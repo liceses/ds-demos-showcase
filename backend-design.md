@@ -1,0 +1,140 @@
+# 后端设计（已实现：FastAPI，按前端契约对齐）
+
+> 前端已由另一 agent 完成（Vue3 + TS，`web/frontend`），其 API 契约以 `src/api/types.ts` / `index.ts` 为准。
+> 本后端实现与前端 `http.ts` 的 `baseURL=/api/v1` 完全对齐，已通过本地联调验证。
+
+---
+
+## 1. 概览
+
+```
+web/
+├── frontend/        # Vue3 + Vite（已由另一 agent 完成）
+└── backend/         # 本目录：FastAPI 后端（新增）
+    ├── app/
+    │   ├── main.py          # 入口、/preview 与 /media 静态路由、初始化
+    │   ├── config.py        # 配置（.env）
+    │   ├── database.py      # SQLAlchemy
+    │   ├── models.py        # ORM
+    │   ├── schemas.py       # Pydantic 响应模型
+    │   ├── security.py      # 密码 / JWT / Cookie
+    │   ├── deps.py          # 当前用户 / 管理员依赖
+    │   ├── serializers.py   # Demo/Tag 序列化
+    │   ├── routers/         # auth, users, tags, demos, comments, sessions, commits, admin
+    │   └── services/        # storage(解压/封面/大小), git_service, settings_service
+    ├── requirements.txt
+    ├── .env.example
+    └── storage/             # demo 文件、封面（运行时生成）
+```
+
+- 数据库：SQLite（`data/app.db`），单机 MVP 足够；后期换 PostgreSQL 也容易。
+- 文件存储：本地磁盘（`storage/demos`、`storage/media`），后期可接 OSS。
+- 登录：账号密码 + JWT（`access_token` 同时放 body 和 HttpOnly Cookie `demo_token`）。
+- 已撤回微信登录，只做本地账号 + GitHub（可后加）。
+
+---
+
+## 2. 启动
+
+```bash
+cd web/backend
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+首次启动自动建表并写入：
+- 管理员：`admin / admin123`
+- 初始标签：`model:dsv4*`、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*`
+
+前端联调：`web/frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指向 `localhost:8000`。
+
+---
+
+## 3. API 汇总（前缀 `/api/v1`）
+
+统一错误：`{ "detail": string, "code": string }`。
+状态语义：400 校验/zip 非法、401 未认证、403 越权、404、409 冲突、413 超限、422 参数、429 限流、500 git/io、503 依赖、507 磁盘。
+
+### 认证
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/auth/register` | `{username,password}` → 201 `{access_token,user}` + Cookie（用户名 3-32，密码≥8） |
+| POST | `/auth/login` | 同上；密码错 401；status≠active → 403 |
+| POST | `/auth/logout` | 清 Cookie → 204 |
+| GET | `/auth/me` | 当前用户 |
+| GET | `/users/{username}` | 用户公开信息 + `demo_count` |
+| PATCH | `/users/{id}` | admin：`{role?,status?}` |
+
+### 标签（扁平数组）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/tags` | `[{id,key,value,description,parent_id,demo_count,child_count}]` |
+| GET | `/tags/{key}:{value}` | 详情 + `parent` + `children` |
+| POST | `/tags` | 创建（key=`author` 保留 → 400） |
+
+### Demo
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/demos` | `?status=&tag=k:v&q=&sort=newest\|popular&page=&page_size=` |
+| GET | `/demos/{slug}` | 详情（含 session_log_count/commit_count/is_author/大小） |
+| POST | `/demos` | multipart：`title, description?, tags(JSON), cover?, file(zip必填)` → 201 `{slug,status}` |
+| PUT | `/demos/{slug}` | 作者/admin，同字段 → 204 |
+| DELETE | `/demos/{slug}` | 作者/admin → 204 |
+| GET | `/demos/{slug}/download` | zip blob |
+| GET | `/preview/{slug}/...` | 解压后的 demo 静态文件（iframe） |
+
+上传自动：解压 zip（要求根 index.html）→ 自动附 `author:{username}` 标签 → git init + 初次提交 → 依 `auto_approve` 置状态。
+
+### 评论（树形，回复深度≤5）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/demos/{slug}/comments` | `[{...,children?}]` |
+| POST | `/demos/{slug}/comments` | `{content,parent_id?}` → 201 |
+| DELETE | `/comments/{id}` | 本人/admin → 204 |
+
+### Session Logs
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/demos/{slug}/session-logs` | `[{id,filename,file_size,created_at}]`（扫描 `storage/demos/{slug}/sessions`，上传 zip 内 `sessions/` 目录自动归位） |
+| GET | `/demos/{slug}/session-logs/{filename}` | 文本/markdown |
+
+### Git 生成过程
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/demos/{slug}/commits` | `[{hash_short,message,author,date}]` |
+| GET | `/demos/{slug}/commits/{hash}` | `{hash,message,author,date,files,diff_text}` |
+
+### 管理后台（admin）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/admin/review` | 待审 Demo |
+| POST | `/admin/review/{slug}` | `{action:"approve"\|"reject"}` |
+| GET | `/admin/demos` | 全部 + storage_size/inconsistency |
+| GET | `/admin/users` | 用户列表 |
+| GET/PUT | `/admin/settings` | `{auto_approve}` |
+
+---
+
+## 4. 关键实现点
+
+- **鉴权**：JWT（HS256，`JWT_SECRET` 需改）；token 同时放 body 与 HttpOnly Cookie，兼容 Bearer 头。密码用 PBKDF2（std 库，无额外依赖）。
+- **上传限制**：`MAX_UPLOAD_SIZE` / `MAX_FILE_SIZE` 默认 200MB，封面 5MB；超限 413。
+- **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
+- **Git**：用 `git` 子进程在 demo 目录维护版本，展示提交历史与 diff，实现「AI 生成过程」可回溯。
+- **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
+
+---
+
+## 5. 部署（后续）
+
+- 单机 MVP：直接跑 uvicorn，或写 `Dockerfile` + `docker compose` 部署到 99 元阿里云服务器。
+- 规模化：`DATABASE_URL` 换 PostgreSQL，文件换 OSS（S3 兼容），静态预览改 CDN。
+- 若将来想回 Cloudflare：API 契约保持 REST，可把 FastAPI 逻辑平移为 Workers + D1 + R2，前端基本不用改。
+
+---
+
+## 6. 已验证
+
+- 后端全部接口本地起服并通过 curl/node 联调：
+  - 注册/登录/me、标签创建/查询、Demo 上传(解压+git+作者标签)/详情/更新/下载、评论树、session-logs、commits、admin 审核/设置/用户。
+- 前端 `npm run typecheck` ✔、`npm run build` ✔（构建警告为 Vite 动态导入提示，非错误）。

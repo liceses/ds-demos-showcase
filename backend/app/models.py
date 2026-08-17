@@ -1,0 +1,115 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .database import Base
+
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), default="user", nullable=False)  # user | admin
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # active | suspended | deleted
+    bio: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    demos: Mapped[list["Demo"]] = relationship(back_populates="author")
+    comments: Mapped[list["Comment"]] = relationship(back_populates="user")
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+    __table_args__ = (UniqueConstraint("key", "value", name="uq_tag_key_value"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    value: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("tags.id"), nullable=True, index=True)
+
+    parent: Mapped["Tag | None"] = relationship(remote_side=[id], back_populates="children")
+    children: Mapped[list["Tag"]] = relationship(back_populates="parent", cascade="all, delete-orphan")
+
+    demo_associations: Mapped[list["DemoTag"]] = relationship(back_populates="tag", cascade="all, delete-orphan")
+
+
+class Demo(Base):
+    __tablename__ = "demos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    cover_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)  # pending | approved | rejected
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    author: Mapped["User | None"] = relationship(back_populates="demos")
+    tag_associations: Mapped[list["DemoTag"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    comments: Mapped[list["Comment"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    session_logs: Mapped[list["SessionLog"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+
+
+class DemoTag(Base):
+    __tablename__ = "demo_tags"
+
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
+
+    demo: Mapped["Demo"] = relationship(back_populates="tag_associations")
+    tag: Mapped["Tag"] = relationship(back_populates="demo_associations")
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("comments.id"), nullable=True, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    demo: Mapped["Demo"] = relationship(back_populates="comments")
+    user: Mapped["User | None"] = relationship(back_populates="comments")
+    parent: Mapped["Comment | None"] = relationship(remote_side=[id], back_populates="children")
+    children: Mapped[list["Comment"]] = relationship(back_populates="parent", cascade="all, delete-orphan")
+
+
+class SessionLog(Base):
+    __tablename__ = "session_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    demo: Mapped["Demo"] = relationship(back_populates="session_logs")
+
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(500), nullable=False)

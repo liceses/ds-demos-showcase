@@ -11,7 +11,10 @@ binding = "DB"
 database_name = "ds-demos"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
 
-# 对象存储（先 npx wrangler r2 bucket create ds-demos-files）
-[[r2_buckets]]
-binding = "FILES"
-bucket_name = "ds-demos-files"
+# 阿里云 OSS 配置（不用 Cloudflare R2，不需要信用卡）
+# 把下面三个改成你自己的；AccessKey Secret 用命令行设置：
+#   npx wrangler secret put OSS_ACCESS_KEY_SECRET
+[vars]
+OSS_ENDPOINT = "oss-cn-hangzhou.aliyuncs.com"
+OSS_BUCKET = "your-bucket-name"
+OSS_ACCESS_KEY_ID = "your-access-key-id"

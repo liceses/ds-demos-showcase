@@ -1,20 +1,18 @@
-# 部署到 Cloudflare（Worker 全栈版）
+# 部署到 Cloudflare（Worker 全栈 + 阿里云 OSS）
 
-> 不再用 Pages 单独部署静态页。
-> 现在是一个 **Cloudflare Worker**：同时托管前端静态资源 + `/api/v1` 后端 API + `/preview` + `/media`。
-> 数据：D1 数据库 + R2 对象存储。
+> 一个 **Cloudflare Worker** 同时托管前端静态资源 + `/api/v1` API + `/preview` + `/media`。
+> 数据库用 **D1**，文件存储用你已有的 **阿里云 OSS**（不需要 Cloudflare R2，也不需要信用卡）。
 
-## 一次部署，包含全部内容
+## 架构
 
 ```
-frontend/
-├── dist/             # Vue 构建产物（Worker 的静态资源）
-├── worker/index.ts   # 后端 API（Hono）
-├── wrangler.toml     # Worker 配置（D1 + R2 + assets）
-└── .env.production   # VITE_USE_MOCK=false（生产走真实后端）
+浏览器 → Cloudflare Worker
+         ├── 前端静态资源（dist，assets）
+         ├── /api/v1   → D1（元数据/用户/评论/提交）
+         └── /preview /media /下载 → 阿里云 OSS（zip/解压文件/封面/session log）
 ```
 
-## 首次部署步骤
+## 首次部署
 
 ### 1. 登录 Cloudflare
 
@@ -29,26 +27,26 @@ npx wrangler login
 npx wrangler d1 create ds-demos
 ```
 
-会输出类似：
+把输出的 `database_id` 填到 `frontend/wrangler.toml`。
 
-```
-✅ Created database 'ds-demos' at <id>
-```
+### 3. 配置阿里云 OSS
 
-把输出的 `database_id` 填到 `frontend/wrangler.toml`：
+在 `frontend/wrangler.toml` 的 `[vars]` 里填：
 
 ```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "ds-demos"
-database_id = "粘贴你的 database_id"
+[vars]
+OSS_ENDPOINT = "oss-cn-hangzhou.aliyuncs.com"   # 你的 region endpoint
+OSS_BUCKET = "你的 bucket 名"
+OSS_ACCESS_KEY_ID = "你的 AccessKey ID"
 ```
 
-### 3. 创建 R2 存储桶
+AccessKey Secret **不要写进仓库**，用命令设置成 Worker 加密变量：
 
 ```powershell
-npx wrangler r2 bucket create ds-demos-files
+npx wrangler secret put OSS_ACCESS_KEY_SECRET
 ```
+
+> OSS 需要是**私有读写**权限即可（Worker 通过签名访问，不公开 bucket）。
 
 ### 4. 构建前端（生产模式，连真实 API）
 
@@ -63,11 +61,9 @@ npm run build
 npx wrangler deploy
 ```
 
-部署完成后会输出 `https://ds-demos-showcase.<你的子域>.workers.dev`。
+完成输出 `https://ds-demos-showcase.<子域>.workers.dev`。
 
 ## 更新流程
-
-改代码后：
 
 ```bash
 cd web/frontend
@@ -75,12 +71,18 @@ npm run build
 npx wrangler deploy
 ```
 
-> 如果以后想配 GitHub Actions 自动部署，可以在 push 时自动跑上面的 build + deploy。
+## 网页版（Dashboard）也可以
 
-## 本地开发不变
+如果你不想用命令行：
 
-- 本地仍用 FastAPI 后端：`web/start-dev.ps1` 启动前后端。
-- Cloudflare Worker 是另一条部署通道，和本地 FastAPI 互不影响。
+1. Workers & Pages → D1 → 创建 `ds-demos`，复制 database_id
+2. GitHub 里编辑 `frontend/wrangler.toml`，填上 database_id 和 OSS 三个值
+3. Workers & Pages → Create application → Worker → 选仓库
+4. 设置：
+   - Path：`frontend`
+   - Build command：`npm install && npm run build`
+   - Deploy command：`npx wrangler deploy`
+5. 部署后在 Worker 设置里添加加密变量 `OSS_ACCESS_KEY_SECRET`
 
 ## 默认账号
 
@@ -89,5 +91,5 @@ npx wrangler deploy
 
 ## 注意
 
-- `wrangler.toml` 里的 `database_id` 是敏感配置，建议提交仓库时保留占位符，或用 CI secret 替换。
-- Worker 上传大小限制约 100MB，demo zip 不要超过这个值。
+- Worker 请求体大小限制约 100MB，上传的 demo zip 别超过。
+- OSS 会按量计费，但你有免费额度；注意 AccessKey 只给 Worker 用最小权限。

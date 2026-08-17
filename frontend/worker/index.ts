@@ -2,16 +2,20 @@
  * DS 民间科研成果展示 —— Cloudflare Worker 全栈后端
  * 一个 Worker 同时服务：静态前端(assets) + /api/v1 API + /preview + /media
  *
- * 存储：D1(DB 绑定) + R2(FILES 绑定)
+ * 存储：D1(DB 绑定) + 阿里云 OSS(文件绑定) —— 不需要 Cloudflare 信用卡/R2
  */
 import { Hono } from 'hono'
 import { unzipSync } from 'fflate'
+import { ossDelete, ossGet, ossList, ossPut } from './oss'
 
 export interface Env {
   DB: D1Database
-  FILES: R2Bucket
   ASSETS: Fetcher
   AUTO_APPROVE?: string
+  OSS_ENDPOINT: string
+  OSS_BUCKET: string
+  OSS_ACCESS_KEY_ID: string
+  OSS_ACCESS_KEY_SECRET: string
 }
 
 type Bindings = { Bindings: Env }
@@ -519,8 +523,8 @@ async function storeDemoZip(env: Env, slug: string, data: Uint8Array, authorName
   const writes: Promise<any>[] = []
   const manifest: Record<string, number | string>[] = []
   // 覆盖旧文件：先删本 demo 的 files 前缀
-  const toDelete = (await env.FILES.list({ prefix: `demos/${slug}/files/` })).objects
-  for (const o of toDelete) writes.push(env.FILES.delete(o.key))
+  const toDelete = await ossList(env, `demos/${slug}/files/`)
+  for (const key of toDelete) writes.push(ossDelete(env, key))
 
   for (const p of paths) {
     const full = root ? `${root}${p}` : p
@@ -528,12 +532,12 @@ async function storeDemoZip(env: Env, slug: string, data: Uint8Array, authorName
     if (!rel) continue
     if (rel.startsWith('sessions/')) {
       const filename = rel.slice('sessions/'.length).split('/').join('-')
-      writes.push(env.FILES.put(`demos/${slug}/sessions/${filename}`, entries[p], { httpMetadata: { contentType: contentType(filename) } }))
+      writes.push(ossPut(env, `demos/${slug}/sessions/${filename}`, entries[p], contentType(filename)))
       writes.push(env.DB.prepare('DELETE FROM session_logs WHERE demo_id=(SELECT id FROM demos WHERE slug=?) AND filename=?').bind(slug, filename).run())
       writes.push(env.DB.prepare('INSERT INTO session_logs (demo_id, filename, file_size, created_at) VALUES ((SELECT id FROM demos WHERE slug=?),?,?,?)').bind(slug, filename, entries[p].length, now()).run())
       continue
     }
-    writes.push(env.FILES.put(`demos/${slug}/files/${rel}`, entries[p], { httpMetadata: { contentType: contentType(rel) } }))
+    writes.push(ossPut(env, `demos/${slug}/files/${rel}`, entries[p], contentType(rel)))
     const h = await sha256hex(entries[p])
     manifest.push({ path: rel, size: entries[p].length, hash: h })
   }
@@ -545,7 +549,7 @@ async function commitSnapshot(env: Env, slug: string, demoId: number, authorName
   const date = now()
   const hash = await sha256hex(JSON.stringify({ manifest, date, demoId }))
   const snapshotKey = `demos/${slug}/snapshots/${hash}.json`
-  await env.FILES.put(snapshotKey, JSON.stringify(manifest))
+  await ossPut(env, snapshotKey, JSON.stringify(manifest), 'application/json')
   const prev = await env.DB.prepare('SELECT hash FROM commits WHERE demo_id=? ORDER BY id DESC LIMIT 1').bind(demoId).first<{ hash: string }>()
   await env.DB.prepare('INSERT INTO commits (demo_id, hash, message, author, author_email, date, snapshot_key, parent_hash) VALUES (?,?,?,?,?,?,?,?)')
     .bind(demoId, hash, message, authorName, `${authorName}@demo-site`, date, snapshotKey, prev?.hash ?? null)
@@ -569,7 +573,7 @@ api.post('/demos', async (c) => {
   const slug = makeSlug(title)
   const coverUrl = '/media/covers/default.svg'
   // 默认封面
-  await env.FILES.put('media/covers/default.svg', new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480"><rect width="640" height="480" fill="#4ecdc4"/><rect x="14" y="14" width="612" height="452" fill="none" stroke="#000" stroke-width="8"/><text x="320" y="250" font-family="Arial, sans-serif" font-size="64" font-weight="900" text-anchor="middle" fill="#000">DS DEMO</text></svg>'), { httpMetadata: { contentType: 'image/svg+xml' } })
+  await ossPut(env, 'media/covers/default.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480"><rect width="640" height="480" fill="#4ecdc4"/><rect x="14" y="14" width="612" height="452" fill="none" stroke="#000" stroke-width="8"/><text x="320" y="250" font-family="Arial, sans-serif" font-size="64" font-weight="900" text-anchor="middle" fill="#000">DS DEMO</text></svg>', 'image/svg+xml')
 
   const res = await env.DB.prepare('INSERT INTO demos (slug,title,description,cover_url,status,author_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)')
     .bind(slug, title, description, coverUrl, autoApprove ? 'approved' : 'pending', user.id, now(), now())
@@ -577,7 +581,7 @@ api.post('/demos', async (c) => {
   const demo = await env.DB.prepare('SELECT * FROM demos WHERE slug=?').bind(slug).first<any>()
 
   try {
-    await env.FILES.put(`demos/${slug}/source.zip`, data, { httpMetadata: { contentType: 'application/zip' } })
+    await ossPut(env, `demos/${slug}/source.zip`, data, 'application/zip')
     const manifest = await storeDemoZip(env, slug, data, user.username)
     const commitHash = await commitSnapshot(env, slug, demo.id, user.username, manifest)
     await commitMeta(env, demo.id, commitHash, 'update demo', user.username, now())
@@ -659,8 +663,8 @@ api.delete('/demos/:slug', async (c) => {
   if (!demo) return err(c, 404, 'Demo 不存在')
   if (demo.author_id !== user.id && user.role !== 'admin') return err(c, 403, '无权删除该 Demo')
   await env.DB.prepare('DELETE FROM demos WHERE id=?').bind(demo.id).run()
-  const objs = (await env.FILES.list({ prefix: `demos/${demo.slug}/` })).objects
-  await Promise.all(objs.map((o) => env.FILES.delete(o.key)))
+  const keys = await ossList(env, `demos/${demo.slug}/`)
+  await Promise.all(keys.map((k) => ossDelete(env, k)))
   return new Response(null, { status: 204 })
 })
 
@@ -668,10 +672,10 @@ api.get('/demos/:slug/download', async (c) => {
   const env = c.env as Env
   const demo = await env.DB.prepare('SELECT * FROM demos WHERE slug=?').bind(c.req.param('slug')).first<any>()
   if (!demo) return err(c, 404, 'Demo 不存在')
-  const obj = await env.FILES.get(`demos/${demo.slug}/source.zip`)
-  if (!obj) return err(c, 404, 'Demo 文件不存在')
+  const buf = await ossGet(env, `demos/${demo.slug}/source.zip`)
+  if (!buf) return err(c, 404, 'Demo 文件不存在')
   await env.DB.prepare('UPDATE demos SET download_count = download_count + 1 WHERE id=?').bind(demo.id).run()
-  return new Response(obj.body, {
+  return new Response(buf, {
     headers: {
       'content-type': 'application/zip',
       'content-disposition': `attachment; filename="${demo.slug}.zip"`,
@@ -748,9 +752,9 @@ api.get('/demos/:slug/session-logs/:filename', async (c) => {
   const filename = c.req.param('filename')
   const safe = sanitizePath(filename)
   if (!safe) return err(c, 400, '非法的文件名')
-  const obj = await env.FILES.get(`demos/${c.req.param('slug')}/sessions/${safe}`)
-  if (!obj) return err(c, 404, '会话日志不存在')
-  return new Response(obj.body, { headers: { 'content-type': contentType(safe) } })
+  const buf = await ossGet(env, `demos/${c.req.param('slug')}/sessions/${safe}`)
+  if (!buf) return err(c, 404, '会话日志不存在')
+  return new Response(buf, { headers: { 'content-type': contentType(safe) } })
 })
 
 // ---------------------------------------------------------------- git (commits)
@@ -769,15 +773,15 @@ api.get('/demos/:slug/commits/:hash', async (c) => {
   const target = c.req.param('hash')
   const commit = await env.DB.prepare('SELECT * FROM commits WHERE demo_id=? AND hash LIKE ?').bind(demo.id, `${target}%`).first<any>()
   if (!commit) return err(c, 404, '提交不存在')
-  const manifestObj = await env.FILES.get(commit.snapshot_key)
-  const manifest: { path: string }[] = manifestObj ? JSON.parse(await manifestObj.text()) : []
+  const manifestBuf = await ossGet(env, commit.snapshot_key)
+  const manifest: { path: string }[] = manifestBuf ? JSON.parse(new TextDecoder().decode(manifestBuf)) : []
   let files: { path: string; status: string; additions: number; deletions: number }[] = manifest.map((f) => ({ path: f.path, status: 'A', additions: 1, deletions: 0 }))
   let diffText = files.map((f) => `+ ${f.path}`).join('\n')
   if (commit.parent_hash) {
     const parent = await env.DB.prepare('SELECT snapshot_key FROM commits WHERE demo_id=? AND hash=?').bind(demo.id, commit.parent_hash).first<any>()
     if (parent) {
-      const pObj = await env.FILES.get(parent.snapshot_key)
-      const pManifest: { path: string }[] = pObj ? JSON.parse(await pObj.text()) : []
+      const pBuf = await ossGet(env, parent.snapshot_key)
+      const pManifest: { path: string }[] = pBuf ? JSON.parse(new TextDecoder().decode(pBuf)) : []
       const curPaths = new Set(manifest.map((f) => f.path))
       const prevPaths = new Set(pManifest.map((f) => f.path))
       files = []
@@ -869,7 +873,7 @@ app.use('/api/v1/*', async (c, next) => {
 
 app.route('/api/v1', api)
 
-// 静态预览 /preview/{slug}/...（从 R2 读取解压后的文件）
+// 静态预览 /preview/{slug}/...（从 OSS 读取解压后的文件）
 app.get('/preview/:slug/*', async (c) => {
   const env = c.env as Env
   const slug = c.req.param('slug')
@@ -877,9 +881,9 @@ app.get('/preview/:slug/*', async (c) => {
   const rest = c.req.param('*') ?? 'index.html'
   const safe = sanitizePath(rest)
   if (!safe) return err(c, 400, '非法的路径')
-  const obj = await env.FILES.get(`demos/${slug}/files/${safe}`)
-  if (!obj) return err(c, 404, '文件不存在')
-  return new Response(obj.body, { headers: { 'content-type': obj.httpMetadata?.contentType || contentType(safe) } })
+  const buf = await ossGet(env, `demos/${slug}/files/${safe}`)
+  if (!buf) return err(c, 404, '文件不存在')
+  return new Response(buf, { headers: { 'content-type': contentType(safe) } })
 })
 
 // 媒体 /media/...
@@ -888,9 +892,9 @@ app.get('/media/*', async (c) => {
   const rest = c.req.param('*') ?? ''
   const safe = sanitizePath(rest)
   if (!safe) return err(c, 400, '非法的路径')
-  const obj = await env.FILES.get(`media/${safe}`)
-  if (!obj) return err(c, 404, '文件不存在')
-  return new Response(obj.body, { headers: { 'content-type': obj.httpMetadata?.contentType || contentType(safe) } })
+  const buf = await ossGet(env, `media/${safe}`)
+  if (!buf) return err(c, 404, '文件不存在')
+  return new Response(buf, { headers: { 'content-type': contentType(safe) } })
 })
 
 // 其余走静态资源（SPA 回退）

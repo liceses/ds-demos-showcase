@@ -39,7 +39,9 @@ Thumbs.db
 # uv / local cache
 .uv-cache/
 .npm-cache/
+.npm-install-cache/
 
-# Cloudflare
+# Wrangler / CF
 .wrangler/
 .dev.vars
+.tmp-wrangler-out/

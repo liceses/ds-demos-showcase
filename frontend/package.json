@@ -12,12 +12,15 @@
   "dependencies": {
     "axios": "^1.19.0",
     "dompurify": "^3.4.13",
+    "fflate": "^0.8.3",
+    "hono": "^4.13.2",
     "marked": "^18.0.9",
     "pinia": "^4.0.3",
     "vue": "^3.5.40",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260817.1",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",

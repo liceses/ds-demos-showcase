@@ -1,0 +1,17 @@
+name = "ds-demos-showcase"
+main = "worker/index.ts"
+compatibility_date = "2026-08-18"
+
+# 前端构建产物作为静态资源（SPA 回退到 index.html）
+assets = { directory = "./dist", not_found_handling = "single-page-application" }
+
+# 数据库（先 npx wrangler d1 create ds-demos，再把 id 填进来）
+[[d1_databases]]
+binding = "DB"
+database_name = "ds-demos"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# 对象存储（先 npx wrangler r2 bucket create ds-demos-files）
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "ds-demos-files"

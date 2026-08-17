@@ -1,47 +1,93 @@
-# 部署到 Cloudflare Pages（前端试水版）
+# 部署到 Cloudflare（Worker 全栈版）
 
-> 当前后端是 FastAPI，不能直接部署到 Cloudflare。本次先用 **Mock 模式**把前端部署到 Pages，
-> 用于验证公网访问与“改代码 → push → 自动更新”的流程。
-> 后端方案（Workers 重写 / 阿里云服务器）之后再定。
+> 不再用 Pages 单独部署静态页。
+> 现在是一个 **Cloudflare Worker**：同时托管前端静态资源 + `/api/v1` 后端 API + `/preview` + `/media`。
+> 数据：D1 数据库 + R2 对象存储。
 
-## 前提
+## 一次部署，包含全部内容
 
-- 已把本仓库推到 GitHub（见下文）
-- 有 Cloudflare 账号
-
-## 步骤
-
-### 1. 推到 GitHub
-
-```bash
-cd web
-git init
-git add -A
-git commit -m "init: DS 民间科研成果展示 monorepo"
-# 在 GitHub 新建空仓库后：
-git remote add origin https://github.com/<you>/<repo>.git
-git push -u origin main
+```
+frontend/
+├── dist/             # Vue 构建产物（Worker 的静态资源）
+├── worker/index.ts   # 后端 API（Hono）
+├── wrangler.toml     # Worker 配置（D1 + R2 + assets）
+└── .env.production   # VITE_USE_MOCK=false（生产走真实后端）
 ```
 
-### 2. Cloudflare Pages 连接仓库
+## 首次部署步骤
 
-1. 登录 Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-2. 授权选择刚才的仓库
-3. 构建设置：
-   - **Framework preset**：`Vite`（或选 None）
-   - **Root directory**：`frontend`
-   - **Build command**：`npm install && npm run build`
-   - **Build output directory**：`dist`
-4. 保存并部署，等几十秒就能拿到 `https://<project>.pages.dev` 地址
+### 1. 登录 Cloudflare
 
-### 3. 验证更新流程
+```powershell
+cd web/frontend
+npx wrangler login
+```
 
-- 本地改任意前端代码 → `git push`
-- Cloudflare 自动重新构建，约 1 分钟内线上生效
-- 也可在 Pages 后台 **Deployments** 里看每次构建状态
+### 2. 创建 D1 数据库
 
-## 说明
+```powershell
+npx wrangler d1 create ds-demos
+```
 
-- `frontend/.env.production` 已设 `VITE_USE_MOCK=true`，所以部署版用的是前端内置 Mock 数据，不需要后端。
-- 本地开发仍是真实后端（`frontend/.env` 里 `VITE_USE_MOCK=false`），两者互不影响。
-- 以后上真实后端时，把 `.env.production` 改成 `VITE_USE_MOCK=false` 并把 API 基地址指到后端，重新部署即可。
+会输出类似：
+
+```
+✅ Created database 'ds-demos' at <id>
+```
+
+把输出的 `database_id` 填到 `frontend/wrangler.toml`：
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "ds-demos"
+database_id = "粘贴你的 database_id"
+```
+
+### 3. 创建 R2 存储桶
+
+```powershell
+npx wrangler r2 bucket create ds-demos-files
+```
+
+### 4. 构建前端（生产模式，连真实 API）
+
+```powershell
+cd web/frontend
+npm run build
+```
+
+### 5. 部署
+
+```powershell
+npx wrangler deploy
+```
+
+部署完成后会输出 `https://ds-demos-showcase.<你的子域>.workers.dev`。
+
+## 更新流程
+
+改代码后：
+
+```bash
+cd web/frontend
+npm run build
+npx wrangler deploy
+```
+
+> 如果以后想配 GitHub Actions 自动部署，可以在 push 时自动跑上面的 build + deploy。
+
+## 本地开发不变
+
+- 本地仍用 FastAPI 后端：`web/start-dev.ps1` 启动前后端。
+- Cloudflare Worker 是另一条部署通道，和本地 FastAPI 互不影响。
+
+## 默认账号
+
+- 管理员：`admin / admin123`（首次部署自动 seed）
+- 初始标签自动写入。
+
+## 注意
+
+- `wrangler.toml` 里的 `database_id` 是敏感配置，建议提交仓库时保留占位符，或用 CI secret 替换。
+- Worker 上传大小限制约 100MB，demo zip 不要超过这个值。

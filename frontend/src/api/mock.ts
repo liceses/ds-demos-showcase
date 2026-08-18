@@ -599,6 +599,28 @@ export const mockApi = {
     if (payload.sort !== undefined) k.sort = payload.sort
     return clone(k)
   },
+  async deleteTagKey(key: string): Promise<void> {
+    await delay(200)
+    const idx = tagKeys.findIndex((x) => x.key === key)
+    if (idx < 0) throw new Error('标签键不存在')
+    if (key === 'author' || key === 'version-of') throw new Error('保留 key 禁止删除')
+    if (tagKeys[idx].demo_count > 0) throw new Error('该键下有标签正被 demo 引用，禁止删除')
+    tagKeys.splice(idx, 1)
+    const toRemove = tags.filter((t) => t.key === key)
+    for (const t of toRemove) {
+      const ti = tags.indexOf(t)
+      if (ti >= 0) tags.splice(ti, 1)
+    }
+  },
+  async deleteTagValue(key: string, value: string): Promise<void> {
+    await delay(200)
+    if (key === 'author' || key === 'version-of') throw new Error('保留 key 禁止删除')
+    const t = tags.find((x) => x.key === key && x.value === value)
+    if (!t) throw new Error('标签值不存在')
+    if (t.demo_count > 0) throw new Error('该标签正被 demo 引用，禁止删除')
+    const idx = tags.indexOf(t)
+    tags.splice(idx, 1)
+  },
 
   // ---------- Demo ----------
   async listDemos(params: DemoListParams = {}): Promise<Paginated<DemoSummary>> {

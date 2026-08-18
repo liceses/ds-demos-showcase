@@ -2,6 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
+from .services import oss
 
 
 def tag_dict(db: Session, tag: Tag) -> dict:
@@ -45,6 +46,11 @@ def serialize_demo(
         "title": demo.title,
         "description": demo.description,
         "cover_url": demo.cover_url,
+        "preview_url": (
+            oss.public_url(f"demos/{demo.slug}/files/index.html")
+            if oss.enabled()
+            else f"/preview/{demo.slug}/index.html"
+        ),
         "author": author.username if author else None,
         "author_id": demo.author_id,
         "tags": tags,

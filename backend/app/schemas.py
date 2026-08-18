@@ -119,6 +119,7 @@ class DemoTimelineOut(BaseModel):
 
 
 class DemoDetailOut(DemoSummaryOut):
+    preview_url: str = ""
     session_log_count: int
     commit_count: int
     is_author: bool

@@ -117,6 +117,9 @@ def create_tag_key(body: TagKeyUpsert, db: Session = Depends(get_db), _: User = 
     return _tag_key_out(db, k)
 
 
+RESERVED_TAG_KEYS = {"author", "version-of"}
+
+
 @router.put("/admin/tag-keys/{key}", response_model=TagKeyOut)
 def update_tag_key(
     key: str,
@@ -133,6 +136,56 @@ def update_tag_key(
     k.sort = body.sort
     db.commit()
     return _tag_key_out(db, k)
+
+
+@router.delete("/admin/tag-keys/{key}", status_code=204)
+def delete_tag_key(key: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """删除标签键（同时删除该键下未被引用的标签值）。"""
+    if key in RESERVED_TAG_KEYS:
+        raise HTTPException(status_code=409, detail=f"{key} 为保留 key，禁止删除", )
+    k = db.get(TagKey, key)
+    if k is None:
+        raise HTTPException(status_code=404, detail="标签键不存在", )
+    referenced = (
+        db.query(func.count(DemoTag.demo_id))
+        .join(Tag, DemoTag.tag_id == Tag.id)
+        .filter(Tag.key == key)
+        .scalar()
+        or 0
+    )
+    if referenced > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"该键下有 {referenced} 个标签正被 demo 引用，禁止删除",
+        )
+    db.query(Tag).filter(Tag.key == key).delete(synchronize_session=False)
+    db.delete(k)
+    db.commit()
+
+
+@router.delete("/admin/tag-keys/{key}/values/{value}", status_code=204)
+def delete_tag_value(
+    key: str,
+    value: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """删除某个标签值（被 demo 引用时禁止删除）。"""
+    if key in RESERVED_TAG_KEYS:
+        raise HTTPException(status_code=409, detail=f"{key} 为保留 key，禁止删除", )
+    tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
+    if tag is None:
+        raise HTTPException(status_code=404, detail="标签值不存在", )
+    referenced = (
+        db.query(func.count(DemoTag.demo_id)).filter(DemoTag.tag_id == tag.id).scalar() or 0
+    )
+    if referenced > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"该标签正被 {referenced} 个 demo 引用，禁止删除",
+        )
+    db.delete(tag)
+    db.commit()
 
 
 def _tag_key_out(db: Session, k: TagKey) -> TagKeyOut:

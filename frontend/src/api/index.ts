@@ -86,6 +86,12 @@ const realApi = {
     const { data } = await http.put(`/tags/admin/tag-keys/${encodeURIComponent(key)}`, payload)
     return data
   },
+  async deleteTagKey(key: string): Promise<void> {
+    await http.delete(`/tags/admin/tag-keys/${encodeURIComponent(key)}`)
+  },
+  async deleteTagValue(key: string, value: string): Promise<void> {
+    await http.delete(`/tags/admin/tag-keys/${encodeURIComponent(key)}/values/${encodeURIComponent(value)}`)
+  },
 
   // ---------- Demo ----------
   async listDemos(params: DemoListParams = {}): Promise<Paginated<DemoSummary>> {

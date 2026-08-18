@@ -134,7 +134,7 @@ onMounted(load)
 
     <IframePreview
       :srcdoc="demo.previewHtml"
-      :src="demo.previewHtml ? undefined : `/preview/${demo.slug}/index.html`"
+      :src="demo.previewHtml ? undefined : (demo.previewUrl ?? `/preview/${demo.slug}/index.html`)"
       :title="demo.title"
     />
 

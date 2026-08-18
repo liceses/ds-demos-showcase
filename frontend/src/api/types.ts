@@ -66,6 +66,8 @@ export interface DemoTimelineEntry {
 }
 
 export interface DemoDetail extends DemoSummary {
+  /** 预览入口：OSS 直链（跨源）或 /preview 相对路径；跨源时前端才会对 iframe 开 allow-same-origin */
+  previewUrl?: string
   session_log_count: number
   commit_count: number
   is_author: boolean

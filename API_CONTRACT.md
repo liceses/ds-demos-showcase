@@ -185,6 +185,24 @@
 
 请求体同上（不含 key），更新 mode/label/description/sort。
 
+#### DELETE `/api/v1/tags/admin/tag-keys/{key}`（仅 admin）
+
+删除标签键（同时删除该键下**未被引用**的标签值）。
+
+安全规则：
+- `author` / `version-of` 保留 key → 409
+- 键下存在被 demo 引用的标签 → **409 + 引用数量**，禁止删除（不做级联删除）
+- 成功返回 204
+
+#### DELETE `/api/v1/tags/admin/tag-keys/{key}/values/{value}`（仅 admin）
+
+删除某个标签值。
+
+安全规则：
+- `author` / `version-of` 保留 key → 409
+- 该 value 被 demo 引用 → **409 + 引用数量**，禁止删除
+- 成功返回 204
+
 #### POST `/api/v1/tags`（仅 admin）
 
 新增**固定值**标签（`fixed` 模式的候选 value）：

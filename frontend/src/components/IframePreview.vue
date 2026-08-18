@@ -11,6 +11,22 @@ const frame = ref<HTMLIFrameElement | null>(null)
 const autoHeight = ref<number | null>(null)
 const webFullscreen = ref(false)
 
+// sandbox：预览源与本站不同源（如 OSS 直链）时，加 allow-same-origin，
+// 让 demo 的 localStorage / 相对 fetch / Worker 可用且彼此隔离在 OSS 源内；
+// 同源或 srcdoc（Mock）保持不透明 origin 不放行，防止上传的 demo 读本站 Cookie/存储。
+const sandboxAttr = computed(() => {
+  const base = 'allow-scripts allow-modals allow-forms allow-popups allow-fullscreen'
+  if (props.src) {
+    try {
+      const u = new URL(props.src, window.location.href)
+      if (u.origin !== window.location.origin) return `${base} allow-same-origin`
+    } catch {
+      // 非法 URL 按同源/收紧处理
+    }
+  }
+  return base
+})
+
 const frameStyle = computed(() => {
   if (webFullscreen.value) return { height: '100%' }
   if (autoHeight.value) return { height: autoHeight.value + 'px' }
@@ -133,7 +149,7 @@ onBeforeUnmount(() => {
       :srcdoc="finalSrcdoc || undefined"
       :title="title || 'Demo 预览'"
       :style="frameStyle"
-      sandbox="allow-scripts allow-modals allow-forms allow-popups allow-fullscreen"
+      :sandbox="sandboxAttr"
       allowfullscreen
       allow="fullscreen"
       loading="eager"

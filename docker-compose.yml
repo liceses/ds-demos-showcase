@@ -14,6 +14,8 @@ services:
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
       # 可选：OSS 自定义域名（如 https://oss.deepdemos.top），规避默认域名对 HTML 的强制下载策略
       OSS_CUSTOM_DOMAIN: ${OSS_CUSTOM_DOMAIN:-}
+      # 预览入口公开地址：demo 预览 iframe 所用主机（如 http://demo.deepdemos.top）
+      PREVIEW_BASE_URL: ${PREVIEW_BASE_URL:-}
       # 网站自身 git 仓库（用于「更新公告」= commit 信息）
       SITE_REPO_DIR: /site-repo
     volumes:

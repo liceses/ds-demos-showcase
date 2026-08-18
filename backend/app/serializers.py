@@ -1,6 +1,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from .config import settings
 from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
 from .services import oss
 
@@ -47,9 +48,13 @@ def serialize_demo(
         "description": demo.description,
         "cover_url": demo.cover_url,
         "preview_url": (
-            oss.public_url(f"demos/{demo.slug}/files/index.html")
-            if oss.enabled()
-            else f"/preview/{demo.slug}/index.html"
+            f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/index.html"
+            if settings.preview_base_url
+            else (
+                oss.public_url(f"demos/{demo.slug}/files/index.html")
+                if oss.enabled()
+                else f"/preview/{demo.slug}/index.html"
+            )
         ),
         "author": author.username if author else None,
         "author_id": demo.author_id,

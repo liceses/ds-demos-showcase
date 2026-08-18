@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # 用自定义域名访问可规避该安全策略（详情：OSS 文档「如何配置访问 OSS 文件时的预览行为」）。
     oss_custom_domain: str = ""
 
+    # 预览入口的公开地址：demo 预览 iframe 所走的主机（如 http://demo.deepdemos.top）。
+    # 与主站不同源才能安全地开 allow-same-origin（localStorage 可用）；
+    # 且 HTML 由后端 /preview 返回，规避 OSS 默认域名对 HTML 的 x-oss-force-download 强制下载。
+    preview_base_url: str = ""
+
     # 网站自身 git 仓库目录（用于「更新公告」= 网站仓库 commit 信息）
     # 本地开发缺省自动定位到仓库根目录；Docker 内用 /site-repo
     site_repo_dir: str = ""

@@ -529,6 +529,13 @@ export const mockApi = {
     return { ...clone(u), demo_count: demos.filter((d) => d.author === username).length }
   },
 
+  async changePassword(old_password: string, new_password: string): Promise<void> {
+    await delay(200)
+    if (!currentUser) throw new Error('未登录')
+    if (passwordOf[currentUser.username] !== old_password) throw new Error('原密码错误')
+    passwordOf[currentUser.username] = new_password
+  },
+
   // ---------- 标签 ----------
   async listTags(): Promise<Tag[]> {
     await delay()

@@ -53,6 +53,9 @@ const realApi = {
     const { data } = await http.get('/auth/me')
     return data
   },
+  async changePassword(old_password: string, new_password: string): Promise<void> {
+    await http.post('/auth/change-password', { old_password, new_password })
+  },
   async getUser(username: string): Promise<User & { demo_count: number }> {
     const { data } = await http.get(`/users/${encodeURIComponent(username)}`)
     return data

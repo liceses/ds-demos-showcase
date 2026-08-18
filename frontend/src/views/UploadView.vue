@@ -13,6 +13,7 @@ const tagsText = ref('')
 const coverFile = ref<File | null>(null)
 const zipFile = ref<File | null>(null)
 const commitMessage = ref('')
+const keepOldVersion = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const success = ref<{ slug: string; status: string } | null>(null)
@@ -64,6 +65,7 @@ async function submit() {
         cover: coverFile.value,
         file: zipFile.value,
         commit_message: commitMessage.value.trim() || undefined,
+        keep_old_version: keepOldVersion.value,
       })
       success.value = { slug: editSlug, status: 'updated' }
     } else {
@@ -122,7 +124,11 @@ async function submit() {
         <label v-if="editSlug" class="field">
           更新说明 / commit 信息（可选）
           <input v-model="commitMessage" class="input" placeholder="例如：修复第二关音效不同步的问题" />
-          <span class="hint">会写入 git commit 并自动生成「更新公告」</span>
+          <span class="hint">会生成「作品更新公告」</span>
+        </label>
+        <label v-if="editSlug && zipFile" class="field" style="display: flex; gap: 8px; align-items: center">
+          <input v-model="keepOldVersion" type="checkbox" style="width: 18px; height: 18px" />
+          保留当前版本为独立旧版页面（上传新 zip 时生效）
         </label>
 
         <div v-if="error" class="notice notice-error">{{ error }}</div>

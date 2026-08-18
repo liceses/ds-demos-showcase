@@ -4,10 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { Comment, CommitInfo, DemoDetail, SessionLog } from '../api/types'
+import type { Comment, DemoDetail, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import MarkdownView from '../components/MarkdownView.vue'
-import CommitTimeline from '../components/CommitTimeline.vue'
 import CommentTree from '../components/CommentTree.vue'
 
 const route = useRoute()
@@ -19,9 +18,8 @@ const slug = String(route.params.slug)
 const demo = ref<DemoDetail | null>(null)
 const loading = ref(true)
 const error = ref('')
-const activeTab = ref<'info' | 'git' | 'session' | 'comments'>('info')
+const activeTab = ref<'info' | 'session' | 'comments'>('info')
 
-const commits = ref<CommitInfo[]>([])
 const sessionLogs = ref<SessionLog[]>([])
 const comments = ref<Comment[]>([])
 const selectedLog = ref<string | null>(null)
@@ -36,12 +34,10 @@ async function load() {
   error.value = ''
   try {
     demo.value = await api.getDemo(slug)
-    const [c, s, cm] = await Promise.all([
-      api.listCommits(slug).catch(() => []),
+    const [s, cm] = await Promise.all([
       api.listSessionLogs(slug).catch(() => []),
       api.listComments(slug).catch(() => []),
     ])
-    commits.value = c
     sessionLogs.value = s
     comments.value = cm
   } catch (e) {
@@ -145,7 +141,6 @@ onMounted(load)
     <section class="section">
       <div class="tabs">
         <button class="tab" :class="{ active: activeTab === 'info' }" type="button" @click="activeTab = 'info'">信息</button>
-        <button class="tab" :class="{ active: activeTab === 'git' }" type="button" @click="activeTab = 'git'">生成过程</button>
         <button class="tab" :class="{ active: activeTab === 'session' }" type="button" @click="activeTab = 'session'">会话日志</button>
         <button class="tab" :class="{ active: activeTab === 'comments' }" type="button" @click="activeTab = 'comments'">评论</button>
       </div>
@@ -171,13 +166,6 @@ onMounted(load)
               <div class="notice notice-info" style="margin-top: 20px">
                 <strong>Git 时间线声明：</strong>页面中的提交历史仅表示版本演进过程，不等同于 AI 生成真实性证明。
               </div>
-            </div>
-          </template>
-
-          <template v-else-if="activeTab === 'git'">
-            <CommitTimeline :slug="slug" :commits="commits" />
-            <div class="notice notice-info" style="margin-top: 12px">
-              时间线 = 该 Demo 服务器本地 Git 仓库的提交历史；V1 不承诺 AI 生成真实性证明。
             </div>
           </template>
 

@@ -7,8 +7,6 @@ import type {
   Announcement,
   AuthResponse,
   Comment,
-  CommitDetail,
-  CommitInfo,
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
@@ -385,67 +383,6 @@ const sessionTexts: Record<string, string> = {
 - commit 4: 完成态视觉`,
 }
 
-const commits: Record<string, CommitInfo[]> = {
-  demo_粒子星空: [
-    { hash_short: 'a1b2c3d', message: 'feat: 粒子星空骨架与粒子运动', author: 'tester', date: '2025-03-01T09:00:00Z' },
-    { hash_short: 'b2c3d4e', message: 'feat: 鼠标引力扰动', author: 'tester', date: '2025-03-01T09:20:00Z' },
-    { hash_short: 'c3d4e5f', message: 'style: 拖尾与视觉打磨', author: 'tester', date: '2025-03-01T09:40:00Z' },
-  ],
-  demo_霓虹时钟: [
-    { hash_short: 'd4e5f6a', message: 'feat: 基础时钟', author: 'tester', date: '2025-03-02T12:00:00Z' },
-    { hash_short: 'e5f6a7b', message: 'style: 霓虹光晕', author: 'tester', date: '2025-03-02T12:15:00Z' },
-    { hash_short: 'f6a7b8c', message: 'style: 响应式字号', author: 'tester', date: '2025-03-02T12:30:00Z' },
-  ],
-  demo_贪吃蛇: [
-    { hash_short: 'a7b8c9d', message: 'feat: 蛇身移动', author: 'alice', date: '2025-03-03T15:30:00Z' },
-    { hash_short: 'b8c9d0e', message: 'feat: 食物与计分', author: 'alice', date: '2025-03-03T15:45:00Z' },
-    { hash_short: 'c9d0e1f', message: 'fix: 碰撞检测', author: 'alice', date: '2025-03-03T16:00:00Z' },
-    { hash_short: 'd0e1f2a', message: 'style: 视觉打磨', author: 'alice', date: '2025-03-03T16:20:00Z' },
-  ],
-  demo_打字机效果: [
-    { hash_short: 'e1f2a3b', message: 'feat: 打字机逻辑', author: 'tester', date: '2025-03-04T18:00:00Z' },
-    { hash_short: 'f2a3b4c', message: 'style: 视觉与循环', author: 'tester', date: '2025-03-04T18:15:00Z' },
-  ],
-  demo_音频可视化: [
-    { hash_short: 'a3b4c5d', message: 'feat: 频谱条绘制', author: 'alice', date: '2025-03-05T08:20:00Z' },
-    { hash_short: 'b4c5d6e', message: 'feat: 波动动画', author: 'alice', date: '2025-03-05T08:35:00Z' },
-    { hash_short: 'c5d6e7f', message: 'style: 配色打磨', author: 'alice', date: '2025-03-05T08:50:00Z' },
-  ],
-  demo_记忆翻牌: [
-    { hash_short: 'd6e7f8a', message: 'feat: 卡片生成', author: 'admin', date: '2025-03-06T11:00:00Z' },
-    { hash_short: 'e7f8a9b', message: 'feat: 翻牌与配对', author: 'admin', date: '2025-03-06T11:15:00Z' },
-    { hash_short: 'f8a9b0c', message: 'fix: 延迟回翻', author: 'admin', date: '2025-03-06T11:30:00Z' },
-    { hash_short: 'a9b0c1d', message: 'style: 完成态视觉', author: 'admin', date: '2025-03-06T11:45:00Z' },
-  ],
-}
-
-const commitDiffs: Record<string, string> = {
-  a1b2c3d: `diff --git a/index.html b/index.html
-new file mode 100644
---- /dev/null
-+++ b/index.html
-@@ -0,0 +1,40 @@
-+<!doctype html>
-+<html>
-+  <head><meta charset="utf-8"><title>粒子星空</title></head>
-+  <body>
-+    <canvas id="c"></canvas>
-+    <script>
-+      // 初始化粒子
-+    </script>
-+  </body>
-+</html>`,
-  b2c3d4e: `diff --git a/index.html b/index.html
---- a/index.html
-+++ b/index.html
-@@ -10,6 +10,12 @@
-       // 初始化粒子
-+      // 鼠标扰动
-+      addEventListener('mousemove', ...);
-     </script>
-   </body>
- </html>`,
-}
 
 const pendingDemos: DemoDetail[] = [
   {
@@ -708,26 +645,6 @@ export const mockApi = {
     await delay()
     const key = `${slug}/${filename}`
     return sessionTexts[key] || `# ${filename}\n\n（暂无内容）`
-  },
-
-  // ---------- Git ----------
-  async listCommits(slug: string): Promise<CommitInfo[]> {
-    await delay()
-    return clone(commits[slug] || [])
-  },
-
-  async getCommitDetail(slug: string, hash: string): Promise<CommitDetail> {
-    await delay()
-    const info = (commits[slug] || []).find((c) => c.hash_short === hash)
-    if (!info) throw new Error('提交不存在')
-    return {
-      hash: info.hash_short,
-      message: info.message,
-      author: info.author,
-      date: info.date,
-      files: [{ path: 'index.html', status: 'modified', additions: 12, deletions: 4 }],
-      diff_text: commitDiffs[hash] || 'diff --git a/index.html b/index.html\n--- a/index.html\n+++ b/index.html\n@@ -1 +1 @@\n-old\n+new',
-    }
   },
 
   // ---------- Admin ----------

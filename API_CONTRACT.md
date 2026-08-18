@@ -2,6 +2,8 @@
 
 > 本文件给前端开发对接用：后端已实现公告系统与 Demo 修改能力，接口如下。
 > 基础前缀：`/api/v1`，认证方式：HttpOnly Cookie `demo_token`（`withCredentials: true`），与现有接口一致。
+>
+> **变更记录**：每 demo 的 git 生成过程功能已移除（`commits` 相关接口不再提供），详情页不再有「生成过程」Tab；Demo 更新改为「默认只保留最新文件 + 可选保留旧版本为独立页面」。
 
 ## 1. 整站公告系统
 
@@ -76,13 +78,15 @@
 | `tags` | string | JSON 字符串数组，如 `["model:dsv4-flash","type:game"]` |
 | `cover` | file | 新封面（可选） |
 | `file` | file | 新 zip 包（可选，不传保留原文件） |
-| `commit_message` | string | **更新说明 / commit 信息（可选）** |
+| `commit_message` | string | 更新说明（可选），用于生成「作品更新公告」 |
+| `keep_old_version` | bool | 上传新 zip 时是否**保留当前版本为独立旧版页面**（默认 false） |
 
 返回 204。
 
-> 说明：只要有任何字段变化（`changed=true`），后端会：
-> 1. 用 `commit_message`（缺省 "更新 demo"）提交一次 git commit
-> 2. 自动生成一条 `type=update` 公告，`content` = commit_message
+> 说明：
+> - **git 功能已移除**：不再为每个 demo 维护 git 仓库，默认只保留最新文件与全部记录（会话日志/评论/元数据）
+> - `keep_old_version=true` 且同时上传了新 zip 时，后端会把**当前文件快照**成一个新的独立 demo 页面（新 slug，带 `version-of:{原slug}` 标签），然后才覆盖当前 demo
+> - 只要有任何字段变化，自动生成一条 `type=demo_update` 公告，`content` = commit_message（缺省 "更新 demo"）
 
 #### DELETE `/api/v1/demos/{slug}`（作者或 admin）
 
@@ -90,9 +94,10 @@
 
 ### 前端建议
 
-- Demo 详情页：作者本人或 admin 显示「编辑 / 删除」按钮
-- 编辑复用上传页表单：预填标题/描述/标签，zip 可选，新增「更新说明」输入框 → 提交到 PUT
+- Demo 详情页：作者本人或 admin 显示「编辑 / 删除」按钮（已无「生成过程/git」Tab）
+- 编辑复用上传页表单：预填标题/描述/标签，zip 可选，新增「更新说明」与「保留旧版本」选项 → 提交到 PUT
 - 删除前 `confirm` 二次确认
+- 旧版本 demo 页面通过 `version-of:{slug}` 标签互相检索
 
 ## 3. 修改密码（顺带交付）
 

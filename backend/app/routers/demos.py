@@ -14,10 +14,10 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
-from ..models import Announcement, Demo, DemoTag, Tag, User
+from ..models import Announcement, Demo, DemoTag, SessionLog, Tag, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
-from ..services import git_service, oss, storage
+from ..services import oss, storage
 from ..services.settings_service import get_auto_approve
 
 router = APIRouter(prefix="/demos", tags=["demos"])
@@ -194,8 +194,6 @@ async def create_demo(
     storage.upload_demo_to_oss(slug)
     oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
 
-    git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site")
-
     # 自动公告：新 demo 发布
     db.add(Announcement(
         type="auto",
@@ -217,6 +215,7 @@ async def update_demo(
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
     commit_message: str | None = Form(None),
+    keep_old_version: bool = Form(False),
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
@@ -243,6 +242,9 @@ async def update_demo(
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+        # 勾选「保留旧版本」：先把当前文件快照成独立 demo 页面，再覆盖
+        if keep_old_version:
+            _snapshot_demo(db, demo, user)
         storage.extract_zip(zip_bytes, slug)
         storage.upload_demo_to_oss(slug)
         oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
@@ -253,8 +255,7 @@ async def update_demo(
 
     if changed:
         message = (commit_message or "更新 demo").strip() or "更新 demo"
-        git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site", message=message)
-        # 作品更新公告：内容即该 demo 的 commit 信息
+        # 作品更新公告：内容即更新说明（不再依赖 git）
         db.add(Announcement(
             type="demo_update",
             title=f"Demo 更新：{demo.title}",
@@ -265,6 +266,55 @@ async def update_demo(
         db.commit()
 
     return Response(status_code=204)
+
+
+def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
+    """把当前 demo 的快照复制成独立的新 demo（保留旧版本为单独页面）。"""
+    from ..models import Demo as DemoModel
+
+    old_slug = demo.slug
+    new_slug = _unique_slug(db, demo.title)
+
+    files_src = storage.demo_files_dir(old_slug)
+    sessions_src = storage.demo_sessions_dir(old_slug)
+    if files_src.exists():
+        dst = storage.demo_files_dir(new_slug)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(files_src, dst)
+    if sessions_src.exists():
+        dst = storage.demo_sessions_dir(new_slug)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(sessions_src, dst)
+
+    snapshot = DemoModel(
+        slug=new_slug,
+        title=demo.title,
+        description=demo.description,
+        cover_url=demo.cover_url,
+        status=demo.status,
+        author_id=demo.author_id,
+    )
+    db.add(snapshot)
+    db.flush()
+
+    # 复制标签 + 标记旧版本归属
+    for dt in db.query(DemoTag).filter(DemoTag.demo_id == demo.id).all():
+        db.add(DemoTag(demo_id=snapshot.id, tag_id=dt.tag_id))
+    version_tag = _ensure_tag(db, f"version-of:{old_slug}")
+    db.add(DemoTag(demo_id=snapshot.id, tag_id=version_tag.id))
+
+    # 复制会话日志记录（文件已随目录复制）
+    for log in db.query(SessionLog).filter(SessionLog.demo_id == demo.id).all():
+        db.add(SessionLog(
+            demo_id=snapshot.id,
+            filename=log.filename,
+            file_size=log.file_size,
+            created_at=log.created_at,
+        ))
+
+    db.commit()
+    storage.upload_demo_to_oss(new_slug)
+    return snapshot
 
 
 @router.delete("/{slug}", status_code=204)

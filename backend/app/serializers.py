@@ -2,7 +2,6 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .models import Comment, Demo, DemoTag, SessionLog, Tag, User
-from .services import git_service
 
 
 def tag_dict(db: Session, tag: Tag) -> dict:
@@ -57,12 +56,11 @@ def serialize_demo(
     if detail:
         from .services.storage import demo_files_dir, demo_storage_size
 
-        commits = git_service.list_commits(demo.slug)
         files_dir = demo_files_dir(demo.slug)
         data.update(
             {
                 "session_log_count": session_log_count,
-                "commit_count": len(commits),
+                "commit_count": 0,  # git 功能已移除
                 "is_author": bool(current_user_id is not None and demo.author_id == current_user_id),
                 "file_size": files_dir.stat().st_size if files_dir.exists() else None,
                 "storage_size": demo_storage_size(demo.slug),

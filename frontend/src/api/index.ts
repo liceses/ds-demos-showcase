@@ -7,8 +7,6 @@ import type {
   Announcement,
   AuthResponse,
   Comment,
-  CommitDetail,
-  CommitInfo,
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
@@ -113,6 +111,7 @@ const realApi = {
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
     if (payload.commit_message) form.append('commit_message', payload.commit_message)
+    if (payload.keep_old_version) form.append('keep_old_version', 'true')
     await http.put(`/demos/${encodeURIComponent(slug)}`, form)
   },
   async deleteDemo(slug: string): Promise<void> {
@@ -141,16 +140,6 @@ const realApi = {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/session-logs/${encodeURIComponent(filename)}`, {
       responseType: 'text',
     })
-    return data
-  },
-
-  // ---------- Git ----------
-  async listCommits(slug: string): Promise<CommitInfo[]> {
-    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/commits`)
-    return data
-  },
-  async getCommitDetail(slug: string, hash: string): Promise<CommitDetail> {
-    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/commits/${encodeURIComponent(hash)}`)
     return data
   },
 

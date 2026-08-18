@@ -141,6 +141,8 @@ export interface UpdateDemoPayload {
   cover?: File | null
   file?: File | null
   commit_message?: string
+  /** 上传新 zip 时是否保留当前版本为独立旧版页面 */
+  keep_old_version?: boolean
 }
 
 export interface Announcement {

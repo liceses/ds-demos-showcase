@@ -145,7 +145,7 @@ export interface UpdateDemoPayload {
 
 export interface Announcement {
   id: number
-  type: 'manual' | 'auto' | 'update'
+  type: 'manual' | 'auto' | 'update' | 'demo_update'
   title: string
   content: string
   demo_slug: string | null

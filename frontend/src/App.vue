@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isMock } from './api'
+import ConfirmHost from './components/ConfirmHost.vue'
+import ToastHost from './components/ToastHost.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -56,5 +58,8 @@ const username = computed(() => auth.user?.username ?? '')
       <div class="mono">DS 民间科研成果展示 · AI 网页 Demo 作品集</div>
       <div class="mono">Git 时间线仅表示提交历史，不等同于 AI 生成真实性证明</div>
     </footer>
+
+    <ConfirmHost />
+    <ToastHost />
   </div>
 </template>

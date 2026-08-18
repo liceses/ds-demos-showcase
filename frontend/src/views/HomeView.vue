@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { Announcement, DemoSummary, Tag } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
+import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 
 const demos = ref<DemoSummary[]>([])
 const announcements = ref<Announcement[]>([])
@@ -18,7 +19,9 @@ const loadingMore = ref(false)
 const error = ref('')
 const hasMore = ref(true)
 
-const annTypeLabel: Record<string, string> = { manual: '公告', auto: '新发布', update: '站点更新', demo_update: '作品更新' }
+// 分组：项目公告 = 带 demo_slug（新发布 / 作品更新）；系统公告 = 无 demo_slug（手动 / 站点更新）
+const projectAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug != null))
+const systemAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug == null))
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -109,24 +112,6 @@ onBeforeUnmount(() => observer?.disconnect())
     </p>
   </section>
 
-  <section v-if="announcements.length" class="section" style="padding-top: 8px">
-    <div class="section-head">
-      <h2 class="section-title">公告</h2>
-    </div>
-    <div class="announce-list">
-      <div v-for="a in announcements.slice(0, 5)" :key="a.id" class="announce-item">
-        <span class="tag-chip" :class="{ active: true }">{{ annTypeLabel[a.type] || a.type }}</span>
-        <div class="announce-body">
-          <b>{{ a.title }}</b>
-          <span v-if="a.demo_slug" class="muted"> · </span>
-          <RouterLink v-if="a.demo_slug" :to="`/demo/${a.demo_slug}`" class="muted">{{ a.demo_slug }}</RouterLink>
-          <p v-if="a.content" class="muted" style="margin: 4px 0 0">{{ a.content }}</p>
-        </div>
-        <span class="muted" style="white-space: nowrap">{{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</span>
-      </div>
-    </div>
-  </section>
-
   <section class="section" style="padding-top: 8px">
     <div class="toolbar">
       <div class="search-box">
@@ -173,5 +158,10 @@ onBeforeUnmount(() => observer?.disconnect())
       <template v-if="loadingMore"><span class="spinner"></span> 加载更多…</template>
       <template v-else-if="!hasMore">已加载全部 {{ total }} 个 Demo</template>
     </div>
+  </section>
+
+  <section v-if="announcements.length" class="section ann-blocks">
+    <AnnouncementBlock v-if="projectAnnouncements.length" title="项目公告" :items="projectAnnouncements" />
+    <AnnouncementBlock v-if="systemAnnouncements.length" title="系统公告" :items="systemAnnouncements" />
   </section>
 </template>

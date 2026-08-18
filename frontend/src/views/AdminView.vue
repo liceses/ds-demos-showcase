@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
+import { useUiStore } from '../stores/ui'
 import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, Tag } from '../api/types'
+
+const ui = useUiStore()
 
 const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings' | 'announcements'>('review')
 
@@ -59,7 +62,7 @@ async function createAnnouncement() {
   }
   try {
     await api.createAnnouncement({ title: newAnn.value.title.trim(), content: newAnn.value.content.trim() })
-    annOk.value = '公告已发布'
+    ui.toast('公告已发布', 'success')
     newAnn.value = { title: '', content: '' }
     announcements.value = await api.listAnnouncements()
   } catch (e) {
@@ -68,12 +71,19 @@ async function createAnnouncement() {
 }
 
 async function deleteAnnouncement(id: number) {
-  if (!confirm('确定删除这条公告？')) return
+  const ok = await ui.confirm({
+    title: '删除公告',
+    message: '确定删除这条公告？',
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
   try {
     await api.deleteAnnouncement(id)
+    ui.toast('公告已删除', 'success')
     announcements.value = await api.listAnnouncements()
   } catch (e) {
-    alert((e as Error).message)
+    ui.toast((e as Error).message, 'error')
   }
 }
 

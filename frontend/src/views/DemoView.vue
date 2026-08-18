@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
+import { useUiStore } from '../stores/ui'
 import type { Comment, CommitInfo, DemoDetail, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import MarkdownView from '../components/MarkdownView.vue'
@@ -12,6 +13,7 @@ import CommentTree from '../components/CommentTree.vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const ui = useUiStore()
 const slug = String(route.params.slug)
 
 const demo = ref<DemoDetail | null>(null)
@@ -90,12 +92,19 @@ const canEdit = computed(
 
 async function onDelete() {
   if (!demo.value) return
-  if (!confirm(`确定删除「${demo.value.title}」？此操作不可恢复。`)) return
+  const ok = await ui.confirm({
+    title: '删除 Demo',
+    message: `确定删除「${demo.value.title}」？此操作不可恢复，本地文件与 OSS 对象都会被清理。`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
   try {
     await api.deleteDemo(slug)
+    ui.toast('Demo 已删除', 'success')
     router.push('/')
   } catch (e) {
-    alert((e as Error).message)
+    ui.toast((e as Error).message, 'error')
   }
 }
 
@@ -117,11 +126,13 @@ onMounted(load)
         <span class="mini-stat"><b>{{ demo.view_count }}</b> 浏览</span>
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
-        <button class="btn btn-sm btn-primary" type="button" @click="onDownload">下载 ZIP</button>
-        <template v-if="canEdit">
-          <RouterLink class="btn btn-sm" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
-          <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
-        </template>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">下载 ZIP</button>
+          <template v-if="canEdit">
+            <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
+            <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
+          </template>
+        </div>
       </div>
     </section>
 

@@ -49,22 +49,46 @@ def preview_file(slug: str, path: str):
     if "/" in slug or "\\" in slug or not slug:
         raise HTTPException(status_code=400, detail="非法的 demo 标识", )
     safe = _safe_join(slug, path)
+    is_html = safe.lower().endswith((".html", ".htm"))
 
-    root = settings.demos_path / slug / "files"
-    file_path = (root / safe).resolve()
-    if file_path.is_file():
-        # 同源返回本地文件：iframe 内的 localStorage 仍属于主站源，不会被第三方拦截
-        return FileResponse(file_path)
+    # HTML 文档：同源返回 + 注入 <base> 指向 OSS，保证 localStorage 属主站源，
+    # 而页内 js/css/图片相对地址会经 <base> 自动跳到 OSS 直连，流量不占服务器。
+    if is_html:
+        data = _read_preview_byte(slug, safe)
+        if data is None:
+            raise HTTPException(status_code=404, detail="文件不存在", )
+        import re as _re
+        html = data.decode("utf-8", errors="replace")
+        base_url = oss.public_url(f"demos/{slug}/files/") if oss.enabled() else f"/preview/{slug}/"
+        if _re.search(r"<base\s", html, _re.IGNORECASE):
+            # 若页面自带 base，替换成我们的
+            html = _re.sub(r"(?i)<base[^>]*>", f'<base href="{base_url}">', html, count=1)
+        elif _re.search(r"<head[^>]*>", html, _re.IGNORECASE):
+            html = _re.sub(r"(?i)(<head[^>]*>)", r'\1<base href="' + base_url + '">', html, count=1)
+        else:
+            html = f'<base href="{base_url}">' + html
+        return Response(content=html.encode("utf-8"), media_type="text/html; charset=utf-8")
 
-    # 本地没有时，从 OSS 拉取并原样返回（仍同源代理，不 302）
+    # 非 HTML（js/css/图片等）：OSS 已启用则 302 直连 OSS，不占服务器带宽
     if oss.enabled():
+        # 确认对象存在才跳，避免 302 到不存在文件
         data = oss.get_bytes(f"demos/{slug}/files/{safe}")
         if data is not None:
-            import mimetypes
-            media_type = mimetypes.guess_type(safe)[0] or "application/octet-stream"
-            return Response(content=data, media_type=media_type)
+            return RedirectResponse(oss.public_url(f"demos/{slug}/files/{safe}"))
 
+    file_path = (settings.demos_path / slug / "files" / safe).resolve()
+    if file_path.is_file():
+        return FileResponse(file_path)
     raise HTTPException(status_code=404, detail="文件不存在", )
+
+
+def _read_preview_byte(slug: str, safe: str) -> bytes | None:
+    file_path = (settings.demos_path / slug / "files" / safe).resolve()
+    if file_path.is_file():
+        return file_path.read_bytes()
+    if oss.enabled():
+        return oss.get_bytes(f"demos/{slug}/files/{safe}")
+    return None
 
 
 @app.get("/media/{path:path}")

@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: sqlite:///./data/app.db
+      STORAGE_DIR: ./storage
+      JWT_SECRET: ${JWT_SECRET:-please-change-me}
+      AUTO_APPROVE: ${AUTO_APPROVE:-true}
+      MAX_UPLOAD_SIZE: 209715200
+      MAX_FILE_SIZE: 209715200
+    volumes:
+      - demo-data:/app/data
+      - demo-storage:/app/storage
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  demo-data:
+  demo-storage:

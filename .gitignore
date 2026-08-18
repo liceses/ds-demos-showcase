@@ -41,6 +41,9 @@ Thumbs.db
 .npm-cache/
 .npm-install-cache/
 
+# 根目录本地环境变量
+/.env
+
 # Wrangler / CF
 .wrangler/
 .dev.vars

@@ -167,7 +167,13 @@ def upload_demo_to_oss(slug: str) -> None:
             if p.is_file():
                 rel = p.relative_to(files_root).as_posix()
                 content_type = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
-                oss.put_file(f"demos/{slug}/files/{rel}", p, content_type)
+                # inline：直接以 OSS 直链在 iframe 里当页面/资源渲染（历史对象曾被误标 attachment）
+                oss.put_file(
+                    f"demos/{slug}/files/{rel}",
+                    p,
+                    content_type,
+                    extra_headers={"Content-Disposition": "inline"},
+                )
 
     sessions_root = demo_sessions_dir(slug)
     if sessions_root.exists():
@@ -175,7 +181,12 @@ def upload_demo_to_oss(slug: str) -> None:
             if p.is_file():
                 rel = p.relative_to(sessions_root).as_posix()
                 content_type = mimetypes.guess_type(p.name)[0] or "text/plain; charset=utf-8"
-                oss.put_file(f"demos/{slug}/sessions/{rel}", p, content_type)
+                oss.put_file(
+                    f"demos/{slug}/sessions/{rel}",
+                    p,
+                    content_type,
+                    extra_headers={"Content-Disposition": "inline"},
+                )
 
 
 def make_slug(title: str) -> str:

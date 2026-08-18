@@ -29,8 +29,12 @@ cd ds-demos-showcase/web
 
 ```bash
 cp .env.example .env
-# 用 vim/nano 编辑 .env，把 JWT_SECRET 改成随机长字符串
+# 用 vim/nano 编辑 .env
+#  - 必改：JWT_SECRET 改成随机长字符串
+#  - 可选（推荐，大文件走 OSS）：填 OSS_ENDPOINT / OSS_BUCKET / OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET
 ```
+
+> **OSS 桶权限**：在阿里云 OSS 控制台把 bucket 读写权限设为 **公有读 / 私有写**，这样预览/下载才能 302 直连 OSS，不占服务器 3M 带宽。上传仍用签名（私有写），安全。
 
 ### 4. 构建并启动
 

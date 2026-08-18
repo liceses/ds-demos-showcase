@@ -19,6 +19,21 @@ class Settings(BaseSettings):
     max_file_size: int = 200 * 1024 * 1024
     max_cover_size: int = 5 * 1024 * 1024     # 5MB
 
+    # 阿里云 OSS（可选；配置后文件走 OSS 直连，不占服务器带宽）
+    oss_endpoint: str = ""
+    oss_bucket: str = ""
+    oss_access_key_id: str = ""
+    oss_access_key_secret: str = ""
+
+    @property
+    def oss_enabled(self) -> bool:
+        return bool(self.oss_endpoint and self.oss_bucket and self.oss_access_key_id and self.oss_access_key_secret)
+
+    @property
+    def oss_public_base(self) -> str:
+        # 公有读桶的公开访问地址
+        return f"https://{self.oss_bucket}.{self.oss_endpoint}"
+
     @property
     def storage_path(self) -> Path:
         return Path(self.storage_dir).resolve()

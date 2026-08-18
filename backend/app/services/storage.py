@@ -1,4 +1,5 @@
 import io
+import mimetypes
 import re
 import shutil
 import uuid
@@ -8,6 +9,7 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from ..config import settings
+from . import oss
 
 SLUG_RE = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 
@@ -136,7 +138,38 @@ def save_cover(data: bytes, ext: str | None = None) -> str:
     folder = settings.media_path / "covers"
     folder.mkdir(parents=True, exist_ok=True)
     (folder / name).write_bytes(data)
+    content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+    oss.put_bytes(f"media/covers/{name}", data, content_type)
     return f"/media/covers/{name}"
+
+
+def delete_demo_from_oss(slug: str) -> None:
+    """删除 OSS 上某个 demo 的全部对象。"""
+    validate_slug(slug)
+    oss.delete_prefix(f"demos/{slug}/")
+
+
+def upload_demo_to_oss(slug: str) -> None:
+    """把本地已解压的 demo 文件镜像到 OSS（files + sessions）。"""
+    if not oss.enabled():
+        return
+    validate_slug(slug)
+
+    files_root = demo_files_dir(slug)
+    if files_root.exists():
+        for p in files_root.rglob("*"):
+            if p.is_file():
+                rel = p.relative_to(files_root).as_posix()
+                content_type = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+                oss.put_file(f"demos/{slug}/files/{rel}", p, content_type)
+
+    sessions_root = demo_sessions_dir(slug)
+    if sessions_root.exists():
+        for p in sessions_root.rglob("*"):
+            if p.is_file():
+                rel = p.relative_to(sessions_root).as_posix()
+                content_type = mimetypes.guess_type(p.name)[0] or "text/plain; charset=utf-8"
+                oss.put_file(f"demos/{slug}/sessions/{rel}", p, content_type)
 
 
 def make_slug(title: str) -> str:

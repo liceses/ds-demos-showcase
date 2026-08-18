@@ -5,3 +5,4 @@ SQLAlchemy>=2.0
 pydantic>=2.7
 pydantic-settings>=2.2
 PyJWT>=2.8
+oss2>=2.18

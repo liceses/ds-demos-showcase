@@ -2,8 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
@@ -11,12 +10,12 @@ from .database import Base, SessionLocal, engine
 from .models import Setting, Tag, User
 from .routers import admin, auth, comments, commits, demos, sessions, tags, users
 from .security import hash_password
+from .services import oss
 from .services.settings_service import KEY_AUTO_APPROVE
 
 app = FastAPI(title="DS 民间科研成果展示 API", version="0.1.0")
 
 settings.media_path.mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=settings.media_path), name="media")
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -49,13 +48,38 @@ app.include_router(admin.router, prefix=API_PREFIX)
 def preview_file(slug: str, path: str):
     if "/" in slug or "\\" in slug or not slug:
         raise HTTPException(status_code=400, detail="非法的 demo 标识", )
+    safe = _safe_join(slug, path)
+    if oss.enabled():
+        return RedirectResponse(oss.public_url(f"demos/{slug}/files/{safe}"))
     root = settings.demos_path / slug / "files"
-    file_path = (root / path).resolve()
+    file_path = (root / safe).resolve()
     if not str(file_path).startswith(str(root.resolve())):
         raise HTTPException(status_code=400, detail="非法的路径", )
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="文件不存在", )
     return FileResponse(file_path)
+
+
+@app.get("/media/{path:path}")
+def media_file(path: str):
+    from pathlib import Path as _P
+    safe = _P(path).as_posix().replace("\\", "/")
+    if oss.enabled():
+        return RedirectResponse(oss.public_url(f"media/{safe}"))
+    file_path = (settings.media_path / safe).resolve()
+    if not str(file_path).startswith(str(settings.media_path.resolve())):
+        raise HTTPException(status_code=400, detail="非法的路径", )
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="文件不存在", )
+    return FileResponse(file_path)
+
+
+def _safe_join(slug: str, path: str) -> str:
+    root = settings.demos_path / slug / "files"
+    file_path = (root / path).resolve()
+    if not str(file_path).startswith(str(root.resolve())):
+        raise HTTPException(status_code=400, detail="非法的路径", )
+    return file_path.relative_to(root).as_posix()
 
 
 def init_db() -> None:
@@ -74,6 +98,8 @@ def init_db() -> None:
             '</svg>',
             encoding="utf-8",
         )
+    if oss.enabled():
+        oss.put_bytes("media/covers/default.svg", default_cover.read_text(encoding="utf-8").encode(), "image/svg+xml")
 
     Base.metadata.create_all(bind=engine)
 

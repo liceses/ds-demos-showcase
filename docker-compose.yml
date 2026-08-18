@@ -8,6 +8,10 @@ services:
       AUTO_APPROVE: ${AUTO_APPROVE:-true}
       MAX_UPLOAD_SIZE: 209715200
       MAX_FILE_SIZE: 209715200
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
     volumes:
       - demo-data:/app/data
       - demo-storage:/app/storage

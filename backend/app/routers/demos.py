@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -17,7 +17,7 @@ from ..deps import current_user, optional_user
 from ..models import Demo, DemoTag, Tag, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
-from ..services import git_service, storage
+from ..services import git_service, oss, storage
 from ..services.settings_service import get_auto_approve
 
 router = APIRouter(prefix="/demos", tags=["demos"])
@@ -191,6 +191,9 @@ async def create_demo(
     _set_demo_tags(db, demo, _parse_tags(tags))
     db.commit()
 
+    storage.upload_demo_to_oss(slug)
+    oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+
     git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site")
     return DemoCreateResult(slug=slug, status=status)
 
@@ -225,6 +228,8 @@ async def update_demo(
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
         storage.extract_zip(zip_bytes, slug)
+        storage.upload_demo_to_oss(slug)
+        oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
         git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site")
 
     demo.updated_at = datetime.utcnow()
@@ -240,12 +245,20 @@ def delete_demo(slug: str, db: Session = Depends(get_db), user: User = Depends(c
     db.delete(demo)
     db.commit()
     shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
+    storage.delete_demo_from_oss(slug)
     return Response(status_code=204)
 
 
 @router.get("/{slug}/download")
 def download_demo(slug: str, db: Session = Depends(get_db)):
     demo = _find_demo(db, slug)
+    demo.download_count += 1
+    db.commit()
+
+    # OSS 已启用：直接 302 到 OSS 公有读地址，不占服务器带宽
+    if oss.enabled():
+        return RedirectResponse(oss.public_url(f"demos/{slug}/{slug}.zip"))
+
     files_dir = storage.demo_files_dir(slug)
     if not files_dir.exists():
         raise HTTPException(status_code=404, detail="Demo 文件不存在", )
@@ -257,9 +270,6 @@ def download_demo(slug: str, db: Session = Depends(get_db)):
         for p in files_dir.rglob("*"):
             if p.is_file():
                 zf.write(p, p.relative_to(files_dir))
-
-    demo.download_count += 1
-    db.commit()
 
     from starlette.background import BackgroundTask
 

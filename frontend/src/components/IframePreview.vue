@@ -12,7 +12,7 @@ defineProps<{
     :src="src"
     :srcdoc="srcdoc"
     :title="title || 'Demo 预览'"
-    sandbox="allow-scripts allow-modals allow-forms allow-popups"
+    sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
     loading="eager"
   ></iframe>
 </template>

@@ -145,46 +145,54 @@ def init_db() -> None:
 
     db = SessionLocal()
     try:
-        # 标签键定义（固定值 / 开放值 / 数字值）
-        if db.query(TagKey).count() == 0:
-            def tag_key(key: str, mode: str, label: str, description: str = "", sort: int = 0) -> None:
+        # 标签键定义（固定值 / 开放值 / 数字值）——幂等：缺失才插入，已有数据不动
+        _DEFAULT_TAG_KEYS = [
+            ("model", "fixed", "模型", "AI 模型版本（固定值）", 1),
+            ("plugin", "fixed", "插件", "使用的插件（固定值）", 2),
+            ("type", "fixed", "类型", "Demo 类型（固定值）", 3),
+            ("skills", "fixed", "技能", "技能工作区（固定值）", 4),
+            ("preset", "fixed", "预设", "预设配置（固定值）", 5),
+            ("category", "fixed", "分类", "作品分类（固定值）", 6),
+            ("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 7),
+            ("rounds", "int", "轮数", "生成轮数（必须为整数）", 8),
+        ]
+        for key, mode, label, description, sort in _DEFAULT_TAG_KEYS:
+            if db.get(TagKey, key) is None:
                 db.add(TagKey(key=key, mode=mode, label=label, description=description, sort=sort))
 
-            tag_key("model", "fixed", "模型", "AI 模型版本（固定值）", 1)
-            tag_key("plugin", "fixed", "插件", "使用的插件（固定值）", 2)
-            tag_key("type", "fixed", "类型", "Demo 类型（固定值）", 3)
-            tag_key("skills", "fixed", "技能", "技能工作区（固定值）", 4)
-            tag_key("preset", "fixed", "预设", "预设配置（固定值）", 5)
-            tag_key("category", "fixed", "分类", "作品分类（固定值）", 6)
-            tag_key("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 7)
-            tag_key("rounds", "int", "轮数", "生成轮数（必须为整数）", 8)
-
-        if db.query(Tag).count() == 0:
-            def tag(key: str, value: str, description: str = "", parent: Tag | None = None) -> Tag:
-                t = Tag(key=key, value=value, description=description, parent_id=parent.id if parent else None)
-                db.add(t)
-                db.flush()
-                return t
-
-            model_root = tag("model", "dsv4", "模型版本总类")
-            tag("model", "dsv4-flash", "DeepSeek V4 Flash —— 快速推理", model_root)
-            tag("model", "dsv4-pro", "DeepSeek V4 Pro —— 强推理", model_root)
-            tag("model", "dsv4flash", "历史自由值：dsv4-flash 的旧写法")
-            tag("model", "ds-unknown", "历史自由值：未识别的模型")
-            tag("plugin", "routing-suite", "路由套件插件")
-            tag("plugin", "suite", "历史自由值：路由套件的旧写法")
-            tag("skills", "J-space", "J-space 技能工作区")
-            tag("skills", "j-space", "历史自由值：J-space 的旧写法")
-            tag("preset", "router-standard", "标准路由预设")
-            tag("preset", "spec", "历史自由值：规格预设")
-            tag("type", "effect", "视觉特效类")
-            tag("type", "widget", "小组件类")
-            tag("type", "game", "小游戏类")
-            tag("type", "demo", "综合演示类")
-            tag("category", "3D建模", "3D 建模类")
-            tag("category", "仿真", "仿真类")
-            tag("category", "动画", "动画类")
-            tag("category", "图形学", "图形学类")
+        # 默认标签（含历史自由值）——幂等：缺失才插入
+        _DEFAULT_TAGS = [
+            ("model", "dsv4", "模型版本总类", None),
+            ("model", "dsv4-flash", "DeepSeek V4 Flash —— 快速推理", "dsv4"),
+            ("model", "dsv4-pro", "DeepSeek V4 Pro —— 强推理", "dsv4"),
+            ("model", "dsv4flash", "历史自由值：dsv4-flash 的旧写法", None),
+            ("model", "ds-unknown", "历史自由值：未识别的模型", None),
+            ("plugin", "routing-suite", "路由套件插件", None),
+            ("plugin", "suite", "历史自由值：路由套件的旧写法", None),
+            ("skills", "J-space", "J-space 技能工作区", None),
+            ("skills", "j-space", "历史自由值：J-space 的旧写法", None),
+            ("preset", "router-standard", "标准路由预设", None),
+            ("preset", "spec", "历史自由值：规格预设", None),
+            ("type", "effect", "视觉特效类", None),
+            ("type", "widget", "小组件类", None),
+            ("type", "game", "小游戏类", None),
+            ("type", "demo", "综合演示类", None),
+            ("category", "3D建模", "3D 建模类", None),
+            ("category", "仿真", "仿真类", None),
+            ("category", "动画", "动画类", None),
+            ("category", "图形学", "图形学类", None),
+        ]
+        for key, value, description, parent_value in _DEFAULT_TAGS:
+            if db.query(Tag).filter(Tag.key == key, Tag.value == value).first() is None:
+                parent = None
+                if parent_value:
+                    parent = db.query(Tag).filter(Tag.key == key, Tag.value == parent_value).first()
+                db.add(Tag(
+                    key=key,
+                    value=value,
+                    description=description,
+                    parent_id=parent.id if parent else None,
+                ))
 
         if db.query(User).filter(User.username == "admin").first() is None:
             db.add(User(username="admin", password_hash=hash_password("admin123"), role="admin", bio="站点管理员"))

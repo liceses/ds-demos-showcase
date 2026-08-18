@@ -12,6 +12,7 @@ const description = ref('')
 const tagsText = ref('')
 const coverFile = ref<File | null>(null)
 const zipFile = ref<File | null>(null)
+const commitMessage = ref('')
 const submitting = ref(false)
 const error = ref('')
 const success = ref<{ slug: string; status: string } | null>(null)
@@ -62,6 +63,7 @@ async function submit() {
         tags,
         cover: coverFile.value,
         file: zipFile.value,
+        commit_message: commitMessage.value.trim() || undefined,
       })
       success.value = { slug: editSlug, status: 'updated' }
     } else {
@@ -116,6 +118,11 @@ async function submit() {
           zip 文件{{ editSlug ? '（可选，不选则保留原文件）' : '' }}
           <input class="input" type="file" accept=".zip,application/zip" @change="onZipChange" />
           <span class="hint">根目录需包含 index.html；大小上限 50MB</span>
+        </label>
+        <label v-if="editSlug" class="field">
+          更新说明 / commit 信息（可选）
+          <input v-model="commitMessage" class="input" placeholder="例如：修复第二关音效不同步的问题" />
+          <span class="hint">会写入 git commit 并自动生成「更新公告」</span>
         </label>
 
         <div v-if="error" class="notice notice-error">{{ error }}</div>

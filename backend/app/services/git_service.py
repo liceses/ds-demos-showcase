@@ -42,7 +42,12 @@ def ensure_repo(slug: str) -> None:
         _run(slug, "config", "user.email", "demo-site@local")
 
 
-def commit_all(slug: str, author_name: str = "demo-site", author_email: str = "demo-site@local") -> bool:
+def commit_all(
+    slug: str,
+    author_name: str = "demo-site",
+    author_email: str = "demo-site@local",
+    message: str = "update demo",
+) -> bool:
     ensure_repo(slug)
     _run(slug, "add", "-A")
     # 没有变化时 git commit 会失败，返回 False
@@ -54,7 +59,7 @@ def commit_all(slug: str, author_name: str = "demo-site", author_email: str = "d
         f"user.email={author_email}",
         "commit",
         "-m",
-        "update demo",
+        message,
         check=False,
     )
     if proc.returncode != 0:

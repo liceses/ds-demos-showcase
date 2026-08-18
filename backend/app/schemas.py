@@ -176,3 +176,20 @@ class ReviewAction(BaseModel):
 class UserPatch(BaseModel):
     role: str | None = Field(default=None, pattern="^(user|admin)$")
     status: str | None = Field(default=None, pattern="^(active|suspended|deleted)$")
+
+
+# ---------- Announcements ----------
+class AnnouncementOut(ORMModel):
+    id: int
+    type: str  # manual | auto | update
+    title: str
+    content: str
+    demo_slug: str | None = None
+    created_by: int | None = None
+    created_at: datetime
+
+
+class AnnouncementUpsert(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = ""
+    demo_slug: str | None = None

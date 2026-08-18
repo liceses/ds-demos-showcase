@@ -192,6 +192,12 @@ p {
   color: var(--paper);
   box-shadow: var(--shadow-lg);
 }
+.btn-danger {
+  background: #b3001b;
+  color: white;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(1deg);
+}
 .btn-lg {
   padding: 16px 30px;
   font-size: 16px;
@@ -906,6 +912,27 @@ table.data tr.inconsistent td {
   background: var(--yellow);
   border: 2px solid var(--ink);
   padding: 1px 7px;
+}
+
+/* ---------- 公告 ---------- */
+.announce-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.announce-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 14px;
+}
+.announce-body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- 响应式 ---------- */

@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { AdminDemo, AdminUser, DemoDetail, Settings, Tag } from '../api/types'
+import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, Tag } from '../api/types'
 
-const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings'>('review')
+const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings' | 'announcements'>('review')
 
 const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
 const tags = ref<Tag[]>([])
 const users = ref<AdminUser[]>([])
 const settings = ref<Settings>({ auto_approve: true })
+const announcements = ref<Announcement[]>([])
+
+const newAnn = ref({ title: '', content: '' })
+const annError = ref('')
+const annOk = ref('')
 
 const newTag = ref({ key: '', value: '', description: '', parent_id: '' as string | number })
 const tagError = ref('')
@@ -22,22 +27,51 @@ async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [p, d, t, u, s] = await Promise.all([
+    const [p, d, t, u, s, a] = await Promise.all([
       api.adminReview(),
       api.adminDemos(),
       api.listTags(),
       api.adminUsers(),
       api.getSettings(),
+      api.listAnnouncements(),
     ])
     pending.value = p
     demos.value = d
     tags.value = t
     users.value = u
     settings.value = s
+    announcements.value = a
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+  }
+}
+
+async function createAnnouncement() {
+  annError.value = ''
+  annOk.value = ''
+  if (!newAnn.value.title.trim()) {
+    annError.value = '公告标题必填'
+    return
+  }
+  try {
+    await api.createAnnouncement({ title: newAnn.value.title.trim(), content: newAnn.value.content.trim() })
+    annOk.value = '公告已发布'
+    newAnn.value = { title: '', content: '' }
+    announcements.value = await api.listAnnouncements()
+  } catch (e) {
+    annError.value = (e as Error).message
+  }
+}
+
+async function deleteAnnouncement(id: number) {
+  if (!confirm('确定删除这条公告？')) return
+  try {
+    await api.deleteAnnouncement(id)
+    announcements.value = await api.listAnnouncements()
+  } catch (e) {
+    alert((e as Error).message)
   }
 }
 
@@ -109,6 +143,7 @@ onMounted(loadAll)
       <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
       <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
       <button class="tab" :class="{ active: tab === 'users' }" type="button" @click="tab = 'users'">用户管理</button>
+      <button class="tab" :class="{ active: tab === 'announcements' }" type="button" @click="tab = 'announcements'">公告管理</button>
       <button class="tab" :class="{ active: tab === 'settings' }" type="button" @click="tab = 'settings'">站点设置</button>
     </div>
 
@@ -215,6 +250,47 @@ onMounted(loadAll)
                     <td>
                       <button class="btn btn-sm btn-outline" type="button" @click="toggleUser(u, 'role')">切换角色</button>
                       <button class="btn btn-sm btn-dark" type="button" @click="toggleUser(u, 'status')">{{ u.status === 'active' ? '停用' : '启用' }}</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+
+          <!-- 公告管理 -->
+          <template v-else-if="tab === 'announcements'">
+            <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
+              <h2 style="margin-bottom: 12px">发布手动公告</h2>
+              <div class="form-stack">
+                <label class="field">
+                  标题
+                  <input v-model="newAnn.title" class="input" placeholder="公告标题" />
+                </label>
+                <label class="field">
+                  内容
+                  <textarea v-model="newAnn.content" class="input textarea" rows="3" placeholder="公告内容（可选）"></textarea>
+                </label>
+                <div class="filter-row" style="margin-bottom: 0">
+                  <button class="btn btn-primary" type="button" @click="createAnnouncement">发布公告</button>
+                  <span v-if="annError" class="notice notice-error" style="margin: 0">{{ annError }}</span>
+                  <span v-if="annOk" class="notice notice-success" style="margin: 0">{{ annOk }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead>
+                  <tr><th>类型</th><th>标题</th><th>内容</th><th>时间</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="a in announcements" :key="a.id">
+                    <td><span class="status-pill">{{ a.type }}</span></td>
+                    <td>{{ a.title }}</td>
+                    <td style="max-width: 320px; overflow-wrap: anywhere">{{ a.content }}</td>
+                    <td>{{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</td>
+                    <td>
+                      <RouterLink v-if="a.demo_slug" class="btn btn-sm btn-outline" :to="`/demo/${a.demo_slug}`">查看</RouterLink>
+                      <button class="btn btn-sm btn-danger" type="button" @click="deleteAnnouncement(a.id)">删除</button>
                     </td>
                   </tr>
                 </tbody>

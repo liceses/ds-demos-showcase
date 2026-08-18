@@ -4,6 +4,7 @@ import { mockApi } from './mock'
 import type {
   AdminDemo,
   AdminUser,
+  Announcement,
   AuthResponse,
   Comment,
   CommitDetail,
@@ -111,6 +112,7 @@ const realApi = {
     if (payload.tags) form.append('tags', JSON.stringify(payload.tags))
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
+    if (payload.commit_message) form.append('commit_message', payload.commit_message)
     await http.put(`/demos/${encodeURIComponent(slug)}`, form)
   },
   async deleteDemo(slug: string): Promise<void> {
@@ -179,6 +181,23 @@ const realApi = {
   async updateUser(id: number, patch: Partial<Pick<User, 'role' | 'status'>>): Promise<User> {
     const { data } = await http.patch(`/users/${id}`, patch)
     return data
+  },
+
+  // ---------- 公告 ----------
+  async listAnnouncements(): Promise<Announcement[]> {
+    const { data } = await http.get('/announcements')
+    return data
+  },
+  async createAnnouncement(payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+    const { data } = await http.post('/admin/announcements', payload)
+    return data
+  },
+  async updateAnnouncement(id: number, payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+    const { data } = await http.put(`/admin/announcements/${id}`, payload)
+    return data
+  },
+  async deleteAnnouncement(id: number): Promise<void> {
+    await http.delete(`/admin/announcements/${id}`)
   },
 }
 

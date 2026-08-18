@@ -140,4 +140,15 @@ export interface UpdateDemoPayload {
   tags?: string[]
   cover?: File | null
   file?: File | null
+  commit_message?: string
+}
+
+export interface Announcement {
+  id: number
+  type: 'manual' | 'auto' | 'update'
+  title: string
+  content: string
+  demo_slug: string | null
+  created_by: number | null
+  created_at: string
 }

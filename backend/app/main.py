@@ -8,7 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .models import Setting, Tag, User
-from .routers import admin, auth, comments, commits, demos, sessions, tags, users
+from .routers import admin, announcements, auth, comments, commits, demos, sessions, tags, users
 from .security import hash_password
 from .services import oss
 from .services.settings_service import KEY_AUTO_APPROVE
@@ -42,6 +42,7 @@ app.include_router(comments.router, prefix=API_PREFIX)
 app.include_router(sessions.router, prefix=API_PREFIX)
 app.include_router(commits.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
+app.include_router(announcements.router, prefix=API_PREFIX)
 
 
 @app.get("/preview/{slug}/{path:path}")

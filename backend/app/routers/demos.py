@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
-from ..models import Demo, DemoTag, Tag, User
+from ..models import Announcement, Demo, DemoTag, Tag, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import git_service, oss, storage
@@ -195,6 +195,16 @@ async def create_demo(
     oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
 
     git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site")
+
+    # 自动公告：新 demo 发布
+    db.add(Announcement(
+        type="auto",
+        title="新 Demo 发布",
+        content=demo.title,
+        demo_slug=slug,
+        created_by=user.id,
+    ))
+    db.commit()
     return DemoCreateResult(slug=slug, status=status)
 
 
@@ -206,6 +216,7 @@ async def update_demo(
     tags: str | None = Form(None),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
+    commit_message: str | None = Form(None),
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
@@ -213,16 +224,21 @@ async def update_demo(
     if demo.author_id != user.id and user.role != "admin":
         raise HTTPException(status_code=403, detail="无权修改该 Demo", )
 
-    if title is not None:
+    changed = False
+    if title is not None and title.strip() != demo.title:
         demo.title = title.strip()
-    if description is not None:
+        changed = True
+    if description is not None and description != demo.description:
         demo.description = description
+        changed = True
     if tags is not None:
         _set_demo_tags(db, demo, _parse_tags(tags))
+        changed = True
     if cover is not None and cover.filename:
         ext = Path(cover.filename).suffix.lstrip(".") or "png"
         cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
         demo.cover_url = storage.save_cover(cover_bytes, ext)
+        changed = True
     if file is not None and file.filename:
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
@@ -230,10 +246,24 @@ async def update_demo(
         storage.extract_zip(zip_bytes, slug)
         storage.upload_demo_to_oss(slug)
         oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
-        git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site")
+        changed = True
 
     demo.updated_at = datetime.utcnow()
     db.commit()
+
+    if changed:
+        message = (commit_message or "更新 demo").strip() or "更新 demo"
+        git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site", message=message)
+        # 更新公告：内容即 commit 信息
+        db.add(Announcement(
+            type="update",
+            title=f"Demo 更新：{demo.title}",
+            content=message,
+            demo_slug=slug,
+            created_by=user.id,
+        ))
+        db.commit()
+
     return Response(status_code=204)
 
 

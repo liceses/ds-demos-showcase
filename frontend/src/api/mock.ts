@@ -4,6 +4,7 @@
 import type {
   AdminDemo,
   AdminUser,
+  Announcement,
   AuthResponse,
   Comment,
   CommitDetail,
@@ -21,6 +22,12 @@ import type {
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
+
+const announcements: Announcement[] = [
+  { id: 1, type: 'manual', title: '站点公告', content: '欢迎来到 DS 民间科研成果展示站，欢迎大家投稿 AI 生成的网页 Demo！', demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
+  { id: 2, type: 'auto', title: '新 Demo 发布', content: '植物大战僵尸（极简版）', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-01T10:00:00Z' },
+  { id: 3, type: 'update', title: 'Demo 更新：植物大战僵尸', content: '修复第二关音效不同步的问题', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-02T15:30:00Z' },
+]
 
 function svgCover(bg: string, text: string, sub: string): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
@@ -769,6 +776,40 @@ export const mockApi = {
     if (!u) throw new Error('用户不存在')
     Object.assign(u, patch)
     return clone(u)
+  },
+
+  // ---------- 公告 ----------
+  async listAnnouncements(): Promise<Announcement[]> {
+    await delay()
+    return clone(announcements)
+  },
+  async createAnnouncement(payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+    await delay(200)
+    const ann: Announcement = {
+      id: Math.max(0, ...announcements.map((a) => a.id)) + 1,
+      type: 'manual',
+      title: payload.title,
+      content: payload.content || '',
+      demo_slug: payload.demo_slug ?? null,
+      created_by: currentUser?.id ?? null,
+      created_at: new Date().toISOString(),
+    }
+    announcements.unshift(ann)
+    return clone(ann)
+  },
+  async updateAnnouncement(id: number, payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+    await delay(200)
+    const a = announcements.find((x) => x.id === id)
+    if (!a) throw new Error('公告不存在')
+    a.title = payload.title
+    if (payload.content !== undefined) a.content = payload.content
+    if (payload.demo_slug !== undefined) a.demo_slug = payload.demo_slug
+    return clone(a)
+  },
+  async deleteAnnouncement(id: number): Promise<void> {
+    await delay(200)
+    const idx = announcements.findIndex((a) => a.id === id)
+    if (idx >= 0) announcements.splice(idx, 1)
   },
 }
 

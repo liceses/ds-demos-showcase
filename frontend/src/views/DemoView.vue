@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import type { Comment, CommitInfo, DemoDetail, SessionLog } from '../api/types'
@@ -10,6 +10,7 @@ import CommitTimeline from '../components/CommitTimeline.vue'
 import CommentTree from '../components/CommentTree.vue'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const slug = String(route.params.slug)
 
@@ -83,6 +84,21 @@ async function onDownload() {
   }
 }
 
+const canEdit = computed(
+  () => !!demo.value && auth.isLoggedIn() && (auth.user?.role === 'admin' || auth.user?.username === demo.value.author),
+)
+
+async function onDelete() {
+  if (!demo.value) return
+  if (!confirm(`确定删除「${demo.value.title}」？此操作不可恢复。`)) return
+  try {
+    await api.deleteDemo(slug)
+    router.push('/')
+  } catch (e) {
+    alert((e as Error).message)
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -102,6 +118,10 @@ onMounted(load)
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
         <button class="btn btn-sm btn-primary" type="button" @click="onDownload">下载 ZIP</button>
+        <template v-if="canEdit">
+          <RouterLink class="btn btn-sm" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
+          <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
+        </template>
       </div>
     </section>
 

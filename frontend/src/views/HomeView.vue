@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { DemoSummary, Tag } from '../api/types'
+import type { Announcement, DemoSummary, Tag } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 
 const demos = ref<DemoSummary[]>([])
+const announcements = ref<Announcement[]>([])
 const allTags = ref<Tag[]>([])
 const selectedTags = ref<string[]>([])
 const q = ref('')
@@ -16,6 +17,8 @@ const loading = ref(false)
 const loadingMore = ref(false)
 const error = ref('')
 const hasMore = ref(true)
+
+const annTypeLabel: Record<string, string> = { manual: '公告', auto: '新发布', update: '更新' }
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -76,6 +79,11 @@ onMounted(async () => {
   } catch {
     allTags.value = []
   }
+  try {
+    announcements.value = await api.listAnnouncements()
+  } catch {
+    announcements.value = []
+  }
   await load(true)
   observer = new IntersectionObserver(
     (entries) => {
@@ -99,6 +107,24 @@ onBeforeUnmount(() => observer?.disconnect())
     <p class="sub">
       这里收集由 AI 模型生成的网页 Demo —— 每个作品都附带生成会话日志与 Git 版本时间线，过程全透明。
     </p>
+  </section>
+
+  <section v-if="announcements.length" class="section" style="padding-top: 8px">
+    <div class="section-head">
+      <h2 class="section-title">公告</h2>
+    </div>
+    <div class="announce-list">
+      <div v-for="a in announcements.slice(0, 5)" :key="a.id" class="announce-item">
+        <span class="tag-chip" :class="{ active: true }">{{ annTypeLabel[a.type] || a.type }}</span>
+        <div class="announce-body">
+          <b>{{ a.title }}</b>
+          <span v-if="a.demo_slug" class="muted"> · </span>
+          <RouterLink v-if="a.demo_slug" :to="`/demo/${a.demo_slug}`" class="muted">{{ a.demo_slug }}</RouterLink>
+          <p v-if="a.content" class="muted" style="margin: 4px 0 0">{{ a.content }}</p>
+        </div>
+        <span class="muted" style="white-space: nowrap">{{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</span>
+      </div>
+    </div>
   </section>
 
   <section class="section" style="padding-top: 8px">

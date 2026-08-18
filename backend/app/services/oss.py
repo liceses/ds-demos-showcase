@@ -25,19 +25,24 @@ def public_url(key: str) -> str:
     return f"{settings.oss_public_base}/{key}"
 
 
-def put_bytes(key: str, data: bytes, content_type: str | None = None) -> None:
+def put_bytes(key: str, data: bytes, content_type: str | None = None, extra_headers: dict[str, str] | None = None) -> None:
     if not enabled():
         return
-    headers: dict[str, str] = {}
+    headers: dict[str, str] = dict(extra_headers or {})
     if content_type:
         headers["Content-Type"] = content_type
     _bucket().put_object(key, data, headers=headers)
 
 
-def put_file(key: str, local_path: os.PathLike | str, content_type: str | None = None) -> None:
+def put_file(
+    key: str,
+    local_path: os.PathLike | str,
+    content_type: str | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> None:
     if not enabled():
         return
-    headers: dict[str, str] = {}
+    headers: dict[str, str] = dict(extra_headers or {})
     if content_type:
         headers["Content-Type"] = content_type
     with open(local_path, "rb") as f:

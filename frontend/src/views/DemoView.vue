@@ -78,7 +78,7 @@ async function onDownload() {
   try {
     await api.downloadDemo(slug)
   } catch (e) {
-    alert((e as Error).message)
+    ui.toast((e as Error).message, 'error')
   }
 }
 

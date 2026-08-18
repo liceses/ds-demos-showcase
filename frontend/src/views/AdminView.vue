@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
 import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, Tag } from '../api/types'
@@ -20,6 +20,42 @@ const annError = ref('')
 const annOk = ref('')
 
 const annTypeLabel: Record<string, string> = { manual: '手动公告', auto: '新发布', update: '站点更新', demo_update: '作品更新' }
+
+const annFilter = ref<'all' | 'manual' | 'auto' | 'demo_update' | 'update'>('all')
+const editingAnn = ref<Announcement | null>(null)
+const editAnnForm = ref({ title: '', content: '' })
+
+const filteredAnnouncements = computed(() =>
+  annFilter.value === 'all' ? announcements.value : announcements.value.filter((a) => a.type === annFilter.value),
+)
+
+function startEditAnn(a: Announcement) {
+  editingAnn.value = a
+  editAnnForm.value = { title: a.title, content: a.content }
+}
+
+function cancelEditAnn() {
+  editingAnn.value = null
+}
+
+async function saveEditAnn() {
+  if (!editingAnn.value) return
+  if (!editAnnForm.value.title.trim()) {
+    ui.toast('公告标题必填', 'error')
+    return
+  }
+  try {
+    await api.updateAnnouncement(editingAnn.value.id, {
+      title: editAnnForm.value.title.trim(),
+      content: editAnnForm.value.content.trim(),
+    })
+    ui.toast('公告已更新', 'success')
+    editingAnn.value = null
+    announcements.value = await api.listAnnouncements()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
 
 const newTag = ref({ key: '', value: '', description: '', parent_id: '' as string | number })
 const tagError = ref('')
@@ -92,7 +128,7 @@ async function review(slug: string, action: 'approve' | 'reject') {
     await api.adminApprove(slug, action)
     await loadAll()
   } catch (e) {
-    alert((e as Error).message)
+    ui.toast((e as Error).message, 'error')
   }
 }
 
@@ -127,16 +163,16 @@ async function toggleUser(u: AdminUser, field: 'role' | 'status') {
     }
     users.value = await api.adminUsers()
   } catch (e) {
-    alert((e as Error).message)
+    ui.toast((e as Error).message, 'error')
   }
 }
 
 async function saveSettings() {
   try {
     settings.value = await api.updateSettings(settings.value)
-    alert('设置已保存')
+    ui.toast('设置已保存', 'success')
   } catch (e) {
-    alert((e as Error).message)
+    ui.toast((e as Error).message, 'error')
   }
 }
 
@@ -272,38 +308,75 @@ onMounted(loadAll)
           <!-- 公告管理 -->
           <template v-else-if="tab === 'announcements'">
             <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
-              <h2 style="margin-bottom: 12px">发布手动公告</h2>
+              <h2 style="margin-bottom: 12px">{{ editingAnn ? '编辑公告' : '发布手动公告' }}</h2>
               <div class="form-stack">
-                <label class="field">
-                  标题
-                  <input v-model="newAnn.title" class="input" placeholder="公告标题" />
-                </label>
-                <label class="field">
-                  内容
-                  <textarea v-model="newAnn.content" class="input textarea" rows="3" placeholder="公告内容（可选）"></textarea>
-                </label>
-                <div class="filter-row" style="margin-bottom: 0">
-                  <button class="btn btn-primary" type="button" @click="createAnnouncement">发布公告</button>
-                  <span v-if="annError" class="notice notice-error" style="margin: 0">{{ annError }}</span>
-                  <span v-if="annOk" class="notice notice-success" style="margin: 0">{{ annOk }}</span>
-                </div>
+                <template v-if="editingAnn">
+                  <label class="field">
+                    标题
+                    <input v-model="editAnnForm.title" class="input" placeholder="公告标题" />
+                  </label>
+                  <label class="field">
+                    内容
+                    <textarea v-model="editAnnForm.content" class="input textarea" rows="3" placeholder="公告内容（可选）"></textarea>
+                  </label>
+                  <div class="filter-row" style="margin-bottom: 0">
+                    <button class="btn btn-primary" type="button" @click="saveEditAnn">保存修改</button>
+                    <button class="btn btn-sm btn-dark" type="button" @click="cancelEditAnn">取消</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <label class="field">
+                    标题
+                    <input v-model="newAnn.title" class="input" placeholder="公告标题" />
+                  </label>
+                  <label class="field">
+                    内容
+                    <textarea v-model="newAnn.content" class="input textarea" rows="3" placeholder="公告内容（可选）"></textarea>
+                  </label>
+                  <div class="filter-row" style="margin-bottom: 0">
+                    <button class="btn btn-primary" type="button" @click="createAnnouncement">发布公告</button>
+                    <span v-if="annError" class="notice notice-error" style="margin: 0">{{ annError }}</span>
+                    <span v-if="annOk" class="notice notice-success" style="margin: 0">{{ annOk }}</span>
+                  </div>
+                </template>
               </div>
             </div>
+
+            <div class="filter-row">
+              <button
+                v-for="f in ['all', 'manual', 'auto', 'demo_update', 'update']"
+                :key="f"
+                class="tag-chip"
+                :class="{ active: annFilter === f }"
+                type="button"
+                @click="annFilter = f as typeof annFilter"
+              >
+                {{ f === 'all' ? '全部' : annTypeLabel[f] || f }}
+              </button>
+            </div>
+
             <div class="table-wrap">
               <table class="data">
                 <thead>
                   <tr><th>类型</th><th>标题</th><th>内容</th><th>时间</th><th>操作</th></tr>
                 </thead>
                 <tbody>
-                  <tr v-for="a in announcements" :key="a.id">
-                    <td><span class="status-pill">{{ annTypeLabel[a.type] || a.type }}</span></td>
+                  <tr v-for="a in filteredAnnouncements" :key="a.id">
+                    <td>
+                      <span class="status-pill">{{ annTypeLabel[a.type] || a.type }}</span>
+                      <span v-if="a.type !== 'manual'" class="status-pill status-pending" style="margin-left: 4px">系统</span>
+                    </td>
                     <td>{{ a.title }}</td>
                     <td style="max-width: 320px; overflow-wrap: anywhere">{{ a.content }}</td>
-                    <td>{{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</td>
+                    <td>{{ new Date(a.created_at).toLocaleString('zh-CN') }}</td>
                     <td>
                       <RouterLink v-if="a.demo_slug" class="btn btn-sm btn-outline" :to="`/demo/${a.demo_slug}`">查看</RouterLink>
+                      <button v-if="a.type === 'manual'" class="btn btn-sm btn-outline" type="button" @click="startEditAnn(a)">编辑</button>
                       <button class="btn btn-sm btn-danger" type="button" @click="deleteAnnouncement(a.id)">删除</button>
                     </td>
+                  </tr>
+                  <tr v-if="!filteredAnnouncements.length">
+                    <td colspan="5" style="text-align: center">该类型暂无公告</td>
                   </tr>
                 </tbody>
               </table>

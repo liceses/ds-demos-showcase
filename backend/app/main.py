@@ -96,13 +96,17 @@ def media_file(path: str):
     from pathlib import Path as _P
     safe = _P(path).as_posix().replace("\\", "/")
     if oss.enabled():
-        return RedirectResponse(oss.public_url(f"media/{safe}"))
+        # 封面文件名唯一不可变：302 重定向本身也可缓存，浏览器下次直连 OSS
+        return RedirectResponse(
+            oss.public_url(f"media/{safe}"),
+            headers={"Cache-Control": "public, max-age=86400, immutable"},
+        )
     file_path = (settings.media_path / safe).resolve()
     if not str(file_path).startswith(str(settings.media_path.resolve())):
         raise HTTPException(status_code=400, detail="非法的路径", )
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="文件不存在", )
-    return FileResponse(file_path)
+    return FileResponse(file_path, headers={"Cache-Control": "public, max-age=86400, immutable"})
 
 
 def _safe_join(slug: str, path: str) -> str:
@@ -130,7 +134,12 @@ def init_db() -> None:
             encoding="utf-8",
         )
     if oss.enabled():
-        oss.put_bytes("media/covers/default.svg", default_cover.read_text(encoding="utf-8").encode(), "image/svg+xml")
+        oss.put_bytes(
+            "media/covers/default.svg",
+            default_cover.read_text(encoding="utf-8").encode(),
+            "image/svg+xml",
+            extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
+        )
 
     Base.metadata.create_all(bind=engine)
 

@@ -1476,3 +1476,34 @@ table.data tr.inconsistent td {
   background: var(--yellow);
   transform: rotate(-1deg);
 }
+
+/* 封面预览（编辑模式） */
+.cover-preview {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+  border: var(--border-w) solid var(--ink);
+  box-shadow: 5px 5px 0 0 rgba(0, 0, 0, 1);
+  background: var(--paper);
+  padding: 4px;
+}
+.cover-preview img {
+  display: block;
+  max-width: 260px;
+  max-height: 160px;
+  object-fit: cover;
+}
+.cover-preview-badge {
+  position: absolute;
+  top: -12px;
+  right: -10px;
+  padding: 3px 8px;
+  border: 3px solid var(--ink);
+  background: var(--yellow);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  transform: rotate(2deg);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}

@@ -139,7 +139,13 @@ def save_cover(data: bytes, ext: str | None = None) -> str:
     folder.mkdir(parents=True, exist_ok=True)
     (folder / name).write_bytes(data)
     content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
-    oss.put_bytes(f"media/covers/{name}", data, content_type)
+    # 封面文件名唯一、不可变 → 浏览器/OSS 长期缓存
+    oss.put_bytes(
+        f"media/covers/{name}",
+        data,
+        content_type,
+        extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
+    )
     return f"/media/covers/{name}"
 
 

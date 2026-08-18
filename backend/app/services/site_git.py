@@ -1,13 +1,21 @@
 """读取网站自身 git 仓库的提交记录，用于生成「更新公告」。"""
 
 import subprocess
+import time
 from pathlib import Path
 
 from ..config import settings
 
+_CACHE_TTL = 60  # 秒
+_cache: dict = {"ts": 0.0, "data": []}
+
 
 def list_site_commits(limit: int = 30) -> list[dict]:
-    """返回网站仓库最近 commit：{hash, message, author, date}。仓库缺失/不可用返回 []。"""
+    """返回网站仓库最近 commit：{hash, message, author, date}。带 60s 内存缓存，避免每次刷新都 fork git 进程。"""
+    now = time.monotonic()
+    if now - _cache["ts"] < _CACHE_TTL:
+        return _cache["data"][:limit]
+
     repo: Path = settings.site_repo_path
     if not (repo / ".git").exists():
         return []
@@ -47,4 +55,7 @@ def list_site_commits(limit: int = 30) -> list[dict]:
                 "date": date,
             }
         )
-    return result
+
+    _cache["ts"] = now
+    _cache["data"] = result
+    return result[:limit]

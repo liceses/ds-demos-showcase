@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -49,15 +49,22 @@ def preview_file(slug: str, path: str):
     if "/" in slug or "\\" in slug or not slug:
         raise HTTPException(status_code=400, detail="非法的 demo 标识", )
     safe = _safe_join(slug, path)
-    if oss.enabled():
-        return RedirectResponse(oss.public_url(f"demos/{slug}/files/{safe}"))
+
     root = settings.demos_path / slug / "files"
     file_path = (root / safe).resolve()
-    if not str(file_path).startswith(str(root.resolve())):
-        raise HTTPException(status_code=400, detail="非法的路径", )
-    if not file_path.is_file():
-        raise HTTPException(status_code=404, detail="文件不存在", )
-    return FileResponse(file_path)
+    if file_path.is_file():
+        # 同源返回本地文件：iframe 内的 localStorage 仍属于主站源，不会被第三方拦截
+        return FileResponse(file_path)
+
+    # 本地没有时，从 OSS 拉取并原样返回（仍同源代理，不 302）
+    if oss.enabled():
+        data = oss.get_bytes(f"demos/{slug}/files/{safe}")
+        if data is not None:
+            import mimetypes
+            media_type = mimetypes.guess_type(safe)[0] or "application/octet-stream"
+            return Response(content=data, media_type=media_type)
+
+    raise HTTPException(status_code=404, detail="文件不存在", )
 
 
 @app.get("/media/{path:path}")

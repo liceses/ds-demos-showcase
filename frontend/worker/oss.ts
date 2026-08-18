@@ -82,8 +82,9 @@ export async function ossDelete(env: OssEnv, key: string): Promise<void> {
 
 export async function ossList(env: OssEnv, prefix: string): Promise<string[]> {
   const date = new Date().toUTCString()
+  // 注意：prefix 等查询参数不进 OSS 签名串（只有 acl/uploads 等子资源才进）
+  const auth = await sign(env, 'GET', '', date, '/')
   const query = `prefix=${encodeURIComponent(prefix)}`
-  const auth = await sign(env, 'GET', '', date, '/', query)
   const url = `https://${env.OSS_BUCKET}.${env.OSS_ENDPOINT}/?${query}`
   const res = await fetch(url, {
     method: 'GET',

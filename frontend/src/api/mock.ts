@@ -58,43 +58,69 @@ let currentUser: User | null = null
 const tags: Tag[] = [
   { id: 1, key: 'model', value: 'dsv4', description: '模型版本总类', parent_id: null, demo_count: 6, child_count: 2 },
   { id: 2, key: 'model', value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', parent_id: 1, demo_count: 3, child_count: 0 },
-  { id: 3, key: 'model', value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', parent_id: 1, demo_count: 3, child_count: 0 },
+  { id: 3, key: 'model', value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', parent_id: 1, demo_count: 0, child_count: 0 },
+  { id: 10, key: 'model', value: 'dsv4flash', description: '历史自由值：dsv4-flash 的旧写法', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 18, key: 'model', value: 'ds-unknown', description: '历史自由值：未识别的模型', parent_id: null, demo_count: 3, child_count: 0 },
   { id: 4, key: 'plugin', value: 'routing-suite', description: '路由套件插件', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 11, key: 'plugin', value: 'suite', description: '历史自由值：路由套件的旧写法', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 5, key: 'skills', value: 'J-space', description: 'J-space 技能工作区', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 16, key: 'skills', value: 'j-space', description: '历史自由值：J-space 的旧写法', parent_id: null, demo_count: 1, child_count: 0 },
   { id: 6, key: 'preset', value: 'router-standard', description: '标准路由预设', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 12, key: 'preset', value: 'spec', description: '历史自由值：规格预设', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 7, key: 'type', value: 'effect', description: '视觉特效类', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 8, key: 'type', value: 'widget', description: '小组件类', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 9, key: 'type', value: 'game', description: '小游戏类', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 10, key: 'author', value: 'tester', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 11, key: 'author', value: 'alice', description: '系统作者标签', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 12, key: 'author', value: 'admin', description: '系统作者标签', parent_id: null, demo_count: 1, child_count: 0 },
+  { id: 22, key: 'type', value: 'demo', description: '综合演示类', parent_id: null, demo_count: 8, child_count: 0 },
+  { id: 23, key: 'category', value: '图形学', description: '图形学类', parent_id: null, demo_count: 4, child_count: 0 },
+  { id: 25, key: 'category', value: '3D建模', description: '3D 建模类', parent_id: null, demo_count: 1, child_count: 0 },
+  { id: 26, key: 'category', value: '仿真', description: '仿真类', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 27, key: 'category', value: '动画', description: '动画类', parent_id: null, demo_count: 1, child_count: 0 },
+  { id: 13, key: 'author', value: 'tester', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 14, key: 'author', value: 'alice', description: '系统作者标签', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 12, key: 'author', value: 'admin', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 19, key: 'author', value: 'DOUBAO', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 21, key: 'author', value: 'gemini-3.7-flash', description: '系统作者标签', parent_id: null, demo_count: 8, child_count: 0 },
+  { id: 15, key: 'author', value: 'sixtyseven', description: '系统作者标签', parent_id: null, demo_count: 6, child_count: 0 },
+  { id: 24, key: 'author', value: 'yiheifeikong', description: '系统作者标签', parent_id: null, demo_count: 8, child_count: 0 },
 ]
 
 const tagKeys: TagKeyInfo[] = [
   { key: 'model', mode: 'fixed', label: '模型', description: 'AI 模型版本（固定值）', sort: 1, values: [
     { value: 'dsv4', description: '模型版本总类', demo_count: 6 },
     { value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', demo_count: 3 },
-    { value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', demo_count: 3 },
+    { value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', demo_count: 0 },
+    { value: 'dsv4flash', description: '历史自由值', demo_count: 3 },
+    { value: 'ds-unknown', description: '历史自由值', demo_count: 3 },
   ], demo_count: 6 },
   { key: 'plugin', mode: 'fixed', label: '插件', description: '使用的插件（固定值）', sort: 2, values: [
     { value: 'routing-suite', description: '路由套件插件', demo_count: 2 },
+    { value: 'suite', description: '历史自由值', demo_count: 2 },
   ], demo_count: 2 },
   { key: 'type', mode: 'fixed', label: '类型', description: 'Demo 类型（固定值）', sort: 3, values: [
     { value: 'effect', description: '视觉特效类', demo_count: 2 },
     { value: 'widget', description: '小组件类', demo_count: 2 },
     { value: 'game', description: '小游戏类', demo_count: 2 },
+    { value: 'demo', description: '综合演示类', demo_count: 8 },
   ], demo_count: 2 },
   { key: 'skills', mode: 'fixed', label: '技能', description: '技能工作区（固定值）', sort: 4, values: [
     { value: 'J-space', description: 'J-space 技能工作区', demo_count: 2 },
+    { value: 'j-space', description: '历史自由值', demo_count: 1 },
   ], demo_count: 2 },
   { key: 'preset', mode: 'fixed', label: '预设', description: '预设配置（固定值）', sort: 5, values: [
     { value: 'router-standard', description: '标准路由预设', demo_count: 2 },
+    { value: 'spec', description: '历史自由值', demo_count: 2 },
   ], demo_count: 2 },
-  { key: 'game', mode: 'open', label: '游戏', description: '游戏名称（自定义值，如 mc / pvz）', sort: 6, values: [
+  { key: 'category', mode: 'fixed', label: '分类', description: '作品分类（固定值）', sort: 6, values: [
+    { value: '图形学', description: '图形学类', demo_count: 4 },
+    { value: '3D建模', description: '3D 建模类', demo_count: 1 },
+    { value: '仿真', description: '仿真类', demo_count: 3 },
+    { value: '动画', description: '动画类', demo_count: 1 },
+  ], demo_count: 4 },
+  { key: 'game', mode: 'open', label: '游戏', description: '游戏名称（自定义值，如 mc / pvz）', sort: 7, values: [
     { value: 'pvz', description: '植物大战僵尸', demo_count: 2 },
     { value: 'mc', description: '我的世界', demo_count: 1 },
   ], demo_count: 2 },
-  { key: 'rounds', mode: 'int', label: '轮数', description: '生成轮数（必须为整数）', sort: 7, values: [
+  { key: 'rounds', mode: 'int', label: '轮数', description: '生成轮数（必须为整数）', sort: 8, values: [
     { value: '3', description: '', demo_count: 1 },
   ], demo_count: 1 },
 ]

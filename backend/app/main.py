@@ -155,8 +155,9 @@ def init_db() -> None:
             tag_key("type", "fixed", "类型", "Demo 类型（固定值）", 3)
             tag_key("skills", "fixed", "技能", "技能工作区（固定值）", 4)
             tag_key("preset", "fixed", "预设", "预设配置（固定值）", 5)
-            tag_key("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 6)
-            tag_key("rounds", "int", "轮数", "生成轮数（必须为整数）", 7)
+            tag_key("category", "fixed", "分类", "作品分类（固定值）", 6)
+            tag_key("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 7)
+            tag_key("rounds", "int", "轮数", "生成轮数（必须为整数）", 8)
 
         if db.query(Tag).count() == 0:
             def tag(key: str, value: str, description: str = "", parent: Tag | None = None) -> Tag:
@@ -168,12 +169,22 @@ def init_db() -> None:
             model_root = tag("model", "dsv4", "模型版本总类")
             tag("model", "dsv4-flash", "DeepSeek V4 Flash —— 快速推理", model_root)
             tag("model", "dsv4-pro", "DeepSeek V4 Pro —— 强推理", model_root)
+            tag("model", "dsv4flash", "历史自由值：dsv4-flash 的旧写法")
+            tag("model", "ds-unknown", "历史自由值：未识别的模型")
             tag("plugin", "routing-suite", "路由套件插件")
+            tag("plugin", "suite", "历史自由值：路由套件的旧写法")
             tag("skills", "J-space", "J-space 技能工作区")
+            tag("skills", "j-space", "历史自由值：J-space 的旧写法")
             tag("preset", "router-standard", "标准路由预设")
+            tag("preset", "spec", "历史自由值：规格预设")
             tag("type", "effect", "视觉特效类")
             tag("type", "widget", "小组件类")
             tag("type", "game", "小游戏类")
+            tag("type", "demo", "综合演示类")
+            tag("category", "3D建模", "3D 建模类")
+            tag("category", "仿真", "仿真类")
+            tag("category", "动画", "动画类")
+            tag("category", "图形学", "图形学类")
 
         if db.query(User).filter(User.username == "admin").first() is None:
             db.add(User(username="admin", password_hash=hash_password("admin123"), role="admin", bio="站点管理员"))

@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     oss_bucket: str = ""
     oss_access_key_id: str = ""
     oss_access_key_secret: str = ""
+    # 可选：绑定到 OSS 的自定义域名（如 https://oss.deepdemos.top）。
+    # 阿里云对 OSS 默认域名访问 HTML 会强制附加 x-oss-force-download 下载，
+    # 用自定义域名访问可规避该安全策略（详情：OSS 文档「如何配置访问 OSS 文件时的预览行为」）。
+    oss_custom_domain: str = ""
 
     # 网站自身 git 仓库目录（用于「更新公告」= 网站仓库 commit 信息）
     # 本地开发缺省自动定位到仓库根目录；Docker 内用 /site-repo
@@ -35,7 +39,9 @@ class Settings(BaseSettings):
 
     @property
     def oss_public_base(self) -> str:
-        # 公有读桶的公开访问地址
+        # 优先级：自定义域名 > 默认域名
+        if self.oss_custom_domain:
+            return self.oss_custom_domain.rstrip("/")
         return f"https://{self.oss_bucket}.{self.oss_endpoint}"
 
     @property

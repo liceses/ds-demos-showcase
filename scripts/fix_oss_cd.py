@@ -5,13 +5,21 @@
 导致前端「OSS 直链预览」在 iframe 里把 HTML 页面当成下载 → 白屏 / Download is disallowed。
 本脚本把 `demos/` 前缀下非 zip 对象的 Content-Disposition 置为 inline（幂等，可反复跑）。
 
+两种改法（--method）：
+  inline —— oss2.update_object_meta（快；部分账号对标准 HTTP 头的落存可能不及时）
+  copy   —— oss2.copy_object 自拷贝 + x-oss-metadata-directive: REPLACE
+             （重写对象=穿透边缘缓存，并显式带上 Content-Type，最可靠；比 inline 慢一点）
+推荐先试 inline，若公共 GET 仍返回 attachment，改用 copy。
+
 运行方式（无需在服务器装任何东西，直接用后端容器里的 python/oss2）：
     cd web
     git pull
-    # 第一步：预检（只统计会处理多少个，不写入）
+    # 预检（只统计会处理多少个，不写入）
     docker compose exec -T backend python - --dry-run < scripts/fix_oss_cd.py
-    # 第二步：真正执行
+    # 方式一：update_object_meta
     docker compose exec -T backend python - < scripts/fix_oss_cd.py
+    # 方式二（保险）：自拷贝 REPLACE
+    docker compose exec -T backend python - --method copy < scripts/fix_oss_cd.py
 
 依赖环境变量（后端容器已由 docker-compose 注入，本地跑需自行 export）：
     OSS_ENDPOINT / OSS_BUCKET / OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET
@@ -26,6 +34,8 @@ import oss2
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="把 OSS demo 对象 Content-Disposition 改为 inline")
+    ap.add_argument("--method", choices=("inline", "copy"), default="inline",
+                    help="inline=update_object_meta（快）；copy=自拷贝 REPLACE（最可靠）")
     ap.add_argument("--prefix", default="demos/", help="对象前缀（默认 demos/）")
     ap.add_argument("--dry-run", action="store_true", help="只统计不写入")
     args = ap.parse_args()
@@ -54,7 +64,20 @@ def main() -> int:
             fixed += 1
             continue
         try:
-            bkt.update_object_meta(key, {"Content-Disposition": "inline"})
+            if args.method == "copy":
+                hdr = bkt.head_object(key)
+                meta = {
+                    "Content-Type": hdr.content_type or "application/octet-stream",
+                    "Content-Disposition": "inline",
+                }
+                cc = hdr.headers.get("Cache-Control")
+                if cc:
+                    meta["Cache-Control"] = cc
+                # 同桶自拷贝 + 元数据 REPLACE：内容不变、元数据重写、新版本号=穿透边缘缓存
+                bkt.copy_object(bucket_name, key, key, meta=meta,
+                                headers={"x-oss-metadata-directive": "REPLACE"})
+            else:
+                bkt.update_object_meta(key, {"Content-Disposition": "inline"})
             if html_sample is None and key.lower().endswith((".html", ".htm")):
                 html_sample = key
             fixed += 1
@@ -62,15 +85,16 @@ def main() -> int:
             print("失败:", key, type(e).__name__, str(e)[:120], file=sys.stderr)
             failed += 1
 
-    mode = "dry-run(未写入)" if args.dry_run else "已写入"
+    mode = "dry-run(未写入)" if args.dry_run else f"已写入(method={args.method})"
     print(f"[{mode}] fixed={fixed} skipped_zip={skipped} failed={failed}")
 
-    if not args.dry_run and failed == 0 and html_sample:
+    if not args.dry_run and html_sample:
+        # SDK（签名）视角的元数据
         h = bkt.head_object(html_sample)
-        print("抽查:", html_sample)
+        print("SDK head 抽查:", html_sample)
         print("  content-type        :", h.content_type)
         print("  content-disposition :", h.headers.get("Content-Disposition"))
-        print("若 content-type 仍为 text/html 且 content-disposition 为 inline，即修复成功。")
+        print("提示：请再通过公共 GET（浏览器/curl https://<bucket>.<endpoint>/<key>）确认也已是 inline。")
 
     return 1 if failed else 0
 

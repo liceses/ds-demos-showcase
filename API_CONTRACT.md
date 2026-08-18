@@ -215,7 +215,22 @@
 
 #### 发布/编辑 demo 的 tags 字段
 
-保持不变：`tags` 为 JSON 字符串数组，如 `["model:dsv4-flash","game:pvz","rounds:3"]`；后端按键定义校验。
+`tags` 为 JSON 数组，元素支持两种形式：
+
+1. 字符串：`"model:dsv4-flash"`（固定值用这种即可）
+2. 对象（**open/int 创建时可选带介绍**）：
+```json
+[
+  "model:dsv4-flash",
+  { "key": "game", "value": "mc", "description": "我的世界像素风地图" },
+  { "key": "rounds", "value": "3" }
+]
+```
+
+规则：
+- `fixed`：value 必须在候选中（介绍以管理员维护为准，忽略传入 description）
+- `open` / `int`：value 首次创建时写入 description；**已存在的 value 不覆盖**（保留首次/管理员设置）
+- 后端按键定义强制校验（未知 key / 非整数 → 422）
 
 ### 前端建议
 

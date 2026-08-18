@@ -15,6 +15,9 @@ export interface TagRef {
   value: string
 }
 
+/** 提交标签：字符串 "k:v" 或带介绍的对象（open/int 创建时可填 description） */
+export type TagInput = string | { key: string; value: string; description?: string }
+
 export interface Tag extends TagRef {
   id: number
   description: string
@@ -157,7 +160,7 @@ export interface DemoListParams {
 export interface CreateDemoPayload {
   title: string
   description?: string
-  tags?: string[]
+  tags?: TagInput[]
   cover?: File | null
   file: File
 }
@@ -165,7 +168,7 @@ export interface CreateDemoPayload {
 export interface UpdateDemoPayload {
   title?: string
   description?: string
-  tags?: string[]
+  tags?: TagInput[]
   cover?: File | null
   file?: File | null
   commit_message?: string

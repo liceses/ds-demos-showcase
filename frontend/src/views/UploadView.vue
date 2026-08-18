@@ -22,8 +22,8 @@ const loading = ref(false)
 
 // 标签选择器
 const tagKeys = ref<TagKeyInfo[]>([])
-const selected = ref<Record<string, string[]>>({})
-const inputs = ref<Record<string, string>>({})
+const selected = ref<Record<string, { value: string; description: string }[]>>({})
+const inputs = ref<Record<string, { value: string; description: string }>>({})
 const initialTagsKey = ref('')
 
 // 编辑模式附加状态
@@ -35,48 +35,55 @@ const initial = ref({ title: '', description: '' })
 
 const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
 
-function selectedOf(key: string): string[] {
+function selectedOf(key: string): { value: string; description: string }[] {
   return selected.value[key] || []
 }
 
 function toggleValue(key: string, value: string) {
   const list = selectedOf(key)
-  const i = list.indexOf(value)
+  const i = list.findIndex((x) => x.value === value)
   if (i >= 0) list.splice(i, 1)
-  else list.push(value)
+  else list.push({ value, description: '' })
 }
 
 function addValue(key: string) {
-  const raw = (inputs.value[key] || '').trim()
+  const raw = (inputs.value[key]?.value || '').trim()
   if (!raw) return
-  if (selectedOf(key).includes(raw)) {
-    inputs.value[key] = ''
+  if (selectedOf(key).some((x) => x.value === raw)) {
+    inputs.value[key] = { value: '', description: '' }
     return
   }
-  selectedOf(key).push(raw)
-  inputs.value[key] = ''
+  selectedOf(key).push({ value: raw, description: (inputs.value[key]?.description || '').trim() })
+  inputs.value[key] = { value: '', description: '' }
 }
 
 function removeValue(key: string, value: string) {
   const list = selectedOf(key)
-  const i = list.indexOf(value)
+  const i = list.findIndex((x) => x.value === value)
   if (i >= 0) list.splice(i, 1)
 }
 
-function collectTags(): string[] {
-  const out: string[] = []
+function collectTags() {
+  const out: (string | { key: string; value: string; description?: string })[] = []
   for (const [key, values] of Object.entries(selected.value)) {
-    for (const v of values) out.push(`${key}:${v}`)
+    const k = tagKeys.value.find((x) => x.key === key)
+    for (const v of values) {
+      if (k?.mode === 'fixed') {
+        out.push(`${key}:${v.value}`)
+      } else {
+        out.push({ key, value: v.value, description: v.description || undefined })
+      }
+    }
   }
   return out
 }
 
 function prefillTags(tags: { key: string; value: string }[]) {
-  const map: Record<string, string[]> = {}
+  const map: Record<string, { value: string; description: string }[]> = {}
   for (const t of tags) {
     if (t.key === 'author') continue
     if (!tagKeys.value.some((k) => k.key === t.key)) continue
-    ;(map[t.key] = map[t.key] || []).push(t.value)
+    ;(map[t.key] = map[t.key] || []).push({ value: t.value, description: '' })
   }
   selected.value = map
   initialTagsKey.value = JSON.stringify(map)
@@ -87,6 +94,9 @@ onMounted(async () => {
     tagKeys.value = await api.listTagKeys()
   } catch {
     tagKeys.value = []
+  }
+  for (const k of tagKeys.value) {
+    if (k.mode !== 'fixed') inputs.value[k.key] = { value: '', description: '' }
   }
   if (editSlug) {
     loading.value = true
@@ -230,7 +240,7 @@ async function submit() {
                 v-for="v in k.values"
                 :key="v.value"
                 class="tag-chip"
-                :class="{ active: selectedOf(k.key).includes(v.value) }"
+                :class="{ active: selectedOf(k.key).some((x) => x.value === v.value) }"
                 type="button"
                 @click="toggleValue(k.key, v.value)"
               >
@@ -239,26 +249,38 @@ async function submit() {
               </button>
             </div>
 
-            <div v-else class="filter-row" style="margin: 0">
-              <input
-                v-model="inputs[k.key]"
-                class="input"
-                :type="k.mode === 'int' ? 'number' : 'text'"
-                :placeholder="k.mode === 'int' ? '整数，如 3' : '自定义值，如 pvz'"
-                style="max-width: 220px"
-                @keyup.enter="addValue(k.key)"
-              />
-              <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
-              <span
-                v-for="v in selectedOf(k.key)"
-                :key="v"
-                class="tag-chip active"
-                role="button"
-                title="点击移除"
-                @click="removeValue(k.key, v)"
-              >
-                {{ v }} ×
-              </span>
+            <div v-else class="form-stack">
+              <div class="filter-row" style="margin: 0">
+                <input
+                  v-model="inputs[k.key].value"
+                  class="input"
+                  :type="k.mode === 'int' ? 'number' : 'text'"
+                  :placeholder="k.mode === 'int' ? '整数，如 3' : '自定义值，如 pvz'"
+                  style="max-width: 220px"
+                  @keyup.enter="addValue(k.key)"
+                />
+                <input
+                  v-model="inputs[k.key].description"
+                  class="input"
+                  type="text"
+                  placeholder="介绍（可选，首次创建时写入）"
+                  style="max-width: 240px"
+                  @keyup.enter="addValue(k.key)"
+                />
+                <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
+              </div>
+              <div class="filter-row" style="margin: 0">
+                <span
+                  v-for="v in selectedOf(k.key)"
+                  :key="v.value"
+                  class="tag-chip active"
+                  role="button"
+                  :title="v.description || '点击移除'"
+                  @click="removeValue(k.key, v.value)"
+                >
+                  {{ v.value }}{{ v.description ? `（${v.description}）` : '' }} ×
+                </span>
+              </div>
             </div>
           </div>
           <span class="hint">author 为系统保留标签，无需填写</span>

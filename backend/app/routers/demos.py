@@ -41,19 +41,27 @@ def _ensure_tag(db: Session, key: str, value: str) -> Tag:
     return tag
 
 
-def _resolve_tag(db: Session, key_value: str) -> Tag:
+def _resolve_tag(db: Session, item: str | dict) -> Tag:
     """按标签键定义校验并解析用户提交的标签：
+    - 支持字符串 "k:v" 或对象 {"key","value","description?"}
     - fixed: value 必须是已存在的固定值
-    - open:  任意自定义 value（自动建标签）
+    - open:  任意自定义 value（自动建标签；首次创建可写入 description）
     - int:   value 必须是整数（自动建标签，规范化存储）
     """
-    key, _, value = key_value.partition(":")
+    if isinstance(item, str):
+        key, _, value = item.partition(":")
+        description = None
+    else:
+        key = item.get("key", "")
+        value = item.get("value", "")
+        description = item.get("description") or None
+
     key = key.strip()
     value = value.strip()
     if not key or not value:
-        raise HTTPException(status_code=422, detail=f"非法标签格式: {key_value}", )
+        raise HTTPException(status_code=422, detail=f"非法标签格式: {item}", )
     if len(key) > 64 or len(value) > 64:
-        raise HTTPException(status_code=422, detail=f"标签 key/value 过长: {key_value}", )
+        raise HTTPException(status_code=422, detail=f"标签 key/value 过长: {key}:{value}", )
 
     key_def = db.get(TagKey, key)
     if key_def is None:
@@ -74,21 +82,29 @@ def _resolve_tag(db: Session, key_value: str) -> Tag:
 
     tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
     if tag is None:
-        tag = Tag(key=key, value=value, description="")
+        # 首次创建 open/int 值时，可写入用户提供的介绍
+        tag = Tag(key=key, value=value, description=description or "")
         db.add(tag)
         db.flush()
     return tag
 
 
-def _parse_tags(raw: str | None) -> list[str]:
+def _parse_tags(raw: str | None) -> list:
+    """解析 tags JSON：支持字符串数组 ["k:v"] 或对象数组 [{"key","value","description?"}]。"""
     if not raw:
         return []
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=422, detail="tags 字段需为 JSON 字符串数组", )
-    if not isinstance(data, list) or not all(isinstance(x, str) for x in data):
-        raise HTTPException(status_code=422, detail="tags 字段需为 JSON 字符串数组", )
+        raise HTTPException(status_code=422, detail="tags 字段需为 JSON 数组", )
+    if not isinstance(data, list):
+        raise HTTPException(status_code=422, detail="tags 字段需为 JSON 数组", )
+    for item in data:
+        if isinstance(item, str):
+            continue
+        if isinstance(item, dict) and isinstance(item.get("key"), str) and isinstance(item.get("value"), str):
+            continue
+        raise HTTPException(status_code=422, detail="tags 元素需为 \"k:v\" 字符串或 {key,value,description?} 对象", )
     return data
 
 

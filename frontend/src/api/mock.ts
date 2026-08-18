@@ -479,6 +479,14 @@ function tagOf(t: { key: string; value: string }) {
   return `${t.key}:${t.value}`
 }
 
+function toTagRef(t: string | { key: string; value: string; description?: string }) {
+  if (typeof t === 'string') {
+    const [key, ...rest] = t.split(':')
+    return { key, value: rest.join(':') }
+  }
+  return { key: t.key, value: t.value }
+}
+
 export const mockApi = {
   // ---------- 认证 ----------
   async login(username: string, password: string): Promise<AuthResponse> {
@@ -682,10 +690,7 @@ export const mockApi = {
       cover_url: svgCover('#95e1d3', 'NEW', 'just uploaded'),
       author: currentUser.username,
       author_id: currentUser.id,
-      tags: [...(payload.tags || []).map((t) => {
-        const [key, ...rest] = t.split(':')
-        return { key, value: rest.join(':') }
-      }), { key: 'author', value: currentUser.username }],
+      tags: [...(payload.tags || []).map((t) => toTagRef(t)), { key: 'author', value: currentUser.username }],
       view_count: 0,
       download_count: 0,
       comment_count: 0,
@@ -706,10 +711,7 @@ export const mockApi = {
     if (!d) throw new Error('Demo 不存在')
     if (payload.title) d.title = payload.title
     if (payload.description !== undefined) d.description = payload.description
-    if (payload.tags) d.tags = payload.tags.map((t) => {
-      const [key, ...rest] = t.split(':')
-      return { key, value: rest.join(':') }
-    })
+    if (payload.tags) d.tags = payload.tags.map((t) => toTagRef(t))
   },
 
   async deleteDemo(slug: string): Promise<void> {

@@ -40,6 +40,12 @@ function sanitizePath(p: string): string | null {
   return parts.join('/')
 }
 
+// Hono 4.x 的 /:slug/* 通配符不填充 param('*')，这里直接从 URL 里解析剩余路径，稳妥可靠
+function restOfPath(c: any, prefix: string): string {
+  const path = new URL(c.req.url).pathname
+  return decodeURIComponent(path.slice(prefix.length))
+}
+
 // ---------------------------------------------------------------- password / token
 async function hashPassword(password: string): Promise<string> {
   const enc = new TextEncoder()
@@ -880,23 +886,27 @@ app.get('/preview/:slug/*', async (c) => {
   const env = c.env as Env
   const slug = c.req.param('slug')
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(slug)) return err(c, 400, '非法的 demo 标识')
-  const rest = c.req.param('*') ?? 'index.html'
+  const rest = restOfPath(c, `/preview/${slug}/`) || 'index.html'
   const safe = sanitizePath(rest)
   if (!safe) return err(c, 400, '非法的路径')
   const buf = await ossGet(env, `demos/${slug}/files/${safe}`)
   if (!buf) return err(c, 404, '文件不存在')
-  return new Response(buf, { headers: { 'content-type': contentType(safe) } })
+  return new Response(buf, {
+    headers: { 'content-type': contentType(safe), 'cache-control': 'no-store' },
+  })
 })
 
 // 媒体 /media/...
 app.get('/media/*', async (c) => {
   const env = c.env as Env
-  const rest = c.req.param('*') ?? ''
+  const rest = restOfPath(c, '/media/')
   const safe = sanitizePath(rest)
   if (!safe) return err(c, 400, '非法的路径')
   const buf = await ossGet(env, `media/${safe}`)
   if (!buf) return err(c, 404, '文件不存在')
-  return new Response(buf, { headers: { 'content-type': contentType(safe) } })
+  return new Response(buf, {
+    headers: { 'content-type': contentType(safe), 'cache-control': 'no-store' },
+  })
 })
 
 // 其余走静态资源（SPA 回退）

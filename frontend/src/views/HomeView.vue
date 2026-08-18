@@ -18,7 +18,7 @@ const loadingMore = ref(false)
 const error = ref('')
 const hasMore = ref(true)
 
-const annTypeLabel: Record<string, string> = { manual: '公告', auto: '新发布', update: '更新' }
+const annTypeLabel: Record<string, string> = { manual: '公告', auto: '新发布', update: '站点更新', demo_update: '作品更新' }
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null

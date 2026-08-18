@@ -26,7 +26,8 @@ const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
 const announcements: Announcement[] = [
   { id: 1, type: 'manual', title: '站点公告', content: '欢迎来到 DS 民间科研成果展示站，欢迎大家投稿 AI 生成的网页 Demo！', demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
   { id: 2, type: 'auto', title: '新 Demo 发布', content: '植物大战僵尸（极简版）', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-01T10:00:00Z' },
-  { id: 3, type: 'update', title: 'Demo 更新：植物大战僵尸', content: '修复第二关音效不同步的问题', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-02T15:30:00Z' },
+  { id: 3, type: 'demo_update', title: 'Demo 更新：植物大战僵尸', content: '修复第二关音效不同步的问题', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-02T15:30:00Z' },
+  { id: 4, type: 'update', title: '站点更新', content: 'feat: 整站公告系统上线', demo_slug: null, created_by: null, created_at: '2025-03-03T09:00:00Z' },
 ]
 
 function svgCover(bg: string, text: string, sub: string): string {

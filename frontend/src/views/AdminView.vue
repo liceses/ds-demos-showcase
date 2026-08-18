@@ -16,6 +16,8 @@ const newAnn = ref({ title: '', content: '' })
 const annError = ref('')
 const annOk = ref('')
 
+const annTypeLabel: Record<string, string> = { manual: '手动公告', auto: '新发布', update: '站点更新', demo_update: '作品更新' }
+
 const newTag = ref({ key: '', value: '', description: '', parent_id: '' as string | number })
 const tagError = ref('')
 const tagOk = ref('')
@@ -284,7 +286,7 @@ onMounted(loadAll)
                 </thead>
                 <tbody>
                   <tr v-for="a in announcements" :key="a.id">
-                    <td><span class="status-pill">{{ a.type }}</span></td>
+                    <td><span class="status-pill">{{ annTypeLabel[a.type] || a.type }}</span></td>
                     <td>{{ a.title }}</td>
                     <td style="max-width: 320px; overflow-wrap: anywhere">{{ a.content }}</td>
                     <td>{{ new Date(a.created_at).toLocaleDateString('zh-CN') }}</td>

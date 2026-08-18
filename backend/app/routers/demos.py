@@ -254,9 +254,9 @@ async def update_demo(
     if changed:
         message = (commit_message or "更新 demo").strip() or "更新 demo"
         git_service.commit_all(slug, author_name=user.username, author_email=f"{user.username}@demo-site", message=message)
-        # 更新公告：内容即 commit 信息
+        # 作品更新公告：内容即该 demo 的 commit 信息
         db.add(Announcement(
-            type="update",
+            type="demo_update",
             title=f"Demo 更新：{demo.title}",
             content=message,
             demo_slug=slug,

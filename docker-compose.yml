@@ -12,9 +12,13 @@ services:
       OSS_BUCKET: ${OSS_BUCKET:-}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      # 网站自身 git 仓库（用于「更新公告」= commit 信息）
+      SITE_REPO_DIR: /site-repo
     volumes:
       - demo-data:/app/data
       - demo-storage:/app/storage
+      # 只读挂载网站仓库根目录（compose 上一级 = 仓库根，含 .git）
+      - ../:/site-repo:ro
     restart: unless-stopped
 
   frontend:

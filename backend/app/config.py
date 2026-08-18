@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     oss_access_key_id: str = ""
     oss_access_key_secret: str = ""
 
+    # 网站自身 git 仓库目录（用于「更新公告」= 网站仓库 commit 信息）
+    # 本地开发缺省自动定位到仓库根目录；Docker 内用 /site-repo
+    site_repo_dir: str = ""
+
     @property
     def oss_enabled(self) -> bool:
         return bool(self.oss_endpoint and self.oss_bucket and self.oss_access_key_id and self.oss_access_key_secret)
@@ -33,6 +37,13 @@ class Settings(BaseSettings):
     def oss_public_base(self) -> str:
         # 公有读桶的公开访问地址
         return f"https://{self.oss_bucket}.{self.oss_endpoint}"
+
+    @property
+    def site_repo_path(self) -> Path:
+        if self.site_repo_dir:
+            return Path(self.site_repo_dir).resolve()
+        # 本地开发默认：backend/app/config.py -> 仓库根目录（web/）
+        return Path(__file__).resolve().parents[2]
 
     @property
     def storage_path(self) -> Path:

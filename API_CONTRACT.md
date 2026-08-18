@@ -3,33 +3,33 @@
 > 本文件给前端开发对接用：后端已实现公告系统与 Demo 修改能力，接口如下。
 > 基础前缀：`/api/v1`，认证方式：HttpOnly Cookie `demo_token`（`withCredentials: true`），与现有接口一致。
 
-## 1. 公告系统
+## 1. 整站公告系统
 
 ### 公告类型（`type` 字段）
 
 | type | 含义 | 产生方式 |
 |---|---|---|
-| `manual` | 手动公告 | 管理员在后台发布 |
-| `auto` | 新 Demo 发布 | 上传 demo 后自动生成，content = demo 标题 |
-| `update` | Demo 更新 | 编辑 demo 后自动生成，content = 提交的 commit 信息 |
+| `manual` | 手动公告（整站） | 管理员在后台发布 |
+| `auto` | 自动公告：新 Demo 发布 | 上传 demo 后自动生成，content = demo 标题 |
+| `demo_update` | 作品更新公告 | 编辑 demo 后自动生成，content = 该 demo 的 commit 信息 |
+| `update` | **站点更新公告** | **实时读取网站自身 git 仓库（GitHub 仓库）的 commit 信息**生成，content = commit message |
+
+> 说明：
+> - `update`（站点更新）不落库，每次 `GET /announcements` 时实时读取服务器上网站仓库的 `git log`（最近 30 条）合并返回
+> - 作品公告（`auto` / `demo_update`）会带上 `demo_slug`，前端可渲染成跳转链接；站点更新 `demo_slug` 为 null
+> - 旧数据兼容：历史 `type=update` 且带 `demo_slug` 的记录按 `demo_update` 返回
 
 ### 接口
 
 #### GET `/api/v1/announcements`（公开，无需登录）
 
-返回最新的公告列表（最多 50 条，按时间倒序）：
+返回整站公告列表（手动 + 自动 + 作品更新 + 站点更新，最多 50 条，按时间倒序）：
 
 ```json
 [
-  {
-    "id": 1,
-    "type": "manual",
-    "title": "站点公告",
-    "content": "欢迎投稿",
-    "demo_slug": null,
-    "created_by": 1,
-    "created_at": "2025-06-01T10:00:00"
-  }
+  { "id": 4, "type": "update", "title": "站点更新", "content": "feat: 整站公告系统上线", "demo_slug": null, "created_by": null, "created_at": "2025-06-02T08:00:00" },
+  { "id": 1, "type": "manual", "title": "站点公告", "content": "欢迎投稿", "demo_slug": null, "created_by": 1, "created_at": "2025-06-01T10:00:00" },
+  { "id": 3, "type": "demo_update", "title": "Demo 更新：xx", "content": "修复第二关音效", "demo_slug": "pvz-xxx", "created_by": 2, "created_at": "2025-05-30T15:30:00" }
 ]
 ```
 
@@ -51,9 +51,9 @@
 
 ### 前端建议
 
-- 首页顶部展示最近 5 条公告，标注类型徽标（公告/新发布/更新）
+- 首页顶部展示最近若干条公告，按 `type` 显示徽标：手动公告 / 新发布 / 作品更新 / 站点更新
 - 有 `demo_slug` 的公告渲染为可点击链接 → `/demo/{slug}`
-- 管理后台「公告管理」页：发布/编辑/删除手动公告；自动公告只读展示（也可删除）
+- 管理后台「公告管理」页：发布/删除手动公告；自动/作品/站点更新公告只读展示（可删除）
 
 ## 2. Demo 修改
 

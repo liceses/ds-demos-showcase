@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { TagKeyInfo } from '../api/types'
 
 const keys = ref<TagKeyInfo[]>([])
 const loading = ref(true)
 const error = ref('')
+const modeFilter = ref<'all' | 'fixed' | 'open' | 'int'>('all')
 
 const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
+
+const sortedKeys = computed(() =>
+  [...keys.value]
+    .filter((k) => modeFilter.value === 'all' || k.mode === modeFilter.value)
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.key.localeCompare(b.key)),
+)
+
+const keyCount = computed(() => keys.value.length)
+const valueCount = computed(() => keys.value.reduce((n, k) => n + k.values.length, 0))
 
 onMounted(async () => {
   try {
@@ -24,31 +34,66 @@ onMounted(async () => {
   <section class="page-hero">
     <span class="eyebrow">标签系统</span>
     <h1 class="huge">标签</h1>
-    <p class="sub">每个标签键定义一类客观属性或自定义维度，点击标签查看关联 Demo。</p>
+    <p class="sub">
+      每个标签键定义一类属性：固定值是客观事实，开放值由用户创造，数字值是量化参数。
+    </p>
+    <div class="filter-row" style="margin-top: 16px">
+      <span class="tag-stat"><b>{{ keyCount }}</b> 标签键</span>
+      <span class="tag-stat"><b>{{ valueCount }}</b> 标签值</span>
+    </div>
   </section>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载标签…</div>
     <div v-else-if="error" class="notice notice-error">{{ error }}</div>
 
-    <div v-else class="filter-row" style="align-items: stretch">
-      <div v-for="k in keys" :key="k.key" class="card card-default" style="padding: 18px; width: 100%">
-        <span class="eyebrow">{{ k.key }} · {{ modeLabel[k.mode] }}</span>
-        <h2 style="margin: 8px 0 6px">{{ k.label }}</h2>
-        <p class="muted" style="margin-bottom: 12px">{{ k.description || '暂无介绍' }}</p>
-        <div class="filter-row" style="margin-bottom: 0">
-          <RouterLink
-            v-for="v in k.values"
-            :key="v.value"
-            class="tag-chip teal"
-            :to="`/tag/${k.key}/${v.value}`"
-          >
-            {{ k.key }}:{{ v.value }}
-            <span class="count">{{ v.demo_count }}</span>
-          </RouterLink>
-          <span v-if="!k.values.length" class="muted">还没有值</span>
+    <template v-else>
+      <div class="filter-row">
+        <button
+          v-for="f in ['all', 'fixed', 'open', 'int']"
+          :key="f"
+          class="tag-chip"
+          :class="['mode-' + f, { active: modeFilter === f }]"
+          type="button"
+          @click="modeFilter = f as typeof modeFilter"
+        >
+          {{ f === 'all' ? '全部' : modeLabel[f] }}
+        </button>
+      </div>
+
+      <div v-if="!sortedKeys.length" class="empty-box">该类型下还没有标签键</div>
+
+      <div v-else class="filter-row" style="align-items: stretch; gap: 18px">
+        <div
+          v-for="k in sortedKeys"
+          :key="k.key"
+          class="card card-default tag-key-card"
+          :class="'mode-' + k.mode"
+          style="padding: 18px; width: 100%"
+        >
+          <div class="section-head" style="margin-bottom: 8px">
+            <div>
+              <span class="eyebrow">{{ k.key }}</span>
+              <h2 style="margin: 8px 0 4px">{{ k.label || k.key }}</h2>
+            </div>
+            <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
+          </div>
+          <p class="muted" style="margin-bottom: 12px">{{ k.description || '暂无介绍' }}</p>
+          <div class="filter-row" style="margin-bottom: 0">
+            <RouterLink
+              v-for="v in k.values"
+              :key="v.value"
+              class="tag-chip"
+              :class="'mode-' + k.mode"
+              :to="`/tag/${k.key}/${v.value}`"
+            >
+              {{ k.key }}:{{ v.value }}
+              <span class="count">{{ v.demo_count }}</span>
+            </RouterLink>
+            <span v-if="!k.values.length" class="muted">还没有值</span>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </section>
 </template>

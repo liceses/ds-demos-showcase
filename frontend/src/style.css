@@ -1535,3 +1535,60 @@ table.data tr.inconsistent td {
   transform: rotate(2deg);
   box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
 }
+
+/* ---------- 标签分级视觉（fixed=白/权威，open=黄/创造，int=青/数字） ---------- */
+.tag-chip.mode-fixed {
+  background: var(--paper);
+}
+.tag-chip.mode-open {
+  background: var(--yellow);
+}
+.tag-chip.mode-int {
+  background: var(--mint);
+  font-variant-numeric: tabular-nums;
+}
+.tag-chip.mode-fixed.active,
+.tag-chip.mode-open.active,
+.tag-chip.mode-int.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 3px solid var(--ink);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+}
+.mode-badge-fixed {
+  background: var(--paper);
+}
+.mode-badge-open {
+  background: var(--yellow);
+}
+.mode-badge-int {
+  background: var(--mint);
+}
+.tag-key-card {
+  border-top: 6px solid var(--ink);
+}
+.tag-key-card.mode-fixed { border-top-color: var(--ink); }
+.tag-key-card.mode-open { border-top-color: var(--yellow); }
+.tag-key-card.mode-int { border-top-color: var(--mint); }
+.tag-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.tag-stat b {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 1px 7px;
+}

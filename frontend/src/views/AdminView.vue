@@ -355,14 +355,14 @@ onMounted(loadAll)
                 <tbody>
                   <tr v-for="k in tagKeys" :key="k.key">
                     <td><b>{{ k.key }}</b></td>
-                    <td><span class="status-pill">{{ modeLabel[k.mode] }}</span></td>
+                    <td><span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span></td>
                     <td>{{ k.label }}</td>
                     <td style="max-width: 220px; overflow-wrap: anywhere">{{ k.description }}</td>
                     <td>{{ k.demo_count }}</td>
                     <td style="max-width: 300px">
                       <div class="filter-row" style="margin: 0; gap: 6px">
                         <template v-for="v in k.values" :key="v.value">
-                          <RouterLink class="tag-chip" :to="`/tag/${k.key}/${v.value}`">
+                          <RouterLink class="tag-chip" :class="'mode-' + k.mode" :to="`/tag/${k.key}/${v.value}`">
                             {{ v.value }}<span class="count">{{ v.demo_count }}</span>
                           </RouterLink>
                           <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(k.key, v.value)">×</button>

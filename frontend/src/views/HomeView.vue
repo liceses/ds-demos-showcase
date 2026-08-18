@@ -22,7 +22,7 @@ const hasMore = ref(true)
 // 首页过滤 chips = 所有标签键下的值（author 键不在 tag_keys 中，自动排除）
 const filterChips = computed(() =>
   tagKeys.value.flatMap((k) =>
-    k.values.map((v) => ({ key: k.key, value: v.value, count: v.demo_count })),
+    k.values.map((v) => ({ key: k.key, value: v.value, count: v.demo_count, mode: k.mode })),
   ),
 )
 
@@ -142,7 +142,7 @@ onBeforeUnmount(() => observer?.disconnect())
         v-for="g in filterChips"
         :key="g.key + ':' + g.value"
         class="tag-chip"
-        :class="{ active: selectedTags.includes(g.key + ':' + g.value) }"
+        :class="['mode-' + g.mode, { active: selectedTags.includes(g.key + ':' + g.value) }]"
         type="button"
         @click="toggleTag(g.key + ':' + g.value)"
       >

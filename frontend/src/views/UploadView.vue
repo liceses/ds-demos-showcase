@@ -232,14 +232,14 @@ async function submit() {
           <div v-for="k in tagKeys" :key="k.key" class="tag-key-row">
             <div class="tag-key-head">
               <b>{{ k.label || k.key }} <code>{{ k.key }}</code></b>
-              <span class="hint">{{ modeLabel[k.mode] }} · {{ k.description }}</span>
+              <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
             </div>
 
             <div v-if="k.mode === 'fixed'" class="filter-row" style="margin: 0">
               <button
                 v-for="v in k.values"
                 :key="v.value"
-                class="tag-chip"
+                class="tag-chip mode-fixed"
                 :class="{ active: selectedOf(k.key).some((x) => x.value === v.value) }"
                 type="button"
                 @click="toggleValue(k.key, v.value)"

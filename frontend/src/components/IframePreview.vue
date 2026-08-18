@@ -15,7 +15,8 @@ const webFullscreen = ref(false)
 // 让 demo 的 localStorage / 相对 fetch / Worker 可用且彼此隔离在 OSS 源内；
 // 同源或 srcdoc（Mock）保持不透明 origin 不放行，防止上传的 demo 读本站 Cookie/存储。
 const sandboxAttr = computed(() => {
-  const base = 'allow-scripts allow-modals allow-forms allow-popups allow-fullscreen'
+  // 注意：不带 allow-fullscreen（浏览器提示其为非法 sandbox flag；全屏由 allowfullscreen + allow="fullscreen" 提供）
+  const base = 'allow-scripts allow-modals allow-forms allow-popups'
   if (props.src) {
     try {
       const u = new URL(props.src, window.location.href)

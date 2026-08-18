@@ -529,8 +529,8 @@ async function storeDemoZip(env: Env, slug: string, data: Uint8Array, authorName
   for (const key of toDelete) writes.push(ossDelete(env, key))
 
   for (const p of paths) {
-    const full = root ? `${root}${p}` : p
-    const rel = sanitizePath(full)
+    // root 表示要剥离的顶层目录前缀（如 pvz/），直接去掉，避免路径重复
+    const rel = sanitizePath(root ? p.slice(root.length) : p)
     if (!rel) continue
     if (rel.startsWith('sessions/')) {
       const filename = rel.slice('sessions/'.length).split('/').join('-')

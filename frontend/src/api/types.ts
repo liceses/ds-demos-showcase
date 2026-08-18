@@ -40,6 +40,14 @@ export interface DemoSummary {
   status?: string
 }
 
+export interface DemoTimelineEntry {
+  id: number
+  version_label: string
+  message: string
+  old_slug: string | null
+  created_at: string
+}
+
 export interface DemoDetail extends DemoSummary {
   session_log_count: number
   commit_count: number
@@ -47,6 +55,7 @@ export interface DemoDetail extends DemoSummary {
   file_size?: number
   storage_size?: number
   inconsistency?: boolean
+  timeline?: DemoTimelineEntry[]
   /** Mock 模式专用：iframe srcdoc */
   previewHtml?: string
 }

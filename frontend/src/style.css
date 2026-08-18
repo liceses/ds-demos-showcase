@@ -935,6 +935,27 @@ table.data tr.inconsistent td {
   overflow-wrap: anywhere;
 }
 
+/* ---------- 轻量时间线 ---------- */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 12px 14px;
+}
+.timeline-body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- 响应式 ---------- */
 @media (max-width: 720px) {
   .huge {
@@ -1379,4 +1400,79 @@ table.data tr.inconsistent td {
 .ann-item.ann-card-demo .ann-content,
 .ann-item.ann-card-demo .ann-time {
   color: inherit;
+}
+
+/* hero 下公告小 tip */
+.ann-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  max-width: min(560px, 100%);
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  font-size: 13px;
+  line-height: 1.4;
+  text-decoration: none;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.ann-tip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+}
+.ann-tip .ann-stamp {
+  flex-shrink: 0;
+}
+.ann-tip-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ann-tip-more {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ann-tip.ann-card-update {
+  color: var(--paper);
+}
+.ann-tip.ann-card-demo {
+  color: #fff;
+}
+.ann-tip.ann-card-update .ann-tip-more,
+.ann-tip.ann-card-demo .ann-tip-more {
+  color: inherit;
+}
+
+/* hero 副标题里的行内公告入口（低调藏进文字） */
+.hero-ann-link {
+  display: inline;
+  margin-left: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--yellow);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+.hero-ann-link:hover {
+  background: var(--yellow);
+  transform: rotate(-1deg);
 }

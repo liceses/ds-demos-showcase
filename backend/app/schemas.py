@@ -85,6 +85,14 @@ class DemoSummaryOut(BaseModel):
     status: str
 
 
+class DemoTimelineOut(BaseModel):
+    id: int
+    version_label: str
+    message: str
+    old_slug: str | None = None
+    created_at: datetime
+
+
 class DemoDetailOut(DemoSummaryOut):
     session_log_count: int
     commit_count: int
@@ -92,6 +100,7 @@ class DemoDetailOut(DemoSummaryOut):
     file_size: int | None = None
     storage_size: int | None = None
     inconsistency: bool = False
+    timeline: list[DemoTimelineOut] = []
 
 
 class AdminDemoOut(DemoDetailOut):

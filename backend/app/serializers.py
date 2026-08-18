@@ -1,7 +1,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .models import Comment, Demo, DemoTag, SessionLog, Tag, User
+from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, User
 
 
 def tag_dict(db: Session, tag: Tag) -> dict:
@@ -56,6 +56,12 @@ def serialize_demo(
     if detail:
         from .services.storage import demo_files_dir, demo_storage_size
 
+        timeline = (
+            db.query(DemoTimeline)
+            .filter(DemoTimeline.demo_id == demo.id)
+            .order_by(DemoTimeline.created_at.desc(), DemoTimeline.id.desc())
+            .all()
+        )
         files_dir = demo_files_dir(demo.slug)
         data.update(
             {
@@ -65,6 +71,16 @@ def serialize_demo(
                 "file_size": files_dir.stat().st_size if files_dir.exists() else None,
                 "storage_size": demo_storage_size(demo.slug),
                 "inconsistency": not files_dir.exists(),
+                "timeline": [
+                    {
+                        "id": t.id,
+                        "version_label": t.version_label,
+                        "message": t.message,
+                        "old_slug": t.old_slug,
+                        "created_at": t.created_at,
+                    }
+                    for t in timeline
+                ],
             }
         )
     return data

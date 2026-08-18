@@ -9,12 +9,13 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
-from ..models import Announcement, Demo, DemoTag, SessionLog, Tag, User
+from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import oss, storage
@@ -72,6 +73,21 @@ def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
         if author:
             author_tag = _ensure_tag(db, f"author:{author.username}")
             db.add(DemoTag(demo_id=demo.id, tag_id=author_tag.id))
+
+
+def _add_timeline(
+    db: Session,
+    demo_id: int,
+    version_label: str,
+    message: str,
+    old_slug: str | None = None,
+) -> None:
+    db.add(DemoTimeline(
+        demo_id=demo_id,
+        version_label=version_label,
+        message=message,
+        old_slug=old_slug,
+    ))
 
 
 def _unique_slug(db: Session, title: str) -> str:
@@ -202,6 +218,7 @@ async def create_demo(
         demo_slug=slug,
         created_by=user.id,
     ))
+    _add_timeline(db, demo.id, "v1", "创建", None)
     db.commit()
     return DemoCreateResult(slug=slug, status=status)
 
@@ -224,6 +241,7 @@ async def update_demo(
         raise HTTPException(status_code=403, detail="无权修改该 Demo", )
 
     changed = False
+    snapshot: Demo | None = None
     if title is not None and title.strip() != demo.title:
         demo.title = title.strip()
         changed = True
@@ -244,7 +262,7 @@ async def update_demo(
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
         # 勾选「保留旧版本」：先把当前文件快照成独立 demo 页面，再覆盖
         if keep_old_version:
-            _snapshot_demo(db, demo, user)
+            snapshot = _snapshot_demo(db, demo, user)
         storage.extract_zip(zip_bytes, slug)
         storage.upload_demo_to_oss(slug)
         oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
@@ -263,6 +281,15 @@ async def update_demo(
             demo_slug=slug,
             created_by=user.id,
         ))
+        # 轻量时间线：记录本次更新；若保留了旧版本，可点击跳转到旧版页面
+        version_count = db.query(func.count(DemoTimeline.id)).filter(DemoTimeline.demo_id == demo.id).scalar() or 0
+        _add_timeline(
+            db,
+            demo.id,
+            f"v{version_count + 1}",
+            message,
+            old_slug=snapshot.slug if snapshot else None,
+        )
         db.commit()
 
     return Response(status_code=204)
@@ -311,6 +338,9 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
             file_size=log.file_size,
             created_at=log.created_at,
         ))
+
+    # 旧版本页面自己的时间线：可跳回最新版
+    _add_timeline(db, snapshot.id, "旧版", "旧版本快照", old_slug=old_slug)
 
     db.commit()
     storage.upload_demo_to_oss(new_slug)

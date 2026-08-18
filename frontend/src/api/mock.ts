@@ -547,7 +547,24 @@ export const mockApi = {
     const d = findDemo(slug)
     if (!d) throw new Error('Demo 不存在')
     d.view_count += 1
-    return clone(d)
+    const out = clone(d)
+    out.timeline = [
+      {
+        id: 1,
+        version_label: 'v2',
+        message: '优化性能与视觉细节',
+        old_slug: `${slug}-v1`,
+        created_at: '2025-03-02T15:30:00Z',
+      },
+      {
+        id: 2,
+        version_label: 'v1',
+        message: '创建',
+        old_slug: null,
+        created_at: '2025-03-01T09:00:00Z',
+      },
+    ]
+    return out
   },
 
   async createDemo(payload: CreateDemoPayload): Promise<{ slug: string; status: string }> {

@@ -18,7 +18,7 @@ const slug = String(route.params.slug)
 const demo = ref<DemoDetail | null>(null)
 const loading = ref(true)
 const error = ref('')
-const activeTab = ref<'info' | 'session' | 'comments'>('info')
+const activeTab = ref<'info' | 'timeline' | 'session' | 'comments'>('info')
 
 const sessionLogs = ref<SessionLog[]>([])
 const comments = ref<Comment[]>([])
@@ -141,6 +141,7 @@ onMounted(load)
     <section class="section">
       <div class="tabs">
         <button class="tab" :class="{ active: activeTab === 'info' }" type="button" @click="activeTab = 'info'">信息</button>
+        <button class="tab" :class="{ active: activeTab === 'timeline' }" type="button" @click="activeTab = 'timeline'">时间线</button>
         <button class="tab" :class="{ active: activeTab === 'session' }" type="button" @click="activeTab = 'session'">会话日志</button>
         <button class="tab" :class="{ active: activeTab === 'comments' }" type="button" @click="activeTab = 'comments'">评论</button>
       </div>
@@ -164,7 +165,23 @@ onMounted(load)
                 </RouterLink>
               </div>
               <div class="notice notice-info" style="margin-top: 20px">
-                <strong>Git 时间线声明：</strong>页面中的提交历史仅表示版本演进过程，不等同于 AI 生成真实性证明。
+                <strong>时间线说明：</strong>版本记录仅表示该 Demo 的创建与更新演进过程。
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="activeTab === 'timeline'">
+            <div v-if="!demo.timeline?.length" class="empty-box">暂无版本记录</div>
+            <div v-else class="timeline">
+              <div v-for="t in demo.timeline" :key="t.id" class="timeline-item">
+                <span class="tag-chip" :class="{ active: true }">{{ t.version_label }}</span>
+                <div class="timeline-body">
+                  <p style="margin: 0">{{ t.message }}</p>
+                  <RouterLink v-if="t.old_slug" class="btn btn-sm btn-outline" :to="`/demo/${t.old_slug}`" style="margin-top: 6px">
+                    查看旧版 →
+                  </RouterLink>
+                </div>
+                <span class="muted" style="white-space: nowrap">{{ new Date(t.created_at).toLocaleString('zh-CN') }}</span>
               </div>
             </div>
           </template>

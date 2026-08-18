@@ -68,6 +68,7 @@ class Demo(Base):
     tag_associations: Mapped[list["DemoTag"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     comments: Mapped[list["Comment"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     session_logs: Mapped[list["SessionLog"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    timeline: Mapped[list["DemoTimeline"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
 
 
 class DemoTag(Base):
@@ -106,6 +107,22 @@ class SessionLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     demo: Mapped["Demo"] = relationship(back_populates="session_logs")
+
+
+class DemoTimeline(Base):
+    """轻量版本时间线（不依赖 git）：记录 demo 的创建/更新历史。"""
+
+    __tablename__ = "demo_timeline"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), nullable=False, index=True)
+    version_label: Mapped[str] = mapped_column(String(32), default="v1", nullable=False)
+    message: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # 若本次更新保留了旧版本，这里指向旧版本 demo 的 slug（可点击跳转）
+    old_slug: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    demo: Mapped["Demo"] = relationship(back_populates="timeline")
 
 
 class Setting(Base):

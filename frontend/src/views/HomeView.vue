@@ -23,6 +23,11 @@ const hasMore = ref(true)
 const projectAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug != null))
 const systemAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug == null))
 
+const annBottom = ref<HTMLElement | null>(null)
+function scrollToAnnouncements() {
+  annBottom.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
@@ -109,6 +114,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <h1 class="huge">民间科研<br />成果展示</h1>
     <p class="sub">
       这里收集由 AI 模型生成的网页 Demo —— 每个作品都附带生成会话日志与 Git 版本时间线，过程全透明。
+      <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">查看公告 →</a>
     </p>
   </section>
 
@@ -160,7 +166,7 @@ onBeforeUnmount(() => observer?.disconnect())
     </div>
   </section>
 
-  <section v-if="announcements.length" class="section ann-blocks">
+  <section v-if="announcements.length" ref="annBottom" class="section ann-blocks">
     <AnnouncementBlock v-if="projectAnnouncements.length" title="项目公告" :items="projectAnnouncements" />
     <AnnouncementBlock v-if="systemAnnouncements.length" title="系统公告" :items="systemAnnouncements" />
   </section>

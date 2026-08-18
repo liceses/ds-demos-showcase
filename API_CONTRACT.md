@@ -3,7 +3,10 @@
 > 本文件给前端开发对接用：后端已实现公告系统与 Demo 修改能力，接口如下。
 > 基础前缀：`/api/v1`，认证方式：HttpOnly Cookie `demo_token`（`withCredentials: true`），与现有接口一致。
 >
-> **变更记录**：每 demo 的 git 生成过程功能已移除（`commits` 相关接口不再提供），详情页不再有「生成过程」Tab；Demo 更新改为「默认只保留最新文件 + 可选保留旧版本为独立页面」。
+> **变更记录**：
+> - 每 demo 的 git 生成过程功能已移除（`commits` 相关接口不再提供）
+> - 改为**轻量时间线**：创建/更新自动记录，有旧版时可在时间线点击跳转（见「2. Demo 修改」）
+> - Demo 更新默认只保留最新文件，可选「保留旧版本为独立页面」
 
 ## 1. 整站公告系统
 
@@ -88,13 +91,35 @@
 > - `keep_old_version=true` 且同时上传了新 zip 时，后端会把**当前文件快照**成一个新的独立 demo 页面（新 slug，带 `version-of:{原slug}` 标签），然后才覆盖当前 demo
 > - 只要有任何字段变化，自动生成一条 `type=demo_update` 公告，`content` = commit_message（缺省 "更新 demo"）
 
+#### 轻量时间线（不依赖 git）
+
+- `GET /api/v1/demos/{slug}` 详情响应新增 **`timeline`** 数组（按时间倒序）：
+
+```json
+"timeline": [
+  { "id": 3, "version_label": "v2", "message": "修复音效问题", "old_slug": "pvz-xxxx-v1", "created_at": "2025-06-03T10:00:00" },
+  { "id": 1, "version_label": "v1", "message": "创建", "old_slug": null, "created_at": "2025-06-01T08:00:00" }
+]
+```
+
+- 字段含义：
+  - `version_label`：版本号（v1/v2…，旧版页面为「旧版」）
+  - `message`：创建/更新说明
+  - `old_slug`：**非空时表示该时间点保留了旧版本，前端渲染为可点击跳转链接** → `/demo/{old_slug}`
+- 时间线记录规则：
+  - 创建 demo → 自动加 `v1 创建`
+  - 更新 demo → 自动加 `v{next} {更新说明}`；若勾选了保留旧版本，该条 `old_slug` 指向旧版页面
+  - 旧版页面自身也有时间线（`旧版 旧版本快照`，`old_slug` 指回最新版）
+
 #### DELETE `/api/v1/demos/{slug}`（作者或 admin）
 
 返回 204，同时清理本地文件与 OSS 对象。
 
 ### 前端建议
 
-- Demo 详情页：作者本人或 admin 显示「编辑 / 删除」按钮（已无「生成过程/git」Tab）
+- Demo 详情页 Tab：信息 / **时间线** / 会话日志 / 评论
+- 时间线 Tab 渲染 `timeline` 数组；`old_slug` 非空的条目显示「查看旧版 →」按钮
+- 作者本人或 admin 显示「编辑 / 删除」按钮
 - 编辑复用上传页表单：预填标题/描述/标签，zip 可选，新增「更新说明」与「保留旧版本」选项 → 提交到 PUT
 - 删除前 `confirm` 二次确认
 - 旧版本 demo 页面通过 `version-of:{slug}` 标签互相检索

@@ -1,129 +1,101 @@
-# 部署到 Cloudflare（Worker 全栈 + 阿里云 OSS）
+# 部署指南（云服务器 + Docker Compose + nginx）
 
-> 一个 **Cloudflare Worker** 同时托管前端静态资源 + `/api/v1` API + `/preview` + `/media`。
-> 数据库用 **D1**，文件存储用你已有的 **阿里云 OSS**（不需要 Cloudflare R2，也不需要信用卡）。
+> 现状：前端由 **nginx** 静态托管并反代 **FastAPI**；数据库 **SQLite**（docker volume）；文件存储本地 `storage/`（demo 文件 / 封面 / 每 demo 一个 git 仓库）。
+> 仓库内 `docker-compose.yml` + `frontend/nginx.conf` 即当前线上拓扑。早期「Cloudflare Worker + D1 + OSS」方案**已弃用**，见文末历史说明。
 
 ## 架构
 
 ```
-浏览器 → Cloudflare Worker
-         ├── 前端静态资源（dist，assets）
-         ├── /api/v1   → D1（元数据/用户/评论/提交）
-         └── /preview /media /下载 → 阿里云 OSS（zip/解压文件/封面/session log）
+浏览器 → Nginx(:80)
+          /api、/preview、/media → backend:8000（FastAPI）
+          /assets                → 静态（长缓存）
+          其余                    → SPA 回退 index.html
 ```
 
 ## 首次部署
 
-### 1. 登录 Cloudflare
+### 1. 准备环境变量（重要）
 
-```powershell
-cd web/frontend
-npx wrangler login
-```
-
-### 2. 创建 D1 数据库
-
-```powershell
-npx wrangler d1 create ds-demos
-```
-
-把输出的 `database_id` 填到 `frontend/wrangler.toml`。
-
-### 3. 配置阿里云 OSS
-
-在 `frontend/wrangler.toml` 的 `[vars]` 里填：
-
-```toml
-[vars]
-OSS_ENDPOINT = "oss-cn-hangzhou.aliyuncs.com"   # 你的 region endpoint
-OSS_BUCKET = "你的 bucket 名"
-OSS_ACCESS_KEY_ID = "你的 AccessKey ID"
-```
-
-AccessKey Secret **不要写进仓库**，用命令设置成 Worker 加密变量：
-
-```powershell
-npx wrangler secret put OSS_ACCESS_KEY_SECRET
-```
-
-> OSS 需要是**私有读写**权限即可（Worker 通过签名访问，不公开 bucket）。
-
-### 4. 构建前端（生产模式，连真实 API）
-
-```powershell
-cd web/frontend
-npm run build
-```
-
-### 5. 部署
-
-```powershell
-npx wrangler deploy
-```
-
-完成输出 `https://ds-demos-showcase.<子域>.workers.dev`。
-
-## 更新流程
+在 `web/` 下创建 `.env`（docker compose 自动读取做变量替换），至少：
 
 ```bash
-cd web/frontend
-npm run build
-npx wrangler deploy
+JWT_SECRET=<强随机串>        # 必须！compose 兜底值是公开的 please-change-me
+AUTO_APPROVE=false           # 生产建议关闭自动审核（新上传需管理员通过）
 ```
 
-## 网页版（Dashboard）也可以
+生成密钥：`openssl rand -hex 32`
 
-如果你不想用命令行：
+> compose 里还预留了 `OSS_*` 变量，当前后端代码并未消费（本地存储），可留空。
 
-1. Workers & Pages → D1 → 创建 `ds-demos`，复制 database_id
-2. GitHub 里编辑 `frontend/wrangler.toml`，填上 database_id 和 OSS 三个值
-3. Workers & Pages → Create application → Worker → 选仓库
-4. 设置：
-   - Path：`frontend`
-   - Build command：`npm install && npm run build`
-   - Deploy command：`npx wrangler deploy`
-5. 部署后在 Worker 设置里添加加密变量 `OSS_ACCESS_KEY_SECRET`
+### 2. 构建并启动
 
-## 默认账号
-
-- 管理员：`admin / admin123`（首次部署自动 seed）
-- 初始标签自动写入。
-
-## 使用 RAM 子用户 AccessKey（推荐，最小权限）
-
-不要用主账号 AccessKey，建一个只访问 OSS 的 RAM 子用户：
-
-1. 打开 RAM 控制台：https://ram.console.aliyun.com/users
-2. **创建用户**：登录名随意（如 `ds-demo-oss`），访问方式勾选 **OpenAPI 调用访问**（会生成 AccessKey）
-3. 创建后**立即复制 AccessKey ID 和 Secret**（Secret 只显示一次）
-4. 给该用户授权：
-   - 简单方式：直接添加系统策略 **AliyunOSSFullAccess**
-   - 更安全的自定义策略（推荐）：
-
-```json
-{
-  "Version": "1",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "oss:GetObject",
-        "oss:PutObject",
-        "oss:DeleteObject",
-        "oss:ListObjects"
-      ],
-      "Resource": [
-        "acs:oss:*:*:你的bucket名",
-        "acs:oss:*:*:你的bucket名/*"
-      ]
-    }
-  ]
-}
+```bash
+cd web
+docker compose up -d --build
 ```
 
-5. 把 RAM 用户的 AccessKey ID 填到 `wrangler.toml`，Secret 用 `wrangler secret put OSS_ACCESS_KEY_SECRET` 设置
+- 前端对外 `:80`（nginx）
+- 后端容器内 `:8000`，不对外，由 nginx 反代
 
-## 注意
+### 3. 域名解析
 
-- Worker 请求体大小限制约 100MB，上传的 demo zip 别超过。
-- OSS 会按量计费，但你有免费额度；注意 AccessKey 只给 Worker 用最小权限。
+把域名（如 `deepdemos.top`）的 A 记录指向服务器公网 IP。
+
+### 4. 首次登录必做（安全）
+
+- **改 admin 默认密码**（当前代码无改密接口，用容器内 Python）：
+
+  ```bash
+  docker compose exec backend python - <<'PY'
+  from app.security import hash_password
+  from app.database import SessionLocal
+  from app.models import User
+  db = SessionLocal()
+  u = db.query(User).filter(User.username == 'admin').first()
+  u.password_hash = hash_password('在这里填一个新强密码')
+  db.commit()
+  print('admin password updated')
+  PY
+  ```
+
+- 确认 `AUTO_APPROVE=false`（否则新上传的 Demo 直接公开）。
+
+## 更新
+
+```bash
+cd web && git pull && docker compose up -d --build
+```
+
+## 上线前安全清单
+
+1. `JWT_SECRET` 改为强随机值（见上）。
+2. 修改 `admin` 默认密码；建议同时补「改密接口」（当前缺失）。
+3. `AUTO_APPROVE=false`。
+4. **配 HTTPS（强烈建议）**：当前 `nginx.conf` 仅监听 80，登录凭据与 Cookie 明文传输。可用 certbot（Let's Encrypt）为 `deepdemos.top` 发证书并改 nginx 配置：
+   - `listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
+5. 建议后续补：登录/上传/评论/下载限流、zip 解压防护（压缩比/条目数/符号链接）、安全响应头（CSP/nosniff 等）、`/health` `/ready`、审计日志。这些属于"生产规范"项，当前代码尚未实现。
+
+## 备份
+
+- **数据库（SQLite 在线一致快照 → storage 卷的 backups 目录）**：
+
+  ```bash
+  docker compose exec -T backend python - <<'PY'
+  import sqlite3, time, os, shutil
+  t = time.strftime("%Y%m%d-%H%M%S")
+  src = sqlite3.connect("/app/data/app.db")
+  dst = sqlite3.connect(f"/tmp/app-{t}.db")
+  src.backup(dst); dst.close(); src.close()
+  os.makedirs("/app/storage/backups", exist_ok=True)
+  shutil.copy(f"/tmp/app-{t}.db", f"/app/storage/backups/app-{t}.db")
+  print("backup ok:", t)
+  PY
+  ```
+
+- **文件**：将 `demo-storage` 卷（demo 文件 / 封面 / 每 demo git 仓库 / backups）定期 rsync 或打包到异机。
+
+> 注意：上面备份落在 storage 卷内，仍建议额外把卷导出到异地（`docker run --rm -v <项目>_demo-storage:/s -v $PWD:/b alpine tar czf /b/storage.tgz -C /s .`，DB 同理用 demo-data 卷）。
+
+## 历史方案（已弃用）
+
+原「Cloudflare Worker 全栈（Hono + D1 + 阿里云 OSS）」部署方式见 git 历史（自 commit `04c4bc2` 起，`wrangler.toml`、`frontend/worker/` 等）。现线上以本文件的 Docker Compose + nginx 为准。

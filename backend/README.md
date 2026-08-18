@@ -55,4 +55,15 @@ app/
 
 ## 部署
 
-后期可 Docker 化部署到云服务器；SQLite + 本地存储适合单机 MVP，量大后换 PostgreSQL + OSS。
+当前生产为 **Docker Compose + nginx**（见仓库根 `docker-compose.yml` 与 `../DEPLOY.md`）：
+
+- `backend/Dockerfile`：`python:3.12-slim` + `uvicorn app.main:app --workers 1`。
+- 数据库 SQLite（volume `demo-data`）；文件存本地（volume `demo-storage`）。
+- 由 nginx 反代 `/api`、`/preview`、`/media`。
+
+启动：`cd web && docker compose up -d --build`。
+
+生产必须：
+1. 设置强 `JWT_SECRET`（compose 兜底值是公开的 `please-change-me`）。
+2. 修改默认 `admin/admin123`（代码暂无改密接口，改法见 `../DEPLOY.md`）。
+3. 配置 HTTPS（当前 nginx 仅 80）。

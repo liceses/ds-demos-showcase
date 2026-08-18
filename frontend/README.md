@@ -55,6 +55,5 @@ npm run preview    # 预览构建产物
 
 ## 当前范围
 
-- 已实现：全部页面 + Mock 数据 + 类型对齐 + 可构建。
-- 未实现（后端职责 / 后续）：zip 上传解压与安全校验、Git 仓库管理、封面重编码、
-  限流、真实部署（Caddy/HTTPS）、CI。
+- 已实现：全部页面 + Mock 数据 + 类型对齐 + 可构建；生产由 nginx 托管（`Dockerfile` + `nginx.conf`），部署见 `../DEPLOY.md`。
+- 未实现（后续）：HTTPS/TLS、安全响应头、限流、CI/测试。

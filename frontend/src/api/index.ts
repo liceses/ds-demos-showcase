@@ -62,10 +62,6 @@ const realApi = {
   },
 
   // ---------- 标签 ----------
-  async listTags(): Promise<Tag[]> {
-    const { data } = await http.get('/tags')
-    return data
-  },
   async getTag(key: string, value: string): Promise<Tag> {
     const { data } = await http.get(`/tags/${encodeURIComponent(`${key}:${value}`)}`)
     return data

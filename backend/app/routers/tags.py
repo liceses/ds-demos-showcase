@@ -11,12 +11,6 @@ from ..serializers import tag_dict
 router = APIRouter(prefix="/tags", tags=["tags"])
 
 
-@router.get("", response_model=list[TagOut])
-def list_tags(db: Session = Depends(get_db)):
-    tags = db.query(Tag).order_by(Tag.key, Tag.value).all()
-    return [tag_dict(db, t) for t in tags]
-
-
 @router.get("/tag-keys", response_model=list[TagKeyOut])
 def list_tag_keys(db: Session = Depends(get_db)):
     """标签键定义（供发布/编辑页做选择器 + 标签主页展示）。"""

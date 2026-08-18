@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
-import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, Tag } from '../api/types'
+import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, TagKeyInfo } from '../api/types'
 
 const ui = useUiStore()
 
@@ -10,7 +10,7 @@ const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings' | 'announceme
 
 const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
-const tags = ref<Tag[]>([])
+const tagKeys = ref<TagKeyInfo[]>([])
 const users = ref<AdminUser[]>([])
 const settings = ref<Settings>({ auto_approve: true })
 const announcements = ref<Announcement[]>([])
@@ -57,9 +57,16 @@ async function saveEditAnn() {
   }
 }
 
-const newTag = ref({ key: '', value: '', description: '', parent_id: '' as string | number })
-const tagError = ref('')
-const tagOk = ref('')
+// 标签键管理
+const newKey = ref({ key: '', mode: 'fixed' as 'fixed' | 'open' | 'int', label: '', description: '', sort: 0 })
+const keyError = ref('')
+const keyOk = ref('')
+const newValue = ref({ key: '', value: '', description: '' })
+const valueError = ref('')
+const valueOk = ref('')
+
+const fixedKeys = computed(() => tagKeys.value.filter((k) => k.mode === 'fixed'))
+const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
 
 const loading = ref(false)
 const error = ref('')
@@ -71,14 +78,14 @@ async function loadAll() {
     const [p, d, t, u, s, a] = await Promise.all([
       api.adminReview(),
       api.adminDemos(),
-      api.listTags(),
+      api.listTagKeys(),
       api.adminUsers(),
       api.getSettings(),
       api.listAnnouncements(),
     ])
     pending.value = p
     demos.value = d
-    tags.value = t
+    tagKeys.value = t
     users.value = u
     settings.value = s
     announcements.value = a
@@ -86,6 +93,80 @@ async function loadAll() {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+  }
+}
+
+async function createTagKey() {
+  keyError.value = ''
+  keyOk.value = ''
+  if (!newKey.value.key.trim() || !newKey.value.label.trim()) {
+    keyError.value = 'key 和 label 必填'
+    return
+  }
+  try {
+    await api.createTagKey({
+      key: newKey.value.key.trim(),
+      mode: newKey.value.mode,
+      label: newKey.value.label.trim(),
+      description: newKey.value.description.trim(),
+      sort: Number(newKey.value.sort) || 0,
+    })
+    keyOk.value = '标签键已创建'
+    newKey.value = { key: '', mode: 'fixed', label: '', description: '', sort: 0 }
+    tagKeys.value = await api.listTagKeys()
+  } catch (e) {
+    keyError.value = (e as Error).message
+  }
+}
+
+async function deleteTagKey(key: string) {
+  const ok = await ui.confirm({
+    title: '删除标签键',
+    message: `确定删除标签键「${key}」？其下未被引用的值会一并删除。`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await api.deleteTagKey(key)
+    ui.toast('标签键已删除', 'success')
+    tagKeys.value = await api.listTagKeys()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
+async function addFixedValue() {
+  valueError.value = ''
+  valueOk.value = ''
+  if (!newValue.value.key || !newValue.value.value.trim()) {
+    valueError.value = '请选择固定键并填写 value'
+    return
+  }
+  try {
+    await api.createTag(newValue.value.key, newValue.value.value.trim(), newValue.value.description.trim() || undefined)
+    valueOk.value = '固定值已添加'
+    newValue.value = { key: newValue.value.key, value: '', description: '' }
+    tagKeys.value = await api.listTagKeys()
+  } catch (e) {
+    valueError.value = (e as Error).message
+  }
+}
+
+async function deleteTagValue(key: string, value: string) {
+  const ok = await ui.confirm({
+    title: '删除标签值',
+    message: `确定删除 ${key}:${value}？`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await api.deleteTagValue(key, value)
+    ui.toast('标签值已删除', 'success')
+    tagKeys.value = await api.listTagKeys()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
   }
 }
 
@@ -129,28 +210,6 @@ async function review(slug: string, action: 'approve' | 'reject') {
     await loadAll()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
-  }
-}
-
-async function createTag() {
-  tagError.value = ''
-  tagOk.value = ''
-  if (!newTag.value.key || !newTag.value.value) {
-    tagError.value = 'key 和 value 必填'
-    return
-  }
-  try {
-    await api.createTag(
-      newTag.value.key.trim(),
-      newTag.value.value.trim(),
-      newTag.value.description.trim() || undefined,
-      newTag.value.parent_id === '' || newTag.value.parent_id === 'none' ? null : Number(newTag.value.parent_id),
-    )
-    tagOk.value = '标签已创建'
-    newTag.value = { key: '', value: '', description: '', parent_id: '' }
-    tags.value = await api.listTags()
-  } catch (e) {
-    tagError.value = (e as Error).message
   }
 }
 
@@ -245,37 +304,75 @@ onMounted(loadAll)
 
           <!-- 标签管理 -->
           <template v-else-if="tab === 'tags'">
-            <div class="card card-mint" style="padding: 20px; margin-bottom: 20px">
-              <h2 style="margin-bottom: 12px">新建标签</h2>
-              <div class="form-stack">
-                <div class="filter-row" style="margin-bottom: 0">
-                  <input v-model="newTag.key" class="input" style="max-width: 200px" placeholder="key" />
-                  <input v-model="newTag.value" class="input" style="max-width: 200px" placeholder="value" />
-                  <select v-model="newTag.parent_id" class="input" style="max-width: 220px">
-                    <option value="none">无父级</option>
-                    <option v-for="t in tags" :key="t.id" :value="t.id">{{ t.key }}:{{ t.value }}</option>
-                  </select>
+            <div class="filter-row" style="align-items: stretch">
+              <div class="card card-mint" style="padding: 20px; margin-bottom: 20px; width: 100%">
+                <h2 style="margin-bottom: 12px">新建标签键</h2>
+                <div class="form-stack">
+                  <div class="filter-row" style="margin-bottom: 0">
+                    <input v-model="newKey.key" class="input" style="max-width: 160px" placeholder="key（如 difficulty）" />
+                    <select v-model="newKey.mode" class="input" style="max-width: 140px">
+                      <option value="fixed">固定值</option>
+                      <option value="open">自由值</option>
+                      <option value="int">数字值</option>
+                    </select>
+                    <input v-model="newKey.label" class="input" style="max-width: 160px" placeholder="显示名" />
+                    <input v-model="newKey.sort" class="input" style="max-width: 90px" type="number" placeholder="排序" />
+                  </div>
+                  <input v-model="newKey.description" class="input" placeholder="键介绍（可选）" />
+                  <div class="filter-row" style="margin-bottom: 0">
+                    <button class="btn btn-secondary" type="button" @click="createTagKey">创建标签键</button>
+                    <span v-if="keyError" class="notice notice-error" style="margin: 0">{{ keyError }}</span>
+                    <span v-if="keyOk" class="notice notice-success" style="margin: 0">{{ keyOk }}</span>
+                  </div>
                 </div>
-                <input v-model="newTag.description" class="input" placeholder="标签介绍（可选）" />
-                <div class="filter-row" style="margin-bottom: 0">
-                  <button class="btn btn-secondary" type="button" @click="createTag">创建标签</button>
-                  <span v-if="tagError" class="notice notice-error" style="margin: 0">{{ tagError }}</span>
-                  <span v-if="tagOk" class="notice notice-success" style="margin: 0">{{ tagOk }}</span>
+              </div>
+
+              <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; width: 100%">
+                <h2 style="margin-bottom: 12px">添加固定值</h2>
+                <div class="form-stack">
+                  <div class="filter-row" style="margin-bottom: 0">
+                    <select v-model="newValue.key" class="input" style="max-width: 180px">
+                      <option value="">选择固定键…</option>
+                      <option v-for="k in fixedKeys" :key="k.key" :value="k.key">{{ k.key }}（{{ k.label }}）</option>
+                    </select>
+                    <input v-model="newValue.value" class="input" style="max-width: 160px" placeholder="value（如 hard）" />
+                    <input v-model="newValue.description" class="input" style="max-width: 200px" placeholder="介绍（可选）" />
+                  </div>
+                  <div class="filter-row" style="margin-bottom: 0">
+                    <button class="btn btn-primary" type="button" :disabled="!newValue.key" @click="addFixedValue">添加固定值</button>
+                    <span v-if="valueError" class="notice notice-error" style="margin: 0">{{ valueError }}</span>
+                    <span v-if="valueOk" class="notice notice-success" style="margin: 0">{{ valueOk }}</span>
+                  </div>
                 </div>
               </div>
             </div>
+
             <div class="table-wrap">
               <table class="data">
                 <thead>
-                  <tr><th>标签</th><th>介绍</th><th>父级</th><th>Demo 数</th><th>子标签数</th></tr>
+                  <tr><th>键</th><th>类型</th><th>显示名</th><th>介绍</th><th>Demo 数</th><th>值</th><th>操作</th></tr>
                 </thead>
                 <tbody>
-                  <tr v-for="t in tags" :key="t.id">
-                    <td><RouterLink :to="`/tag/${t.key}/${t.value}`">{{ t.key }}:{{ t.value }}</RouterLink></td>
-                    <td>{{ t.description }}</td>
-                    <td>{{ t.parent_id ?? '-' }}</td>
-                    <td>{{ t.demo_count }}</td>
-                    <td>{{ t.child_count }}</td>
+                  <tr v-for="k in tagKeys" :key="k.key">
+                    <td><b>{{ k.key }}</b></td>
+                    <td><span class="status-pill">{{ modeLabel[k.mode] }}</span></td>
+                    <td>{{ k.label }}</td>
+                    <td style="max-width: 220px; overflow-wrap: anywhere">{{ k.description }}</td>
+                    <td>{{ k.demo_count }}</td>
+                    <td style="max-width: 300px">
+                      <div class="filter-row" style="margin: 0; gap: 6px">
+                        <template v-for="v in k.values" :key="v.value">
+                          <RouterLink class="tag-chip" :to="`/tag/${k.key}/${v.value}`">
+                            {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+                          </RouterLink>
+                          <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(k.key, v.value)">×</button>
+                        </template>
+                        <span v-if="!k.values.length" class="muted">无</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(k.key)">删除键</button>
+                    </td>
                   </tr>
                 </tbody>
               </table>

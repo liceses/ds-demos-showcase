@@ -538,11 +538,6 @@ export const mockApi = {
   },
 
   // ---------- 标签 ----------
-  async listTags(): Promise<Tag[]> {
-    await delay()
-    return clone(tags)
-  },
-
   async getTag(key: string, value: string): Promise<Tag> {
     await delay()
     const t = tags.find((x) => x.key === key && x.value === value)

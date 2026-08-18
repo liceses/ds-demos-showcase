@@ -135,6 +135,8 @@
 
 ## 4. 标签系统（分级标签）
 
+> **接口统一**：旧的扁平列表 `GET /api/v1/tags` **已下线**，前端一律使用 `GET /api/v1/tags/tag-keys` 作为数据源；`GET /api/v1/tags/{key}:{value}`（详情/层级）保留。
+
 ### 标签键定义（mode）
 
 | mode | 含义 | value 规则 | 示例 |

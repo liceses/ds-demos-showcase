@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { Announcement, DemoSummary, Tag } from '../api/types'
+import type { Announcement, DemoSummary, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 
 const demos = ref<DemoSummary[]>([])
 const announcements = ref<Announcement[]>([])
-const allTags = ref<Tag[]>([])
+const tagKeys = ref<TagKeyInfo[]>([])
 const selectedTags = ref<string[]>([])
 const q = ref('')
 const sort = ref<'newest' | 'popular'>('newest')
@@ -18,6 +18,13 @@ const loading = ref(false)
 const loadingMore = ref(false)
 const error = ref('')
 const hasMore = ref(true)
+
+// 首页过滤 chips = 所有标签键下的值（author 键不在 tag_keys 中，自动排除）
+const filterChips = computed(() =>
+  tagKeys.value.flatMap((k) =>
+    k.values.map((v) => ({ key: k.key, value: v.value, count: v.demo_count })),
+  ),
+)
 
 // 分组：项目公告 = 带 demo_slug（新发布 / 作品更新）；系统公告 = 无 demo_slug（手动 / 站点更新）
 const projectAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug != null))
@@ -83,9 +90,9 @@ function onSearch() {
 
 onMounted(async () => {
   try {
-    allTags.value = await api.listTags()
+    tagKeys.value = await api.listTagKeys()
   } catch {
-    allTags.value = []
+    tagKeys.value = []
   }
   try {
     announcements.value = await api.listAnnouncements()
@@ -130,9 +137,9 @@ onBeforeUnmount(() => observer?.disconnect())
       </div>
     </div>
 
-    <div v-if="allTags.length" class="filter-row">
+    <div v-if="filterChips.length" class="filter-row">
       <button
-        v-for="g in allTags.filter((t) => t.parent_id !== null || t.child_count === 0)"
+        v-for="g in filterChips"
         :key="g.key + ':' + g.value"
         class="tag-chip"
         :class="{ active: selectedTags.includes(g.key + ':' + g.value) }"
@@ -140,7 +147,7 @@ onBeforeUnmount(() => observer?.disconnect())
         @click="toggleTag(g.key + ':' + g.value)"
       >
         {{ g.key }}:{{ g.value }}
-        <span class="count">{{ g.demo_count }}</span>
+        <span class="count">{{ g.count }}</span>
       </button>
     </div>
 

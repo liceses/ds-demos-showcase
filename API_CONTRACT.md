@@ -132,3 +132,78 @@
 { "old_password": "旧密码", "new_password": "新密码（≥8位）" }
 ```
 返回 204；旧密码错误返回 401。前端可在个人主页放「修改密码」表单（个人页已实现简单版）。
+
+## 4. 标签系统（分级标签）
+
+### 标签键定义（mode）
+
+| mode | 含义 | value 规则 | 示例 |
+|---|---|---|---|
+| `fixed` | 固定值 | 只能选已存在的 value（管理员维护） | `model:dsv4-flash`、`plugin:routing-suite`、`type:game` |
+| `open` | 开放值 | key 固定，value 用户自定义 | `game:mc`、`game:pvz` |
+| `int` | 数字值 | value 必须为整数（自动规范化存储） | `rounds:3` |
+
+> 发布/编辑 demo 时，后端按标签键定义**强制校验**：
+> - 未知 key → 422（需管理员先在标签键管理中定义）
+> - `fixed` 的 value 不在候选中 → 422
+> - `int` 的 value 不是整数 → 422
+> - `author`、`version-of` 为系统保留 key，用户不可使用
+
+### 接口
+
+#### GET `/api/v1/tags/tag-keys`（公开）
+
+返回标签键定义（供选择器 + 标签主页）：
+
+```json
+[
+  {
+    "key": "model",
+    "mode": "fixed",
+    "label": "模型",
+    "description": "AI 模型版本（固定值）",
+    "sort": 1,
+    "demo_count": 6,
+    "values": [
+      { "value": "dsv4-flash", "description": "DeepSeek V4 Flash —— 快速推理", "demo_count": 3 }
+    ]
+  },
+  { "key": "game", "mode": "open", "label": "游戏", "description": "游戏名称（自定义值）", "sort": 6, "demo_count": 2, "values": [{ "value": "pvz", "description": "", "demo_count": 2 }] },
+  { "key": "rounds", "mode": "int", "label": "轮数", "description": "生成轮数（必须为整数）", "sort": 7, "demo_count": 1, "values": [{ "value": "3", "description": "", "demo_count": 1 }] }
+]
+```
+
+#### POST `/api/v1/tags/admin/tag-keys`（仅 admin）
+
+请求体：
+```json
+{ "key": "rounds", "mode": "int", "label": "轮数", "description": "生成轮数", "sort": 7 }
+```
+返回 201 + 标签键对象。
+
+#### PUT `/api/v1/tags/admin/tag-keys/{key}`（仅 admin）
+
+请求体同上（不含 key），更新 mode/label/description/sort。
+
+#### POST `/api/v1/tags`（仅 admin）
+
+新增**固定值**标签（`fixed` 模式的候选 value）：
+```json
+{ "key": "type", "value": "game", "description": "小游戏类" }
+```
+`open`/`int` 键无需预定义 value（用户提交时自动创建）。
+
+#### 发布/编辑 demo 的 tags 字段
+
+保持不变：`tags` 为 JSON 字符串数组，如 `["model:dsv4-flash","game:pvz","rounds:3"]`；后端按键定义校验。
+
+### 前端建议
+
+- 发布/编辑页：`GET /tags/tag-keys` 渲染选择器
+  - `fixed` → 候选 value 多选 chips
+  - `open` → 文本框 + 添加
+  - `int` → number 输入 + 添加（提交前可本地校验整数）
+  - 组装成 `key:value` 数组提交
+- 标签主页 `/tags`：按 tag-keys 分组展示（hero = label + description），value chips 链接到 `/tag/{key}/{value}`
+- 标签详情页 `/tag/{k}/{v}`：hero 标签文本 + 介绍 + 关联 Demo 瀑布流
+- 管理后台可加「标签键管理」（POST/PUT 已就绪）

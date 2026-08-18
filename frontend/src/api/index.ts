@@ -15,6 +15,7 @@ import type {
   SessionLog,
   Settings,
   Tag,
+  TagKeyInfo,
   UpdateDemoPayload,
   User,
 } from './types'
@@ -71,6 +72,18 @@ const realApi = {
   },
   async createTag(key: string, value: string, description?: string, parent_id?: number | null): Promise<Tag> {
     const { data } = await http.post('/tags', { key, value, description, parent_id })
+    return data
+  },
+  async listTagKeys(): Promise<TagKeyInfo[]> {
+    const { data } = await http.get('/tags/tag-keys')
+    return data
+  },
+  async createTagKey(payload: { key: string; mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
+    const { data } = await http.post('/tags/admin/tag-keys', payload)
+    return data
+  },
+  async updateTagKey(key: string, payload: { mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
+    const { data } = await http.put(`/tags/admin/tag-keys/${encodeURIComponent(key)}`, payload)
     return data
   },
 

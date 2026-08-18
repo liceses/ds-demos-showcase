@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
-from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, User
+from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import oss, storage
@@ -31,10 +31,47 @@ def _find_demo(db: Session, slug: str) -> Demo:
     return demo
 
 
-def _ensure_tag(db: Session, key_value: str) -> Tag:
+def _ensure_tag(db: Session, key: str, value: str) -> Tag:
+    """内部标签（author / version-of 等保留 key）直接创建或复用。"""
+    tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
+    if tag is None:
+        tag = Tag(key=key, value=value, description="")
+        db.add(tag)
+        db.flush()
+    return tag
+
+
+def _resolve_tag(db: Session, key_value: str) -> Tag:
+    """按标签键定义校验并解析用户提交的标签：
+    - fixed: value 必须是已存在的固定值
+    - open:  任意自定义 value（自动建标签）
+    - int:   value 必须是整数（自动建标签，规范化存储）
+    """
     key, _, value = key_value.partition(":")
+    key = key.strip()
+    value = value.strip()
     if not key or not value:
         raise HTTPException(status_code=422, detail=f"非法标签格式: {key_value}", )
+    if len(key) > 64 or len(value) > 64:
+        raise HTTPException(status_code=422, detail=f"标签 key/value 过长: {key_value}", )
+
+    key_def = db.get(TagKey, key)
+    if key_def is None:
+        raise HTTPException(status_code=422, detail=f"未知标签 key: {key}（请管理员先在标签键管理中定义）", )
+
+    if key_def.mode == "fixed":
+        tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
+        if tag is None:
+            raise HTTPException(status_code=422, detail=f"{key}:{value} 不是该键的固定值，请从候选中选择", )
+        return tag
+
+    if key_def.mode == "int":
+        try:
+            int(value)
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"{key} 的值必须是整数（如 rounds:3）", )
+        value = str(int(value))
+
     tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
     if tag is None:
         tag = Tag(key=key, value=value, description="")
@@ -65,13 +102,13 @@ async def _read_limited(file: UploadFile, limit: int, msg: str) -> bytes:
 def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
     db.query(DemoTag).filter(DemoTag.demo_id == demo.id).delete()
     for kv in key_values:
-        tag = _ensure_tag(db, kv)
+        tag = _resolve_tag(db, kv)
         db.add(DemoTag(demo_id=demo.id, tag_id=tag.id))
-    # 自动附加作者标签
+    # 自动附加作者标签（保留 key，跳过键定义校验）
     if demo.author_id is not None:
         author = db.get(User, demo.author_id)
         if author:
-            author_tag = _ensure_tag(db, f"author:{author.username}")
+            author_tag = _ensure_tag(db, "author", author.username)
             db.add(DemoTag(demo_id=demo.id, tag_id=author_tag.id))
 
 
@@ -327,7 +364,7 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
     # 复制标签 + 标记旧版本归属
     for dt in db.query(DemoTag).filter(DemoTag.demo_id == demo.id).all():
         db.add(DemoTag(demo_id=snapshot.id, tag_id=dt.tag_id))
-    version_tag = _ensure_tag(db, f"version-of:{old_slug}")
+    version_tag = _ensure_tag(db, "version-of", old_slug)
     db.add(DemoTag(demo_id=snapshot.id, tag_id=version_tag.id))
 
     # 复制会话日志记录（文件已随目录复制）

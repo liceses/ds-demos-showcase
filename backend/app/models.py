@@ -49,6 +49,24 @@ class Tag(Base):
     demo_associations: Mapped[list["DemoTag"]] = relationship(back_populates="tag", cascade="all, delete-orphan")
 
 
+class TagKey(Base):
+    """标签键定义：决定该 key 下 value 的填写方式。
+
+    mode:
+      - fixed: 固定值（管理员维护，用户只能选择，如 model:dsv4-flash）
+      - open:  开放值（key 固定，用户自定义 value，如 game:mc）
+      - int:   数字值（key 固定，value 必须是整数，如 rounds:3）
+    """
+
+    __tablename__ = "tag_keys"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    mode: Mapped[str] = mapped_column(String(16), default="open", nullable=False)
+    label: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    sort: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
 class Demo(Base):
     __tablename__ = "demos"
 

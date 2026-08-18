@@ -55,6 +55,7 @@ class TagOut(ORMModel):
     parent_id: int | None
     demo_count: int = 0
     child_count: int = 0
+    mode: str = "open"
 
 
 class TagDetail(TagOut):
@@ -67,6 +68,30 @@ class TagCreate(BaseModel):
     value: str = Field(min_length=1, max_length=128)
     description: str = ""
     parent_id: int | None = None
+
+
+class TagKeyValueOut(BaseModel):
+    value: str
+    description: str = ""
+    demo_count: int = 0
+
+
+class TagKeyOut(BaseModel):
+    key: str
+    mode: str  # fixed | open | int
+    label: str
+    description: str
+    sort: int = 0
+    values: list[TagKeyValueOut] = []
+    demo_count: int = 0
+
+
+class TagKeyUpsert(BaseModel):
+    key: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    mode: str = Field(pattern="^(fixed|open|int)$")
+    label: str = Field(min_length=1, max_length=64)
+    description: str = ""
+    sort: int = 0
 
 
 # ---------- Demo ----------

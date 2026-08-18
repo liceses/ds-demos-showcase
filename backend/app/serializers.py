@@ -1,7 +1,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, User
+from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
 
 
 def tag_dict(db: Session, tag: Tag) -> dict:
@@ -12,6 +12,7 @@ def tag_dict(db: Session, tag: Tag) -> dict:
         or 0
     )
     child_count = db.query(func.count(Tag.id)).filter(Tag.parent_id == tag.id).scalar() or 0
+    key_def = db.get(TagKey, tag.key)
     return {
         "id": tag.id,
         "key": tag.key,
@@ -20,6 +21,7 @@ def tag_dict(db: Session, tag: Tag) -> dict:
         "parent_id": tag.parent_id,
         "demo_count": demo_count,
         "child_count": child_count,
+        "mode": key_def.mode if key_def else "open",
     }
 
 

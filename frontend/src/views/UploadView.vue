@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
-import type { DemoDetail } from '../api/types'
+import type { DemoDetail, TagKeyInfo } from '../api/types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -11,7 +11,6 @@ const editSlug = typeof route.query.slug === 'string' ? route.query.slug : ''
 
 const title = ref('')
 const description = ref('')
-const tagsText = ref('')
 const coverFile = ref<File | null>(null)
 const zipFile = ref<File | null>(null)
 const commitMessage = ref('')
@@ -21,14 +20,74 @@ const error = ref('')
 const success = ref<{ slug: string; status: string } | null>(null)
 const loading = ref(false)
 
+// 标签选择器
+const tagKeys = ref<TagKeyInfo[]>([])
+const selected = ref<Record<string, string[]>>({})
+const inputs = ref<Record<string, string>>({})
+const initialTagsKey = ref('')
+
 // 编辑模式附加状态
 const demoTitle = ref('')
 const currentCover = ref('')
 const coverPreview = ref('')
 const denied = ref(false)
-const initial = ref({ title: '', description: '', tagsText: '' })
+const initial = ref({ title: '', description: '' })
+
+const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
+
+function selectedOf(key: string): string[] {
+  return selected.value[key] || []
+}
+
+function toggleValue(key: string, value: string) {
+  const list = selectedOf(key)
+  const i = list.indexOf(value)
+  if (i >= 0) list.splice(i, 1)
+  else list.push(value)
+}
+
+function addValue(key: string) {
+  const raw = (inputs.value[key] || '').trim()
+  if (!raw) return
+  if (selectedOf(key).includes(raw)) {
+    inputs.value[key] = ''
+    return
+  }
+  selectedOf(key).push(raw)
+  inputs.value[key] = ''
+}
+
+function removeValue(key: string, value: string) {
+  const list = selectedOf(key)
+  const i = list.indexOf(value)
+  if (i >= 0) list.splice(i, 1)
+}
+
+function collectTags(): string[] {
+  const out: string[] = []
+  for (const [key, values] of Object.entries(selected.value)) {
+    for (const v of values) out.push(`${key}:${v}`)
+  }
+  return out
+}
+
+function prefillTags(tags: { key: string; value: string }[]) {
+  const map: Record<string, string[]> = {}
+  for (const t of tags) {
+    if (t.key === 'author') continue
+    if (!tagKeys.value.some((k) => k.key === t.key)) continue
+    ;(map[t.key] = map[t.key] || []).push(t.value)
+  }
+  selected.value = map
+  initialTagsKey.value = JSON.stringify(map)
+}
 
 onMounted(async () => {
+  try {
+    tagKeys.value = await api.listTagKeys()
+  } catch {
+    tagKeys.value = []
+  }
   if (editSlug) {
     loading.value = true
     try {
@@ -37,8 +96,8 @@ onMounted(async () => {
       currentCover.value = demo.cover_url
       title.value = demo.title
       description.value = demo.description
-      tagsText.value = demo.tags.filter((t) => t.key !== 'author').map((t) => `${t.key}:${t.value}`).join('\n')
-      initial.value = { title: demo.title, description: demo.description, tagsText: tagsText.value.trim() }
+      prefillTags(demo.tags)
+      initial.value = { title: demo.title, description: demo.description }
       const canEdit = auth.user?.role === 'admin' || auth.user?.username === demo.author
       if (!canEdit) {
         denied.value = true
@@ -69,6 +128,18 @@ function onZipChange(e: Event) {
   zipFile.value = (e.target as HTMLInputElement).files?.[0] || null
 }
 
+const hasChanges = computed(() => {
+  if (!editSlug) return true
+  return (
+    title.value.trim() !== initial.value.title ||
+    description.value.trim() !== initial.value.description ||
+    JSON.stringify(selected.value) !== initialTagsKey.value ||
+    !!coverFile.value ||
+    !!zipFile.value ||
+    !!commitMessage.value.trim()
+  )
+})
+
 async function submit() {
   if (!title.value.trim()) {
     error.value = '请填写标题'
@@ -78,21 +149,12 @@ async function submit() {
     error.value = '请上传 zip 文件'
     return
   }
-  const tags = tagsText.value.split('\n').map((s) => s.trim()).filter(Boolean)
+  const tags = collectTags()
 
-  // 编辑模式：没有任何改动时阻止提交，避免生成空 commit + 空公告
-  if (editSlug) {
-    const changed =
-      title.value.trim() !== initial.value.title ||
-      description.value.trim() !== initial.value.description ||
-      tags.join('\n') !== initial.value.tagsText ||
-      !!coverFile.value ||
-      !!zipFile.value ||
-      !!commitMessage.value.trim()
-    if (!changed) {
-      error.value = '没有任何修改，未提交'
-      return
-    }
+  // 编辑模式：没有任何改动时阻止提交，避免生成空公告
+  if (editSlug && !hasChanges.value) {
+    error.value = '没有任何修改，未提交'
+    return
   }
 
   submitting.value = true
@@ -132,7 +194,7 @@ async function submit() {
     <span class="eyebrow">{{ editSlug ? '编辑 Demo' : '上传 Demo' }}</span>
     <h1 class="huge">{{ editSlug ? demoTitle || '编辑' : '上传' }}</h1>
     <p class="sub">
-      {{ editSlug ? '修改作品信息或重新上传文件；改动会写入 git commit 并自动生成更新公告。' : '上传一个包含 index.html 的 zip 压缩包，系统会自动解压、初始化 Git 仓库并生成封面。' }}
+      {{ editSlug ? '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。' : '上传一个包含 index.html 的 zip 压缩包，系统会自动解压并生成预览。' }}
     </p>
   </section>
 
@@ -154,11 +216,54 @@ async function submit() {
           描述
           <textarea v-model="description" class="input textarea" rows="3" placeholder="简要描述这个 Demo"></textarea>
         </label>
-        <label class="field">
-          标签（每行一个 k:v）
-          <textarea v-model="tagsText" class="input textarea input-mint" rows="5" placeholder="model:dsv4-flash&#10;type:effect&#10;skills:J-space"></textarea>
-          <span class="hint">最多 20 个；author 为系统保留标签，无需填写</span>
-        </label>
+
+        <div class="field">
+          <span class="field-label">标签（按键选择/填写）</span>
+          <div v-for="k in tagKeys" :key="k.key" class="tag-key-row">
+            <div class="tag-key-head">
+              <b>{{ k.label || k.key }} <code>{{ k.key }}</code></b>
+              <span class="hint">{{ modeLabel[k.mode] }} · {{ k.description }}</span>
+            </div>
+
+            <div v-if="k.mode === 'fixed'" class="filter-row" style="margin: 0">
+              <button
+                v-for="v in k.values"
+                :key="v.value"
+                class="tag-chip"
+                :class="{ active: selectedOf(k.key).includes(v.value) }"
+                type="button"
+                @click="toggleValue(k.key, v.value)"
+              >
+                {{ v.value }}
+                <span class="count">{{ v.demo_count }}</span>
+              </button>
+            </div>
+
+            <div v-else class="filter-row" style="margin: 0">
+              <input
+                v-model="inputs[k.key]"
+                class="input"
+                :type="k.mode === 'int' ? 'number' : 'text'"
+                :placeholder="k.mode === 'int' ? '整数，如 3' : '自定义值，如 pvz'"
+                style="max-width: 220px"
+                @keyup.enter="addValue(k.key)"
+              />
+              <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
+              <span
+                v-for="v in selectedOf(k.key)"
+                :key="v"
+                class="tag-chip active"
+                role="button"
+                title="点击移除"
+                @click="removeValue(k.key, v)"
+              >
+                {{ v }} ×
+              </span>
+            </div>
+          </div>
+          <span class="hint">author 为系统保留标签，无需填写</span>
+        </div>
+
         <label class="field">
           封面{{ editSlug ? '（可选，不选保留当前封面）' : '（可选）' }}
           <input class="input" type="file" accept="image/png,image/jpeg,image/webp" @change="onCoverChange" />
@@ -175,7 +280,7 @@ async function submit() {
         <label v-if="editSlug" class="field">
           更新说明 / commit 信息（可选）
           <input v-model="commitMessage" class="input" placeholder="例如：修复第二关音效不同步的问题" />
-          <span class="hint">会生成「作品更新公告」</span>
+          <span class="hint">会生成「作品更新公告」并写入时间线</span>
         </label>
         <label v-if="editSlug && zipFile" class="field" style="display: flex; gap: 8px; align-items: center">
           <input v-model="keepOldVersion" type="checkbox" style="width: 18px; height: 18px" />

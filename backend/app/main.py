@@ -7,7 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .models import Setting, Tag, User
+from .models import Setting, Tag, TagKey, User
 from .routers import admin, announcements, auth, comments, demos, sessions, tags, users
 from .security import hash_password
 from .services import oss
@@ -145,6 +145,19 @@ def init_db() -> None:
 
     db = SessionLocal()
     try:
+        # 标签键定义（固定值 / 开放值 / 数字值）
+        if db.query(TagKey).count() == 0:
+            def tag_key(key: str, mode: str, label: str, description: str = "", sort: int = 0) -> None:
+                db.add(TagKey(key=key, mode=mode, label=label, description=description, sort=sort))
+
+            tag_key("model", "fixed", "模型", "AI 模型版本（固定值）", 1)
+            tag_key("plugin", "fixed", "插件", "使用的插件（固定值）", 2)
+            tag_key("type", "fixed", "类型", "Demo 类型（固定值）", 3)
+            tag_key("skills", "fixed", "技能", "技能工作区（固定值）", 4)
+            tag_key("preset", "fixed", "预设", "预设配置（固定值）", 5)
+            tag_key("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 6)
+            tag_key("rounds", "int", "轮数", "生成轮数（必须为整数）", 7)
+
         if db.query(Tag).count() == 0:
             def tag(key: str, value: str, description: str = "", parent: Tag | None = None) -> Tag:
                 t = Tag(key=key, value=value, description=description, parent_id=parent.id if parent else None)

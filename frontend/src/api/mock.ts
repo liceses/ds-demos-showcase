@@ -15,6 +15,7 @@ import type {
   SessionLog,
   Settings,
   Tag,
+  TagKeyInfo,
   UpdateDemoPayload,
   User,
 } from './types'
@@ -67,6 +68,35 @@ const tags: Tag[] = [
   { id: 10, key: 'author', value: 'tester', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
   { id: 11, key: 'author', value: 'alice', description: '系统作者标签', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 12, key: 'author', value: 'admin', description: '系统作者标签', parent_id: null, demo_count: 1, child_count: 0 },
+]
+
+const tagKeys: TagKeyInfo[] = [
+  { key: 'model', mode: 'fixed', label: '模型', description: 'AI 模型版本（固定值）', sort: 1, values: [
+    { value: 'dsv4', description: '模型版本总类', demo_count: 6 },
+    { value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', demo_count: 3 },
+    { value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', demo_count: 3 },
+  ], demo_count: 6 },
+  { key: 'plugin', mode: 'fixed', label: '插件', description: '使用的插件（固定值）', sort: 2, values: [
+    { value: 'routing-suite', description: '路由套件插件', demo_count: 2 },
+  ], demo_count: 2 },
+  { key: 'type', mode: 'fixed', label: '类型', description: 'Demo 类型（固定值）', sort: 3, values: [
+    { value: 'effect', description: '视觉特效类', demo_count: 2 },
+    { value: 'widget', description: '小组件类', demo_count: 2 },
+    { value: 'game', description: '小游戏类', demo_count: 2 },
+  ], demo_count: 2 },
+  { key: 'skills', mode: 'fixed', label: '技能', description: '技能工作区（固定值）', sort: 4, values: [
+    { value: 'J-space', description: 'J-space 技能工作区', demo_count: 2 },
+  ], demo_count: 2 },
+  { key: 'preset', mode: 'fixed', label: '预设', description: '预设配置（固定值）', sort: 5, values: [
+    { value: 'router-standard', description: '标准路由预设', demo_count: 2 },
+  ], demo_count: 2 },
+  { key: 'game', mode: 'open', label: '游戏', description: '游戏名称（自定义值，如 mc / pvz）', sort: 6, values: [
+    { value: 'pvz', description: '植物大战僵尸', demo_count: 2 },
+    { value: 'mc', description: '我的世界', demo_count: 1 },
+  ], demo_count: 2 },
+  { key: 'rounds', mode: 'int', label: '轮数', description: '生成轮数（必须为整数）', sort: 7, values: [
+    { value: '3', description: '', demo_count: 1 },
+  ], demo_count: 1 },
 ]
 
 const demos: DemoDetail[] = [
@@ -512,6 +542,36 @@ export const mockApi = {
     }
     tags.push(tag)
     return clone(tag)
+  },
+
+  async listTagKeys(): Promise<TagKeyInfo[]> {
+    await delay()
+    return clone(tagKeys)
+  },
+  async createTagKey(payload: { key: string; mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
+    await delay(200)
+    if (tagKeys.some((k) => k.key === payload.key)) throw new Error('标签键已存在')
+    const info: TagKeyInfo = {
+      key: payload.key,
+      mode: payload.mode,
+      label: payload.label,
+      description: payload.description || '',
+      sort: payload.sort ?? 0,
+      values: [],
+      demo_count: 0,
+    }
+    tagKeys.push(info)
+    return clone(info)
+  },
+  async updateTagKey(key: string, payload: { mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
+    await delay(200)
+    const k = tagKeys.find((x) => x.key === key)
+    if (!k) throw new Error('标签键不存在')
+    k.mode = payload.mode
+    k.label = payload.label
+    if (payload.description !== undefined) k.description = payload.description
+    if (payload.sort !== undefined) k.sort = payload.sort
+    return clone(k)
   },
 
   // ---------- Demo ----------

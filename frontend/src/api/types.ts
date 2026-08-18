@@ -23,6 +23,23 @@ export interface Tag extends TagRef {
   child_count: number
   children?: Tag[]
   parent?: Tag | null
+  mode?: string
+}
+
+export interface TagKeyValue {
+  value: string
+  description: string
+  demo_count: number
+}
+
+export interface TagKeyInfo {
+  key: string
+  mode: 'fixed' | 'open' | 'int'
+  label: string
+  description: string
+  sort: number
+  values: TagKeyValue[]
+  demo_count: number
 }
 
 export interface DemoSummary {

@@ -295,6 +295,34 @@ label.field .hint {
   color: #444;
 }
 
+.field-label {
+  display: block;
+  margin: 0 0 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tag-key-row {
+  border: 2px solid var(--ink);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--paper);
+}
+.tag-key-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.tag-key-head code {
+  background: var(--yellow);
+  padding: 1px 5px;
+  font-size: 11px;
+}
+
 /* ---------- 标签 ---------- */
 .tag-chip {
   display: inline-flex;

@@ -208,7 +208,9 @@ async function initDb(env: Env) {
       value TEXT NOT NULL
     );
   `
-  await env.DB.exec(sql)
+  // D1 exec 不支持一次执行多语句，改为 batch 逐条执行
+  const statements = sql.split(';').map((s) => s.trim()).filter(Boolean)
+  await env.DB.batch(statements.map((s) => env.DB.prepare(s)))
 
   // seed 初始标签
   const tagCount = await env.DB.prepare('SELECT COUNT(*) as n FROM tags').first<{ n: number }>()

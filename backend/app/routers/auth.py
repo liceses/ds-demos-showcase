@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import current_user
 from ..models import User
-from ..schemas import AuthResponse, LoginRequest, RegisterRequest, UserOut
+from ..schemas import AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, UserOut
 from ..security import (
     clear_auth_cookie,
     create_access_token,
@@ -52,3 +52,12 @@ def logout(response: Response, user: User = Depends(current_user)):
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(current_user)):
     return user
+
+
+@router.post("/change-password", status_code=204)
+def change_password(body: ChangePasswordRequest, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if not verify_password(body.old_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="原密码错误", )
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return Response(status_code=204)

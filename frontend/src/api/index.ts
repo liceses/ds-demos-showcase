@@ -24,18 +24,6 @@ const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
 
 export const isMock = useMock
 
-async function downloadFile(url: string, filename: string) {
-  const res = await http.get(url, { responseType: 'blob' })
-  const link = document.createElement('a')
-  const objectUrl = URL.createObjectURL(res.data as Blob)
-  link.href = objectUrl
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(objectUrl)
-}
-
 const realApi = {
   // ---------- 认证 ----------
   async login(username: string, password: string): Promise<AuthResponse> {
@@ -141,7 +129,9 @@ const realApi = {
     await http.delete(`/demos/${encodeURIComponent(slug)}`)
   },
   async downloadDemo(slug: string): Promise<void> {
-    await downloadFile(`/demos/${encodeURIComponent(slug)}/download`, `${slug}.zip`)
+    // 直接整页导航下载：后端 307 → OSS（Content-Disposition: attachment）触发浏览器原生下载。
+    // 不经过 XHR/blob，因此不需要 OSS CORS 放行主站源；大 zip 走流式下载也不占内存。
+    window.location.assign(`/api/v1/demos/${encodeURIComponent(slug)}/download`)
   },
 
   // ---------- 评论 ----------

@@ -18,7 +18,8 @@ web/
 ├── idea.md             # 原始需求
 ├── start-dev.ps1/.bat  # 本地一键启动（开发环境）
 ├── docs/
-│   └── 预览架构与排坑记录.md  # 预览 iframe 架构决策 + 三个大坑（localStorage/OSS 强制下载/CORS）与配置清单
+│   ├── 预览架构与排坑记录.md  # 预览 iframe 架构决策 + 三个大坑（localStorage/OSS 强制下载/CORS）与配置清单
+│   └── 运维经验与排坑记录.md  # 线上运维沉淀：Docker/OSS/CDN 缓存/性能/迁移/安全/AI agent 集成
 └── stylepkg/           # 视觉设计规范（neo-brutalist-playful）
 ```
 

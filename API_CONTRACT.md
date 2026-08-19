@@ -303,3 +303,69 @@ commit_message / keep_old_version  同前（编辑时）
   - `zip` → 「文件包项目」卡片 + 下载按钮
   - `link` → 「打开链接」按钮（`external_url`，新窗口）
   - 信息 Tab：`prompt` 非空时展示「💬 第一轮提示词」卡片；`video_url` 非空时展示「🎬 介绍视频」跳转按钮
+
+## 6. AI Agent 上传指南
+
+### 认证（Bearer Token，免 Cookie）
+
+登录接口本就返回 `access_token`，后端同时支持 Cookie 与 `Authorization: Bearer <token>`：
+
+```bash
+# 1. 登录拿 token
+curl -s -X POST https://deepdemos.top/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"你的用户名","password":"你的密码"}'
+# → {"access_token":"eyJ...","user":{...}}
+
+# 2. 之后所有接口带请求头
+-H "Authorization: Bearer eyJ..."
+```
+
+### 方式一：JSON + zip URL（推荐 agent 用，免 multipart）
+
+`POST /api/v1/demos/from-url`
+
+```bash
+curl -X POST https://deepdemos.top/api/v1/demos/from-url \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "title": "机械表模拟",
+    "description": "AI 生成的机械表网页 demo",
+    "demo_type": "web",
+    "zip_url": "https://your-oss-or-any-public-host/机械表.zip",
+    "cover_url": "https://your-oss-or-any-public-host/cover.png",
+    "prompt": "用 canvas 画一个机械表…",
+    "video_url": "",
+    "tags": ["model:dsv4-flash", {"key":"game","value":"watch","description":"机械表主题"}]
+  }'
+# → {"slug":"ji-xie-biao-mo-ni","status":"approved"}
+```
+
+- `zip_url` 后端自行下载（限 `max_upload_size` 50MB、60s 超时），**只允许公网 http(s)**：内网/回环/保留地址返回 422（SSRF 防护）
+- 封面 `cover_url` 可选；`tags` 支持字符串或对象数组（同第 4 节）
+- `demo_type` 规则同第 5 节：web/zip 必填 `zip_url`，link 必填 `external_url` 且禁传 zip
+
+### 方式二：multipart 直传（文件在本地时用）
+
+`POST /api/v1/demos`（同网页上传，字段一致）：
+
+```bash
+curl -X POST https://deepdemos.top/api/v1/demos \
+  -H "Authorization: Bearer <token>" \
+  -F "title=机械表模拟" \
+  -F "description=AI 生成的机械表网页 demo" \
+  -F "demo_type=web" \
+  -F 'tags=["model:dsv4-flash"]' \
+  -F "prompt=用 canvas 画一个机械表…" \
+  -F "file=@D:/path/机械表.zip" \
+  -F "cover=@D:/path/cover.png"
+```
+
+### agent 流程建议
+
+1. 生成/打包游戏 → zip
+2. zip 放到公网可下载地址（OSS / 临时 http 服务 / GitHub release）
+3. `POST /auth/login` 拿 token
+4. `POST /demos/from-url` 提交 → 拿到 `slug`
+5. 可选：`GET /demos/{slug}` 校验上线状态；`PUT /demos/{slug}` 更新

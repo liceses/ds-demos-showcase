@@ -95,6 +95,19 @@ class TagKeyUpsert(BaseModel):
 
 
 # ---------- Demo ----------
+class DemoFromUrlIn(BaseModel):
+    """AI agent 友好：JSON 提交，zip 走 URL（后端下载），免 multipart。"""
+    title: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    tags: list | None = None
+    demo_type: str = "web"  # web | zip | link
+    external_url: str | None = None
+    prompt: str = ""
+    video_url: str | None = None
+    zip_url: str | None = None
+    cover_url: str | None = None
+
+
 class DemoSummaryOut(BaseModel):
     slug: str
     title: str

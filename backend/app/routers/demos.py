@@ -1,11 +1,15 @@
+import ipaddress
 import json
 import os
 import shutil
+import socket
+import urllib.error
+import urllib.request
 import uuid
 import zipfile
-from pathlib import Path
-
 from datetime import datetime
+from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
@@ -16,7 +20,7 @@ from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
 from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
-from ..schemas import DemoCreateResult, DemoDetailOut, DemoSummaryOut, Paginated
+from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import oss, storage
 from ..services.settings_service import get_auto_approve
@@ -243,6 +247,108 @@ def _validate_url(url: str | None, field: str) -> str:
     return cleaned
 
 
+def _assert_public_url(url: str) -> None:
+    """SSRF 基础防护：拒绝内网/回环/保留地址。"""
+    host = urlparse(url).hostname
+    if not host:
+        raise HTTPException(status_code=422, detail="无效的下载地址", )
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="无法解析下载地址", )
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            raise HTTPException(status_code=422, detail="不允许下载内网/保留地址", )
+
+
+def _download_url_bytes(url: str, limit: int, what: str) -> bytes:
+    """从 URL 下载字节（带大小上限与超时）。"""
+    url = _clean_url(url)
+    if url is None:
+        raise HTTPException(status_code=422, detail=f"{what} 地址无效", )
+    _assert_public_url(url)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "ds-demos-showcase/1.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = resp.read(limit + 1)
+    except urllib.error.HTTPError as e:
+        raise HTTPException(status_code=400, detail=f"下载{what}失败: HTTP {e.code}", )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"下载{what}失败: {e}", )
+    if len(data) > limit:
+        raise HTTPException(status_code=400, detail=f"{what}超过大小限制", )
+    return data
+
+
+def _create_demo_record(
+    db: Session,
+    user: User,
+    *,
+    slug: str,
+    title: str,
+    description: str,
+    tags_raw: str | None,
+    demo_type: str,
+    external_url: str | None,
+    prompt: str,
+    video_url: str | None,
+    cover_bytes: bytes | None = None,
+    cover_ext: str = "png",
+    zip_bytes: bytes | None = None,
+) -> tuple[Demo, str]:
+    """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。"""
+    demo = Demo(
+        slug=slug,
+        title=title,
+        description=description,
+        demo_type=demo_type,
+        external_url=external_url,
+        prompt=(prompt or "").strip(),
+        video_url=_clean_url(video_url),
+    )
+    demo.author_id = user.id
+    status = "approved" if get_auto_approve(db) else "pending"
+    demo.status = status
+
+    if cover_bytes:
+        demo.cover_url = storage.save_cover(cover_bytes, cover_ext)
+    else:
+        demo.cover_url = "/media/covers/default.svg"
+
+    db.add(demo)
+    db.flush()
+    db.commit()
+
+    if zip_bytes is not None:
+        try:
+            storage.extract_zip(zip_bytes, slug, require_index=(demo_type == "web"))
+        except HTTPException:
+            db.delete(demo)
+            db.commit()
+            shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
+            raise
+        storage.upload_demo_to_oss(slug)
+        oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+
+    _set_demo_tags(db, demo, _parse_tags(tags_raw))
+    db.commit()
+
+    db.add(Announcement(
+        type="auto",
+        title="新 Demo 发布",
+        content=demo.title,
+        demo_slug=slug,
+        created_by=user.id,
+    ))
+    _add_timeline(db, demo.id, "v1", "创建", None)
+    db.commit()
+    return demo, status
+
+
 @router.post("", status_code=201, response_model=DemoCreateResult)
 async def create_demo(
     title: str = Form(...),
@@ -268,57 +374,72 @@ async def create_demo(
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
 
-    slug = _unique_slug(db, title)
-    demo = Demo(
-        slug=slug,
+    cover_bytes = None
+    cover_ext = "png"
+    if cover is not None and cover.filename:
+        cover_ext = Path(cover.filename or "").suffix.lstrip(".") or "png"
+        cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
+
+    demo, status = _create_demo_record(
+        db, user,
+        slug=_unique_slug(db, title),
         title=title.strip(),
         description=description,
+        tags_raw=tags,
         demo_type=demo_type,
         external_url=ext_url,
-        prompt=(prompt or "").strip(),
-        video_url=_clean_url(video_url),
+        prompt=prompt or "",
+        video_url=video_url,
+        cover_bytes=cover_bytes,
+        cover_ext=cover_ext,
+        zip_bytes=zip_bytes,
     )
-    demo.author_id = user.id
-    status = "approved" if get_auto_approve(db) else "pending"
-    demo.status = status
+    return DemoCreateResult(slug=demo.slug, status=status)
 
-    cover_url = "/media/covers/default.svg"
-    if cover is not None and cover.filename:
-        ext = Path(cover.filename or "").suffix.lstrip(".") or "png"
-        cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
-        cover_url = storage.save_cover(cover_bytes, ext)
-    demo.cover_url = cover_url
 
-    # 落库获得 id，再写文件
-    db.add(demo)
-    db.flush()
-    db.commit()
+@router.post("/from-url", status_code=201, response_model=DemoCreateResult)
+def create_demo_from_url(
+    body: DemoFromUrlIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """AI agent 友好：JSON 提交，zip/封面走 URL（后端下载），免 multipart。"""
+    demo_type = _validate_demo_type(body.demo_type)
 
-    if zip_bytes is not None:
-        try:
-            storage.extract_zip(zip_bytes, slug, require_index=(demo_type == "web"))
-        except HTTPException:
-            db.delete(demo)
-            db.commit()
-            shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
-            raise
-        storage.upload_demo_to_oss(slug)
-        oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+    if demo_type == "link":
+        ext_url = _validate_url(body.external_url, "external_url")
+        zip_bytes = None
+    else:
+        ext_url = None
+        if not body.zip_url:
+            raise HTTPException(status_code=422, detail="web/zip 类型需要提供 zip_url", )
+        zip_bytes = _download_url_bytes(body.zip_url, settings.max_upload_size, "zip")
+        if zip_bytes[:2] != b"PK":
+            raise HTTPException(status_code=400, detail="zip_url 下载的内容不是 zip 文件", )
 
-    _set_demo_tags(db, demo, _parse_tags(tags))
-    db.commit()
+    cover_bytes = None
+    cover_ext = "png"
+    if body.cover_url:
+        cover_bytes = _download_url_bytes(body.cover_url, settings.max_cover_size, "封面")
+        cover_ext = Path(urlparse(body.cover_url).path).suffix.lstrip(".") or "png"
 
-    # 自动公告：新 demo 发布
-    db.add(Announcement(
-        type="auto",
-        title="新 Demo 发布",
-        content=demo.title,
-        demo_slug=slug,
-        created_by=user.id,
-    ))
-    _add_timeline(db, demo.id, "v1", "创建", None)
-    db.commit()
-    return DemoCreateResult(slug=slug, status=status)
+    tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
+
+    demo, status = _create_demo_record(
+        db, user,
+        slug=_unique_slug(db, body.title),
+        title=body.title.strip(),
+        description=body.description,
+        tags_raw=tags_raw,
+        demo_type=demo_type,
+        external_url=ext_url,
+        prompt=body.prompt,
+        video_url=body.video_url,
+        cover_bytes=cover_bytes,
+        cover_ext=cover_ext,
+        zip_bytes=zip_bytes,
+    )
+    return DemoCreateResult(slug=demo.slug, status=status)
 
 
 @router.put("/{slug}", status_code=204)

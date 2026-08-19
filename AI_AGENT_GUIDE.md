@@ -11,7 +11,7 @@
 | 项 | 说明 |
 |---|---|
 | 上传方式 | ① JSON + zip 公网 URL（推荐）② multipart 直传（zip 在本地时） |
-| 是否需要账号 | 否，匿名即可；作者显示为「公开用户」或你指定的 nickname |
+| 是否需要账号 | 否，匿名即可；匿名作者统一显示为 **public**（公开用户） |
 | 审核 | 匿名上传默认 `pending`，管理员后台放行 |
 | 免审核 | 站点配置 `UPLOAD_CODE` 后，agent 上传时带上即可直接上线 |
 | 公开用户页 | `/author/public` 查看所有未注册上传 |
@@ -27,8 +27,7 @@ GET https://deepdemos.top/api/v1/meta/agent-guide
 **你需要提供给 agent 的信息：**
 1. zip 文件的本地路径（或公网可下载 URL）
 2. 站点地址：`https://deepdemos.top`
-3. 可选：展示昵称（如「小明的 AI」）
-4. 可选：`upload_code`（想要免审核时给）
+3. 可选：`upload_code`（想要免审核时给）
 
 ---
 
@@ -82,7 +81,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
    - description：2~4 句中文，说明「是什么 + 怎么玩/用 + 亮点」
    - prompt：如果作品是 AI 生成的，第一轮提示词（若有）填入；没有就不填
    - video_url：有演示视频链接可填；没有就不填
-   - nickname：显示昵称（可用用户提供的；没有则省略）
+   - 匿名上传作者固定为 public，无需也不能指定昵称
 
 5. **上传（二选一）**
 
@@ -97,7 +96,6 @@ GET {BASE_URL}/api/v1/meta/agent-guide
        "zip_url": "https://公网可下载的zip地址",
        "cover_url": "https://公网可下载的封面图(可选)",
        "prompt": "第一轮提示词(可选)",
-       "nickname": "昵称(可选)",
        "upload_code": "免审核密钥(有就给)",
        "tags": ["model:dsv4-flash", {"key":"game","value":"mc","description":"我的世界"}]
      }'
@@ -110,7 +108,6 @@ GET {BASE_URL}/api/v1/meta/agent-guide
      -F "title=作品标题" \
      -F "description=2~4 句中文简介" \
      -F "demo_type=web" \
-     -F "nickname=昵称(可选)" \
      -F "upload_code=免审核密钥(有就给)" \
      -F 'tags=["model:dsv4-flash", {"key":"game","value":"mc"}]' \
      -F "prompt=第一轮提示词(可选)" \

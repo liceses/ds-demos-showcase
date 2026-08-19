@@ -97,7 +97,7 @@ class TagKeyUpsert(BaseModel):
 # ---------- Demo ----------
 class DemoFromUrlIn(BaseModel):
     """AI agent 友好：JSON 提交，zip 走 URL（后端下载），免 multipart。
-    可匿名上传（不登录）：author_id 为空 + guest_name 展示名；带 upload_code 视为可信。"""
+    可匿名上传（不登录）：作者固定为 public；带 upload_code 视为可信。"""
     title: str = Field(min_length=1, max_length=200)
     description: str = ""
     tags: list | None = None
@@ -107,7 +107,6 @@ class DemoFromUrlIn(BaseModel):
     video_url: str | None = None
     zip_url: str | None = None
     cover_url: str | None = None
-    nickname: str = ""  # 可选：匿名展示名（未登录时生效）
     upload_code: str = ""  # 可选：信任通道密钥（未登录时生效，匹配则直接放行）
 
 

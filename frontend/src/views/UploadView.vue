@@ -11,7 +11,6 @@ const editSlug = typeof route.query.slug === 'string' ? route.query.slug : ''
 
 const title = ref('')
 const description = ref('')
-const nickname = ref('')
 const demoType = ref<'web' | 'zip' | 'link'>('web')
 const externalUrl = ref('')
 const prompt = ref('')
@@ -249,7 +248,6 @@ async function submit() {
         external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
         prompt: prompt.value.trim(),
         video_url: videoUrl.value.trim() || undefined,
-        nickname: nickname.value.trim() || undefined,
         cover: coverFile.value,
         file: zipFile.value,
         commit_message: commitMessage.value.trim() || undefined,
@@ -265,7 +263,6 @@ async function submit() {
         external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
         prompt: prompt.value.trim(),
         video_url: videoUrl.value.trim() || undefined,
-        nickname: nickname.value.trim() || undefined,
         cover: coverFile.value,
         file: zipFile.value,
       })
@@ -301,10 +298,6 @@ async function submit() {
         <label class="field">
           标题
           <input v-model="title" class="input" placeholder="Demo 标题" required />
-        </label>
-        <label v-if="!auth.isLoggedIn()" class="field">
-          昵称（可选，未登录以公开用户身份发布）
-          <input v-model="nickname" class="input" maxlength="64" placeholder="如：小明；留空显示「公开用户」" />
         </label>
         <label class="field">
           描述

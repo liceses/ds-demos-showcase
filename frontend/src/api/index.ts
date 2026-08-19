@@ -106,7 +106,6 @@ const realApi = {
     if (payload.external_url) form.append('external_url', payload.external_url)
     if (payload.prompt) form.append('prompt', payload.prompt)
     if (payload.video_url) form.append('video_url', payload.video_url)
-    if (payload.nickname) form.append('nickname', payload.nickname)
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
     // 上传含解压 + OSS 传输，放宽超时（默认 15s 不够）

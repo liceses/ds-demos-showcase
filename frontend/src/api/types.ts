@@ -176,8 +176,6 @@ export interface CreateDemoPayload {
   external_url?: string
   prompt?: string
   video_url?: string
-  /** 未登录上传时的展示昵称（public 虚拟身份） */
-  nickname?: string
   cover?: File | null
   file?: File | null
 }

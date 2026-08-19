@@ -141,14 +141,14 @@ def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
     for kv in key_values:
         tag = _resolve_tag(db, kv)
         db.add(DemoTag(demo_id=demo.id, tag_id=tag.id))
-    # 自动附加作者标签（保留 key，跳过键定义校验）；匿名用 guest_name
+    # 自动附加作者标签（保留 key，跳过键定义校验）；匿名统一为 public
     author_name = None
     if demo.author_id is not None:
         author = db.get(User, demo.author_id)
         if author:
             author_name = author.username
-    elif demo.guest_name:
-        author_name = demo.guest_name
+    else:
+        author_name = "public"
     if author_name:
         author_tag = _ensure_tag(db, "author", author_name)
         db.add(DemoTag(demo_id=demo.id, tag_id=author_tag.id))
@@ -332,11 +332,10 @@ def _create_demo_record(
     cover_bytes: bytes | None = None,
     cover_ext: str = "png",
     zip_bytes: bytes | None = None,
-    guest_name: str | None = None,
     trusted: bool = False,
 ) -> tuple[Demo, str]:
     """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
-    - user 为空 = 匿名（public 虚拟身份）：author_id=NULL + guest_name 展示名
+    - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
     - trusted（UPLOAD_CODE 匹配）或已登录且 auto_approve → approved
     - 匿名：auto_approve_all 或 auto_approve_public 任一开 → approved，否则 pending
     """
@@ -348,7 +347,6 @@ def _create_demo_record(
         external_url=external_url,
         prompt=(prompt or "").strip(),
         video_url=_clean_url(video_url),
-        guest_name=guest_name,
     )
     demo.author_id = user.id if user else None
 
@@ -398,21 +396,19 @@ def _create_demo_record(
 def _uploader_context(
     request: Request,
     user: User | None,
-    nickname: str | None,
     upload_code: str | None,
-) -> tuple[str | None, bool]:
-    """匿名上传身份解析：返回 (guest_name, trusted)。
-    - 已登录：guest=None, trusted=False（身份用账号）
+) -> bool:
+    """匿名上传身份解析：返回 trusted。
+    - 已登录：trusted=False（身份用账号）
     - 未登录 + upload_code 匹配：trusted=True（跳过限流、直接放行）
-    - 未登录：限流 + guest_name=昵称或 None（显示「公开用户」）
+    - 未登录：限流（作者恒为 public）
     """
     if user is not None:
-        return None, False
+        return False
     trusted = bool(settings.upload_code and upload_code and upload_code.strip() == settings.upload_code)
     if not trusted:
         _anon_rate_limit(request)
-    guest = (nickname or "").strip()[:64] or None
-    return guest, trusted
+    return trusted
 
 
 @router.post("", status_code=201, response_model=DemoCreateResult)
@@ -425,7 +421,6 @@ async def create_demo(
     external_url: str | None = Form(None),
     prompt: str | None = Form(None),
     video_url: str | None = Form(None),
-    nickname: str | None = Form(None),
     upload_code: str | None = Form(None),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
@@ -449,7 +444,7 @@ async def create_demo(
         cover_ext = Path(cover.filename or "").suffix.lstrip(".") or "png"
         cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
 
-    guest_name, trusted = _uploader_context(request, user, nickname, upload_code)
+    trusted = _uploader_context(request, user, upload_code)
 
     demo, status = _create_demo_record(
         db, user,
@@ -464,7 +459,6 @@ async def create_demo(
         cover_bytes=cover_bytes,
         cover_ext=cover_ext,
         zip_bytes=zip_bytes,
-        guest_name=guest_name,
         trusted=trusted,
     )
     return DemoCreateResult(slug=demo.slug, status=status)
@@ -505,7 +499,7 @@ def create_demo_from_url(
 
     tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
 
-    guest_name, trusted = _uploader_context(request, user, body.nickname, body.upload_code)
+    trusted = _uploader_context(request, user, body.upload_code)
 
     demo, status = _create_demo_record(
         db, user,
@@ -520,7 +514,6 @@ def create_demo_from_url(
         cover_bytes=cover_bytes,
         cover_ext=cover_ext,
         zip_bytes=zip_bytes,
-        guest_name=guest_name,
         trusted=trusted,
     )
     return DemoCreateResult(slug=demo.slug, status=status)

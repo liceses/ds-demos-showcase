@@ -335,7 +335,7 @@ curl -s -X POST https://deepdemos.top/api/v1/auth/login \
 
 ### 匿名上传（未注册也能传，public 虚拟身份）
 
-- **不登录也能上传**：`author_id` 为空，作者显示为 `nickname`（缺省「公开用户」），归入 `/author/public` 公开用户页
+- **不登录也能上传**：`author_id` 为空，作者**恒为 `public`**（不支持自定义昵称），归入 `/author/public` 公开用户页
 - public 不能评论、不能编辑/删除（只有管理员能管）
 - 放行规则（管理后台两个开关）：
   - `auto_approve`（放行所有）：登录用户 + 匿名都直接上线
@@ -349,7 +349,7 @@ curl -s -X POST https://deepdemos.top/api/v1/auth/login \
 `POST /api/v1/demos/from-url`
 
 ```bash
-# ① 匿名（最简单，无需登录）
+# ① 匿名（最简单，无需登录；作者固定为 public）
 curl -X POST https://deepdemos.top/api/v1/demos/from-url \
   -H "Content-Type: application/json" \
   -d '{
@@ -359,7 +359,6 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
     "zip_url": "https://your-oss-or-any-public-host/机械表.zip",
     "cover_url": "https://your-oss-or-any-public-host/cover.png",
     "prompt": "用 canvas 画一个机械表…",
-    "nickname": "小明的 AI",
     "tags": ["model:dsv4-flash", {"key":"game","value":"watch","description":"机械表主题"}]
   }'
 # → {"slug":"ji-xie-biao-mo-ni","status":"approved" | "pending"}
@@ -382,7 +381,7 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
 
 ### 方式二：multipart 直传（文件在本地时用）
 
-`POST /api/v1/demos`（同网页上传，字段一致；匿名时加 `nickname` / `upload_code`）：
+`POST /api/v1/demos`（同网页上传，字段一致；匿名时加 `upload_code`，作者固定 public）：
 
 ```bash
 # 匿名直传（不登录）
@@ -390,7 +389,6 @@ curl -X POST https://deepdemos.top/api/v1/demos \
   -F "title=机械表模拟" \
   -F "description=AI 生成的机械表网页 demo" \
   -F "demo_type=web" \
-  -F "nickname=小明的 AI" \
   -F 'tags=["model:dsv4-flash"]' \
   -F "prompt=用 canvas 画一个机械表…" \
   -F "file=@D:/path/机械表.zip" \

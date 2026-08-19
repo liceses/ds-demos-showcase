@@ -116,13 +116,12 @@ def media_file(path: str):
     from pathlib import Path as _P
     safe = _P(path).as_posix().replace("\\", "/")
     if oss.enabled():
-        # 封面文件名唯一不可变：302 重定向本身也可缓存，浏览器下次直连 OSS
-        # 先确认对象存在，避免 302 到不存在的 key（OSS 未同步时回源本地）
+        # 先确认对象存在，避免重定向到不存在的 key（OSS 未同步时回源本地）
         if oss.get_bytes(f"media/{safe}") is not None:
             return RedirectResponse(
                 oss.public_url(f"media/{safe}"),
-                # 重定向目标可能随 CDN 配置变化，不设 immutable，避免长期缓存旧地址
-                headers={"Cache-Control": "public, max-age=3600"},
+                # 重定向目标随 CDN 配置变化：本身不缓存，最终 OSS 对象自带 immutable
+                headers={"Cache-Control": "no-store"},
             )
     file_path = (settings.media_path / safe).resolve()
     if not str(file_path).startswith(str(settings.media_path.resolve())):

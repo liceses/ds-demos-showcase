@@ -11,12 +11,13 @@ const frame = ref<HTMLIFrameElement | null>(null)
 const autoHeight = ref<number | null>(null)
 const webFullscreen = ref(false)
 
-// sandbox：预览源与本站不同源（如 OSS 直链）时，加 allow-same-origin，
-// 让 demo 的 localStorage / 相对 fetch / Worker 可用且彼此隔离在 OSS 源内；
+// sandbox：预览源与本站不同源（如 demo.deepdemos.top / OSS 直链）时，加 allow-same-origin，
+// 让 demo 的 localStorage / 相对 fetch / Worker 可用且彼此隔离在预览源内；
 // 同源或 srcdoc（Mock）保持不透明 origin 不放行，防止上传的 demo 读本站 Cookie/存储。
+// allow-pointer-lock：3D 游戏（如我的世界）用 Pointer Lock 控制视角/移动，缺它 requestPointerLock 会被拒。
 const sandboxAttr = computed(() => {
   // 注意：不带 allow-fullscreen（浏览器提示其为非法 sandbox flag；全屏由 allowfullscreen + allow="fullscreen" 提供）
-  const base = 'allow-scripts allow-modals allow-forms allow-popups'
+  const base = 'allow-scripts allow-modals allow-forms allow-popups allow-pointer-lock'
   if (props.src) {
     try {
       const u = new URL(props.src, window.location.href)

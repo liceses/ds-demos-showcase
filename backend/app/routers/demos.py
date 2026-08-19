@@ -317,6 +317,16 @@ def _download_url_bytes(url: str, limit: int, what: str) -> bytes:
     return data
 
 
+def _oss_upload_safe(slug: str, zip_bytes: bytes | None = None) -> None:
+    """上传到 OSS（失败不阻塞：降级本地存储，仅警告）。"""
+    try:
+        storage.upload_demo_to_oss(slug)
+        if zip_bytes is not None:
+            oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+    except Exception as e:  # noqa: BLE001
+        print(f"[warn] OSS 上传失败（降级本地存储）: {slug} {e}", flush=True)
+
+
 def _create_demo_record(
     db: Session,
     user: User | None,
@@ -375,8 +385,7 @@ def _create_demo_record(
             db.commit()
             shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
             raise
-        storage.upload_demo_to_oss(slug)
-        oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+        _oss_upload_safe(slug, zip_bytes)
 
     _set_demo_tags(db, demo, _parse_tags(tags_raw))
     db.commit()
@@ -583,8 +592,7 @@ async def update_demo(
         if keep_old_version:
             snapshot = _snapshot_demo(db, demo, user)
         storage.extract_zip(zip_bytes, slug, require_index=(demo.demo_type == "web"))
-        storage.upload_demo_to_oss(slug)
-        oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+        _oss_upload_safe(slug, zip_bytes)
         changed = True
 
     demo.updated_at = datetime.utcnow()
@@ -667,7 +675,7 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
     _add_timeline(db, snapshot.id, "旧版", "旧版本快照", old_slug=old_slug)
 
     db.commit()
-    storage.upload_demo_to_oss(new_slug)
+    _oss_upload_safe(new_slug)
     return snapshot
 
 

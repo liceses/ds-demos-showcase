@@ -168,12 +168,15 @@ def init_db() -> None:
             encoding="utf-8",
         )
     if oss.enabled():
-        oss.put_bytes(
-            "media/covers/default.svg",
-            default_cover.read_text(encoding="utf-8").encode(),
-            "image/svg+xml",
-            extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
-        )
+        try:
+            oss.put_bytes(
+                "media/covers/default.svg",
+                default_cover.read_text(encoding="utf-8").encode(),
+                "image/svg+xml",
+                extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
+            )
+        except Exception as e:  # noqa: BLE001 —— OSS 不可用不阻塞启动，降级本地存储
+            print(f"[warn] OSS 默认封面上传失败（降级本地存储）: {e}", flush=True)
 
     Base.metadata.create_all(bind=engine)
     _ensure_demo_columns()

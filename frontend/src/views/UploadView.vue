@@ -24,8 +24,6 @@ const error = ref('')
 const success = ref<{ slug: string; status: string } | null>(null)
 const loading = ref(false)
 
-const demoTypeLabel: Record<string, string> = { web: '网页应用', zip: '文件包（zip）', link: '外部链接' }
-
 // 标签选择器
 const tagKeys = ref<TagKeyInfo[]>([])
 const selected = ref<Record<string, { value: string; description: string }[]>>({})

@@ -124,7 +124,7 @@ onMounted(load)
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
         <div class="btn-group">
           <template v-if="demo.demo_type === 'link'">
-            <a class="btn btn-sm btn-primary" :href="demo.external_url" target="_blank" rel="noopener">打开链接 ↗</a>
+            <a class="btn btn-sm btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 ↗</a>
           </template>
           <template v-else>
             <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">下载 ZIP</button>
@@ -157,7 +157,7 @@ onMounted(load)
       <div class="card card-coral" style="padding: 32px; text-align: center">
         <h2 style="margin-bottom: 10px">🔗 外部链接项目</h2>
         <p class="muted" style="margin-bottom: 18px">内容托管在外部站点，点击下方按钮跳转访问。</p>
-        <a class="btn btn-primary" :href="demo.external_url" target="_blank" rel="noopener">打开链接 ↗</a>
+        <a class="btn btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 ↗</a>
       </div>
     </template>
 

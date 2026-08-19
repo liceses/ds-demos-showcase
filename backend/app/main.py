@@ -117,10 +117,12 @@ def media_file(path: str):
     safe = _P(path).as_posix().replace("\\", "/")
     if oss.enabled():
         # 封面文件名唯一不可变：302 重定向本身也可缓存，浏览器下次直连 OSS
-        return RedirectResponse(
-            oss.public_url(f"media/{safe}"),
-            headers={"Cache-Control": "public, max-age=86400, immutable"},
-        )
+        # 先确认对象存在，避免 302 到不存在的 key（OSS 未同步时回源本地）
+        if oss.get_bytes(f"media/{safe}") is not None:
+            return RedirectResponse(
+                oss.public_url(f"media/{safe}"),
+                headers={"Cache-Control": "public, max-age=86400, immutable"},
+            )
     file_path = (settings.media_path / safe).resolve()
     if not str(file_path).startswith(str(settings.media_path.resolve())):
         raise HTTPException(status_code=400, detail="非法的路径", )

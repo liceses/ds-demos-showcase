@@ -1,12 +1,17 @@
+import io
+import zipfile
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import get_db
 from ..deps import require_admin
 from ..models import Demo, User
 from ..schemas import AdminDemoOut, AdminUserOut, ReviewAction, SettingsOut, UserOut
 from ..serializers import serialize_demo
-from ..services import settings_service
+from ..services import oss, settings_service, storage
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -66,3 +71,57 @@ def update_settings(body: SettingsOut, db: Session = Depends(get_db), _: User = 
     settings_service.set_auto_approve(db, body.auto_approve)
     settings_service.set_auto_approve_public(db, body.auto_approve_public)
     return SettingsOut(auto_approve=body.auto_approve, auto_approve_public=body.auto_approve_public)
+
+
+@router.post("/oss-sync")
+def oss_sync(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """把本地已有 demo 文件/zip/封面补传到 OSS。
+    用于 OSS 不可用期间降级为本地存储后，恢复 OSS 时一键补齐。"""
+    if not oss.enabled():
+        raise HTTPException(status_code=400, detail="OSS 未启用", )
+
+    demo_ok = 0
+    demo_fail = 0
+    for d in db.query(Demo).all():
+        try:
+            storage.upload_demo_to_oss(d.slug)
+            files_dir = storage.demo_files_dir(d.slug)
+            if files_dir.exists():
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for p in files_dir.rglob("*"):
+                        if p.is_file():
+                            zf.write(p, p.relative_to(files_dir))
+                oss.put_bytes(
+                    f"demos/{d.slug}/{d.slug}.zip",
+                    buf.getvalue(),
+                    "application/zip",
+                    extra_headers={"Cache-Control": "public, max-age=3600"},
+                )
+            demo_ok += 1
+        except Exception as e:  # noqa: BLE001
+            demo_fail += 1
+            print(f"[oss-sync] {d.slug} 失败: {e}", flush=True)
+
+    cover_ok = 0
+    cover_fail = 0
+    covers_dir = settings.media_path / "covers"
+    if covers_dir.exists():
+        for p in covers_dir.iterdir():
+            if not p.is_file():
+                continue
+            try:
+                import mimetypes
+                content_type = mimetypes.guess_type(p.name)[0] or "image/png"
+                oss.put_bytes(
+                    f"media/covers/{p.name}",
+                    p.read_bytes(),
+                    content_type,
+                    extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
+                )
+                cover_ok += 1
+            except Exception as e:  # noqa: BLE001
+                cover_fail += 1
+                print(f"[oss-sync] cover {p.name} 失败: {e}", flush=True)
+
+    return {"demos_ok": demo_ok, "demos_fail": demo_fail, "covers_ok": cover_ok, "covers_fail": cover_fail}

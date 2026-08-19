@@ -456,7 +456,7 @@ async def create_demo(
     cover_ext = "png"
     if cover is not None and cover.filename:
         cover_ext = Path(cover.filename or "").suffix.lstrip(".") or "png"
-        cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
+        cover_bytes = await _read_limited(cover, settings.max_upload_size, "封面文件过大")
 
     trusted = _uploader_context(request, user, upload_code)
 
@@ -508,7 +508,7 @@ def create_demo_from_url(
     cover_bytes = None
     cover_ext = "png"
     if body.cover_url:
-        cover_bytes = _download_url_bytes(body.cover_url, settings.max_cover_size, "封面")
+        cover_bytes = _download_url_bytes(body.cover_url, settings.max_upload_size, "封面")
         cover_ext = Path(urlparse(body.cover_url).path).suffix.lstrip(".") or "png"
 
     tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
@@ -584,7 +584,7 @@ async def update_demo(
         changed = True
     if cover is not None and cover.filename:
         ext = Path(cover.filename).suffix.lstrip(".") or "png"
-        cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
+        cover_bytes = await _read_limited(cover, settings.max_upload_size, "封面文件过大")
         demo.cover_url = storage.save_cover(cover_bytes, ext)
         changed = True
     if file is not None and file.filename:

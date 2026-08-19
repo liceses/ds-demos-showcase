@@ -133,24 +133,60 @@ def demo_storage_size(slug: str) -> int:
     return dir_size(d) if d.exists() else 0
 
 
+def compress_cover(data: bytes) -> tuple[bytes, str]:
+    """把封面压缩为 WebP（最大边 1280、质量 82），返回 (bytes, 'webp')。"""
+    try:
+        from PIL import Image
+    except ImportError:
+        raise HTTPException(status_code=500, detail="服务端缺少 Pillow，无法处理封面", )
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.load()
+    except Exception:
+        raise HTTPException(status_code=400, detail="封面不是有效图片", )
+
+    # 统一通道：保留透明 → RGBA；否则 RGB（WebP 均支持）
+    if img.mode in ("RGBA", "LA"):
+        img = img.convert("RGBA")
+    elif img.mode == "P":
+        img = img.convert("RGBA")
+    else:
+        img = img.convert("RGB")
+
+    # 限制最大边，等比缩小
+    max_side = 1280
+    w, h = img.size
+    if max(w, h) > max_side:
+        scale = max_side / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+
+    out = io.BytesIO()
+    img.save(out, format="WEBP", quality=82, method=4)
+    return out.getvalue(), "webp"
+
+
 def save_cover(data: bytes, ext: str | None = None) -> str:
-    """保存封面到 media/covers，返回 /media/covers/<name>。"""
+    """保存封面：自动压缩为 WebP（只保留压缩版），返回 /media/covers/<name>。
+    不做上传体积限制（原图多大都收），压缩后通常几 KB ~ 几十 KB。"""
     if not data:
         raise HTTPException(status_code=400, detail="封面为空")
-    if len(data) > settings.max_cover_size:
-        raise HTTPException(status_code=413, detail="封面超过大小限制")
-    ext = (ext or "png").lower()
-    if ext not in {"png", "jpg", "jpeg", "gif", "webp", "svg"}:
-        raise HTTPException(status_code=400, detail="不支持的封面格式")
-    name = uuid.uuid4().hex + "." + ext
+
+    ext = (ext or "").lower()
+    if ext == "svg":
+        # SVG 是文本，直接原样保存（Pillow 无法处理且没必要压缩）
+        out_data, out_ext = data, "svg"
+    else:
+        out_data, out_ext = compress_cover(data)
+
+    name = uuid.uuid4().hex + "." + out_ext
     folder = settings.media_path / "covers"
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / name).write_bytes(data)
-    content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+    (folder / name).write_bytes(out_data)
+    content_type = "image/svg+xml" if out_ext == "svg" else "image/webp"
     # 封面文件名唯一、不可变 → 浏览器/OSS 长期缓存
     oss.put_bytes(
         f"media/covers/{name}",
-        data,
+        out_data,
         content_type,
         extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
     )

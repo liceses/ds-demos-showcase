@@ -278,6 +278,7 @@ commit_message / keep_old_version  同前（编辑时）
 - link：`external_url` 必填且 http(s)；上传 file → 400
 - web/zip：创建时必须上传 zip；web 解压要求含 index.html，zip 不要求
 - 更新时若切换类型：link ↔ web/zip 均可；link 下上传 file → 400
+- **封面自动压缩**：上传原图**无大小限制**（受整体请求上限约束），后端自动压缩为 WebP（最大边 1280、质量 82），**只保留压缩版**，返回 `/media/covers/xxx.webp`
 
 ### 响应新增字段
 

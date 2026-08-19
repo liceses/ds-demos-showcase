@@ -1,6 +1,6 @@
 # DS 民间科研成果展示
 
-「AI 网页 Demo 作品集」展示站：多栏瀑布流主页 + Demo 详情/预览 + 标签系统 + 评论 + 会话日志 + 生成过程（git 时间线）+ 上传下载 + 管理后台。
+「AI 网页 Demo 作品集」展示站：多栏瀑布流主页 + Demo 详情/预览 + 标签系统 + 评论 + 会话日志 + 版本时间线 + 上传下载 + 管理后台。
 
 技术栈：**Vue 3 + TypeScript + Vite（前端） / FastAPI + SQLAlchemy（后端） / SQLite + 本地存储 / Nginx（生产托管与反代） / Docker Compose（部署）**。
 
@@ -11,12 +11,14 @@
 ```
 web/
 ├── frontend/           # Vue3 + Vite SPA（含 Dockerfile、nginx.conf）
-├── backend/            # FastAPI 后端（含 Dockerfile；API/预览/媒体/git/审核）
+├── backend/            # FastAPI 后端（含 Dockerfile；API/预览/媒体/审核）
 ├── docker-compose.yml  # 生产部署：backend + frontend(nginx)
 ├── backend-design.md   # 后端设计 / API 契约
 ├── DEPLOY.md           # 生产部署指南
 ├── idea.md             # 原始需求
 ├── start-dev.ps1/.bat  # 本地一键启动（开发环境）
+├── docs/
+│   └── 预览架构与排坑记录.md  # 预览 iframe 架构决策 + 三个大坑（localStorage/OSS 强制下载/CORS）与配置清单
 └── stylepkg/           # 视觉设计规范（neo-brutalist-playful）
 ```
 
@@ -27,7 +29,7 @@ web/
           ├── /api、/preview、/media → FastAPI(:8000)
           ├── /assets → 静态资源（长缓存）
           └── 其余 → SPA 回退 index.html
-数据：SQLite（volume demo-data）+ storage/（volume demo-storage：demo 文件 / 封面 / 每 demo 一个 git 仓库）
+数据：SQLite（volume demo-data）+ storage/（volume demo-storage：demo 文件 / 封面 / 会话日志）
 ```
 
 ## 本地开发
@@ -50,11 +52,11 @@ Windows 双击 `start-dev.bat`，或在 `web/` 下执行：
 | # | 需求 | 状态 | 说明 |
 |---|---|---|---|
 | 1 | 多栏内容瀑布流主页 | ✅ | CSS 多栏瀑布流（`columns: 3 280px`）+ 无限滚动 + 搜索 + 标签筛选 + 排序 |
-| 2 | 独立展示页（demo/标签/信息/评论） | ✅ | DemoView 四 Tab：信息 / 生成过程 / 会话日志 / 评论 |
+| 2 | 独立展示页（demo/标签/信息/评论） | ✅ | DemoView 四 Tab：信息 / 时间线 / 会话日志 / 评论 |
 | 3 | 标签系统（键值对/自定义/介绍/层级） | ✅ | `key/value/description/parent_id`；管理端建标签、上传自动建（⚠️ 缺字符集校验与每日限额） |
 | 4 | 按标签查找 demos | ✅ | `/demos?tag=k:v`（多标签 AND）+ 标签详情页（父链/子标签） |
 | 5 | 每个 demo 伴随 session log | ✅ | 上传 zip 内 `sessions/` 自动归位；列表 + markdown 渲染 |
-| 6 | 每 demo git 版本控制 + 生成过程展示 | ✅ | 每 demo 一个真实 git 仓库（init/commit/log/diff），展示于「生成过程」Tab（已声明非 AI 真实性证明） |
+| 6 | 版本时间线（原 git 生成过程已简化） | ✅ | 轻量时间线记录创建/更新/旧版快照，展示于「时间线」Tab；不再维护每 demo git 仓库（非 AI 真实性证明） |
 | 7 | 部署 Cloudflare / 可迁移 | ⚠️ | 实际迁移到云服务器 FastAPI + nginx（docker compose）；CF Worker 方案已弃用 |
 | 8 | 用户/登录/评论 + 作者附加 tag | ✅ | JWT(HttpOnly Cookie) 本地账号 + 评论树（深度≤5）+ 自动 `author:` 标签（gh 登录为 todo，未做） |
 | 9 | 优良扩展性的底层架构 | ⚠️ | 模块化清晰（APIRouter/services），但无 Alembic/状态机/配额，SQLite 单写，属"单机级"扩展 |

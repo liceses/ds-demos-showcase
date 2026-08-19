@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
@@ -25,6 +25,20 @@ const tagKeys = ref<TagKeyInfo[]>([])
 const selected = ref<Record<string, { value: string; description: string }[]>>({})
 const inputs = ref<Record<string, { value: string; description: string }>>({})
 const initialTagsKey = ref('')
+const tagsOpen = ref(false)
+
+// 宽屏（≥1281px）两栏布局：标签面板常驻右侧；窄屏默认收起、点横条展开
+const isWide = ref(false)
+let wideMq: MediaQueryList | null = null
+function onWideChange(e: MediaQueryListEvent) {
+  isWide.value = e.matches
+}
+onMounted(() => {
+  wideMq = window.matchMedia('(min-width: 1281px)')
+  isWide.value = wideMq.matches
+  wideMq.addEventListener('change', onWideChange)
+})
+onBeforeUnmount(() => wideMq?.removeEventListener('change', onWideChange))
 
 // 编辑模式附加状态
 const demoTitle = ref('')
@@ -39,29 +53,59 @@ function selectedOf(key: string): { value: string; description: string }[] {
   return selected.value[key] || []
 }
 
+/** 确保键在 selected 中存在（否则 push 到临时数组，状态不生效） */
+function ensureList(key: string): { value: string; description: string }[] {
+  if (!selected.value[key]) selected.value[key] = []
+  return selected.value[key]
+}
+
 function toggleValue(key: string, value: string) {
-  const list = selectedOf(key)
+  const list = ensureList(key)
   const i = list.findIndex((x) => x.value === value)
   if (i >= 0) list.splice(i, 1)
   else list.push({ value, description: '' })
 }
 
 function addValue(key: string) {
-  const raw = (inputs.value[key]?.value || '').trim()
+  const k = tagKeys.value.find((x) => x.key === key)
+  // 注意：type="number" 时 v-model 会转成 number，必须 String() 后再 trim
+  const raw = String(inputs.value[key]?.value ?? '').trim()
   if (!raw) return
-  if (selectedOf(key).some((x) => x.value === raw)) {
+
+  let final = raw
+  if (k?.mode === 'int') {
+    if (!/^-?\d+$/.test(raw)) {
+      tagErrors.value[key] = '请输入整数'
+      return
+    }
+    final = String(Number(raw))
+  }
+
+  if (selectedOf(key).some((x) => x.value === final)) {
     inputs.value[key] = { value: '', description: '' }
+    tagErrors.value[key] = ''
     return
   }
-  selectedOf(key).push({ value: raw, description: (inputs.value[key]?.description || '').trim() })
+  ensureList(key).push({ value: final, description: String(inputs.value[key]?.description ?? '').trim() })
   inputs.value[key] = { value: '', description: '' }
+  tagErrors.value[key] = ''
 }
 
 function removeValue(key: string, value: string) {
-  const list = selectedOf(key)
+  const list = selected.value[key]
+  if (!list) return
   const i = list.findIndex((x) => x.value === value)
   if (i >= 0) list.splice(i, 1)
 }
+
+const tagErrors = ref<Record<string, string>>({})
+
+const selectedCount = computed(() => Object.values(selected.value).reduce((n, arr) => n + arr.length, 0))
+const selectedList = computed(() =>
+  Object.entries(selected.value).flatMap(([key, values]) =>
+    values.map((x) => ({ key, value: x.value, description: x.description })),
+  ),
+)
 
 function collectTags() {
   const out: (string | { key: string; value: string; description?: string })[] = []
@@ -216,8 +260,9 @@ async function submit() {
       <RouterLink class="btn btn-outline" to="/">返回首页</RouterLink>
     </div>
 
-    <div v-else class="card card-default" style="max-width: 760px; padding: 24px">
-      <form class="form-stack" @submit.prevent="submit">
+    <div v-else class="upload-grid" :class="{ 'panel-open': tagsOpen }">
+      <div class="card card-default upload-form-card" style="padding: 24px">
+        <form class="form-stack" @submit.prevent="submit">
         <label class="field">
           标题
           <input v-model="title" class="input" placeholder="Demo 标题" required />
@@ -227,63 +272,23 @@ async function submit() {
           <textarea v-model="description" class="input textarea" rows="3" placeholder="简要描述这个 Demo"></textarea>
         </label>
 
-        <div class="field">
-          <span class="field-label">标签（按键选择/填写）</span>
-          <div v-for="k in tagKeys" :key="k.key" class="tag-key-row">
-            <div class="tag-key-head">
-              <b>{{ k.label || k.key }} <code>{{ k.key }}</code></b>
-              <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
-            </div>
-
-            <div v-if="k.mode === 'fixed'" class="filter-row" style="margin: 0">
-              <button
-                v-for="v in k.values"
-                :key="v.value"
-                class="tag-chip mode-fixed"
-                :class="{ active: selectedOf(k.key).some((x) => x.value === v.value) }"
-                type="button"
-                @click="toggleValue(k.key, v.value)"
+        <div class="tag-drawer-wrap">
+          <button class="tag-drawer-bar" type="button" @click="tagsOpen = !tagsOpen">
+            <span class="tag-drawer-stamp">可选</span>
+            <span class="tag-drawer-title">标签（选填）</span>
+            <span v-if="selectedList.length" class="tag-drawer-chips">
+              <span
+                v-for="s in selectedList"
+                :key="s.key + ':' + s.value"
+                class="tag-chip active"
+                :title="s.description || ''"
               >
-                {{ v.value }}
-                <span class="count">{{ v.demo_count }}</span>
-              </button>
-            </div>
-
-            <div v-else class="form-stack">
-              <div class="filter-row" style="margin: 0">
-                <input
-                  v-model="inputs[k.key].value"
-                  class="input"
-                  :type="k.mode === 'int' ? 'number' : 'text'"
-                  :placeholder="k.mode === 'int' ? '整数，如 3' : '自定义值，如 pvz'"
-                  style="max-width: 220px"
-                  @keyup.enter="addValue(k.key)"
-                />
-                <input
-                  v-model="inputs[k.key].description"
-                  class="input"
-                  type="text"
-                  placeholder="介绍（可选，首次创建时写入）"
-                  style="max-width: 240px"
-                  @keyup.enter="addValue(k.key)"
-                />
-                <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
-              </div>
-              <div class="filter-row" style="margin: 0">
-                <span
-                  v-for="v in selectedOf(k.key)"
-                  :key="v.value"
-                  class="tag-chip active"
-                  role="button"
-                  :title="v.description || '点击移除'"
-                  @click="removeValue(k.key, v.value)"
-                >
-                  {{ v.value }}{{ v.description ? `（${v.description}）` : '' }} ×
-                </span>
-              </div>
-            </div>
-          </div>
-          <span class="hint">author 为系统保留标签，无需填写</span>
+                {{ s.key }}:{{ s.value }}
+              </span>
+            </span>
+            <span class="tag-drawer-count"><b>{{ selectedCount }}</b> 已选</span>
+            <span v-if="!isWide" class="tag-drawer-toggle">{{ tagsOpen ? '收起 ←' : '展开 →' }}</span>
+          </button>
         </div>
 
         <label class="field">
@@ -324,6 +329,75 @@ async function submit() {
           {{ submitting ? '提交中…' : editSlug ? '保存修改' : '上传' }}
         </button>
       </form>
+      </div>
+
+      <div class="tag-drawer-panel" :class="{ 'panel-hidden': !(tagsOpen || isWide) }">
+        <div class="tag-drawer-head">
+          <span class="hint">固定值点选 · 自定义值输入添加 · 数字值填整数 · author 系统保留</span>
+        </div>
+
+        <div v-for="k in tagKeys" :key="k.key" class="tag-key-row" :class="'mode-' + k.mode">
+          <div class="tag-key-head">
+            <b>{{ k.label || k.key }} <code>{{ k.key }}</code></b>
+            <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
+          </div>
+
+          <div v-if="k.mode === 'fixed'">
+            <TransitionGroup name="chip" tag="div" class="filter-row" style="margin: 0">
+              <button
+                v-for="v in k.values"
+                :key="v.value"
+                class="tag-chip mode-fixed"
+                :class="{ active: selectedOf(k.key).some((x) => x.value === v.value) }"
+                type="button"
+                @click="toggleValue(k.key, v.value)"
+              >
+                {{ v.value }}
+                <span class="count">{{ v.demo_count }}</span>
+              </button>
+            </TransitionGroup>
+          </div>
+
+          <div v-else class="form-stack">
+            <div class="filter-row" style="margin: 0">
+              <input
+                v-model="inputs[k.key].value"
+                class="input"
+                :type="k.mode === 'int' ? 'number' : 'text'"
+                :placeholder="k.mode === 'int' ? '整数，如 3' : '自定义值，如 pvz'"
+                style="max-width: 200px"
+                @keyup.enter="addValue(k.key)"
+                @input="tagErrors[k.key] = ''"
+              />
+              <input
+                v-model="inputs[k.key].description"
+                class="input"
+                type="text"
+                placeholder="介绍（可选，首次创建时写入）"
+                style="max-width: 220px"
+                @keyup.enter="addValue(k.key)"
+              />
+              <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
+            </div>
+            <div v-if="tagErrors[k.key]" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">
+              {{ tagErrors[k.key] }}
+            </div>
+            <TransitionGroup name="chip" tag="div" class="filter-row" style="margin: 0; gap: 6px">
+              <span
+                v-for="v in selectedOf(k.key)"
+                :key="v.value"
+                class="tag-chip active"
+                role="button"
+                :title="v.description || '点击移除'"
+                @click="removeValue(k.key, v.value)"
+              >
+                {{ v.value }}{{ v.description ? `（${v.description}）` : '' }}
+                <span class="chip-x">X</span>
+              </span>
+            </TransitionGroup>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>

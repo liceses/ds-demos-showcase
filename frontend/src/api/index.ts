@@ -107,7 +107,8 @@ const realApi = {
     if (payload.video_url) form.append('video_url', payload.video_url)
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
-    const { data } = await http.post('/demos', form)
+    // 上传含解压 + OSS 传输，放宽超时（默认 15s 不够）
+    const { data } = await http.post('/demos', form, { timeout: 120000 })
     return data
   },
   async updateDemo(slug: string, payload: UpdateDemoPayload): Promise<void> {
@@ -123,7 +124,7 @@ const realApi = {
     if (payload.file) form.append('file', payload.file)
     if (payload.commit_message) form.append('commit_message', payload.commit_message)
     if (payload.keep_old_version) form.append('keep_old_version', 'true')
-    await http.put(`/demos/${encodeURIComponent(slug)}`, form)
+    await http.put(`/demos/${encodeURIComponent(slug)}`, form, { timeout: 120000 })
   },
   async deleteDemo(slug: string): Promise<void> {
     await http.delete(`/demos/${encodeURIComponent(slug)}`)

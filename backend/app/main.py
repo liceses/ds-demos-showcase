@@ -121,7 +121,8 @@ def media_file(path: str):
         if oss.get_bytes(f"media/{safe}") is not None:
             return RedirectResponse(
                 oss.public_url(f"media/{safe}"),
-                headers={"Cache-Control": "public, max-age=86400, immutable"},
+                # 重定向目标可能随 CDN 配置变化，不设 immutable，避免长期缓存旧地址
+                headers={"Cache-Control": "public, max-age=3600"},
             )
     file_path = (settings.media_path / safe).resolve()
     if not str(file_path).startswith(str(settings.media_path.resolve())):

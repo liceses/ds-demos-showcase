@@ -25,6 +25,7 @@ web/
     ├── requirements.txt
     ├── .env.example
     └── storage/             # demo 文件、封面（运行时生成）
+scripts/recompress_covers.py   # 历史封面压缩迁移（一次性维护脚本）
 ```
 
 - 数据库：SQLite（`data/app.db`），单机 MVP 足够；后期换 PostgreSQL 也容易。
@@ -117,10 +118,25 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## 4. 关键实现点
 
 - **鉴权**：JWT（HS256，`JWT_SECRET` 需改）；token 同时放 body 与 HttpOnly Cookie，兼容 Bearer 头。密码用 PBKDF2（std 库，无额外依赖）。
-- **上传限制**：`MAX_UPLOAD_SIZE` / `MAX_FILE_SIZE` 默认 200MB，封面 5MB；超限 413。
+- **上传限制**：zip `MAX_UPLOAD_SIZE` 默认 200MB；封面**无大小限制**（自动压缩，见下节）。
 - **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
+
+### 封面自动压缩
+
+- **策略**：上传原图**不限大小** → 后端 Pillow 压缩为 **WebP（最大边 1280px、质量 82、method 4）** → **只保存压缩版**；SVG 为文本直接原样直存。
+- **全通道覆盖**：网页 multipart `cover`、AI agent `from-url` 的 `cover_url`、编辑更新封面，统一走 `storage.save_cover()`。
+- **流量收益**：封面文件名唯一 + `Cache-Control: immutable` 长期缓存；压缩后通常从 MB 级降到几十 KB，首页/列表高频拉取成本大幅下降。
+- **依赖**：`Pillow>=10.0`（已加入 requirements.txt）。
+- **历史数据迁移**（已有大封面才需要）：
+  ```bash
+  # 本地（web/ 目录下）
+  python scripts/recompress_covers.py
+  # 服务器容器内（仓库根已只读挂载到 /site-repo）
+  docker compose exec backend python /site-repo/scripts/recompress_covers.py
+  ```
+  批量压缩为 WebP → 更新 `demos.cover_url` → 删除旧本地文件与 OSS 对象；幂等（`.webp` 自动跳过），可重复运行。
 
 ---
 

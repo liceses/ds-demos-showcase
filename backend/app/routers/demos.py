@@ -217,22 +217,67 @@ def get_demo(slug: str, db: Session = Depends(get_db), user: User | None = Depen
     return serialize_demo(db, demo, user.id if user else None, detail=True)
 
 
+def _validate_demo_type(t: str) -> str:
+    if t not in ("web", "zip", "link"):
+        raise HTTPException(status_code=422, detail="demo_type 需为 web（网页应用）/ zip（文件包）/ link（外部链接）", )
+    return t
+
+
+def _clean_url(url: str | None) -> str | None:
+    """可选链接字段：空则 None，非空必须是 http(s)。"""
+    if not url or not url.strip():
+        return None
+    url = url.strip()
+    if not (url.startswith("http://") or url.startswith("https://")):
+        raise HTTPException(status_code=422, detail="链接需为 http(s) 地址", )
+    if len(url) > 2000:
+        raise HTTPException(status_code=422, detail="链接过长", )
+    return url
+
+
+def _validate_url(url: str | None, field: str) -> str:
+    """必填链接字段（link 类型的 external_url）。"""
+    cleaned = _clean_url(url)
+    if cleaned is None:
+        raise HTTPException(status_code=422, detail=f"{field} 为链接类型必填", )
+    return cleaned
+
+
 @router.post("", status_code=201, response_model=DemoCreateResult)
 async def create_demo(
     title: str = Form(...),
     description: str = Form(""),
     tags: str | None = Form(None),
+    demo_type: str = Form("web"),
+    external_url: str | None = Form(None),
+    prompt: str | None = Form(None),
+    video_url: str | None = Form(None),
     cover: UploadFile | None = File(None),
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    if not file.filename or not file.filename.lower().endswith(".zip"):
-        raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
-    zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+    demo_type = _validate_demo_type(demo_type)
+
+    if demo_type == "link":
+        ext_url = _validate_url(external_url, "external_url")
+        zip_bytes = None
+    else:
+        ext_url = None
+        if file is None or not file.filename or not file.filename.lower().endswith(".zip"):
+            raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
+        zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
 
     slug = _unique_slug(db, title)
-    demo = Demo(slug=slug, title=title.strip(), description=description)
+    demo = Demo(
+        slug=slug,
+        title=title.strip(),
+        description=description,
+        demo_type=demo_type,
+        external_url=ext_url,
+        prompt=(prompt or "").strip(),
+        video_url=_clean_url(video_url),
+    )
     demo.author_id = user.id
     status = "approved" if get_auto_approve(db) else "pending"
     demo.status = status
@@ -244,24 +289,24 @@ async def create_demo(
         cover_url = storage.save_cover(cover_bytes, ext)
     demo.cover_url = cover_url
 
-    # 落库获得 id，再写文件与 git
+    # 落库获得 id，再写文件
     db.add(demo)
     db.flush()
     db.commit()
 
-    try:
-        storage.extract_zip(zip_bytes, slug)
-    except HTTPException:
-        db.delete(demo)
-        db.commit()
-        shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
-        raise
+    if zip_bytes is not None:
+        try:
+            storage.extract_zip(zip_bytes, slug, require_index=(demo_type == "web"))
+        except HTTPException:
+            db.delete(demo)
+            db.commit()
+            shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
+            raise
+        storage.upload_demo_to_oss(slug)
+        oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
 
     _set_demo_tags(db, demo, _parse_tags(tags))
     db.commit()
-
-    storage.upload_demo_to_oss(slug)
-    oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
 
     # 自动公告：新 demo 发布
     db.add(Announcement(
@@ -282,6 +327,10 @@ async def update_demo(
     title: str | None = Form(None),
     description: str | None = Form(None),
     tags: str | None = Form(None),
+    demo_type: str | None = Form(None),
+    external_url: str | None = Form(None),
+    prompt: str | None = Form(None),
+    video_url: str | None = Form(None),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
     commit_message: str | None = Form(None),
@@ -301,6 +350,23 @@ async def update_demo(
     if description is not None and description != demo.description:
         demo.description = description
         changed = True
+    if demo_type is not None:
+        new_type = _validate_demo_type(demo_type)
+        if new_type != demo.demo_type:
+            demo.demo_type = new_type
+            changed = True
+    if external_url is not None:
+        if demo.demo_type == "link":
+            demo.external_url = _validate_url(external_url, "external_url")
+        else:
+            demo.external_url = _clean_url(external_url)
+        changed = True
+    if prompt is not None:
+        demo.prompt = prompt.strip()
+        changed = True
+    if video_url is not None:
+        demo.video_url = _clean_url(video_url)
+        changed = True
     if tags is not None:
         _set_demo_tags(db, demo, _parse_tags(tags))
         changed = True
@@ -310,13 +376,15 @@ async def update_demo(
         demo.cover_url = storage.save_cover(cover_bytes, ext)
         changed = True
     if file is not None and file.filename:
+        if demo.demo_type == "link":
+            raise HTTPException(status_code=400, detail="链接类型不需要上传 zip 文件", )
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
         # 勾选「保留旧版本」：先把当前文件快照成独立 demo 页面，再覆盖
         if keep_old_version:
             snapshot = _snapshot_demo(db, demo, user)
-        storage.extract_zip(zip_bytes, slug)
+        storage.extract_zip(zip_bytes, slug, require_index=(demo.demo_type == "web"))
         storage.upload_demo_to_oss(slug)
         oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
         changed = True
@@ -357,20 +425,25 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
 
     files_src = storage.demo_files_dir(old_slug)
     sessions_src = storage.demo_sessions_dir(old_slug)
-    if files_src.exists():
-        dst = storage.demo_files_dir(new_slug)
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(files_src, dst)
-    if sessions_src.exists():
-        dst = storage.demo_sessions_dir(new_slug)
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(sessions_src, dst)
+    if demo.demo_type != "link":
+        if files_src.exists():
+            dst = storage.demo_files_dir(new_slug)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(files_src, dst)
+        if sessions_src.exists():
+            dst = storage.demo_sessions_dir(new_slug)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(sessions_src, dst)
 
     snapshot = DemoModel(
         slug=new_slug,
         title=demo.title,
         description=demo.description,
         cover_url=demo.cover_url,
+        demo_type=demo.demo_type,
+        external_url=demo.external_url,
+        prompt=demo.prompt,
+        video_url=demo.video_url,
         status=demo.status,
         author_id=demo.author_id,
     )
@@ -415,6 +488,8 @@ def delete_demo(slug: str, db: Session = Depends(get_db), user: User = Depends(c
 @router.get("/{slug}/download")
 def download_demo(slug: str, db: Session = Depends(get_db)):
     demo = _find_demo(db, slug)
+    if demo.demo_type == "link":
+        raise HTTPException(status_code=400, detail="链接类型无下载，请直接访问外部链接", )
     demo.download_count += 1
     db.commit()
 

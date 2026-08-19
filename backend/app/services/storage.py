@@ -48,8 +48,11 @@ def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
             shutil.copyfileobj(src, out)
 
 
-def extract_zip(zip_bytes: bytes, slug: str) -> None:
-    """解压 zip 到 demo files 目录；要求存在 index.html（允许唯一顶层目录包裹）。"""
+def extract_zip(zip_bytes: bytes, slug: str, require_index: bool = True) -> None:
+    """解压 zip 到 demo files 目录。
+    - require_index=True（web 类型）：要求存在 index.html（允许唯一顶层目录包裹）
+    - require_index=False（zip 文件包）：不要求 index.html，仅解包单层包裹目录
+    """
     validate_slug(slug)
     target = demo_files_dir(slug)
     if target.exists():
@@ -71,20 +74,25 @@ def extract_zip(zip_bytes: bytes, slug: str) -> None:
     finally:
         zf.close()
 
-    # 定位 index.html：优先根目录；否则若只有一个顶层目录且内含 index.html 则取之
-    root: Path = tmp
-    index_candidates = list(tmp.rglob("index.html"))
-    if (tmp / "index.html").exists():
-        root = tmp
-    elif len(index_candidates) == 1:
-        root = index_candidates[0].parent
-    else:
-        shutil.rmtree(tmp, ignore_errors=True)
-        raise HTTPException(status_code=400, detail="zip 中缺少 index.html（需要单层或单目录包裹）", )
+    if require_index:
+        # 定位 index.html：优先根目录；否则若只有一个顶层目录且内含 index.html 则取之
+        root: Path = tmp
+        index_candidates = list(tmp.rglob("index.html"))
+        if (tmp / "index.html").exists():
+            root = tmp
+        elif len(index_candidates) == 1:
+            root = index_candidates[0].parent
+        else:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise HTTPException(status_code=400, detail="zip 中缺少 index.html（需要单层或单目录包裹）", )
 
-    if not (root / "index.html").is_file():
-        shutil.rmtree(tmp, ignore_errors=True)
-        raise HTTPException(status_code=400, detail="zip 中缺少 index.html", )
+        if not (root / "index.html").is_file():
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise HTTPException(status_code=400, detail="zip 中缺少 index.html", )
+    else:
+        # 文件包：不要求 index.html；若只有一个顶层目录则解包一层，否则保留原结构
+        top = list(tmp.iterdir())
+        root = top[0] if len(top) == 1 and top[0].is_dir() else tmp
 
     # 拷贝到正式目录
     for item in root.iterdir():

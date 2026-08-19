@@ -681,7 +681,7 @@ export const mockApi = {
   async createDemo(payload: CreateDemoPayload): Promise<{ slug: string; status: string }> {
     await delay(500)
     if (!currentUser) throw new Error('请先登录')
-    if (!payload.file) throw new Error('请上传 zip 文件')
+    if (payload.demo_type !== 'link' && !payload.file) throw new Error('请上传 zip 文件')
     const slug = 'demo_' + Math.random().toString(16).slice(2, 10)
     const demo: DemoDetail = {
       slug,
@@ -691,6 +691,10 @@ export const mockApi = {
       author: currentUser.username,
       author_id: currentUser.id,
       tags: [...(payload.tags || []).map((t) => toTagRef(t)), { key: 'author', value: currentUser.username }],
+      demo_type: payload.demo_type || 'web',
+      external_url: payload.external_url || null,
+      prompt: payload.prompt || '',
+      video_url: payload.video_url || null,
       view_count: 0,
       download_count: 0,
       comment_count: 0,
@@ -699,7 +703,7 @@ export const mockApi = {
       session_log_count: 0,
       commit_count: 1,
       is_author: true,
-      previewHtml: '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#4ecdc4"><h1>已上传 Demo</h1></body></html>',
+      previewHtml: payload.demo_type === 'web' ? '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#4ecdc4"><h1>已上传 Demo</h1></body></html>' : undefined,
     }
     ;(settings.auto_approve ? demos : pendingDemos).push(demo)
     return { slug: demo.slug, status: demo.status as string }
@@ -711,6 +715,10 @@ export const mockApi = {
     if (!d) throw new Error('Demo 不存在')
     if (payload.title) d.title = payload.title
     if (payload.description !== undefined) d.description = payload.description
+    if (payload.demo_type) d.demo_type = payload.demo_type
+    if (payload.external_url !== undefined) d.external_url = payload.external_url || null
+    if (payload.prompt !== undefined) d.prompt = payload.prompt
+    if (payload.video_url !== undefined) d.video_url = payload.video_url || null
     if (payload.tags) d.tags = payload.tags.map((t) => toTagRef(t))
   },
 

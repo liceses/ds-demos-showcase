@@ -75,6 +75,11 @@ class Demo(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     cover_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # web=网页应用 zip=文件包 link=外部链接
+    demo_type: Mapped[str] = mapped_column(String(16), default="web", nullable=False, index=True)
+    external_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    prompt: Mapped[str] = mapped_column(Text, default="", nullable=False)  # 第一轮提示词
+    video_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)  # 介绍视频链接（不存视频）
     status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)  # pending | approved | rejected
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

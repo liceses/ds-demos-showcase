@@ -108,6 +108,8 @@ class DemoSummaryOut(BaseModel):
     comment_count: int
     created_at: datetime
     status: str
+    demo_type: str = "web"
+    external_url: str | None = None
 
 
 class DemoTimelineOut(BaseModel):
@@ -123,6 +125,8 @@ class DemoDetailOut(DemoSummaryOut):
     session_log_count: int
     commit_count: int
     is_author: bool
+    prompt: str = ""
+    video_url: str | None = None
     file_size: int | None = None
     storage_size: int | None = None
     inconsistency: bool = False

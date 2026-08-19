@@ -47,13 +47,19 @@ def serialize_demo(
         "title": demo.title,
         "description": demo.description,
         "cover_url": demo.cover_url,
+        "demo_type": demo.demo_type,
+        "external_url": demo.external_url,
         "preview_url": (
-            f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/index.html"
-            if settings.preview_base_url
+            ""
+            if demo.demo_type != "web"
             else (
-                oss.public_url(f"demos/{demo.slug}/files/index.html")
-                if oss.enabled()
-                else f"/preview/{demo.slug}/index.html"
+                f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/index.html"
+                if settings.preview_base_url
+                else (
+                    oss.public_url(f"demos/{demo.slug}/files/index.html")
+                    if oss.enabled()
+                    else f"/preview/{demo.slug}/index.html"
+                )
             )
         ),
         "author": author.username if author else None,
@@ -81,9 +87,11 @@ def serialize_demo(
                 "session_log_count": session_log_count,
                 "commit_count": 0,  # git 功能已移除
                 "is_author": bool(current_user_id is not None and demo.author_id == current_user_id),
+                "prompt": demo.prompt,
+                "video_url": demo.video_url,
                 "file_size": files_dir.stat().st_size if files_dir.exists() else None,
                 "storage_size": demo_storage_size(demo.slug),
-                "inconsistency": not files_dir.exists(),
+                "inconsistency": demo.demo_type != "link" and not files_dir.exists(),
                 "timeline": [
                     {
                         "id": t.id,

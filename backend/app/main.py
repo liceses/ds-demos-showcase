@@ -117,6 +117,26 @@ def _safe_join(slug: str, path: str) -> str:
     return file_path.relative_to(root).as_posix()
 
 
+def _ensure_demo_columns() -> None:
+    """SQLite 增量迁移：给已存在的 demos 表补充新增列（create_all 不会改旧表）。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "demos" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("demos")}
+    additions = [
+        ("demo_type", "TEXT NOT NULL DEFAULT 'web'"),
+        ("external_url", "TEXT"),
+        ("prompt", "TEXT NOT NULL DEFAULT ''"),
+        ("video_url", "TEXT"),
+    ]
+    with engine.begin() as conn:
+        for name, ddl in additions:
+            if name not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE demos ADD COLUMN {name} {ddl}")
+
+
 def init_db() -> None:
     settings.demos_path.mkdir(parents=True, exist_ok=True)
     settings.media_path.mkdir(parents=True, exist_ok=True)
@@ -142,6 +162,7 @@ def init_db() -> None:
         )
 
     Base.metadata.create_all(bind=engine)
+    _ensure_demo_columns()
 
     db = SessionLocal()
     try:

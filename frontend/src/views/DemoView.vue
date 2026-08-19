@@ -123,7 +123,12 @@ onMounted(load)
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
         <div class="btn-group">
-          <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">下载 ZIP</button>
+          <template v-if="demo.demo_type === 'link'">
+            <a class="btn btn-sm btn-primary" :href="demo.external_url" target="_blank" rel="noopener">打开链接 ↗</a>
+          </template>
+          <template v-else>
+            <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">下载 ZIP</button>
+          </template>
           <template v-if="canEdit">
             <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
             <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
@@ -132,11 +137,29 @@ onMounted(load)
       </div>
     </section>
 
-    <IframePreview
-      :srcdoc="demo.previewHtml"
-      :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
-      :title="demo.title"
-    />
+    <template v-if="demo.demo_type === 'web'">
+      <IframePreview
+        :srcdoc="demo.previewHtml"
+        :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
+        :title="demo.title"
+      />
+    </template>
+
+    <template v-else-if="demo.demo_type === 'zip'">
+      <div class="card card-mint" style="padding: 32px; text-align: center">
+        <h2 style="margin-bottom: 10px">📦 文件包项目</h2>
+        <p class="muted" style="margin-bottom: 18px">这是一个项目文件包（非网页应用），不提供在线预览，请下载后本地查看。</p>
+        <button class="btn btn-primary" type="button" @click="onDownload">下载 ZIP（{{ demo.download_count }} 次）</button>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="card card-coral" style="padding: 32px; text-align: center">
+        <h2 style="margin-bottom: 10px">🔗 外部链接项目</h2>
+        <p class="muted" style="margin-bottom: 18px">内容托管在外部站点，点击下方按钮跳转访问。</p>
+        <a class="btn btn-primary" :href="demo.external_url" target="_blank" rel="noopener">打开链接 ↗</a>
+      </div>
+    </template>
 
     <section class="section">
       <div class="tabs">
@@ -152,6 +175,19 @@ onMounted(load)
             <div class="card card-default" style="padding: 22px">
               <h2 style="margin-bottom: 12px">描述</h2>
               <p style="line-height: 1.8">{{ demo.description }}</p>
+
+              <template v-if="demo.prompt">
+                <h2 style="margin: 22px 0 12px">💬 第一轮提示词</h2>
+                <div class="card card-mint" style="padding: 16px; border-left: 4px solid var(--ink)">
+                  <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; font-family: var(--font-mono); font-size: 13px">{{ demo.prompt }}</p>
+                </div>
+              </template>
+
+              <template v-if="demo.video_url">
+                <h2 style="margin: 22px 0 12px">🎬 介绍视频</h2>
+                <a class="btn btn-sm btn-outline" :href="demo.video_url" target="_blank" rel="noopener">观看介绍视频 ↗</a>
+              </template>
+
               <h2 style="margin: 22px 0 12px">标签</h2>
               <div class="filter-row">
                 <RouterLink

@@ -241,4 +241,65 @@
   - 组装成 `key:value` 数组提交
 - 标签主页 `/tags`：按 tag-keys 分组展示（hero = label + description），value chips 链接到 `/tag/{key}/{value}`
 - 标签详情页 `/tag/{k}/{v}`：hero 标签文本 + 介绍 + 关联 Demo 瀑布流
-- 管理后台可加「标签键管理」（POST/PUT 已就绪）
+- 管理后台可加「标签键管理」（POST/PUT/DELETE 已就绪）
+
+## 5. Demo 类型扩展 + 丰富信息
+
+### demo_type（web / zip / link）
+
+`demo_type` 决定 Demo 的托管/展示方式：
+
+| 类型 | 含义 | 必填 | 预览/展示 |
+|---|---|---|---|
+| `web`（默认） | 网页应用 | zip（根目录需含 index.html） | iframe 在线预览 + 下载 ZIP |
+| `zip` | 文件包（不大的 zip，无需 index.html） | zip（解包后仅提供下载） | 无 iframe，展示「文件包项目」+ 下载 ZIP |
+| `link` | 外部链接（服务器不存内容） | `external_url`（http/https） | 「打开链接」按钮跳转，无下载 |
+
+### 新增表单字段（create/update demo）
+
+```
+POST /api/v1/demos        （multipart/form-data）
+PUT  /api/v1/demos/{slug} （multipart/form-data）
+
+title        必填
+description  可选
+tags         可选 JSON（见第 4 节）
+demo_type    web | zip | link（缺省 web）
+external_url 可选；link 类型必填且必须 http(s)
+prompt       可选，第一轮提示词（详情页展示为提示词卡片）
+video_url    可选，介绍视频链接（服务器不存视频，仅存链接）
+cover        可选图片
+file         可选 zip；web/zip 创建时必填，link 类型禁止上传
+commit_message / keep_old_version  同前（编辑时）
+```
+
+校验规则：
+- `demo_type` 非法 → 422
+- link：`external_url` 必填且 http(s)；上传 file → 400
+- web/zip：创建时必须上传 zip；web 解压要求含 index.html，zip 不要求
+- 更新时若切换类型：link ↔ web/zip 均可；link 下上传 file → 400
+
+### 响应新增字段
+
+```json
+{
+  "slug": "...",
+  "demo_type": "web",
+  "external_url": null,
+  "prompt": "用 canvas 做一个小游戏…",
+  "video_url": "https://www.bilibili.com/video/BV1xxxx",
+  "preview_url": "…"   // 仅 web 类型非空；zip/link 为空字符串
+}
+```
+
+- 列表接口（`GET /demos`）也会返回 `demo_type` / `external_url`
+- 详情接口（`GET /demos/{slug}`）额外返回 `prompt` / `video_url`
+
+### 前端对齐建议
+
+- 发布/编辑页：类型选择（网页应用 / 文件包 / 链接）+ 条件表单（link → 链接地址；web/zip → zip 上传）+ 提示词文本域 + 视频链接输入
+- 详情页：
+  - `web` → iframe 预览 + 下载
+  - `zip` → 「文件包项目」卡片 + 下载按钮
+  - `link` → 「打开链接」按钮（`external_url`，新窗口）
+  - 信息 Tab：`prompt` 非空时展示「💬 第一轮提示词」卡片；`video_url` 非空时展示「🎬 介绍视频」跳转按钮

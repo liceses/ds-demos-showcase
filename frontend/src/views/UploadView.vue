@@ -11,6 +11,10 @@ const editSlug = typeof route.query.slug === 'string' ? route.query.slug : ''
 
 const title = ref('')
 const description = ref('')
+const demoType = ref<'web' | 'zip' | 'link'>('web')
+const externalUrl = ref('')
+const prompt = ref('')
+const videoUrl = ref('')
 const coverFile = ref<File | null>(null)
 const zipFile = ref<File | null>(null)
 const commitMessage = ref('')
@@ -19,6 +23,8 @@ const submitting = ref(false)
 const error = ref('')
 const success = ref<{ slug: string; status: string } | null>(null)
 const loading = ref(false)
+
+const demoTypeLabel: Record<string, string> = { web: '网页应用', zip: '文件包（zip）', link: '外部链接' }
 
 // 标签选择器
 const tagKeys = ref<TagKeyInfo[]>([])
@@ -45,7 +51,7 @@ const demoTitle = ref('')
 const currentCover = ref('')
 const coverPreview = ref('')
 const denied = ref(false)
-const initial = ref({ title: '', description: '' })
+const initial = ref({ title: '', description: '', demoType: 'web', externalUrl: '', prompt: '', videoUrl: '' })
 
 const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
 
@@ -150,8 +156,19 @@ onMounted(async () => {
       currentCover.value = demo.cover_url
       title.value = demo.title
       description.value = demo.description
+      demoType.value = demo.demo_type || 'web'
+      externalUrl.value = demo.external_url || ''
+      prompt.value = demo.prompt || ''
+      videoUrl.value = demo.video_url || ''
       prefillTags(demo.tags)
-      initial.value = { title: demo.title, description: demo.description }
+      initial.value = {
+        title: demo.title,
+        description: demo.description,
+        demoType: demo.demo_type || 'web',
+        externalUrl: demo.external_url || '',
+        prompt: demo.prompt || '',
+        videoUrl: demo.video_url || '',
+      }
       const canEdit = auth.user?.role === 'admin' || auth.user?.username === demo.author
       if (!canEdit) {
         denied.value = true
@@ -187,6 +204,10 @@ const hasChanges = computed(() => {
   return (
     title.value.trim() !== initial.value.title ||
     description.value.trim() !== initial.value.description ||
+    demoType.value !== initial.value.demoType ||
+    externalUrl.value.trim() !== initial.value.externalUrl ||
+    prompt.value.trim() !== initial.value.prompt ||
+    videoUrl.value.trim() !== initial.value.videoUrl ||
     JSON.stringify(selected.value) !== initialTagsKey.value ||
     !!coverFile.value ||
     !!zipFile.value ||
@@ -199,7 +220,12 @@ async function submit() {
     error.value = '请填写标题'
     return
   }
-  if (!editSlug && !zipFile.value) {
+  if (demoType.value === 'link') {
+    if (!/^https?:\/\//.test(externalUrl.value.trim())) {
+      error.value = '链接类型需要填写 http(s) 地址'
+      return
+    }
+  } else if (!editSlug && !zipFile.value) {
     error.value = '请上传 zip 文件'
     return
   }
@@ -220,6 +246,10 @@ async function submit() {
         title: title.value.trim(),
         description: description.value.trim(),
         tags,
+        demo_type: demoType.value,
+        external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
+        prompt: prompt.value.trim(),
+        video_url: videoUrl.value.trim() || undefined,
         cover: coverFile.value,
         file: zipFile.value,
         commit_message: commitMessage.value.trim() || undefined,
@@ -231,8 +261,12 @@ async function submit() {
         title: title.value.trim(),
         description: description.value.trim(),
         tags,
+        demo_type: demoType.value,
+        external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
+        prompt: prompt.value.trim(),
+        video_url: videoUrl.value.trim() || undefined,
         cover: coverFile.value,
-        file: zipFile.value as File,
+        file: zipFile.value,
       })
     }
   } catch (e) {
@@ -248,7 +282,7 @@ async function submit() {
     <span class="eyebrow">{{ editSlug ? '编辑 Demo' : '上传 Demo' }}</span>
     <h1 class="huge">{{ editSlug ? demoTitle || '编辑' : '上传' }}</h1>
     <p class="sub">
-      {{ editSlug ? '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。' : '上传一个包含 index.html 的 zip 压缩包，系统会自动解压并生成预览。' }}
+      {{ editSlug ? '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。' : '支持网页应用 / 文件包（zip）/ 外部链接三种类型，可附提示词与介绍视频。' }}
     </p>
   </section>
 
@@ -270,6 +304,28 @@ async function submit() {
         <label class="field">
           描述
           <textarea v-model="description" class="input textarea" rows="3" placeholder="简要描述这个 Demo"></textarea>
+        </label>
+
+        <label class="field">
+          Demo 类型
+          <select v-model="demoType" class="input" style="max-width: 280px">
+            <option value="web">网页应用（zip 含 index.html）</option>
+            <option value="zip">文件包（zip，无需 index.html）</option>
+            <option value="link">外部链接（不传文件）</option>
+          </select>
+        </label>
+        <label v-if="demoType === 'link'" class="field">
+          外部链接地址（必填）
+          <input v-model="externalUrl" class="input" placeholder="https://…" />
+          <span class="hint">直接跳转打开，服务器不存储内容</span>
+        </label>
+        <label class="field">
+          第一轮提示词（可选，展示为提示词卡片）
+          <textarea v-model="prompt" class="input textarea" rows="4" placeholder="生成这个 Demo 时使用的第一轮提示词…"></textarea>
+        </label>
+        <label class="field">
+          介绍视频链接（可选，服务器不存视频）
+          <input v-model="videoUrl" class="input" placeholder="https://…（B站/YouTube 等）" />
         </label>
 
         <div class="tag-drawer-wrap">
@@ -299,17 +355,17 @@ async function submit() {
             <span v-if="coverPreview" class="cover-preview-badge">新封面</span>
           </div>
         </label>
-        <label class="field">
+        <label v-if="demoType !== 'link'" class="field">
           zip 文件{{ editSlug ? '（可选，不选则保留原文件）' : '' }}
           <input class="input" type="file" accept=".zip,application/zip" @change="onZipChange" />
-          <span class="hint">根目录需包含 index.html；大小上限 50MB</span>
+          <span class="hint">{{ demoType === 'web' ? '根目录需包含 index.html；大小上限 50MB' : '不要求 index.html；大小上限 50MB' }}</span>
         </label>
         <label v-if="editSlug" class="field">
           更新说明 / commit 信息（可选）
           <input v-model="commitMessage" class="input" placeholder="例如：修复第二关音效不同步的问题" />
           <span class="hint">会生成「作品更新公告」并写入时间线</span>
         </label>
-        <label v-if="editSlug && zipFile" class="field" style="display: flex; gap: 8px; align-items: center">
+        <label v-if="editSlug && zipFile && demoType !== 'link'" class="field" style="display: flex; gap: 8px; align-items: center">
           <input v-model="keepOldVersion" type="checkbox" style="width: 18px; height: 18px" />
           保留当前版本为独立旧版页面（上传新 zip 时生效）
         </label>

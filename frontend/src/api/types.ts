@@ -58,6 +58,9 @@ export interface DemoSummary {
   comment_count: number
   created_at: string
   status?: string
+  /** web=网页应用 zip=文件包 link=外部链接 */
+  demo_type?: 'web' | 'zip' | 'link'
+  external_url?: string | null
 }
 
 export interface DemoTimelineEntry {
@@ -74,6 +77,10 @@ export interface DemoDetail extends DemoSummary {
   session_log_count: number
   commit_count: number
   is_author: boolean
+  /** 第一轮提示词 */
+  prompt?: string
+  /** 介绍视频链接（服务器不存视频） */
+  video_url?: string | null
   file_size?: number
   storage_size?: number
   inconsistency?: boolean
@@ -161,14 +168,22 @@ export interface CreateDemoPayload {
   title: string
   description?: string
   tags?: TagInput[]
+  demo_type?: 'web' | 'zip' | 'link'
+  external_url?: string
+  prompt?: string
+  video_url?: string
   cover?: File | null
-  file: File
+  file?: File | null
 }
 
 export interface UpdateDemoPayload {
   title?: string
   description?: string
   tags?: TagInput[]
+  demo_type?: 'web' | 'zip' | 'link'
+  external_url?: string
+  prompt?: string
+  video_url?: string
   cover?: File | null
   file?: File | null
   commit_message?: string

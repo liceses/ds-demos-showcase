@@ -45,6 +45,18 @@ app.include_router(announcements.router, prefix=API_PREFIX)
 app.include_router(meta.router, prefix=API_PREFIX)
 
 
+@app.get(API_PREFIX)
+def api_root():
+    """API 根信息：agent 探测 /api/v1 即可发现上传指南。"""
+    return {
+        "name": "DS 民间科研成果展示 API",
+        "version": "1",
+        "docs": "/docs",
+        "agent_guide": f"{API_PREFIX}/meta/agent-guide",
+        "tag_keys": f"{API_PREFIX}/tags/tag-keys",
+    }
+
+
 @app.get("/preview/{slug}/{path:path}")
 def preview_file(slug: str, path: str):
     if "/" in slug or "\\" in slug or not slug:

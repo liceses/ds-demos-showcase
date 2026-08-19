@@ -92,6 +92,10 @@ onMounted(async () => {
     </div>
   </section>
 
+  <p class="muted" style="text-align: center; padding: 0 16px 8px">
+    🤖 AI 自动上传：读取 <code>/api/v1/meta/agent-guide</code> 后即可发布
+  </p>
+
   <!-- 精选展示 -->
   <section class="section" style="padding-top: 8px">
     <div class="section-head">

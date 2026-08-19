@@ -306,6 +306,18 @@ commit_message / keep_old_version  同前（编辑时）
 
 ## 6. AI Agent 上传指南
 
+### 自发现入口（agent 访问站点即可找到指南）
+
+| 入口 | 路径 | 说明 |
+|---|---|---|
+| LLM 约定文件 | `GET /llms.txt` | 站点根路径，AI 常用的「给 LLM 的 robots.txt」 |
+| robots.txt | `GET /robots.txt` | 含指南路径注释 |
+| 首页 HTML | `/` | head 含 `meta[name=ai-agent-guide]` + `link[rel=alternate]`，正文有提示行 |
+| API 根 | `GET /api/v1` | 返回 `agent_guide` / `tag_keys` 字段 |
+| 指南全文 | `GET /api/v1/meta/agent-guide` | Markdown，最终落点 |
+
+任一入口都能到达指南全文。
+
 ### 认证（可选，Bearer Token 免 Cookie）
 
 登录接口返回 `access_token`，后端同时支持 Cookie 与 `Authorization: Bearer <token>`。**上传接口也允许不登录**（见下方「匿名上传」）：

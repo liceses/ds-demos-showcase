@@ -1,0 +1,4 @@
+# deepdemos.top robots
+# AI agents: upload guide at /api/v1/meta/agent-guide
+User-agent: *
+Allow: /

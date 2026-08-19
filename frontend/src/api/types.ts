@@ -148,6 +148,8 @@ export interface AdminUser extends User {
 
 export interface Settings {
   auto_approve: boolean
+  /** 未注册（public）上传是否直接放行 */
+  auto_approve_public: boolean
 }
 
 export interface AuthResponse {
@@ -159,6 +161,8 @@ export interface DemoListParams {
   status?: string
   tags?: string[]
   q?: string
+  /** 作者过滤：public = 未注册上传；其他 = 用户名 */
+  author?: string
   sort?: 'newest' | 'popular'
   page?: number
   page_size?: number
@@ -172,6 +176,8 @@ export interface CreateDemoPayload {
   external_url?: string
   prompt?: string
   video_url?: string
+  /** 未登录上传时的展示昵称（public 虚拟身份） */
+  nickname?: string
   cover?: File | null
   file?: File | null
 }

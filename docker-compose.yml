@@ -6,6 +6,8 @@ services:
       STORAGE_DIR: ./storage
       JWT_SECRET: ${JWT_SECRET:-please-change-me}
       AUTO_APPROVE: ${AUTO_APPROVE:-true}
+      # 匿名上传信任通道：AI agent 带此 code 上传直接放行（可留空关闭）
+      UPLOAD_CODE: ${UPLOAD_CODE:-}
       MAX_UPLOAD_SIZE: 209715200
       MAX_FILE_SIZE: 209715200
       OSS_ENDPOINT: ${OSS_ENDPOINT:-}

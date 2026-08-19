@@ -62,7 +62,7 @@ def serialize_demo(
                 )
             )
         ),
-        "author": author.username if author else None,
+        "author": author.username if author else (demo.guest_name or "公开用户"),
         "author_id": demo.author_id,
         "tags": tags,
         "view_count": demo.view_count,

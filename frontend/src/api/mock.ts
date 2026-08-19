@@ -465,7 +465,7 @@ const pendingDemos: DemoDetail[] = [
   },
 ]
 
-let settings: Settings = { auto_approve: true }
+let settings: Settings = { auto_approve: true, auto_approve_public: false }
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T

@@ -117,7 +117,13 @@ onMounted(load)
       <span class="eyebrow">{{ demo.status || 'approved' }}</span>
       <h1 class="huge" style="margin-top: 14px">{{ demo.title }}</h1>
       <div class="filter-row" style="margin-top: 16px">
-        <span class="mini-stat"><b>{{ demo.author }}</b> 作者</span>
+        <span class="mini-stat">
+          <b>
+            <RouterLink v-if="demo.author_id == null" to="/author/public" style="color: inherit">{{ demo.author }}</RouterLink>
+            <RouterLink v-else :to="`/user/${demo.author}`" style="color: inherit">{{ demo.author }}</RouterLink>
+          </b>
+          作者
+        </span>
         <span class="mini-stat"><b>{{ new Date(demo.created_at).toLocaleDateString('zh-CN') }}</b> 创建</span>
         <span class="mini-stat"><b>{{ demo.view_count }}</b> 浏览</span>
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>

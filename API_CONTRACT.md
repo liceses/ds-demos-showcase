@@ -306,29 +306,40 @@ commit_message / keep_old_version  同前（编辑时）
 
 ## 6. AI Agent 上传指南
 
-### 认证（Bearer Token，免 Cookie）
+### 认证（可选，Bearer Token 免 Cookie）
 
-登录接口本就返回 `access_token`，后端同时支持 Cookie 与 `Authorization: Bearer <token>`：
+登录接口返回 `access_token`，后端同时支持 Cookie 与 `Authorization: Bearer <token>`。**上传接口也允许不登录**（见下方「匿名上传」）：
 
 ```bash
-# 1. 登录拿 token
+# 登录拿 token（可选）
 curl -s -X POST https://deepdemos.top/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"你的用户名","password":"你的密码"}'
 # → {"access_token":"eyJ...","user":{...}}
 
-# 2. 之后所有接口带请求头
+# 之后所有接口带请求头
 -H "Authorization: Bearer eyJ..."
 ```
+
+### 匿名上传（未注册也能传，public 虚拟身份）
+
+- **不登录也能上传**：`author_id` 为空，作者显示为 `nickname`（缺省「公开用户」），归入 `/author/public` 公开用户页
+- public 不能评论、不能编辑/删除（只有管理员能管）
+- 放行规则（管理后台两个开关）：
+  - `auto_approve`（放行所有）：登录用户 + 匿名都直接上线
+  - `auto_approve_public`（放行未注册，默认关）：仅匿名直接上线
+  - 都不开：匿名上传进审核队列（`pending`）
+- **信任通道**：服务器配置环境变量 `UPLOAD_CODE` 后，匿名上传带 `upload_code` 匹配 → **直接放行**（跳过审核与限流），用于自家/信任的 AI agent
+- **限流**：无 `upload_code` 的匿名上传每 IP 每小时最多 20 次（429 拒绝）
 
 ### 方式一：JSON + zip URL（推荐 agent 用，免 multipart）
 
 `POST /api/v1/demos/from-url`
 
 ```bash
+# ① 匿名（最简单，无需登录）
 curl -X POST https://deepdemos.top/api/v1/demos/from-url \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
   -d '{
     "title": "机械表模拟",
     "description": "AI 生成的机械表网页 demo",
@@ -336,10 +347,20 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
     "zip_url": "https://your-oss-or-any-public-host/机械表.zip",
     "cover_url": "https://your-oss-or-any-public-host/cover.png",
     "prompt": "用 canvas 画一个机械表…",
-    "video_url": "",
+    "nickname": "小明的 AI",
     "tags": ["model:dsv4-flash", {"key":"game","value":"watch","description":"机械表主题"}]
   }'
-# → {"slug":"ji-xie-biao-mo-ni","status":"approved"}
+# → {"slug":"ji-xie-biao-mo-ni","status":"approved" | "pending"}
+
+# ② 可信 agent（带 UPLOAD_CODE，直接放行）
+curl -X POST https://deepdemos.top/api/v1/demos/from-url \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "机械表模拟",
+    "demo_type": "web",
+    "zip_url": "https://.../机械表.zip",
+    "upload_code": "你的-UPLOAD_CODE"
+  }'
 ```
 
 - `zip_url` 后端自行下载（限 `max_upload_size` 50MB、60s 超时），**只允许公网 http(s)**：内网/回环/保留地址返回 422（SSRF 防护）
@@ -348,24 +369,36 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
 
 ### 方式二：multipart 直传（文件在本地时用）
 
-`POST /api/v1/demos`（同网页上传，字段一致）：
+`POST /api/v1/demos`（同网页上传，字段一致；匿名时加 `nickname` / `upload_code`）：
 
 ```bash
+# 匿名直传（不登录）
 curl -X POST https://deepdemos.top/api/v1/demos \
-  -H "Authorization: Bearer <token>" \
   -F "title=机械表模拟" \
   -F "description=AI 生成的机械表网页 demo" \
   -F "demo_type=web" \
+  -F "nickname=小明的 AI" \
   -F 'tags=["model:dsv4-flash"]' \
   -F "prompt=用 canvas 画一个机械表…" \
   -F "file=@D:/path/机械表.zip" \
   -F "cover=@D:/path/cover.png"
+
+# 登录上传则加 -H "Authorization: Bearer <token>"
 ```
+
+### 查看公开用户的所有 Demo
+
+```
+GET /api/v1/demos?status=approved&author=public
+```
+
+- `author=public` = 所有未注册上传（`author_id` 为空）
+- `author=<用户名>` = 某个注册用户的作品
 
 ### agent 流程建议
 
 1. 生成/打包游戏 → zip
 2. zip 放到公网可下载地址（OSS / 临时 http 服务 / GitHub release）
-3. `POST /auth/login` 拿 token
-4. `POST /demos/from-url` 提交 → 拿到 `slug`
-5. 可选：`GET /demos/{slug}` 校验上线状态；`PUT /demos/{slug}` 更新
+3. 直接 `POST /demos/from-url`（匿名）→ 拿到 `slug`（`pending` 或 `approved`）
+4. 若需即时上线：配置并带上 `UPLOAD_CODE`（找站点管理员要）
+5. 可选：`GET /demos/{slug}` 校验状态；管理员在后台审核 `pending` 的公开上传

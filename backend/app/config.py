@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 天
 
     auto_approve: bool = True
+    # 匿名上传信任通道：agent 带 UPLOAD_CODE 上传 = 可信（绕过审核，见 API_CONTRACT 第 6 节）
+    upload_code: str = ""
 
     max_upload_size: int = 200 * 1024 * 1024  # 200MB
     max_file_size: int = 200 * 1024 * 1024

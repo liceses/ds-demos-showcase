@@ -130,6 +130,7 @@ def _ensure_demo_columns() -> None:
         ("external_url", "TEXT"),
         ("prompt", "TEXT NOT NULL DEFAULT ''"),
         ("video_url", "TEXT"),
+        ("guest_name", "TEXT"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:

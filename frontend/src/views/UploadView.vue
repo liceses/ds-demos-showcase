@@ -11,6 +11,7 @@ const editSlug = typeof route.query.slug === 'string' ? route.query.slug : ''
 
 const title = ref('')
 const description = ref('')
+const nickname = ref('')
 const demoType = ref<'web' | 'zip' | 'link'>('web')
 const externalUrl = ref('')
 const prompt = ref('')
@@ -248,6 +249,7 @@ async function submit() {
         external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
         prompt: prompt.value.trim(),
         video_url: videoUrl.value.trim() || undefined,
+        nickname: nickname.value.trim() || undefined,
         cover: coverFile.value,
         file: zipFile.value,
         commit_message: commitMessage.value.trim() || undefined,
@@ -263,6 +265,7 @@ async function submit() {
         external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
         prompt: prompt.value.trim(),
         video_url: videoUrl.value.trim() || undefined,
+        nickname: nickname.value.trim() || undefined,
         cover: coverFile.value,
         file: zipFile.value,
       })
@@ -280,7 +283,7 @@ async function submit() {
     <span class="eyebrow">{{ editSlug ? '编辑 Demo' : '上传 Demo' }}</span>
     <h1 class="huge">{{ editSlug ? demoTitle || '编辑' : '上传' }}</h1>
     <p class="sub">
-      {{ editSlug ? '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。' : '支持网页应用 / 文件包（zip）/ 外部链接三种类型，可附提示词与介绍视频。' }}
+      {{ editSlug ? '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。' : '支持网页应用 / 文件包（zip）/ 外部链接三种类型，可附提示词与介绍视频；未登录也能以公开用户身份发布。' }}
     </p>
   </section>
 
@@ -298,6 +301,10 @@ async function submit() {
         <label class="field">
           标题
           <input v-model="title" class="input" placeholder="Demo 标题" required />
+        </label>
+        <label v-if="!auth.isLoggedIn()" class="field">
+          昵称（可选，未登录以公开用户身份发布）
+          <input v-model="nickname" class="input" maxlength="64" placeholder="如：小明；留空显示「公开用户」" />
         </label>
         <label class="field">
           描述
@@ -394,6 +401,10 @@ async function submit() {
           <div class="tag-key-head">
             <b>{{ k.label || k.key }} <code>{{ k.key }}</code></b>
             <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
+          </div>
+
+          <div v-if="k.key === 'model'" class="tag-key-hint">
+            灰测 Demo 专属标签：<code>ds-unknown</code>
           </div>
 
           <div v-if="k.mode === 'fixed'">

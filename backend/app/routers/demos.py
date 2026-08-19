@@ -3,15 +3,17 @@ import json
 import os
 import shutil
 import socket
+import time
 import urllib.error
 import urllib.request
 import uuid
 import zipfile
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -23,9 +25,24 @@ from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag,
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import oss, storage
-from ..services.settings_service import get_auto_approve
+from ..services.settings_service import get_auto_approve, get_auto_approve_public
 
 router = APIRouter(prefix="/demos", tags=["demos"])
+
+# 匿名上传限流：IP -> [unix 时间戳]（每小时窗口）
+_anon_uploads: dict[str, list[float]] = defaultdict(list)
+ANON_RATE_LIMIT = 20  # 次/小时/IP
+
+
+def _anon_rate_limit(request: Request) -> None:
+    """匿名上传限流：每 IP 每小时最多 ANON_RATE_LIMIT 次。"""
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    window = now - 3600
+    _anon_uploads[ip] = [t for t in _anon_uploads[ip] if t > window]
+    if len(_anon_uploads[ip]) >= ANON_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail=f"匿名上传过于频繁（{ANON_RATE_LIMIT} 次/小时），请稍后再试或登录", )
+    _anon_uploads[ip].append(now)
 
 
 def _find_demo(db: Session, slug: str) -> Demo:
@@ -124,12 +141,17 @@ def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
     for kv in key_values:
         tag = _resolve_tag(db, kv)
         db.add(DemoTag(demo_id=demo.id, tag_id=tag.id))
-    # 自动附加作者标签（保留 key，跳过键定义校验）
+    # 自动附加作者标签（保留 key，跳过键定义校验）；匿名用 guest_name
+    author_name = None
     if demo.author_id is not None:
         author = db.get(User, demo.author_id)
         if author:
-            author_tag = _ensure_tag(db, "author", author.username)
-            db.add(DemoTag(demo_id=demo.id, tag_id=author_tag.id))
+            author_name = author.username
+    elif demo.guest_name:
+        author_name = demo.guest_name
+    if author_name:
+        author_tag = _ensure_tag(db, "author", author_name)
+        db.add(DemoTag(demo_id=demo.id, tag_id=author_tag.id))
 
 
 def _add_timeline(
@@ -160,6 +182,7 @@ def list_demos(
     status: str | None = Query(default="approved"),
     tag: list[str] = Query(default=[]),
     q: str | None = None,
+    author: str | None = None,
     sort: str = Query(default="newest", pattern="^(newest|popular)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -168,6 +191,16 @@ def list_demos(
     query = db.query(Demo)
     if status:
         query = query.filter(Demo.status == status)
+
+    if author:
+        if author == "public":
+            # public 虚拟身份：所有未注册上传（author_id 为空）
+            query = query.filter(Demo.author_id.is_(None))
+        else:
+            user = db.query(User).filter(User.username == author).first()
+            if user is None:
+                return Paginated(items=[], total=0, page=page, page_size=page_size)
+            query = query.filter(Demo.author_id == user.id)
 
     for kv in tag:
         from sqlalchemy import select
@@ -286,7 +319,7 @@ def _download_url_bytes(url: str, limit: int, what: str) -> bytes:
 
 def _create_demo_record(
     db: Session,
-    user: User,
+    user: User | None,
     *,
     slug: str,
     title: str,
@@ -299,8 +332,14 @@ def _create_demo_record(
     cover_bytes: bytes | None = None,
     cover_ext: str = "png",
     zip_bytes: bytes | None = None,
+    guest_name: str | None = None,
+    trusted: bool = False,
 ) -> tuple[Demo, str]:
-    """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。"""
+    """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
+    - user 为空 = 匿名（public 虚拟身份）：author_id=NULL + guest_name 展示名
+    - trusted（UPLOAD_CODE 匹配）或已登录且 auto_approve → approved
+    - 匿名：auto_approve_all 或 auto_approve_public 任一开 → approved，否则 pending
+    """
     demo = Demo(
         slug=slug,
         title=title,
@@ -309,9 +348,16 @@ def _create_demo_record(
         external_url=external_url,
         prompt=(prompt or "").strip(),
         video_url=_clean_url(video_url),
+        guest_name=guest_name,
     )
-    demo.author_id = user.id
-    status = "approved" if get_auto_approve(db) else "pending"
+    demo.author_id = user.id if user else None
+
+    if trusted:
+        status = "approved"
+    elif user is not None:
+        status = "approved" if get_auto_approve(db) else "pending"
+    else:
+        status = "approved" if (get_auto_approve(db) or get_auto_approve_public(db)) else "pending"
     demo.status = status
 
     if cover_bytes:
@@ -349,8 +395,29 @@ def _create_demo_record(
     return demo, status
 
 
+def _uploader_context(
+    request: Request,
+    user: User | None,
+    nickname: str | None,
+    upload_code: str | None,
+) -> tuple[str | None, bool]:
+    """匿名上传身份解析：返回 (guest_name, trusted)。
+    - 已登录：guest=None, trusted=False（身份用账号）
+    - 未登录 + upload_code 匹配：trusted=True（跳过限流、直接放行）
+    - 未登录：限流 + guest_name=昵称或 None（显示「公开用户」）
+    """
+    if user is not None:
+        return None, False
+    trusted = bool(settings.upload_code and upload_code and upload_code.strip() == settings.upload_code)
+    if not trusted:
+        _anon_rate_limit(request)
+    guest = (nickname or "").strip()[:64] or None
+    return guest, trusted
+
+
 @router.post("", status_code=201, response_model=DemoCreateResult)
 async def create_demo(
+    request: Request,
     title: str = Form(...),
     description: str = Form(""),
     tags: str | None = Form(None),
@@ -358,10 +425,12 @@ async def create_demo(
     external_url: str | None = Form(None),
     prompt: str | None = Form(None),
     video_url: str | None = Form(None),
+    nickname: str | None = Form(None),
+    upload_code: str | None = Form(None),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
 ):
     demo_type = _validate_demo_type(demo_type)
 
@@ -380,6 +449,8 @@ async def create_demo(
         cover_ext = Path(cover.filename or "").suffix.lstrip(".") or "png"
         cover_bytes = await _read_limited(cover, settings.max_cover_size, "封面超过大小限制")
 
+    guest_name, trusted = _uploader_context(request, user, nickname, upload_code)
+
     demo, status = _create_demo_record(
         db, user,
         slug=_unique_slug(db, title),
@@ -393,17 +464,20 @@ async def create_demo(
         cover_bytes=cover_bytes,
         cover_ext=cover_ext,
         zip_bytes=zip_bytes,
+        guest_name=guest_name,
+        trusted=trusted,
     )
     return DemoCreateResult(slug=demo.slug, status=status)
 
 
 @router.post("/from-url", status_code=201, response_model=DemoCreateResult)
 def create_demo_from_url(
+    request: Request,
     body: DemoFromUrlIn,
     db: Session = Depends(get_db),
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
 ):
-    """AI agent 友好：JSON 提交，zip/封面走 URL（后端下载），免 multipart。"""
+    """AI agent 友好：JSON 提交，zip/封面走 URL（后端下载），免 multipart；可匿名上传。"""
     demo_type = _validate_demo_type(body.demo_type)
 
     if demo_type == "link":
@@ -425,6 +499,8 @@ def create_demo_from_url(
 
     tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
 
+    guest_name, trusted = _uploader_context(request, user, body.nickname, body.upload_code)
+
     demo, status = _create_demo_record(
         db, user,
         slug=_unique_slug(db, body.title),
@@ -438,6 +514,8 @@ def create_demo_from_url(
         cover_bytes=cover_bytes,
         cover_ext=cover_ext,
         zip_bytes=zip_bytes,
+        guest_name=guest_name,
+        trusted=trusted,
     )
     return DemoCreateResult(slug=demo.slug, status=status)
 

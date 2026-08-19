@@ -12,7 +12,7 @@ const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
 const users = ref<AdminUser[]>([])
-const settings = ref<Settings>({ auto_approve: true })
+const settings = ref<Settings>({ auto_approve: true, auto_approve_public: false })
 const announcements = ref<Announcement[]>([])
 
 const newAnn = ref({ title: '', content: '' })
@@ -485,8 +485,13 @@ onMounted(loadAll)
             <div class="card card-default" style="max-width: 520px; padding: 24px">
               <label class="field">
                 <input v-model="settings.auto_approve" type="checkbox" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle" />
-                新上传 Demo 自动通过审核
+                新上传 Demo 自动通过审核（登录用户）
               </label>
+              <label class="field">
+                <input v-model="settings.auto_approve_public" type="checkbox" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle" />
+                未注册（public）上传自动通过审核
+              </label>
+              <p class="hint" style="margin-bottom: 14px">开启「未注册放行」后，任何人（含 AI agent）不注册即可上传并即时上线，建议配合限流与 UPLOAD_CODE 信任通道使用。</p>
               <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
             </div>
           </template>

@@ -84,6 +84,8 @@ class Demo(Base):
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    # 匿名（未注册）上传的展示名；author_id 为 NULL 时生效（虚拟 public 身份）
+    guest_name: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 

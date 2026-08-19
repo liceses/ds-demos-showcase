@@ -55,10 +55,14 @@ def admin_users(db: Session = Depends(get_db), _: User = Depends(require_admin))
 
 @router.get("/settings", response_model=SettingsOut)
 def get_settings(db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    return SettingsOut(auto_approve=settings_service.get_auto_approve(db))
+    return SettingsOut(
+        auto_approve=settings_service.get_auto_approve(db),
+        auto_approve_public=settings_service.get_auto_approve_public(db),
+    )
 
 
 @router.put("/settings", response_model=SettingsOut)
 def update_settings(body: SettingsOut, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     settings_service.set_auto_approve(db, body.auto_approve)
-    return SettingsOut(auto_approve=body.auto_approve)
+    settings_service.set_auto_approve_public(db, body.auto_approve_public)
+    return SettingsOut(auto_approve=body.auto_approve, auto_approve_public=body.auto_approve_public)

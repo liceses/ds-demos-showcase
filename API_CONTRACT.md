@@ -366,6 +366,7 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
 - `zip_url` 后端自行下载（限 `max_upload_size` 50MB、60s 超时），**只允许公网 http(s)**：内网/回环/保留地址返回 422（SSRF 防护）
 - 封面 `cover_url` 可选；`tags` 支持字符串或对象数组（同第 4 节）
 - `demo_type` 规则同第 5 节：web/zip 必填 `zip_url`，link 必填 `external_url` 且禁传 zip
+- **AI 上传质量强制**：`description` 必填（非空）、`tags` 至少 1 个——从 URL 通道上传必须带简介和标签，否则 422
 
 ### 方式二：multipart 直传（文件在本地时用）
 

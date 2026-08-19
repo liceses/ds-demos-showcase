@@ -477,8 +477,14 @@ def create_demo_from_url(
     db: Session = Depends(get_db),
     user: User | None = Depends(optional_user),
 ):
-    """AI agent 友好：JSON 提交，zip/封面走 URL（后端下载），免 multipart；可匿名上传。"""
+    """AI agent 友好：JSON 提交，zip/封面走 URL（后端下载），免 multipart；可匿名上传。
+    强制要求简介与至少 1 个标签，保证 AI 上传的信息质量。"""
     demo_type = _validate_demo_type(body.demo_type)
+
+    if not body.description.strip():
+        raise HTTPException(status_code=422, detail="description 必填（AI 自动上传需要填写简介）", )
+    if not body.tags or len(body.tags) == 0:
+        raise HTTPException(status_code=422, detail="tags 至少需要 1 个标签（AI 自动上传需要打适宜标签）", )
 
     if demo_type == "link":
         ext_url = _validate_url(body.external_url, "external_url")

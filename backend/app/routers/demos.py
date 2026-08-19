@@ -322,7 +322,12 @@ def _oss_upload_safe(slug: str, zip_bytes: bytes | None = None) -> None:
     try:
         storage.upload_demo_to_oss(slug)
         if zip_bytes is not None:
-            oss.put_bytes(f"demos/{slug}/{slug}.zip", zip_bytes, "application/zip")
+            oss.put_bytes(
+                f"demos/{slug}/{slug}.zip",
+                zip_bytes,
+                "application/zip",
+                extra_headers={"Cache-Control": "public, max-age=3600"},
+            )
     except Exception as e:  # noqa: BLE001
         print(f"[warn] OSS 上传失败（降级本地存储）: {slug} {e}", flush=True)
 
@@ -701,7 +706,10 @@ def download_demo(slug: str, db: Session = Depends(get_db)):
 
     # OSS 已启用：直接 302 到 OSS 公有读地址，不占服务器带宽
     if oss.enabled():
-        return RedirectResponse(oss.public_url(f"demos/{slug}/{slug}.zip"))
+        return RedirectResponse(
+            oss.public_url(f"demos/{slug}/{slug}.zip"),
+            headers={"Cache-Control": "public, max-age=60"},
+        )
 
     files_dir = storage.demo_files_dir(slug)
     if not files_dir.exists():

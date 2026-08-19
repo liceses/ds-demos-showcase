@@ -80,18 +80,25 @@ def preview_file(slug: str, path: str):
             html = _re.sub(r"(?i)(<head[^>]*>)", r'\1<base href="' + base_url + '">', html, count=1)
         else:
             html = f'<base href="{base_url}">' + html
-        return Response(content=html.encode("utf-8"), media_type="text/html; charset=utf-8")
+        return Response(
+            content=html.encode("utf-8"),
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "public, max-age=60"},
+        )
 
     # 非 HTML（js/css/图片等）：OSS 已启用则 302 直连 OSS，不占服务器带宽
     if oss.enabled():
         # 确认对象存在才跳，避免 302 到不存在文件
         data = oss.get_bytes(f"demos/{slug}/files/{safe}")
         if data is not None:
-            return RedirectResponse(oss.public_url(f"demos/{slug}/files/{safe}"))
+            return RedirectResponse(
+                oss.public_url(f"demos/{slug}/files/{safe}"),
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
 
     file_path = (settings.demos_path / slug / "files" / safe).resolve()
     if file_path.is_file():
-        return FileResponse(file_path)
+        return FileResponse(file_path, headers={"Cache-Control": "public, max-age=86400"})
     raise HTTPException(status_code=404, detail="文件不存在", )
 
 

@@ -180,7 +180,10 @@ def upload_demo_to_oss(slug: str) -> None:
                     f"demos/{slug}/files/{rel}",
                     p,
                     content_type,
-                    extra_headers={"Content-Disposition": "inline"},
+                    extra_headers={
+                        "Content-Disposition": "inline",
+                        "Cache-Control": "public, max-age=86400",
+                    },
                 )
 
     sessions_root = demo_sessions_dir(slug)
@@ -193,7 +196,10 @@ def upload_demo_to_oss(slug: str) -> None:
                     f"demos/{slug}/sessions/{rel}",
                     p,
                     content_type,
-                    extra_headers={"Content-Disposition": "inline"},
+                    extra_headers={
+                        "Content-Disposition": "inline",
+                        "Cache-Control": "public, max-age=86400",
+                    },
                 )
 
 

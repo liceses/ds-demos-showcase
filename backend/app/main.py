@@ -88,9 +88,8 @@ def preview_file(slug: str, path: str):
 
     # 非 HTML（js/css/图片等）：OSS 已启用则 302 直连 OSS，不占服务器带宽
     if oss.enabled():
-        # 确认对象存在才跳，避免 302 到不存在文件
-        data = oss.get_bytes(f"demos/{slug}/files/{safe}")
-        if data is not None:
+        # HEAD 检查存在性（不要 get_bytes 全量下载，避免服务器重复拉取）
+        if oss.object_exists(f"demos/{slug}/files/{safe}"):
             return RedirectResponse(
                 oss.public_url(f"demos/{slug}/files/{safe}"),
                 headers={"Cache-Control": "public, max-age=86400"},
@@ -116,11 +115,10 @@ def media_file(path: str):
     from pathlib import Path as _P
     safe = _P(path).as_posix().replace("\\", "/")
     if oss.enabled():
-        # 先确认对象存在，避免重定向到不存在的 key（OSS 未同步时回源本地）
-        if oss.get_bytes(f"media/{safe}") is not None:
+        # HEAD 检查存在性，避免全量下载对象（重定向本身 no-store，最终对象自带 immutable 缓存）
+        if oss.object_exists(f"media/{safe}"):
             return RedirectResponse(
                 oss.public_url(f"media/{safe}"),
-                # 重定向目标随 CDN 配置变化：本身不缓存，最终 OSS 对象自带 immutable
                 headers={"Cache-Control": "no-store"},
             )
     file_path = (settings.media_path / safe).resolve()

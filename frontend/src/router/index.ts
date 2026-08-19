@@ -5,6 +5,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('../views/HomeView.vue'), meta: { title: '首页' } },
+    { path: '/demos', name: 'demos', component: () => import('../views/DemosView.vue'), meta: { title: '作品库' } },
     { path: '/demo/:slug', name: 'demo', component: () => import('../views/DemoView.vue'), props: true, meta: { title: 'Demo' } },
     { path: '/tags', name: 'tags', component: () => import('../views/TagListView.vue'), meta: { title: '标签' } },
     { path: '/tag/:k/:v', name: 'tag-detail', component: () => import('../views/TagDetailView.vue'), props: true, meta: { title: '标签详情' } },

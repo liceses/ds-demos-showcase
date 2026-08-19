@@ -21,6 +21,7 @@ const username = computed(() => auth.user?.username ?? '')
 
       <nav class="topnav">
         <RouterLink class="nav-link" to="/">首页</RouterLink>
+        <RouterLink class="nav-link" to="/demos">作品库</RouterLink>
         <RouterLink class="nav-link" to="/tags">标签</RouterLink>
         <RouterLink class="nav-link" to="/upload">上传 Demo</RouterLink>
         <RouterLink v-if="auth.isAdmin()" class="nav-link" to="/admin">管理后台</RouterLink>

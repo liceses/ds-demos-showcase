@@ -1,30 +1,21 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { Announcement, DemoSummary, TagKeyInfo } from '../api/types'
+import type { Announcement, DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 
-const demos = ref<DemoSummary[]>([])
+const featured = ref<DemoSummary[]>([])
+const grayTest = ref<DemoSummary[]>([])
 const announcements = ref<Announcement[]>([])
-const tagKeys = ref<TagKeyInfo[]>([])
-const selectedTags = ref<string[]>([])
-const q = ref('')
-const sort = ref<'newest' | 'popular'>('newest')
-const page = ref(1)
-const pageSize = 12
-const total = ref(0)
-const loading = ref(false)
-const loadingMore = ref(false)
+const totalDemos = ref(0)
+const totalTags = ref(0)
+const loading = ref(true)
 const error = ref('')
-const hasMore = ref(true)
 
-// 首页过滤 chips = 所有标签键下的值（author 键不在 tag_keys 中，自动排除）
-const filterChips = computed(() =>
-  tagKeys.value.flatMap((k) =>
-    k.values.map((v) => ({ key: k.key, value: v.value, count: v.demo_count, mode: k.mode })),
-  ),
-)
+// 灰测模型标签（mock/后端统一为 model:ds-unknown）
+const GRAY_TAG = 'model:ds-unknown'
+const grayTagUrl = computed(() => `/tag/model/ds-unknown`)
 
 // 分组：项目公告 = 带 demo_slug（新发布 / 作品更新）；系统公告 = 无 demo_slug（手动 / 站点更新）
 const projectAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug != null))
@@ -35,84 +26,31 @@ function scrollToAnnouncements() {
   annBottom.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const sentinel = ref<HTMLElement | null>(null)
-let observer: IntersectionObserver | null = null
+const entries = [
+  { to: '/demos', stamp: '逛', cls: 'lib', title: '作品库', desc: '搜索 · 筛选 · 全部作品' },
+  { to: '/tags', stamp: '翻', cls: 'tags', title: '标签库', desc: '固定 / 开放 / 数字 三种维度' },
+  { to: '/upload', stamp: '投', cls: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
+]
 
-async function load(reset = false) {
-  if (loading.value) return
-  loading.value = true
-  error.value = ''
+onMounted(async () => {
   try {
-    const p = reset ? 1 : page.value
-    const res = await api.listDemos({
-      status: 'approved',
-      tags: selectedTags.value,
-      q: q.value.trim() || undefined,
-      sort: sort.value,
-      page: p,
-      page_size: pageSize,
-    })
-    demos.value = reset ? res.items : [...demos.value, ...res.items]
-    total.value = res.total
-    page.value = p + 1
-    hasMore.value = demos.value.length < res.total
+    const [f, g, a, keys] = await Promise.all([
+      api.listDemos({ status: 'approved', sort: 'popular', page: 1, page_size: 6 }),
+      api.listDemos({ status: 'approved', tags: [GRAY_TAG], page: 1, page_size: 6 }),
+      api.listAnnouncements(),
+      api.listTagKeys(),
+    ])
+    featured.value = f.items
+    grayTest.value = g.items
+    totalDemos.value = f.total
+    totalTags.value = keys.reduce((n, k) => n + k.values.length, 0)
+    announcements.value = a
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
   }
-}
-
-function reset() {
-  page.value = 1
-  hasMore.value = true
-  // 不要先清空列表：清空会导致页面高度塌陷、滚动位置跳到顶部。
-  // 保留旧列表直到新数据返回后再整体替换。
-  void load(true)
-}
-
-function toggleTag(t: string) {
-  const i = selectedTags.value.indexOf(t)
-  if (i >= 0) selectedTags.value.splice(i, 1)
-  else selectedTags.value.push(t)
-  reset()
-}
-
-function applySort() {
-  reset()
-}
-
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-function onSearch() {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(reset, 300)
-}
-
-onMounted(async () => {
-  try {
-    tagKeys.value = await api.listTagKeys()
-  } catch {
-    tagKeys.value = []
-  }
-  try {
-    announcements.value = await api.listAnnouncements()
-  } catch {
-    announcements.value = []
-  }
-  await load(true)
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && hasMore.value && !loadingMore.value) {
-        loadingMore.value = true
-        void load().finally(() => (loadingMore.value = false))
-      }
-    },
-    { rootMargin: '300px' },
-  )
-  if (sentinel.value) observer.observe(sentinel.value)
 })
-
-onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
@@ -123,56 +61,73 @@ onBeforeUnmount(() => observer?.disconnect())
       这里收集由 AI 模型生成的网页 Demo —— 每个作品都附带生成会话日志与版本时间线，过程全透明。
       <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">查看公告 →</a>
     </p>
+    <div class="filter-row" style="margin-top: 16px">
+      <span class="tag-stat"><b>{{ totalDemos }}</b> Demo</span>
+      <span class="tag-stat"><b>{{ totalTags }}</b> 标签值</span>
+      <RouterLink class="btn btn-sm btn-primary" to="/upload">投稿 →</RouterLink>
+    </div>
   </section>
 
+  <!-- 入口大厅 -->
   <section class="section" style="padding-top: 8px">
-    <div class="toolbar">
-      <div class="search-box">
-        <input v-model="q" class="input" type="search" placeholder="搜索标题 / 描述 / 标签…" @input="onSearch" />
-        <span class="search-icon">Q</span>
-      </div>
-      <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
-        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
-      </div>
-    </div>
-
-    <div v-if="filterChips.length" class="filter-row">
-      <button
-        v-for="g in filterChips"
-        :key="g.key + ':' + g.value"
-        class="tag-chip"
-        :class="['mode-' + g.mode, { active: selectedTags.includes(g.key + ':' + g.value) }]"
-        type="button"
-        @click="toggleTag(g.key + ':' + g.value)"
+    <div class="entry-grid">
+      <RouterLink
+        v-for="e in entries"
+        :key="e.to"
+        class="card card-default entry-card"
+        :class="'entry-' + e.cls"
+        :to="e.to"
       >
-        {{ g.key }}:{{ g.value }}
-        <span class="count">{{ g.count }}</span>
+        <span class="entry-stamp">{{ e.stamp }}</span>
+        <h2>{{ e.title }}</h2>
+        <p class="muted">{{ e.desc }}</p>
+        <span class="entry-arrow">进入 →</span>
+      </RouterLink>
+      <button class="card card-default entry-card entry-ann" type="button" @click="scrollToAnnouncements">
+        <span class="entry-stamp">看</span>
+        <h2>站点公告</h2>
+        <p class="muted">项目公告 / 系统公告 · 最新动态</p>
+        <span class="entry-arrow">查看 →</span>
       </button>
     </div>
+  </section>
 
+  <!-- 精选展示 -->
+  <section class="section" style="padding-top: 8px">
+    <div class="section-head">
+      <h2 class="section-title">精选作品</h2>
+      <RouterLink class="btn btn-sm btn-outline" to="/demos">查看全部 →</RouterLink>
+    </div>
     <div v-if="error" class="notice notice-error">{{ error }}</div>
-
-    <div v-if="loading && !demos.length" class="loading-row">
-      <span class="spinner"></span> 加载 Demo 中…
-    </div>
-
-    <div v-else-if="!demos.length" class="empty-box">
-      没有匹配的 Demo —— 换一组标签或关键词试试。
-    </div>
-
+    <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载精选…</div>
+    <div v-else-if="!featured.length" class="empty-box">还没有 Demo，来投第一篇稿吧。</div>
     <div v-else class="waterfall">
-      <div v-for="d in demos" :key="d.slug" class="waterfall-item">
+      <div v-for="d in featured" :key="d.slug" class="waterfall-item">
         <DemoCard :demo="d" />
       </div>
     </div>
+  </section>
 
-    <div ref="sentinel" class="loading-row">
-      <template v-if="loadingMore"><span class="spinner"></span> 加载更多…</template>
-      <template v-else-if="!hasMore">已加载全部 {{ total }} 个 Demo</template>
+  <!-- 灰测作品展示（网传灰测模型制作的 demo） -->
+  <section v-if="grayTest.length" class="section" style="padding-top: 8px">
+    <div class="section-head">
+      <h2 class="section-title">
+        灰测作品
+        <span class="mode-badge mode-badge-int" style="margin-left: 10px">网传灰测</span>
+      </h2>
+      <RouterLink class="btn btn-sm btn-outline" :to="grayTagUrl">查看全部 →</RouterLink>
+    </div>
+    <p class="muted" style="margin: -12px 0 18px">
+      以下 Demo 由网传灰测版模型生成。
+    </p>
+    <div class="waterfall">
+      <div v-for="d in grayTest" :key="d.slug" class="waterfall-item">
+        <DemoCard :demo="d" />
+      </div>
     </div>
   </section>
 
+  <!-- 公告沉底 -->
   <section v-if="announcements.length" ref="annBottom" class="section ann-blocks">
     <AnnouncementBlock v-if="projectAnnouncements.length" title="项目公告" :items="projectAnnouncements" />
     <AnnouncementBlock v-if="systemAnnouncements.length" title="系统公告" :items="systemAnnouncements" />

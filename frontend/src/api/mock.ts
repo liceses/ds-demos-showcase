@@ -60,7 +60,7 @@ const tags: Tag[] = [
   { id: 2, key: 'model', value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', parent_id: 1, demo_count: 3, child_count: 0 },
   { id: 3, key: 'model', value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', parent_id: 1, demo_count: 0, child_count: 0 },
   { id: 10, key: 'model', value: 'dsv4flash', description: '历史自由值：dsv4-flash 的旧写法', parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 18, key: 'model', value: 'ds-unknown', description: '历史自由值：未识别的模型', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 18, key: 'model', value: 'ds-unknown', description: '网传灰测版', parent_id: null, demo_count: 3, child_count: 0 },
   { id: 4, key: 'plugin', value: 'routing-suite', description: '路由套件插件', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 11, key: 'plugin', value: 'suite', description: '历史自由值：路由套件的旧写法', parent_id: null, demo_count: 2, child_count: 0 },
   { id: 5, key: 'skills', value: 'J-space', description: 'J-space 技能工作区', parent_id: null, demo_count: 2, child_count: 0 },
@@ -90,7 +90,7 @@ const tagKeys: TagKeyInfo[] = [
     { value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', demo_count: 3 },
     { value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', demo_count: 0 },
     { value: 'dsv4flash', description: '历史自由值', demo_count: 3 },
-    { value: 'ds-unknown', description: '历史自由值', demo_count: 3 },
+    { value: 'ds-unknown', description: '网传灰测版', demo_count: 3 },
   ], demo_count: 6 },
   { key: 'plugin', mode: 'fixed', label: '插件', description: '使用的插件（固定值）', sort: 2, values: [
     { value: 'routing-suite', description: '路由套件插件', demo_count: 2 },

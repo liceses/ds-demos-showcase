@@ -235,6 +235,19 @@ async function saveSettings() {
   }
 }
 
+const ossSyncing = ref(false)
+async function runOssSync() {
+  ossSyncing.value = true
+  try {
+    const r = await api.ossSync()
+    ui.toast(`OSS 同步完成：demo ${r.demos_ok} 成功 / ${r.demos_fail} 失败，封面 ${r.covers_ok} 成功 / ${r.covers_fail} 失败`, r.demos_fail || r.covers_fail ? 'error' : 'success')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    ossSyncing.value = false
+  }
+}
+
 onMounted(loadAll)
 </script>
 
@@ -492,7 +505,13 @@ onMounted(loadAll)
                 未注册（public）上传自动通过审核
               </label>
               <p class="hint" style="margin-bottom: 14px">开启「未注册放行」后，任何人（含 AI agent）不注册即可上传并即时上线，建议配合限流与 UPLOAD_CODE 信任通道使用。</p>
-              <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
+              <div class="filter-row" style="margin-bottom: 0">
+                <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
+                <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync">
+                  {{ ossSyncing ? '同步中…' : '同步本地文件到 OSS' }}
+                </button>
+              </div>
+              <p class="hint" style="margin: 10px 0 0">OSS 不可用期间上传的 demo 只存在服务器本地，点此/重启后端即可自动补传。</p>
             </div>
           </template>
         </div>

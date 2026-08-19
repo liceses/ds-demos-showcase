@@ -182,6 +182,10 @@ const realApi = {
     const { data } = await http.put('/admin/settings', next)
     return data
   },
+  async ossSync(): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
+    const { data } = await http.post('/admin/oss-sync')
+    return data
+  },
   async updateUser(id: number, patch: Partial<Pick<User, 'role' | 'status'>>): Promise<User> {
     const { data } = await http.patch(`/users/${id}`, patch)
     return data

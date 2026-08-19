@@ -59,6 +59,15 @@ def get_bytes(key: str) -> bytes | None:
         return None
 
 
+def object_exists(key: str) -> bool:
+    if not enabled():
+        return False
+    try:
+        return _bucket().object_exists(key)
+    except oss2.exceptions.OssError:
+        return False
+
+
 def delete_object(key: str) -> None:
     if not enabled():
         return

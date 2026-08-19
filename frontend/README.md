@@ -11,7 +11,7 @@ frontend/
   public/favicon.svg
   src/
     api/            # types.ts（与后端契约对齐）+ http.ts（axios）+ mock.ts（占位数据）+ index.ts（统一出口）
-    components/     # DemoCard / TagChip / IframePreview / MarkdownView / CommitTimeline / CommentTree
+    components/     # DemoCard / TagChip / IframePreview / MarkdownView / CommentTree
     router/         # 路由 + 鉴权守卫（/upload 需登录，/admin 需 admin）
     stores/auth.ts  # Pinia 用户状态（HttpOnly Cookie 语义，无 localStorage token）
     views/          # Home / Demo / TagList / TagDetail / Login / Register / User / Upload / Admin / NotFound
@@ -31,7 +31,7 @@ npm run preview    # 预览构建产物
 ## Mock 模式 / 真实后端
 
 - 默认 **Mock 模式**（`VITE_USE_MOCK` 缺省为 true）：内置 6 个占位 Demo、标签层级、
-  评论树、session log、Git 时间线，无需后端即可浏览全部页面。
+  评论树、session log、版本时间线，无需后端即可浏览全部页面。
 - 连接真实后端：复制 `.env.example` 为 `.env`，设 `VITE_USE_MOCK=false`，然后启动
   后端（FastAPI，见 `../../项目计划书.md`）。
 
@@ -42,13 +42,13 @@ npm run preview    # 预览构建产物
 | `GET /api/v1/demos` | 瀑布流列表（status/tag/q/sort/page） |
 | `GET /api/v1/demos/:slug` | 详情 + 原子 view_count |
 | `POST /api/v1/demos` | multipart 上传，走状态机 |
-| `GET /api/v1/demos/:slug/commits` | 生成过程时间线 |
 | `GET /api/v1/demos/:slug/session-logs` | 会话日志 |
 | `GET/POST /api/v1/demos/:slug/comments` | 评论树 |
 | `GET /api/v1/tags` | 标签分组列表 |
 | `/auth/login /register /logout /me` | Cookie 鉴权（HttpOnly） |
 | `/admin/*` | 审核 / 设置 / 用户 / Demo 管理 |
 
+- 版本时间线：已由每 demo git 仓库简化为轻量 `timeline`（随 `GET /demos/:slug` 返回），不再提供 `/demos/:slug/commits` 接口。
 - 预览 iframe：真实模式加载 `/preview/<slug>/index.html`；Mock 模式使用内置 `srcdoc`。
 - dev 代理已配置：`/api`、`/preview`、`/media` → `http://localhost:8000`。
 - 前端不做数据渲染裸 `v-html`：所有 Markdown 经 `marked` + `DOMPurify` 后输出。

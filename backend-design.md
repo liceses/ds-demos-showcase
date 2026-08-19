@@ -20,8 +20,8 @@ web/
     │   ├── security.py      # 密码 / JWT / Cookie
     │   ├── deps.py          # 当前用户 / 管理员依赖
     │   ├── serializers.py   # Demo/Tag 序列化
-    │   ├── routers/         # auth, users, tags, demos, comments, sessions, commits, admin
-    │   └── services/        # storage(解压/封面/大小), git_service, settings_service
+    │   ├── routers/         # auth, users, tags, demos, comments, sessions, admin, announcements
+    │   └── services/        # storage(解压/封面/大小), oss, settings_service, site_git
     ├── requirements.txt
     ├── .env.example
     └── storage/             # demo 文件、封面（运行时生成）
@@ -53,7 +53,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## 3. API 汇总（前缀 `/api/v1`）
 
 统一错误：`{ "detail": string, "code": string }`。
-状态语义：400 校验/zip 非法、401 未认证、403 越权、404、409 冲突、413 超限、422 参数、429 限流、500 git/io、503 依赖、507 磁盘。
+状态语义：400 校验/zip 非法、401 未认证、403 越权、404、409 冲突、413 超限、422 参数、429 限流、500 内部/io、503 依赖、507 磁盘。
 
 ### 认证
 | 方法 | 路径 | 说明 |
@@ -76,14 +76,14 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/demos` | `?status=&tag=k:v&q=&sort=newest\|popular&page=&page_size=` |
-| GET | `/demos/{slug}` | 详情（含 session_log_count/commit_count/is_author/大小） |
+| GET | `/demos/{slug}` | 详情（含 session_log_count/timeline/is_author/大小） |
 | POST | `/demos` | multipart：`title, description?, tags(JSON), cover?, file(zip必填)` → 201 `{slug,status}` |
 | PUT | `/demos/{slug}` | 作者/admin，同字段 → 204 |
 | DELETE | `/demos/{slug}` | 作者/admin → 204 |
 | GET | `/demos/{slug}/download` | zip blob |
 | GET | `/preview/{slug}/...` | 解压后的 demo 静态文件（iframe） |
 
-上传自动：解压 zip（要求根 index.html）→ 自动附 `author:{username}` 标签 → git init + 初次提交 → 依 `auto_approve` 置状态。
+上传自动：解压 zip（要求根 index.html）→ 自动附 `author:{username}` 标签 → 写入 v1 时间线 + 新 Demo 公告 → 依 `auto_approve` 置状态。
 
 ### 评论（树形，回复深度≤5）
 | 方法 | 路径 | 说明 |
@@ -98,11 +98,10 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | GET | `/demos/{slug}/session-logs` | `[{id,filename,file_size,created_at}]`（扫描 `storage/demos/{slug}/sessions`，上传 zip 内 `sessions/` 目录自动归位） |
 | GET | `/demos/{slug}/session-logs/{filename}` | 文本/markdown |
 
-### Git 生成过程
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/demos/{slug}/commits` | `[{hash_short,message,author,date}]` |
-| GET | `/demos/{slug}/commits/{hash}` | `{hash,message,author,date,files,diff_text}` |
+### 版本时间线（原 git 生成过程已简化）
+
+- 无独立 `/commits` 接口；`GET /demos/{slug}` 返回 `timeline: [{id,version_label,message,old_slug,created_at}]`。
+- 创建、更新、旧版快照会自动写入时间线；`old_slug` 非空表示可跳转到旧版页面。
 
 ### 管理后台（admin）
 | 方法 | 路径 | 说明 |
@@ -120,7 +119,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **鉴权**：JWT（HS256，`JWT_SECRET` 需改）；token 同时放 body 与 HttpOnly Cookie，兼容 Bearer 头。密码用 PBKDF2（std 库，无额外依赖）。
 - **上传限制**：`MAX_UPLOAD_SIZE` / `MAX_FILE_SIZE` 默认 200MB，封面 5MB；超限 413。
 - **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
-- **Git**：用 `git` 子进程在 demo 目录维护版本，展示提交历史与 diff，实现「AI 生成过程」可回溯。
+- **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
 
 ---
@@ -136,5 +135,5 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## 6. 已验证
 
 - 后端全部接口本地起服并通过 curl/node 联调：
-  - 注册/登录/me、标签创建/查询、Demo 上传(解压+git+作者标签)/详情/更新/下载、评论树、session-logs、commits、admin 审核/设置/用户。
+  - 注册/登录/me、标签创建/查询、Demo 上传(解压+作者标签+时间线)/详情/更新/下载、评论树、session-logs、admin 审核/设置/用户。
 - 前端 `npm run typecheck` ✔、`npm run build` ✔（构建警告为 Vite 动态导入提示，非错误）。

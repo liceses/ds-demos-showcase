@@ -71,7 +71,7 @@ Windows 双击 `start-dev.bat`，或在 `web/` 下执行：
 
 ## 安全须知
 
-- **admin 默认密码**：生产默认仍为 `admin/admin123`，且**当前代码没有改密接口**；改法见 `DEPLOY.md`（容器内 Python/SQL 更新）。
+- **admin 默认密码**：生产默认仍为 `admin/admin123`，请部署后第一时间在「设置」页改密（也可按 `DEPLOY.md` 用容器内 Python 方式）。
 - **JWT_SECRET**：docker-compose 兜底值是公开的 `please-change-me`，生产必须在 `web/.env` 设置强随机值（`openssl rand -hex 32`），否则可伪造任意用户 Token。
 - **HTTPS**：`frontend/nginx.conf` 当前只监听 80（纯 HTTP），登录凭据与 Cookie 明文传输，**强烈建议尽快配 TLS**。
 

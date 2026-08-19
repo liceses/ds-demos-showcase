@@ -45,7 +45,7 @@ app/
 ├── deps.py          # 当前用户依赖
 ├── serializers.py   # Demo/Tag 序列化
 ├── routers/         # API 路由
-└── services/        # 存储、git、设置
+└── services/        # 存储、OSS、设置
 ```
 
 ## 与前端联调
@@ -65,5 +65,5 @@ app/
 
 生产必须：
 1. 设置强 `JWT_SECRET`（compose 兜底值是公开的 `please-change-me`）。
-2. 修改默认 `admin/admin123`（代码暂无改密接口，改法见 `../DEPLOY.md`）。
+2. 修改默认 `admin/admin123`（前端「设置」页有改密接口；也可按 `../DEPLOY.md` 用容器内 Python 方式）。
 3. 配置 HTTPS（当前 nginx 仅 80）。

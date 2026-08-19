@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useUiStore } from '../stores/ui'
 
 const props = defineProps<{
   src?: string
   srcdoc?: string
   title?: string
 }>()
+
+const ui = useUiStore()
 
 const frame = ref<HTMLIFrameElement | null>(null)
 const autoHeight = ref<number | null>(null)
@@ -87,18 +90,37 @@ function onMessage(e: MessageEvent) {
 async function toggleIframeFullscreen() {
   const el = frame.value
   if (!el) return
-  try {
-    if (document.fullscreenElement === el) {
+
+  // 已在全屏 → 退出
+  if (document.fullscreenElement) {
+    try {
       await document.exitFullscreen()
-    } else if (!document.fullscreenElement) {
-      await el.requestFullscreen()
+    } catch {
+      /* 忽略退出失败 */
     }
-  } catch {
-    // 兼容旧版 WebKit
+    return
+  }
+
+  try {
+    await el.requestFullscreen()
+    return
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e)
+    // 兼容旧版 WebKit（Safari 前缀方法）
     const legacy = el as HTMLIFrameElement & { webkitRequestFullscreen?: () => Promise<void> }
-    if (!document.fullscreenElement && legacy.webkitRequestFullscreen) {
-      await legacy.webkitRequestFullscreen()
+    if (legacy.webkitRequestFullscreen) {
+      try {
+        await legacy.webkitRequestFullscreen()
+        return
+      } catch {
+        /* 旧前缀也被拒，继续降级 */
+      }
     }
+    // 环境（如外层预览面板沙箱未放行 allow="fullscreen"）拒绝 iframe 全屏：
+    // 不再静默，降级为网页全屏覆盖层并明确告知原因
+    webFullscreen.value = true
+    document.body.style.overflow = 'hidden'
+    ui.toast(`iframe 全屏被浏览器拒绝（${reason}），已切换为网页全屏`, 'info')
   }
 }
 

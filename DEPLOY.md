@@ -1,6 +1,6 @@
 # 部署指南（云服务器 + Docker Compose + nginx）
 
-> 现状：前端由 **nginx** 静态托管并反代 **FastAPI**；数据库 **SQLite**（docker volume）；文件存储本地 `storage/`（demo 文件 / 封面 / 每 demo 一个 git 仓库）。
+> 现状：前端由 **nginx** 静态托管并反代 **FastAPI**；数据库 **SQLite**（docker volume）；文件存储本地 `storage/`（demo 文件 / 封面 / 会话日志）。
 > 仓库内 `docker-compose.yml` + `frontend/nginx.conf` 即当前线上拓扑。早期「Cloudflare Worker + D1 + OSS」方案**已弃用**，见文末历史说明。
 
 ## 架构
@@ -25,7 +25,7 @@ AUTO_APPROVE=false           # 生产建议关闭自动审核（新上传需管�
 
 生成密钥：`openssl rand -hex 32`
 
-> compose 里还预留了 `OSS_*` 变量，当前后端代码并未消费（本地存储），可留空。
+> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面会上传阿里云 OSS 并提供直链；不配置则使用本地 `storage/`。
 
 ### 2. 构建并启动
 
@@ -43,7 +43,7 @@ docker compose up -d --build
 
 ### 4. 首次登录必做（安全）
 
-- **改 admin 默认密码**（当前代码无改密接口，用容器内 Python）：
+- **改 admin 默认密码**（前端「设置」页已有改密接口；也可用容器内 Python）：
 
   ```bash
   docker compose exec backend python - <<'PY'
@@ -69,7 +69,7 @@ cd web && git pull && docker compose up -d --build
 ## 上线前安全清单
 
 1. `JWT_SECRET` 改为强随机值（见上）。
-2. 修改 `admin` 默认密码；建议同时补「改密接口」（当前缺失）。
+2. 修改 `admin` 默认密码（前端「设置」页可直接改）。
 3. `AUTO_APPROVE=false`。
 4. **配 HTTPS（强烈建议）**：当前 `nginx.conf` 仅监听 80，登录凭据与 Cookie 明文传输。可用 certbot（Let's Encrypt）为 `deepdemos.top` 发证书并改 nginx 配置：
    - `listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
@@ -92,7 +92,7 @@ cd web && git pull && docker compose up -d --build
   PY
   ```
 
-- **文件**：将 `demo-storage` 卷（demo 文件 / 封面 / 每 demo git 仓库 / backups）定期 rsync 或打包到异机。
+- **文件**：将 `demo-storage` 卷（demo 文件 / 封面 / 会话日志 / backups）定期 rsync 或打包到异机。
 
 > 注意：上面备份落在 storage 卷内，仍建议额外把卷导出到异地（`docker run --rm -v <项目>_demo-storage:/s -v $PWD:/b alpine tar czf /b/storage.tgz -C /s .`，DB 同理用 demo-data 卷）。
 

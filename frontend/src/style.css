@@ -681,7 +681,7 @@ label.field .hint {
   text-align: left;
 }
 
-/* ---------- Git 时间线 ---------- */
+/* ---------- 版本时间线 ---------- */
 .commit-item {
   position: relative;
   padding: 0 0 22px 26px;

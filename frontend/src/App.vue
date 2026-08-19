@@ -56,7 +56,7 @@ const username = computed(() => auth.user?.username ?? '')
 
     <footer class="footer container">
       <div class="mono">DS 民间科研成果展示 · AI 网页 Demo 作品集</div>
-      <div class="mono">Git 时间线仅表示提交历史，不等同于 AI 生成真实性证明</div>
+      <div class="mono">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明</div>
     </footer>
 
     <ConfirmHost />

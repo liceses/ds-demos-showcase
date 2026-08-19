@@ -23,8 +23,8 @@ services:
     volumes:
       - demo-data:/app/data
       - demo-storage:/app/storage
-      # 只读挂载网站仓库根目录（compose 上一级 = 仓库根，含 .git）
-      - ../:/site-repo:ro
+      # 只读挂载网站仓库根目录（= compose 文件所在目录，含 .git 与 scripts/）
+      - .:/site-repo:ro
     restart: unless-stopped
 
   frontend:

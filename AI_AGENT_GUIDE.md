@@ -16,6 +16,14 @@
 | 免审核 | 站点配置 `UPLOAD_CODE` 后，agent 上传时带上即可直接上线 |
 | 公开用户页 | `/author/public` 查看所有未注册上传 |
 
+**如果 agent 只拿到站点地址（比如 deepdemos.top），它应该先去抓本指南：**
+
+```
+GET https://deepdemos.top/api/v1/meta/agent-guide
+```
+
+这个接口返回本文件全文，agent 抓取后按指南执行即可（下面第二节的 prompt 已内置该步骤）。
+
 **你需要提供给 agent 的信息：**
 1. zip 文件的本地路径（或公网可下载 URL）
 2. 站点地址：`https://deepdemos.top`
@@ -35,6 +43,16 @@
   例如 https://deepdemos.top/api/v1
 - 上传不需要登录（匿名 = public 虚拟身份）
 - 如果需要免审核，站点管理员会给一个 upload_code，带上它上传会直接上线
+
+## 第 0 步：先抓取本指南（必做）
+
+如果你（agent）拿到的信息里没有完整上传规则，第一步先执行：
+
+```
+GET {BASE_URL}/api/v1/meta/agent-guide
+```
+
+返回的是这份指南全文（Markdown）。读完再继续，以该文档为准。
 
 ## 上传前必须做的工作（按顺序）
 
@@ -136,6 +154,7 @@ echo 'UPLOAD_CODE=你自定义的随机密钥' >> /opt/ds-demos-showcase/.env
 
 | 接口 | 用途 |
 |---|---|
+| `GET /api/v1/meta/agent-guide` | **上传指南全文（agent 第一步先抓这个）** |
 | `GET /api/v1/tags/tag-keys` | 标签键定义（打标签前必查） |
 | `POST /api/v1/demos/from-url` | JSON + zip URL 上传（推荐） |
 | `POST /api/v1/demos` | multipart 直传 |

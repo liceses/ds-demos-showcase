@@ -398,6 +398,7 @@ GET /api/v1/demos?status=approved&author=public
 
 ### agent 流程建议
 
+0. **先抓指南**：`GET /api/v1/meta/agent-guide` → 返回 `AI_AGENT_GUIDE.md` 全文（Markdown），按它执行
 1. 生成/打包游戏 → zip
 2. zip 放到公网可下载地址（OSS / 临时 http 服务 / GitHub release）
 3. 直接 `POST /demos/from-url`（匿名）→ 拿到 `slug`（`pending` 或 `approved`）

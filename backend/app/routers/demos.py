@@ -1,3 +1,4 @@
+import asyncio
 import ipaddress
 import json
 import os
@@ -332,7 +333,7 @@ def _oss_upload_safe(slug: str, zip_bytes: bytes | None = None) -> None:
         print(f"[warn] OSS 上传失败（降级本地存储）: {slug} {e}", flush=True)
 
 
-def _create_demo_record(
+async def _create_demo_record(
     db: Session,
     user: User | None,
     *,
@@ -353,6 +354,7 @@ def _create_demo_record(
     - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
     - trusted（UPLOAD_CODE 匹配）或已登录且 auto_approve → approved
     - 匿名：auto_approve_all 或 auto_approve_public 任一开 → approved，否则 pending
+    - 解压/OSS/封面上传等阻塞操作放线程池，避免卡死事件循环（批量上传时其他接口还能响应）
     """
     demo = Demo(
         slug=slug,
@@ -374,7 +376,7 @@ def _create_demo_record(
     demo.status = status
 
     if cover_bytes:
-        demo.cover_url = storage.save_cover(cover_bytes, cover_ext)
+        demo.cover_url = await asyncio.to_thread(storage.save_cover, cover_bytes, cover_ext)
     else:
         demo.cover_url = "/media/covers/default.svg"
 
@@ -384,13 +386,13 @@ def _create_demo_record(
 
     if zip_bytes is not None:
         try:
-            storage.extract_zip(zip_bytes, slug, require_index=(demo_type == "web"))
+            await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo_type == "web"))
         except HTTPException:
             db.delete(demo)
             db.commit()
             shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
             raise
-        _oss_upload_safe(slug, zip_bytes)
+        await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
 
     _set_demo_tags(db, demo, _parse_tags(tags_raw))
     db.commit()
@@ -460,7 +462,7 @@ async def create_demo(
 
     trusted = _uploader_context(request, user, upload_code)
 
-    demo, status = _create_demo_record(
+    demo, status = await _create_demo_record(
         db, user,
         slug=_unique_slug(db, title),
         title=title.strip(),
@@ -479,7 +481,7 @@ async def create_demo(
 
 
 @router.post("/from-url", status_code=201, response_model=DemoCreateResult)
-def create_demo_from_url(
+async def create_demo_from_url(
     request: Request,
     body: DemoFromUrlIn,
     db: Session = Depends(get_db),
@@ -501,21 +503,22 @@ def create_demo_from_url(
         ext_url = None
         if not body.zip_url:
             raise HTTPException(status_code=422, detail="web/zip 类型需要提供 zip_url", )
-        zip_bytes = _download_url_bytes(body.zip_url, settings.max_upload_size, "zip")
+        # URL 下载放线程池，避免阻塞事件循环
+        zip_bytes = await asyncio.to_thread(_download_url_bytes, body.zip_url, settings.max_upload_size, "zip")
         if zip_bytes[:2] != b"PK":
             raise HTTPException(status_code=400, detail="zip_url 下载的内容不是 zip 文件", )
 
     cover_bytes = None
     cover_ext = "png"
     if body.cover_url:
-        cover_bytes = _download_url_bytes(body.cover_url, settings.max_upload_size, "封面")
+        cover_bytes = await asyncio.to_thread(_download_url_bytes, body.cover_url, settings.max_cover_size, "封面")
         cover_ext = Path(urlparse(body.cover_url).path).suffix.lstrip(".") or "png"
 
     tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
 
     trusted = _uploader_context(request, user, body.upload_code)
 
-    demo, status = _create_demo_record(
+    demo, status = await _create_demo_record(
         db, user,
         slug=_unique_slug(db, body.title),
         title=body.title.strip(),
@@ -585,7 +588,7 @@ async def update_demo(
     if cover is not None and cover.filename:
         ext = Path(cover.filename).suffix.lstrip(".") or "png"
         cover_bytes = await _read_limited(cover, settings.max_upload_size, "封面文件过大")
-        demo.cover_url = storage.save_cover(cover_bytes, ext)
+        demo.cover_url = await asyncio.to_thread(storage.save_cover, cover_bytes, ext)
         changed = True
     if file is not None and file.filename:
         if demo.demo_type == "link":
@@ -596,8 +599,8 @@ async def update_demo(
         # 勾选「保留旧版本」：先把当前文件快照成独立 demo 页面，再覆盖
         if keep_old_version:
             snapshot = _snapshot_demo(db, demo, user)
-        storage.extract_zip(zip_bytes, slug, require_index=(demo.demo_type == "web"))
-        _oss_upload_safe(slug, zip_bytes)
+        await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo.demo_type == "web"))
+        await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
         changed = True
 
     demo.updated_at = datetime.utcnow()

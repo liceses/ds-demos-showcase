@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
+import MasonryGrid from '../components/MasonryGrid.vue'
 
 const featured = ref<DemoSummary[]>([])
 const grayTest = ref<DemoSummary[]>([])
@@ -105,11 +106,11 @@ onMounted(async () => {
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载精选…</div>
     <div v-else-if="!featured.length" class="empty-box">还没有 Demo，来投第一篇稿吧。</div>
-    <div v-else class="waterfall">
-      <div v-for="d in featured" :key="d.slug" class="waterfall-item">
-        <DemoCard :demo="d" />
-      </div>
-    </div>
+    <MasonryGrid v-else :items="featured" :item-key="(d: unknown) => (d as DemoSummary).slug">
+      <template #default="{ item }">
+        <DemoCard :demo="item as DemoSummary" />
+      </template>
+    </MasonryGrid>
   </section>
 
   <!-- 灰测作品展示（网传灰测模型制作的 demo） -->
@@ -124,11 +125,11 @@ onMounted(async () => {
     <p class="muted" style="margin: -12px 0 18px">
       以下 Demo 由网传灰测版模型生成。
     </p>
-    <div class="waterfall">
-      <div v-for="d in grayTest" :key="d.slug" class="waterfall-item">
-        <DemoCard :demo="d" />
-      </div>
-    </div>
+    <MasonryGrid :items="grayTest" :item-key="(d: unknown) => (d as DemoSummary).slug">
+      <template #default="{ item }">
+        <DemoCard :demo="item as DemoSummary" />
+      </template>
+    </MasonryGrid>
   </section>
 
   <!-- 公告沉底 -->

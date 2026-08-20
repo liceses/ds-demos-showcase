@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { DemoSummary, Tag, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
+import MasonryGrid from '../components/MasonryGrid.vue'
 
 const props = defineProps<{ k: string; v: string }>()
 
@@ -110,11 +111,11 @@ onMounted(async () => {
         <span class="mini-stat"><b>{{ demos.length }}</b> 个</span>
       </div>
       <div v-if="!demos.length" class="empty-box">这个标签还很年轻，还没有 Demo</div>
-      <div v-else class="waterfall">
-        <div v-for="d in demos" :key="d.slug" class="waterfall-item">
-          <DemoCard :demo="d" />
-        </div>
-      </div>
+      <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
+        <template #default="{ item }">
+          <DemoCard :demo="item as DemoSummary" />
+        </template>
+      </MasonryGrid>
     </section>
   </template>
 </template>

@@ -233,9 +233,10 @@ def list_demos(
         query = query.filter(Demo.id.in_(ids))
 
     if sort == "popular":
-        query = query.order_by(Demo.view_count.desc(), Demo.created_at.desc())
+        query = query.order_by(Demo.view_count.desc(), Demo.created_at.desc(), Demo.id.desc())
     else:
-        query = query.order_by(Demo.created_at.desc())
+        # 次级键 id 兜底：同一秒发布的 demo 也有确定顺序，避免刷新/翻页抖动
+        query = query.order_by(Demo.created_at.desc(), Demo.id.desc())
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()

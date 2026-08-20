@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
+import MasonryGrid from '../components/MasonryGrid.vue'
 
 const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
@@ -150,11 +151,11 @@ onBeforeUnmount(() => observer?.disconnect())
       没有匹配的 Demo —— 换一组标签或关键词试试。
     </div>
 
-    <div v-else class="waterfall">
-      <div v-for="d in demos" :key="d.slug" class="waterfall-item">
-        <DemoCard :demo="d" />
-      </div>
-    </div>
+    <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
+      <template #default="{ item }">
+        <DemoCard :demo="item as DemoSummary" />
+      </template>
+    </MasonryGrid>
 
     <div ref="sentinel" class="loading-row">
       <template v-if="loadingMore"><span class="spinner"></span> 加载更多…</template>

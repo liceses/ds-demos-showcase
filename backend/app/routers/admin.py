@@ -1,12 +1,16 @@
+import os
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import get_db
 from ..deps import require_admin
 from ..models import Demo, User
 from ..schemas import AdminDemoOut, AdminUserOut, ReviewAction, SettingsOut, UserOut
 from ..serializers import serialize_demo
-from ..services import settings_service
+from ..services import oss, settings_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -75,3 +79,28 @@ def oss_sync(_: User = Depends(require_admin)):
     from ..services.oss_sync import sync_all
 
     return sync_all()
+
+
+@router.get("/storage-status")
+def storage_status(_: User = Depends(require_admin)):
+    """本地存储规模 + 当前生效模式（oss / local）。"""
+    demos_root = settings.demos_path
+    demo_dirs = 0
+    files = 0
+    size = 0
+    if demos_root.exists():
+        demo_dirs = sum(1 for d in demos_root.iterdir() if d.is_dir())
+        for root, _, fs in os.walk(demos_root):
+            files += len(fs)
+            for name in fs:
+                try:
+                    size += (Path(root) / name).stat().st_size
+                except OSError:
+                    pass
+    return {
+        "oss_enabled": oss.enabled(),
+        "mode": "oss" if oss.enabled() else "local",
+        "local_demos": demo_dirs,
+        "local_files": files,
+        "local_size_bytes": size,
+    }

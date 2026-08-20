@@ -10,6 +10,8 @@ services:
       UPLOAD_CODE: ${UPLOAD_CODE:-}
       MAX_UPLOAD_SIZE: 209715200
       MAX_FILE_SIZE: 209715200
+      # 存储模式总开关：false=只用本地存储，true/留空=按 OSS_* 配置决定
+      OSS_ENABLED: ${OSS_ENABLED:-true}
       OSS_ENDPOINT: ${OSS_ENDPOINT:-}
       OSS_BUCKET: ${OSS_BUCKET:-}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}

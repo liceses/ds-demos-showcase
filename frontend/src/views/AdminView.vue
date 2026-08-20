@@ -14,6 +14,13 @@ const tagKeys = ref<TagKeyInfo[]>([])
 const users = ref<AdminUser[]>([])
 const settings = ref<Settings>({ auto_approve: true, auto_approve_public: false })
 const announcements = ref<Announcement[]>([])
+const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }>({
+  oss_enabled: false,
+  mode: 'local',
+  local_demos: 0,
+  local_files: 0,
+  local_size_bytes: 0,
+})
 
 const newAnn = ref({ title: '', content: '' })
 const annError = ref('')
@@ -75,13 +82,14 @@ async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [p, d, t, u, s, a] = await Promise.all([
+    const [p, d, t, u, s, a, st] = await Promise.all([
       api.adminReview(),
       api.adminDemos(),
       api.listTagKeys(),
       api.adminUsers(),
       api.getSettings(),
       api.listAnnouncements(),
+      api.storageStatus(),
     ])
     pending.value = p
     demos.value = d
@@ -89,6 +97,7 @@ async function loadAll() {
     users.value = u
     settings.value = s
     announcements.value = a
+    storageInfo.value = st
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -246,6 +255,13 @@ async function runOssSync() {
   } finally {
     ossSyncing.value = false
   }
+}
+
+function fmtSize(n: number) {
+  if (n >= 1024 * 1024 * 1024) return (n / 1073741824).toFixed(2) + ' GB'
+  if (n >= 1024 * 1024) return (n / 1048576).toFixed(1) + ' MB'
+  if (n >= 1024) return (n / 1024).toFixed(0) + ' KB'
+  return n + ' B'
 }
 
 onMounted(loadAll)
@@ -495,6 +511,22 @@ onMounted(loadAll)
 
           <!-- 站点设置 -->
           <template v-else-if="tab === 'settings'">
+            <div class="card card-mint" style="max-width: 520px; padding: 24px; margin-bottom: 20px">
+              <h2 style="margin-bottom: 12px">存储</h2>
+              <div class="filter-row" style="margin-bottom: 10px">
+                <span class="mini-stat"><b>{{ storageInfo.mode === 'oss' ? 'OSS 直连' : '本地存储' }}</b> 模式</span>
+                <span class="mini-stat"><b>{{ storageInfo.local_demos }}</b> demo</span>
+                <span class="mini-stat"><b>{{ storageInfo.local_files }}</b> 文件</span>
+                <span class="mini-stat"><b>{{ fmtSize(storageInfo.local_size_bytes) }}</b> 本地占用</span>
+              </div>
+              <p class="hint" style="margin-bottom: 12px">本地是完整存储（全量文件在服务器），OSS 只是镜像。切换模式：修改服务器 .env 的 <code>OSS_ENABLED</code>（false=本地 / true=OSS）+ <code>docker compose up -d backend</code> 重建生效。</p>
+              <div class="filter-row" style="margin-bottom: 0">
+                <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync">
+                  {{ ossSyncing ? '同步中…' : '同步本地文件到 OSS' }}
+                </button>
+              </div>
+            </div>
+
             <div class="card card-default" style="max-width: 520px; padding: 24px">
               <label class="field">
                 <input v-model="settings.auto_approve" type="checkbox" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle" />
@@ -505,13 +537,7 @@ onMounted(loadAll)
                 未注册（public）上传自动通过审核
               </label>
               <p class="hint" style="margin-bottom: 14px">开启「未注册放行」后，任何人（含 AI agent）不注册即可上传并即时上线，建议配合限流与 UPLOAD_CODE 信任通道使用。</p>
-              <div class="filter-row" style="margin-bottom: 0">
-                <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
-                <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync">
-                  {{ ossSyncing ? '同步中…' : '同步本地文件到 OSS' }}
-                </button>
-              </div>
-              <p class="hint" style="margin: 10px 0 0">OSS 不可用期间上传的 demo 只存在服务器本地，点此/重启后端即可自动补传。</p>
+              <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
             </div>
           </template>
         </div>

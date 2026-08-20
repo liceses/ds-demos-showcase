@@ -827,6 +827,11 @@ export const mockApi = {
     return { demos_ok: demos.length, demos_fail: 0, covers_ok: 0, covers_fail: 0 }
   },
 
+  async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {
+    await delay(200)
+    return { oss_enabled: false, mode: 'local', local_demos: demos.length, local_files: 0, local_size_bytes: 0 }
+  },
+
   async updateUser(id: number, patch: Partial<Pick<User, 'role' | 'status'>>): Promise<User> {
     await delay(200)
     const u = users.find((x) => x.id === id)

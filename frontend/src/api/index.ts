@@ -186,6 +186,10 @@ const realApi = {
     const { data } = await http.post('/admin/oss-sync')
     return data
   },
+  async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {
+    const { data } = await http.get('/admin/storage-status')
+    return data
+  },
   async updateUser(id: number, patch: Partial<Pick<User, 'role' | 'status'>>): Promise<User> {
     const { data } = await http.patch(`/users/${id}`, patch)
     return data

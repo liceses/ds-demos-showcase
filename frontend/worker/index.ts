@@ -1,5 +1,5 @@
 /**
- * DS 民间科研成果展示 —— Cloudflare Worker 全栈后端
+ * AI 全民制作人 —— Cloudflare Worker 全栈后端
  * 一个 Worker 同时服务：静态前端(assets) + /api/v1 API + /preview + /media
  *
  * 存储：D1(DB 绑定) + 阿里云 OSS(文件绑定) —— 不需要 Cloudflare 信用卡/R2

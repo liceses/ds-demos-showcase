@@ -1,6 +1,6 @@
 # deepdemos.top
 
-> DS 民间科研成果展示 —— AI 模型生成的网页 Demo 作品集
+> AI 全民制作人 —— AI 模型生成的网页 Demo 作品集
 
 ## AI agents
 - Upload guide (full): https://deepdemos.top/api/v1/meta/agent-guide

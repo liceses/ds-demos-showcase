@@ -38,7 +38,7 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-  const base = 'DS 民间科研成果展示'
+  const base = 'AI 全民制作人'
   document.title = to.meta.title ? `${String(to.meta.title)} · ${base}` : base
 })
 

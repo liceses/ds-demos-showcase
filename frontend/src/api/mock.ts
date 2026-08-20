@@ -23,7 +23,7 @@ import type {
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
 
 const announcements: Announcement[] = [
-  { id: 1, type: 'manual', title: '站点公告', content: '欢迎来到 DS 民间科研成果展示站，欢迎大家投稿 AI 生成的网页 Demo！', demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
+  { id: 1, type: 'manual', title: '站点公告', content: '欢迎来到 AI 全民制作人站，欢迎大家投稿 AI 生成的网页 Demo！', demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
   { id: 2, type: 'auto', title: '新 Demo 发布', content: '植物大战僵尸（极简版）', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-01T10:00:00Z' },
   { id: 3, type: 'demo_update', title: 'Demo 更新：植物大战僵尸', content: '修复第二关音效不同步的问题', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-02T15:30:00Z' },
   { id: 4, type: 'update', title: '站点更新', content: 'feat: 整站公告系统上线', demo_slug: null, created_by: null, created_at: '2025-03-03T09:00:00Z' },
@@ -228,7 +228,7 @@ function loop(){if(dead)return;t++;if(t%7)return requestAnimationFrame(loop);con
     commit_count: 2,
     is_author: false,
     previewHtml: `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;font-family:monospace;padding:40px}pre{font-size:22px;line-height:1.8;border:6px solid #000;padding:32px;background:#ffe66d;box-shadow:8px 8px 0 #000;white-space:pre-wrap;max-width:720px;min-height:180px}</style></head><body><pre id="out"></pre><script>
-const txt='你好，这里是 AI 生成的网页 Demo。\n每一行都由模型逐步写出。\n—— DS 民间科研成果展示';let i=0;const out=document.getElementById('out');setInterval(()=>{if(i<=txt.length){out.textContent=txt.slice(0,i)+'▍';i++}else{i=0}},90);
+const txt='你好，这里是 AI 生成的网页 Demo。\n每一行都由模型逐步写出。\n—— AI 全民制作人';let i=0;const out=document.getElementById('out');setInterval(()=>{if(i<=txt.length){out.textContent=txt.slice(0,i)+'▍';i++}else{i=0}},90);
 </script></body></html>`,
   },
   {

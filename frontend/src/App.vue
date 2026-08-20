@@ -16,7 +16,7 @@ const username = computed(() => auth.user?.username ?? '')
     <header class="topbar container">
       <RouterLink to="/" class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-name">DS 民间科研<br />成果展示</span>
+        <span class="brand-name">AI 全民<br />制作人</span>
       </RouterLink>
 
       <nav class="topnav">
@@ -56,7 +56,7 @@ const username = computed(() => auth.user?.username ?? '')
     </main>
 
     <footer class="footer container">
-      <div class="mono">DS 民间科研成果展示 · AI 网页 Demo 作品集</div>
+      <div class="mono">AI 全民制作人 · AI 网页 Demo 作品集</div>
       <div class="mono">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明</div>
     </footer>
 

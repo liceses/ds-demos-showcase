@@ -1,4 +1,4 @@
-# DS 民间科研成果展示 —— 后端
+# AI 全民制作人 —— 后端
 
 FastAPI 后端，为前端提供 `/api/v1` REST API、`/preview/{slug}/...` 静态预览和 `/media/...` 媒体文件。
 

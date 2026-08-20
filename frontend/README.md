@@ -1,4 +1,4 @@
-# DS 民间科研成果展示 · 前端
+# AI 全民制作人 · 前端
 
 基于 **Vue 3 + TypeScript + Vite** 的单页应用，视觉完全遵循
 `../stylepkg/neo-brutalist-playful`（俏皮野兽派）的 SKILL.md 规范：

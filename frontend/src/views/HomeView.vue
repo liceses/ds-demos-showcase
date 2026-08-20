@@ -114,7 +114,7 @@ onMounted(async () => {
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载精选…</div>
     <div v-else-if="!featured.length" class="empty-box">还没有 Demo，来投第一篇稿吧。</div>
-    <MasonryGrid v-else :items="featured" :item-key="(d: unknown) => (d as DemoSummary).slug">
+    <MasonryGrid v-else :cols="3" :items="featured" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">
         <DemoCard :demo="item as DemoSummary" />
       </template>
@@ -133,7 +133,7 @@ onMounted(async () => {
     <p class="muted" style="margin: -12px 0 18px">
       以下 Demo 由网传灰测版模型生成。
     </p>
-    <MasonryGrid :items="grayTest" :item-key="(d: unknown) => (d as DemoSummary).slug">
+    <MasonryGrid :cols="3" :items="grayTest" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">
         <DemoCard :demo="item as DemoSummary" />
       </template>

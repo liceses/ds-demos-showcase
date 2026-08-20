@@ -14,6 +14,8 @@ const props = withDefaults(
     minColWidth?: number
     /** 卡片间距（px） */
     gap?: number
+    /** 固定列数（桌面端目标列数；窄屏自动降，保证不溢出） */
+    cols?: number
     /** 唯一 key 提取函数（默认用数组下标） */
     itemKey?: (item: unknown, index: number) => string | number
   }>(),
@@ -106,7 +108,9 @@ watch(
 function computeCols() {
   if (!root.value) return
   const w = root.value.clientWidth
-  const n = Math.max(1, Math.floor((w + props.gap) / (props.minColWidth + props.gap)))
+  const byWidth = Math.max(1, Math.floor((w + props.gap) / (props.minColWidth + props.gap)))
+  // cols 提供时作为桌面目标列数，但绝不超出按宽度能放下的列数（窄屏自动降）
+  const n = props.cols ? Math.max(1, Math.min(props.cols, byWidth)) : byWidth
   if (n !== colCount.value) {
     colCount.value = n
     rebuild(props.items)

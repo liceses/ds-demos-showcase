@@ -52,11 +52,15 @@ const hotChips = computed(() =>
 // 折叠态：缺省全部折叠（细条只露前 4 个值），显式展开记录在 expanded
 const COLLAPSED_SHOW = 4
 const groupExpanded = ref<Record<string, boolean>>({})
+function isExpanded(k: FilterGroup) {
+  return !!groupExpanded.value[k.key]
+}
 function isCollapsed(k: FilterGroup) {
-  return !(groupExpanded.value[k.key] ?? false)
+  return !isExpanded(k)
 }
 function toggleGroup(k: FilterGroup) {
-  groupExpanded.value = { ...groupExpanded.value, [k.key]: !isCollapsed(k) }
+  // 写入「与当前相反的展开态」：折叠→置 true 展开，展开→置 false 折叠
+  groupExpanded.value = { ...groupExpanded.value, [k.key]: !isExpanded(k) }
 }
 function visibleValues(k: FilterGroup) {
   return isCollapsed(k) ? k.values.slice(0, COLLAPSED_SHOW) : k.values

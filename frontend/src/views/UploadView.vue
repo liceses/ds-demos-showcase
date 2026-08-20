@@ -22,6 +22,7 @@ const keepOldVersion = ref(false)
 const submitting = ref(false)
 const uploadProgress = ref(0)
 const error = ref('')
+const dupSlug = ref<string | null>(null)
 const success = ref<{ slug: string; status: string } | null>(null)
 const loading = ref(false)
 
@@ -241,6 +242,7 @@ async function submit() {
   submitting.value = true
   uploadProgress.value = 0
   error.value = ''
+  dupSlug.value = null
   success.value = null
   const onProgress = (p: number) => {
     uploadProgress.value = p
@@ -283,6 +285,9 @@ async function submit() {
     }
   } catch (e) {
     error.value = (e as Error).message
+    // 409 内容重复：后端 detail 含 /demo/<slug>，解析出已有 demo 供跳转
+    const m = /\/demo\/([^/\s]+)/.exec((e as Error).message)
+    dupSlug.value = m ? m[1] : null
   } finally {
     submitting.value = false
   }
@@ -382,7 +387,12 @@ async function submit() {
           保留当前版本为独立旧版页面（上传新 zip 时生效）
         </label>
 
-        <div v-if="error" class="notice notice-error">{{ error }}</div>
+        <div v-if="error" class="notice notice-error">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+            <span>{{ error }}</span>
+            <RouterLink v-if="dupSlug" class="btn btn-sm btn-outline" :to="`/demo/${dupSlug}`">查看已有 Demo →</RouterLink>
+          </div>
+        </div>
         <div v-if="success" class="notice notice-success">
           <p style="margin-bottom: 10px">{{ editSlug ? '更新成功，已生成更新公告。' : '上传成功。' }}</p>
           <div class="filter-row" style="margin: 0">

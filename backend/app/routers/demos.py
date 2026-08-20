@@ -2,6 +2,7 @@ import asyncio
 import ipaddress
 import json
 import os
+import re
 import shutil
 import socket
 import time
@@ -17,6 +18,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -350,11 +352,13 @@ async def _create_demo_record(
     cover_ext: str = "png",
     zip_bytes: bytes | None = None,
     trusted: bool = False,
-) -> tuple[Demo, str]:
+    idempotency_key: str | None = None,
+) -> tuple[Demo, str, bool]:
     """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
     - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
     - trusted（UPLOAD_CODE 匹配）或已登录且 auto_approve → approved
     - 匿名：auto_approve_all 或 auto_approve_public 任一开 → approved，否则 pending
+    - idempotency_key：唯一幂等键；并发/重试撞键时返回已有结果（created=False）
     - 解压/OSS/封面上传等阻塞操作放线程池，避免卡死事件循环（批量上传时其他接口还能响应）
     """
     demo = Demo(
@@ -365,6 +369,7 @@ async def _create_demo_record(
         external_url=external_url,
         prompt=(prompt or "").strip(),
         video_url=_clean_url(video_url),
+        idempotency_key=idempotency_key,
     )
     demo.author_id = user.id if user else None
 
@@ -383,7 +388,17 @@ async def _create_demo_record(
 
     db.add(demo)
     db.flush()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 幂等键冲突：返回已存在的 demo，不重复创建
+        db.rollback()
+        existing = (
+            db.query(Demo).filter(Demo.idempotency_key == idempotency_key).first() if idempotency_key else None
+        )
+        if existing is None:
+            raise
+        return existing, existing.status, False
 
     if zip_bytes is not None:
         try:
@@ -407,7 +422,7 @@ async def _create_demo_record(
     ))
     _add_timeline(db, demo.id, "v1", "创建", None)
     db.commit()
-    return demo, status
+    return demo, status, True
 
 
 def _uploader_context(
@@ -428,6 +443,24 @@ def _uploader_context(
     return trusted
 
 
+def _validate_idempotency_key(key: str | None) -> str | None:
+    """校验幂等键：8~128 位字母数字 _ . -；空返回 None。"""
+    if not key:
+        return None
+    key = key.strip()
+    if not (8 <= len(key) <= 128):
+        raise HTTPException(status_code=422, detail="idempotency_key 长度需为 8~128", )
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", key):
+        raise HTTPException(status_code=422, detail="idempotency_key 仅允许字母数字 _ . -", )
+    return key
+
+
+def _existing_demo_by_key(db: Session, key: str | None) -> Demo | None:
+    if not key:
+        return None
+    return db.query(Demo).filter(Demo.idempotency_key == key).first()
+
+
 @router.post("", status_code=201, response_model=DemoCreateResult)
 async def create_demo(
     request: Request,
@@ -439,12 +472,18 @@ async def create_demo(
     prompt: str | None = Form(None),
     video_url: str | None = Form(None),
     upload_code: str | None = Form(None),
+    idempotency_key: str | None = Form(None),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User | None = Depends(optional_user),
 ):
     demo_type = _validate_demo_type(demo_type)
+    idem_key = _validate_idempotency_key(idempotency_key)
+    # 幂等：同 key 已成功创建过 → 直接返回已有结果（agent 重试去重，省去重新上传）
+    existing = _existing_demo_by_key(db, idem_key)
+    if existing is not None:
+        return DemoCreateResult(slug=existing.slug, status=existing.status, created=False)
 
     if demo_type == "link":
         ext_url = _validate_url(external_url, "external_url")
@@ -463,7 +502,7 @@ async def create_demo(
 
     trusted = _uploader_context(request, user, upload_code)
 
-    demo, status = await _create_demo_record(
+    demo, status, created = await _create_demo_record(
         db, user,
         slug=_unique_slug(db, title),
         title=title.strip(),
@@ -477,8 +516,9 @@ async def create_demo(
         cover_ext=cover_ext,
         zip_bytes=zip_bytes,
         trusted=trusted,
+        idempotency_key=idem_key,
     )
-    return DemoCreateResult(slug=demo.slug, status=status)
+    return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
 
 @router.post("/from-url", status_code=201, response_model=DemoCreateResult)
@@ -497,6 +537,12 @@ async def create_demo_from_url(
     if not body.tags or len(body.tags) == 0:
         raise HTTPException(status_code=422, detail="tags 至少需要 1 个标签（AI 自动上传需要打适宜标签）", )
 
+    idem_key = _validate_idempotency_key(body.idempotency_key)
+    # 幂等：同 key 已创建 → 直接返回已有结果（agent 超时重试不再重复上传）
+    existing = _existing_demo_by_key(db, idem_key)
+    if existing is not None:
+        return DemoCreateResult(slug=existing.slug, status=existing.status, created=False)
+
     if demo_type == "link":
         ext_url = _validate_url(body.external_url, "external_url")
         zip_bytes = None
@@ -512,14 +558,14 @@ async def create_demo_from_url(
     cover_bytes = None
     cover_ext = "png"
     if body.cover_url:
-        cover_bytes = await asyncio.to_thread(_download_url_bytes, body.cover_url, settings.max_cover_size, "封面")
+        cover_bytes = await asyncio.to_thread(_download_url_bytes, body.cover_url, settings.max_upload_size, "封面")
         cover_ext = Path(urlparse(body.cover_url).path).suffix.lstrip(".") or "png"
 
     tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
 
     trusted = _uploader_context(request, user, body.upload_code)
 
-    demo, status = await _create_demo_record(
+    demo, status, created = await _create_demo_record(
         db, user,
         slug=_unique_slug(db, body.title),
         title=body.title.strip(),
@@ -533,8 +579,9 @@ async def create_demo_from_url(
         cover_ext=cover_ext,
         zip_bytes=zip_bytes,
         trusted=trusted,
+        idempotency_key=idem_key,
     )
-    return DemoCreateResult(slug=demo.slug, status=status)
+    return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
 
 @router.put("/{slug}", status_code=204)

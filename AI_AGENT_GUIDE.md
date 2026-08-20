@@ -82,6 +82,8 @@ GET {BASE_URL}/api/v1/meta/agent-guide
    - prompt：如果作品是 AI 生成的，第一轮提示词（若有）填入；没有就不填
    - video_url：有演示视频链接可填；没有就不填
    - 匿名上传作者固定为 public，无需也不能指定昵称
+   - **幂等键（必做）**：为本次上传生成唯一 `idempotency_key`（如 `game-watch-20240819-001`，8~128 位字母数字 `_ . -`）；
+     如果请求超时/失败需要重试，**必须使用同一个 key**——后端会返回第一次的结果（`created:false`），绝不重复创建
 
 5. **上传（二选一）**
 
@@ -97,6 +99,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
        "cover_url": "https://公网可下载的封面图(可选)",
        "prompt": "第一轮提示词(可选)",
        "upload_code": "免审核密钥(有就给)",
+       "idempotency_key": "本次上传的唯一幂等键",
        "tags": ["model:dsv4-flash", {"key":"game","value":"mc","description":"我的世界"}]
      }'
    ```
@@ -109,6 +112,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
      -F "description=2~4 句中文简介" \
      -F "demo_type=web" \
      -F "upload_code=免审核密钥(有就给)" \
+     -F "idempotency_key=本次上传的唯一幂等键" \
      -F 'tags=["model:dsv4-flash", {"key":"game","value":"mc"}]' \
      -F "prompt=第一轮提示词(可选)" \
      -F "file=@本地zip路径.zip" \
@@ -128,6 +132,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
 - [ ] tags 全部来自 /tags/tag-keys 的真实 key；fixed 值在候选中；int 值是整数
 - [ ] demo_type 与 zip 内容一致（有 index.html 才用 web）
 - [ ] link 类型一定给了 external_url；web/zip 一定给了 zip 文件
+- [ ] 生成了唯一 idempotency_key，且重试时复用同一个 key
 - [ ] 没有编造不存在的标签键、没有编造作品信息
 - [ ] 上传后已用 GET /demos/{slug} 校验状态并告知结果
 ```

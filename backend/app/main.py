@@ -151,11 +151,14 @@ def _ensure_demo_columns() -> None:
         ("prompt", "TEXT NOT NULL DEFAULT ''"),
         ("video_url", "TEXT"),
         ("guest_name", "TEXT"),
+        ("idempotency_key", "TEXT"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:
             if name not in cols:
                 conn.exec_driver_sql(f"ALTER TABLE demos ADD COLUMN {name} {ddl}")
+        # 幂等键唯一索引（SQLite 中 NULL 可重复，不影响无 key 的历史行）
+        conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_demos_idempotency_key ON demos (idempotency_key)")
 
 
 def init_db() -> None:

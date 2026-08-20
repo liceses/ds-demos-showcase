@@ -28,6 +28,24 @@ const columns = ref<number[][]>([])
 const heights = new Map<string | number, number>()
 const itemEls = new Map<number, HTMLElement>()
 const ESTIMATE_H = 300
+/** 首帧已用实测高度收敛过（只做一次，避免每帧重排） */
+let initialSettled = false
+
+function allMeasured(): boolean {
+  if (!props.items.length) return false
+  for (let i = 0; i < props.items.length; i++) {
+    if (!heights.has(keyOf(props.items[i], i))) return false
+  }
+  return true
+}
+
+function trySettleInitial() {
+  // 首帧：等所有卡片实测高度就绪后，按真实高度收敛重排一次
+  // （此后的追加只进最短列，已有卡片永不移动）
+  if (initialSettled || !allMeasured()) return
+  initialSettled = true
+  rebuild(props.items)
+}
 
 function keyOf(item: unknown, index: number) {
   return props.itemKey(item, index)
@@ -76,7 +94,10 @@ watch(
     if (firstKey === prevFirstKey && items.length > (prev?.length ?? 0)) {
       appendTail(items, prev?.length ?? 0)
     } else {
+      // 整体替换：重置首帧收敛标记，新列表就绪后重新收敛一次
+      initialSettled = false
       rebuild(items)
+      requestAnimationFrame(trySettleInitial)
     }
   },
   { immediate: true, deep: false },
@@ -120,8 +141,10 @@ onMounted(() => {
         }
       }
     }
+    trySettleInitial()
   })
   for (const dom of itemEls.values()) itemRO.observe(dom)
+  requestAnimationFrame(trySettleInitial)
 })
 
 onBeforeUnmount(() => {

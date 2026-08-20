@@ -19,12 +19,53 @@ const refreshing = ref(false)
 const error = ref('')
 const hasMore = ref(true)
 
-// 筛选 chips = 所有标签键下的值（author 键不在 tag_keys 中，自动排除）
-const filterChips = computed(() =>
-  tagKeys.value.flatMap((k) =>
-    k.values.map((v) => ({ key: k.key, value: v.value, count: v.demo_count, mode: k.mode })),
-  ),
+const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
+
+type FilterGroup = {
+  key: string
+  mode: 'fixed' | 'open' | 'int'
+  label: string
+  total: number
+  values: { value: string; count: number }[]
+}
+
+// 分组筛选（A）：按标签键分行，组内 values 按热度排序
+const filterGroups = computed<FilterGroup[]>(() =>
+  [...tagKeys.value]
+    .filter((k) => k.values.length > 0)
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.key.localeCompare(b.key))
+    .map((k) => ({
+      key: k.key,
+      mode: k.mode,
+      label: k.label || k.key,
+      total: k.values.reduce((n, v) => n + v.demo_count, 0),
+      values: [...k.values].sort((a, b) => b.demo_count - a.demo_count).map((v) => ({ value: v.value, count: v.demo_count })),
+    })),
 )
+
+// 热门快捷（B）：全站计数最高的 6 个标签值
+const hotChips = computed(() =>
+  tagKeys.value
+    .flatMap((k) => k.values.map((v) => ({ key: k.key, value: v.value, count: v.demo_count, mode: k.mode })))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6),
+)
+
+// 折叠态：显式开关优先，缺省低频键（该键总计数 < 2）折叠
+const groupOverride = ref<Record<string, boolean>>({})
+function isCollapsed(k: FilterGroup) {
+  const ov = groupOverride.value[k.key]
+  if (ov !== undefined) return !ov
+  return k.total < 2
+}
+function toggleGroup(k: FilterGroup) {
+  groupOverride.value = { ...groupOverride.value, [k.key]: !isCollapsed(k) }
+}
+
+function clearTags() {
+  selectedTags.value = []
+  reset()
+}
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -127,9 +168,26 @@ onBeforeUnmount(() => observer?.disconnect())
       </div>
     </div>
 
-    <div v-if="filterChips.length" class="filter-row">
+    <!-- 已选标签：置顶、可单独/一键移除 -->
+    <div v-if="selectedTags.length" class="filter-row tag-selected-row">
+      <span class="filter-label">已选</span>
       <button
-        v-for="g in filterChips"
+        v-for="t in selectedTags"
+        :key="t"
+        class="tag-chip active"
+        type="button"
+        @click="toggleTag(t)"
+      >
+        {{ t }}<span class="chip-x">X</span>
+      </button>
+      <button class="btn btn-sm btn-dark" type="button" @click="clearTags">清空</button>
+    </div>
+
+    <!-- 热门快捷 -->
+    <div v-if="hotChips.length" class="filter-row">
+      <span class="filter-label">热门</span>
+      <button
+        v-for="g in hotChips"
         :key="g.key + ':' + g.value"
         class="tag-chip"
         :class="['mode-' + g.mode, { active: selectedTags.includes(g.key + ':' + g.value) }]"
@@ -139,6 +197,36 @@ onBeforeUnmount(() => observer?.disconnect())
         {{ g.key }}:{{ g.value }}
         <span class="count">{{ g.count }}</span>
       </button>
+    </div>
+
+    <!-- 分组筛选（A）：按标签键分行，低频默认折叠 -->
+    <div v-if="filterGroups.length" class="tag-groups">
+      <div v-for="k in filterGroups" :key="k.key" class="tag-group" :class="'mode-' + k.mode">
+        <div
+          class="tag-group-head"
+          role="button"
+          :aria-expanded="!isCollapsed(k)"
+          @click="toggleGroup(k)"
+        >
+          <span class="tag-group-title">{{ k.label }} <code>{{ k.key }}</code></span>
+          <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
+          <span class="tag-group-toggle">{{ isCollapsed(k) ? '展开 →' : '收起 ↑' }}</span>
+        </div>
+        <div v-if="!isCollapsed(k)" class="filter-row tag-group-chips">
+          <button
+            v-for="v in k.values"
+            :key="v.value"
+            class="tag-chip"
+            :class="['mode-' + k.mode, { active: selectedTags.includes(k.key + ':' + v.value) }]"
+            type="button"
+            @click="toggleTag(k.key + ':' + v.value)"
+          >
+            {{ v.value }}
+            <span class="count">{{ v.count }}</span>
+          </button>
+        </div>
+        <div v-else class="tag-group-collapsed">已收缩 {{ k.values.length }} 个值 · 点击展开</div>
+      </div>
     </div>
 
     <div v-if="error" class="notice notice-error">{{ error }}</div>

@@ -163,7 +163,7 @@ export interface DemoListParams {
   q?: string
   /** 作者过滤：public = 未注册上传；其他 = 用户名 */
   author?: string
-  sort?: 'newest' | 'popular'
+  sort?: 'newest' | 'popular' | 'random'
   page?: number
   page_size?: number
 }

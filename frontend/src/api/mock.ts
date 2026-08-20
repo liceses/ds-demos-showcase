@@ -644,7 +644,14 @@ export const mockApi = {
     }
     // 稳定排序：主键 + 次级键（同时间/同热度时按 slug 兜底），保证刷新后顺序可复现
     const bySlug = (a: DemoDetail, b: DemoDetail) => a.slug.localeCompare(b.slug)
-    if (sort === 'popular') {
+    if (sort === 'random') {
+      // 随机推荐（首页精选「换一批」，Fisher-Yates 洗牌）
+      items = [...items]
+      for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[items[i], items[j]] = [items[j], items[i]]
+      }
+    } else if (sort === 'popular') {
       items = [...items].sort(
         (a, b) => b.view_count - a.view_count || b.created_at.localeCompare(a.created_at) || bySlug(a, b),
       )

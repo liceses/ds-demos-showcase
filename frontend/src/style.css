@@ -2029,3 +2029,54 @@ table.data tr.inconsistent td {
   font-size: 12px;
   color: #666;
 }
+
+/* ---------- 管理后台增强 ---------- */
+.dash-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  padding: 12px 16px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  min-width: 120px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.stat-card b {
+  display: block;
+  font-size: 28px;
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.stat-card.stat-ok { border-top: 8px solid var(--mint); }
+.stat-card.stat-warn { border-top: 8px solid var(--yellow); }
+.stat-card.stat-err { border-top: 8px solid var(--red); }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border: 2px solid var(--ink);
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.pager .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

@@ -264,6 +264,113 @@ function fmtSize(n: number) {
   return n + ' B'
 }
 
+// ---------- 概览统计 ----------
+const dashStats = computed(() => {
+  const statuses = demos.value.reduce(
+    (acc, d) => {
+      acc[d.status as 'approved'] = (acc[d.status as 'approved'] || 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
+  return {
+    total: demos.value.length,
+    approved: statuses.approved || 0,
+    pending: pending.value.length,
+    rejected: statuses.rejected || 0,
+    users: users.value.length,
+    recent: [...demos.value]
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, 5),
+  }
+})
+
+// ---------- Demo 管理：搜索 / 状态筛选 / 分页 ----------
+const demoQuery = ref('')
+const demoStatus = ref<'all' | 'approved' | 'pending' | 'rejected'>('all')
+const demoPage = ref(1)
+const demoPageSize = 8
+
+const demoFiltered = computed(() =>
+  demos.value.filter((d) => {
+    if (demoStatus.value !== 'all' && d.status !== demoStatus.value) return false
+    const q = demoQuery.value.trim().toLowerCase()
+    if (!q) return true
+    return (
+      d.title.toLowerCase().includes(q) ||
+      d.author.toLowerCase().includes(q) ||
+      d.slug.toLowerCase().includes(q) ||
+      d.tags.some((t) => `${t.key}:${t.value}`.toLowerCase().includes(q))
+    )
+  }),
+)
+const demoTotal = computed(() => demoFiltered.value.length)
+const demoPages = computed(() => Math.max(1, Math.ceil(demoTotal.value / demoPageSize)))
+const demoPaged = computed(() => demoFiltered.value.slice((demoPage.value - 1) * demoPageSize, demoPage.value * demoPageSize))
+function setDemoPage(p: number) {
+  demoPage.value = Math.min(Math.max(1, p), demoPages.value)
+}
+
+async function setDemoStatus(slug: string, action: 'approve' | 'reject') {
+  try {
+    await api.adminApprove(slug, action)
+    ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
+    await loadAll()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
+async function deleteDemoRow(d: AdminDemo) {
+  const ok = await ui.confirm({
+    title: '删除 Demo',
+    message: `确定删除「${d.title}」？本地文件与 OSS 对象都会被清理，不可恢复。`,
+    confirmText: '删除',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await api.deleteDemo(d.slug)
+    ui.toast('Demo 已删除', 'success')
+    await loadAll()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
+// ---------- 标签键编辑 ----------
+const editingKey = ref<TagKeyInfo | null>(null)
+const editKeyForm = ref({ mode: 'fixed' as 'fixed' | 'open' | 'int', label: '', description: '', sort: 0 })
+const keyEditError = ref('')
+function startEditKey(k: TagKeyInfo) {
+  editingKey.value = k
+  editKeyForm.value = { mode: k.mode, label: k.label, description: k.description, sort: k.sort ?? 0 }
+  keyEditError.value = ''
+}
+function cancelEditKey() {
+  editingKey.value = null
+}
+async function saveEditKey() {
+  if (!editingKey.value) return
+  if (!editKeyForm.value.label.trim()) {
+    keyEditError.value = 'label 必填'
+    return
+  }
+  try {
+    await api.updateTagKey(editingKey.value.key, {
+      mode: editKeyForm.value.mode,
+      label: editKeyForm.value.label.trim(),
+      description: editKeyForm.value.description.trim(),
+      sort: Number(editKeyForm.value.sort) || 0,
+    })
+    ui.toast('标签键已更新', 'success')
+    editingKey.value = null
+    tagKeys.value = await api.listTagKeys()
+  } catch (e) {
+    keyEditError.value = (e as Error).message
+  }
+}
+
 onMounted(loadAll)
 </script>
 
@@ -275,7 +382,10 @@ onMounted(loadAll)
 
   <section class="section" style="padding-top: 8px">
     <div class="tabs">
-      <button class="tab" :class="{ active: tab === 'review' }" type="button" @click="tab = 'review'">审核队列</button>
+      <button class="tab" :class="{ active: tab === 'review' }" type="button" @click="tab = 'review'">
+        审核队列
+        <span v-if="pending.length" class="badge">{{ pending.length }}</span>
+      </button>
       <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
       <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
       <button class="tab" :class="{ active: tab === 'users' }" type="button" @click="tab = 'users'">用户管理</button>
@@ -287,6 +397,16 @@ onMounted(loadAll)
     <div v-else-if="error" class="notice notice-error">{{ error }}</div>
 
     <template v-else>
+      <!-- 概览统计 -->
+      <div class="dash-stats">
+        <div class="stat-card"><b>{{ dashStats.total }}</b>总作品</div>
+        <div class="stat-card stat-ok"><b>{{ dashStats.approved }}</b>已上线</div>
+        <div class="stat-card stat-warn"><b>{{ dashStats.pending }}</b>待审</div>
+        <div class="stat-card stat-err"><b>{{ dashStats.rejected }}</b>已拒</div>
+        <div class="stat-card"><b>{{ dashStats.users }}</b>用户</div>
+        <div class="stat-card"><b>{{ storageInfo.mode === 'oss' ? 'OSS' : '本地' }}</b>存储</div>
+      </div>
+
       <Transition name="tab-pane" mode="out-in">
         <div :key="tab" class="tab-pane">
           <!-- 审核队列 -->
@@ -311,28 +431,92 @@ onMounted(loadAll)
 
           <!-- Demo 管理 -->
           <template v-else-if="tab === 'demos'">
+            <div class="filter-row" style="margin-bottom: 14px">
+              <div class="search-box" style="flex: 1">
+                <input
+                  v-model="demoQuery"
+                  class="input"
+                  type="search"
+                  placeholder="搜索标题 / 作者 / slug / 标签…"
+                  @input="demoPage = 1"
+                />
+                <span class="search-icon">Q</span>
+              </div>
+              <div class="tabs" style="margin: 0">
+                <button class="tab" :class="{ active: demoStatus === 'all' }" type="button" @click="demoStatus = 'all'; demoPage = 1">全部</button>
+                <button class="tab" :class="{ active: demoStatus === 'approved' }" type="button" @click="demoStatus = 'approved'; demoPage = 1">已上线</button>
+                <button class="tab" :class="{ active: demoStatus === 'pending' }" type="button" @click="demoStatus = 'pending'; demoPage = 1">待审</button>
+                <button class="tab" :class="{ active: demoStatus === 'rejected' }" type="button" @click="demoStatus = 'rejected'; demoPage = 1">已拒</button>
+              </div>
+            </div>
+
             <div class="table-wrap">
               <table class="data">
                 <thead>
                   <tr><th>标题</th><th>作者</th><th>状态</th><th>浏览</th><th>存储</th><th>一致性</th><th>操作</th></tr>
                 </thead>
                 <tbody>
-                  <tr v-for="d in demos" :key="d.slug" :class="{ inconsistent: d.inconsistency }">
+                  <tr v-for="d in demoPaged" :key="d.slug" :class="{ inconsistent: d.inconsistency }">
                     <td><RouterLink :to="`/demo/${d.slug}`">{{ d.title }}</RouterLink></td>
                     <td>{{ d.author }}</td>
                     <td><span class="status-pill" :class="`status-${d.status}`">{{ d.status }}</span></td>
                     <td>{{ d.view_count }}</td>
                     <td>{{ d.storage_size ? Math.round(d.storage_size / 1024) + ' KB' : '-' }}</td>
                     <td>{{ d.inconsistency ? '不一致' : '正常' }}</td>
-                    <td><RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${d.slug}`">编辑</RouterLink></td>
+                    <td>
+                      <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${d.slug}`">编辑</RouterLink>
+                      <button
+                        v-if="d.status !== 'approved'"
+                        class="btn btn-sm btn-primary"
+                        type="button"
+                        @click="setDemoStatus(d.slug, 'approve')"
+                      >通过</button>
+                      <button
+                        v-if="d.status !== 'rejected'"
+                        class="btn btn-sm btn-dark"
+                        type="button"
+                        @click="setDemoStatus(d.slug, 'reject')"
+                      >拒绝</button>
+                      <button class="btn btn-sm btn-danger" type="button" @click="deleteDemoRow(d)">删除</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!demoPaged.length">
+                    <td colspan="7" style="text-align: center">没有匹配的 Demo</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div v-if="demoPages > 1" class="pager">
+              <button class="btn btn-sm btn-outline" type="button" :disabled="demoPage <= 1" @click="setDemoPage(demoPage - 1)">上一页</button>
+              <span class="tag-stat"><b>{{ demoPage }}</b> / {{ demoPages }}（共 {{ demoTotal }} 条）</span>
+              <button class="btn btn-sm btn-outline" type="button" :disabled="demoPage >= demoPages" @click="setDemoPage(demoPage + 1)">下一页</button>
             </div>
           </template>
 
           <!-- 标签管理 -->
           <template v-else-if="tab === 'tags'">
+            <div v-if="editingKey" class="card card-default" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
+              <h2 style="margin-bottom: 12px">编辑标签键 <code>{{ editingKey.key }}</code></h2>
+              <div class="form-stack">
+                <div class="filter-row" style="margin-bottom: 0">
+                  <select v-model="editKeyForm.mode" class="input" style="max-width: 140px">
+                    <option value="fixed">固定值</option>
+                    <option value="open">自由值</option>
+                    <option value="int">数字值</option>
+                  </select>
+                  <input v-model="editKeyForm.label" class="input" style="max-width: 180px" placeholder="显示名" />
+                  <input v-model.number="editKeyForm.sort" class="input" style="max-width: 90px" type="number" placeholder="排序" />
+                </div>
+                <input v-model="editKeyForm.description" class="input" placeholder="键介绍（可选）" />
+                <div class="filter-row" style="margin-bottom: 0">
+                  <button class="btn btn-primary" type="button" @click="saveEditKey">保存修改</button>
+                  <button class="btn btn-sm btn-dark" type="button" @click="cancelEditKey">取消</button>
+                  <span v-if="keyEditError" class="notice notice-error" style="margin: 0">{{ keyEditError }}</span>
+                </div>
+              </div>
+            </div>
+
             <div class="filter-row" style="align-items: stretch">
               <div class="card card-mint" style="padding: 20px; margin-bottom: 20px; width: 100%">
                 <h2 style="margin-bottom: 12px">新建标签键</h2>
@@ -400,6 +584,7 @@ onMounted(loadAll)
                       </div>
                     </td>
                     <td>
+                      <button class="btn btn-sm btn-outline" type="button" @click="startEditKey(k)">编辑</button>
                       <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(k.key)">删除键</button>
                     </td>
                   </tr>

@@ -19,8 +19,6 @@ const refreshing = ref(false)
 const error = ref('')
 const hasMore = ref(true)
 
-const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
-
 type FilterGroup = {
   key: string
   mode: 'fixed' | 'open' | 'int'
@@ -51,15 +49,20 @@ const hotChips = computed(() =>
     .slice(0, 6),
 )
 
-// 折叠态：显式开关优先，缺省低频键（该键总计数 < 2）折叠
-const groupOverride = ref<Record<string, boolean>>({})
+// 折叠态：缺省全部折叠（细条只露前 4 个值），显式展开记录在 expanded
+const COLLAPSED_SHOW = 4
+const groupExpanded = ref<Record<string, boolean>>({})
 function isCollapsed(k: FilterGroup) {
-  const ov = groupOverride.value[k.key]
-  if (ov !== undefined) return !ov
-  return k.total < 2
+  return !(groupExpanded.value[k.key] ?? false)
 }
 function toggleGroup(k: FilterGroup) {
-  groupOverride.value = { ...groupOverride.value, [k.key]: !isCollapsed(k) }
+  groupExpanded.value = { ...groupExpanded.value, [k.key]: !isCollapsed(k) }
+}
+function visibleValues(k: FilterGroup) {
+  return isCollapsed(k) ? k.values.slice(0, COLLAPSED_SHOW) : k.values
+}
+function hiddenCount(k: FilterGroup) {
+  return isCollapsed(k) ? Math.max(0, k.values.length - COLLAPSED_SHOW) : 0
 }
 
 function clearTags() {
@@ -199,22 +202,16 @@ onBeforeUnmount(() => observer?.disconnect())
       </button>
     </div>
 
-    <!-- 分组筛选（A）：按标签键分行，低频默认折叠 -->
-    <div v-if="filterGroups.length" class="tag-groups">
-      <div v-for="k in filterGroups" :key="k.key" class="tag-group" :class="'mode-' + k.mode">
-        <div
-          class="tag-group-head"
-          role="button"
-          :aria-expanded="!isCollapsed(k)"
-          @click="toggleGroup(k)"
-        >
-          <span class="tag-group-title">{{ k.label }} <code>{{ k.key }}</code></span>
-          <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
-          <span class="tag-group-toggle">{{ isCollapsed(k) ? '展开 →' : '收起 ↑' }}</span>
-        </div>
-        <div v-if="!isCollapsed(k)" class="filter-row tag-group-chips">
+    <!-- 分组筛选（细条）：每键一行、默认折叠只露前 4 个，点「展开」看全部 -->
+    <div v-if="filterGroups.length" class="tag-strips">
+      <div v-for="k in filterGroups" :key="k.key" class="tag-strip-row" :class="'mode-' + k.mode">
+        <span class="tag-strip-title">
+          {{ k.label }} <code>{{ k.key }}</code>
+          <span class="mode-dot" :class="'mode-dot-' + k.mode"></span>
+        </span>
+        <div class="filter-row tag-strip-chips">
           <button
-            v-for="v in k.values"
+            v-for="v in visibleValues(k)"
             :key="v.value"
             class="tag-chip"
             :class="['mode-' + k.mode, { active: selectedTags.includes(k.key + ':' + v.value) }]"
@@ -224,8 +221,23 @@ onBeforeUnmount(() => observer?.disconnect())
             {{ v.value }}
             <span class="count">{{ v.count }}</span>
           </button>
+          <button
+            v-if="isCollapsed(k) && k.values.length > COLLAPSED_SHOW"
+            class="tag-chip tag-strip-toggle"
+            type="button"
+            @click="toggleGroup(k)"
+          >
+            展开 +{{ hiddenCount(k) }}
+          </button>
+          <button
+            v-if="!isCollapsed(k)"
+            class="tag-chip tag-strip-toggle"
+            type="button"
+            @click="toggleGroup(k)"
+          >
+            收起
+          </button>
         </div>
-        <div v-else class="tag-group-collapsed">已收缩 {{ k.values.length }} 个值 · 点击展开</div>
       </div>
     </div>
 

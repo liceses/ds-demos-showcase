@@ -2080,3 +2080,58 @@ table.data tr.inconsistent td {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ---------- 作品库标签细条（账本式，默认折叠） ---------- */
+.tag-strips {
+  margin-top: 10px;
+}
+.tag-strip-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 5px 4px;
+  border-top: 2px solid var(--ink);
+}
+.tag-strip-row:last-child {
+  border-bottom: 2px solid var(--ink);
+}
+.tag-strip-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 13px;
+}
+.tag-strip-title code {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 0 4px;
+  font-size: 11px;
+}
+.mode-dot {
+  align-self: center;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+}
+.mode-dot-fixed { background: var(--paper); }
+.mode-dot-open { background: var(--yellow); }
+.mode-dot-int { background: var(--mint); }
+.tag-strip-chips {
+  margin: 0;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.tag-strip-toggle {
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+}
+.tag-strip-toggle:hover {
+  background: var(--teal);
+  color: var(--ink);
+}

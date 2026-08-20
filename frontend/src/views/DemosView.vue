@@ -14,6 +14,7 @@ const pageSize = 12
 const total = ref(0)
 const loading = ref(false)
 const loadingMore = ref(false)
+const refreshing = ref(false)
 const error = ref('')
 const hasMore = ref(true)
 
@@ -49,13 +50,19 @@ async function load(reset = false) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
 function reset() {
+  if (loading.value) return
+  refreshing.value = true
+  // 立即清空并回顶，显示明确加载态；避免「旧卡留着→数据返回后一次性整体替换」的突然消失/出现
+  demos.value = []
+  error.value = ''
   page.value = 1
   hasMore.value = true
-  // 保留旧列表直到新数据返回后再整体替换，避免高度塌陷/滚动跳顶
+  window.scrollTo({ top: 0, behavior: 'auto' })
   void load(true)
 }
 
@@ -85,10 +92,11 @@ onMounted(async () => {
   await load(true)
   observer = new IntersectionObserver(
     (entries) => {
-      if (entries[0].isIntersecting && hasMore.value && !loadingMore.value) {
-        loadingMore.value = true
-        void load().finally(() => (loadingMore.value = false))
-      }
+      // reset/首载进行中、或没有更多时，不触发翻页（避免列表塌陷后 sentinel 进视口误翻页）
+      if (!entries[0].isIntersecting) return
+      if (loading.value || loadingMore.value || refreshing.value || !hasMore.value) return
+      loadingMore.value = true
+      void load().finally(() => (loadingMore.value = false))
     },
     { rootMargin: '300px' },
   )
@@ -135,7 +143,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <div v-if="error" class="notice notice-error">{{ error }}</div>
 
     <div v-if="loading && !demos.length" class="loading-row">
-      <span class="spinner"></span> 加载 Demo 中…
+      <span class="spinner"></span> {{ refreshing ? '正在刷新…' : '加载 Demo 中…' }}
     </div>
 
     <div v-else-if="!demos.length" class="empty-box">

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
 
     # 阿里云 OSS（可选；配置后文件走 OSS 直连，不占服务器带宽）
     # oss_enabled 总开关：false 时即使填了 AK 也强制走本地存储
-    oss_enabled_flag: bool = True
+    oss_enabled_flag: bool = Field(default=True, validation_alias=AliasChoices("oss_enabled_flag", "OSS_ENABLED"))
     oss_endpoint: str = ""
     oss_bucket: str = ""
     oss_access_key_id: str = ""

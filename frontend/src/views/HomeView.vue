@@ -33,19 +33,24 @@ const entries = [
   { to: '/upload', stamp: '投', cls: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
 ]
 
+async function loadFeatured() {
+  // 首页精选整批随机，可点「换一批」刷新
+  const f = await api.listDemos({ status: 'approved', sort: 'random', page: 1, page_size: 6 })
+  featured.value = f.items
+  totalDemos.value = f.total
+}
+
 onMounted(async () => {
   try {
-    const [f, g, a, keys] = await Promise.all([
-      api.listDemos({ status: 'approved', sort: 'popular', page: 1, page_size: 6 }),
+    const [g, a, keys] = await Promise.all([
       api.listDemos({ status: 'approved', tags: [GRAY_TAG], page: 1, page_size: 6 }),
       api.listAnnouncements(),
       api.listTagKeys(),
     ])
-    featured.value = f.items
     grayTest.value = g.items
-    totalDemos.value = f.total
     totalTags.value = keys.reduce((n, k) => n + k.values.length, 0)
     announcements.value = a
+    await loadFeatured()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -101,7 +106,10 @@ onMounted(async () => {
   <section class="section" style="padding-top: 8px">
     <div class="section-head">
       <h2 class="section-title">精选作品</h2>
-      <RouterLink class="btn btn-sm btn-outline" to="/demos">查看全部 →</RouterLink>
+      <div class="filter-row" style="margin: 0">
+        <button class="btn btn-sm btn-secondary" type="button" @click="loadFeatured">换一批</button>
+        <RouterLink class="btn btn-sm btn-outline" to="/demos">查看全部 →</RouterLink>
+      </div>
     </div>
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载精选…</div>

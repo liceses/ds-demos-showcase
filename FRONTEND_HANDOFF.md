@@ -23,6 +23,7 @@
 | 内容去重 | 同作者相同 zip（sha256）→ **409**，detail 含 `/demo/<slug>`；管理员 `force` 可跳过。 |
 | 封面 | 上传不限大小，后端自动压缩为 WebP（最大边 1280），`cover_url` 返回 `/media/covers/xxx.webp`。 |
 | 公告 | `GET /announcements` 4 类：`manual`/`auto`/`update`/`demo_update`（`update`=站点 git commit 实时合并，60s 缓存）。 |
+| 推荐 | `GET /demos/{slug}/related?limit=30`（相关候选池）；`GET /demos?sort=random`（精选随机）。 |
 
 ## 3. 匿名（public）上传
 - 未登录上传：作者恒为 `public`（无 nickname），`author_id=null`；不能评论、不能编辑/删除。

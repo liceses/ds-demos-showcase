@@ -294,8 +294,9 @@ commit_message / keep_old_version  同前（编辑时）
 }
 ```
 
-- 列表接口（`GET /demos`）也会返回 `demo_type` / `external_url`
+- 列表接口（`GET /demos`）也会返回 `demo_type` / `external_url`；`sort` 支持 `newest|popular|random`
 - 详情接口（`GET /demos/{slug}`）额外返回 `prompt` / `video_url`
+- 相关推荐：`GET /demos/{slug}/related?limit=30` → 按标签重合+同类型+热度+随机排序的候选池（排除自身），前端拿整池本地「换一批」，无需再请求
 
 ### 前端对齐建议
 

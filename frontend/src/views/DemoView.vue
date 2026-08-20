@@ -4,10 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { Comment, DemoDetail, SessionLog } from '../api/types'
+import type { Comment, DemoDetail, DemoSummary, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import CommentTree from '../components/CommentTree.vue'
+import DemoCard from '../components/DemoCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +30,43 @@ const commentText = ref('')
 const posting = ref(false)
 const commentError = ref('')
 
+// 相关推荐：候选池 + 本地换一批（不重复）
+const RELATED_BATCH = 6
+const relatedPool = ref<DemoSummary[]>([])
+const relatedShown = ref<DemoSummary[]>([])
+const relatedSeen = ref<string[]>([])
+const relatedLoading = ref(false)
+
+function drawRelated() {
+  if (!relatedPool.value.length) return
+  const out: DemoSummary[] = []
+  for (const d of relatedPool.value) {
+    if (relatedSeen.value.includes(d.slug)) continue
+    out.push(d)
+    relatedSeen.value.push(d.slug)
+    if (out.length >= RELATED_BATCH) break
+  }
+  relatedShown.value = out
+  // 池子快用完时提前补一池，保证一直能换
+  if (relatedPool.value.filter((d) => !relatedSeen.value.includes(d.slug)).length < RELATED_BATCH) {
+    loadRelated()
+  }
+}
+
+async function loadRelated() {
+  relatedLoading.value = true
+  try {
+    const pool = await api.getRelated(slug)
+    // 合并新池，去重
+    const seen = new Set(relatedSeen.value)
+    relatedPool.value = pool.filter((d) => !seen.has(d.slug))
+  } catch {
+    /* 推荐失败静默 */
+  } finally {
+    relatedLoading.value = false
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -40,6 +78,9 @@ async function load() {
     ])
     sessionLogs.value = s
     comments.value = cm
+    await loadRelated()
+    drawRelated()
+    if (!relatedShown.value.length && relatedPool.value.length) drawRelated()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -266,6 +307,21 @@ onMounted(load)
           </template>
         </div>
       </Transition>
+    </section>
+
+    <!-- 相关推荐 -->
+    <section class="section" style="padding-top: 8px">
+      <div class="section-head">
+        <h2 class="section-title">相关推荐</h2>
+        <button class="btn btn-sm btn-outline" type="button" @click="drawRelated">换一批</button>
+      </div>
+      <div v-if="relatedLoading && !relatedShown.length" class="loading-row"><span class="spinner"></span> 加载推荐…</div>
+      <div v-else-if="!relatedShown.length" class="empty-box">暂无相关推荐</div>
+      <div v-else class="waterfall">
+        <div v-for="d in relatedShown" :key="d.slug" class="waterfall-item">
+          <DemoCard :demo="d" />
+        </div>
+      </div>
     </section>
   </template>
 </template>

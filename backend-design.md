@@ -144,6 +144,12 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
   ```
   批量压缩为 WebP → 更新 `demos.cover_url` → 删除旧本地文件与 OSS 对象；幂等（`.webp` 自动跳过），可重复运行。
 
+### 推荐（轻量）
+
+- **相关推荐** `GET /demos/{slug}/related?limit=30`：score = 标签重合（type/game=3、model/category=2、其余 1）+ 同类型 +0.5 + 热度(view+2*download)*0.001 + 随机抖动；排除自身；返回排序候选池。
+- **首页精选** `GET /demos?sort=random`：SQLite `ORDER BY RANDOM()` 整批随机。
+- 前端拿到相关候选池后**本地洗牌「换一批」**（不重复、不额外请求）；标签过少的 demo 用「同类型 + 热度 + 随机」保底，保证池子不空。
+
 ---
 
 ## 5. 部署（后续）

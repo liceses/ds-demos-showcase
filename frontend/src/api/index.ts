@@ -97,6 +97,10 @@ const realApi = {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}`)
     return data
   },
+  async getRelated(slug: string): Promise<DemoSummary[]> {
+    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/related`)
+    return data
+  },
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
     const form = new FormData()
     form.append('title', payload.title)

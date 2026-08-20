@@ -3,6 +3,7 @@ import hashlib
 import ipaddress
 import json
 import os
+import random
 import re
 import shutil
 import socket
@@ -187,7 +188,7 @@ def list_demos(
     tag: list[str] = Query(default=[]),
     q: str | None = None,
     author: str | None = None,
-    sort: str = Query(default="newest", pattern="^(newest|popular)$"),
+    sort: str = Query(default="newest", pattern="^(newest|popular|random)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -237,6 +238,9 @@ def list_demos(
 
     if sort == "popular":
         query = query.order_by(Demo.view_count.desc(), Demo.created_at.desc(), Demo.id.desc())
+    elif sort == "random":
+        # 首页精选整批随机
+        query = query.order_by(func.random())
     else:
         # 次级键 id 兜底：同一秒发布的 demo 也有确定顺序，避免刷新/翻页抖动
         query = query.order_by(Demo.created_at.desc(), Demo.id.desc())
@@ -257,6 +261,42 @@ def get_demo(slug: str, db: Session = Depends(get_db), user: User | None = Depen
     demo.view_count += 1
     db.commit()
     return serialize_demo(db, demo, user.id if user else None, detail=True)
+
+
+@router.get("/{slug}/related", response_model=list[DemoSummaryOut])
+def related_demos(
+    slug: str,
+    limit: int = Query(default=30, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """相关推荐候选池：按标签重合度 + 同类型 + 热度 + 随机抖动排序（排除自身）。
+    返回 top N；前端拿整池后本地洗牌「换一批」，无需再发请求。"""
+    current = _find_demo(db, slug)
+    cur_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in current.tag_associations}
+    cur_type = current.demo_type
+    cur_id = current.id
+
+    core_weight = {"type": 3, "game": 3, "model": 2, "category": 2,
+                   "plugin": 1, "skills": 1, "preset": 1, "rounds": 1}
+
+    rows = db.query(Demo).filter(Demo.status == "approved", Demo.id != cur_id).all()
+    scored: list[tuple[float, Demo]] = []
+    for d in rows:
+        d_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in d.tag_associations}
+        shared = cur_tags & d_tags
+        if not shared and d.demo_type != cur_type:
+            # 完全无关的弱推荐：给很低的保底分，保证池子不至于空
+            score = random.random() * 0.3
+        else:
+            score = sum(core_weight.get(k.split(":", 1)[0], 1) for k in shared)
+            if d.demo_type == cur_type:
+                score += 0.5
+            score += (d.view_count + 2 * d.download_count) * 0.001
+            score += random.random() * 0.5
+        scored.append((score, d))
+
+    scored.sort(key=lambda x: -x[0])
+    return [serialize_demo(db, d) for _, d in scored[:limit]]
 
 
 def _validate_demo_type(t: str) -> str:

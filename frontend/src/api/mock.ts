@@ -682,6 +682,25 @@ export const mockApi = {
     return out
   },
 
+  async getRelated(slug: string): Promise<DemoSummary[]> {
+    await delay(200)
+    const cur = findDemo(slug)
+    if (!cur) throw new Error('Demo 不存在')
+    // 按标签重合粗略推荐（mock 简单实现）
+    const curKeys = new Set(cur.tags.filter((t) => t.key !== 'author').map((t) => t.key + ':' + t.value))
+    const others = [...demos.filter((d) => d.slug !== slug)]
+      .map((d) => {
+        let score = d.tags.filter((t) => curKeys.has(t.key + ':' + t.value)).length
+        score += d.view_count * 0.001
+        score += Math.random() * 0.5
+        return { score, d }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30)
+      .map((x) => x.d)
+    return clone(others)
+  },
+
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
     await delay(500)
     onProgress?.(50)

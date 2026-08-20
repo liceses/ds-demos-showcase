@@ -323,6 +323,22 @@ label.field .hint {
   font-size: 11px;
 }
 
+/* 上传进度条 */
+.upload-progress {
+  margin: 4px 0 14px;
+}
+.progress-track {
+  height: 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--teal);
+  transition: width 0.2s ease;
+}
+
 /* ---------- 标签 ---------- */
 .tag-chip {
   display: inline-flex;

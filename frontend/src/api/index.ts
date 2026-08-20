@@ -97,7 +97,7 @@ const realApi = {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}`)
     return data
   },
-  async createDemo(payload: CreateDemoPayload): Promise<{ slug: string; status: string }> {
+  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
     const form = new FormData()
     form.append('title', payload.title)
     if (payload.description) form.append('description', payload.description)
@@ -108,11 +108,18 @@ const realApi = {
     if (payload.video_url) form.append('video_url', payload.video_url)
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
-    // 上传含解压 + OSS 传输，放宽超时（默认 15s 不够）
-    const { data } = await http.post('/demos', form, { timeout: 120000 })
+    // 上传含解压 + OSS 传输，放宽超时（默认 15s 不够）；onUploadProgress 给前端进度条
+    const { data } = await http.post('/demos', form, {
+      timeout: 120000,
+      onUploadProgress: onProgress
+        ? (e) => {
+            if (e.total) onProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)))
+          }
+        : undefined,
+    })
     return data
   },
-  async updateDemo(slug: string, payload: UpdateDemoPayload): Promise<void> {
+  async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {
     const form = new FormData()
     if (payload.title) form.append('title', payload.title)
     if (payload.description !== undefined) form.append('description', payload.description)
@@ -125,7 +132,14 @@ const realApi = {
     if (payload.file) form.append('file', payload.file)
     if (payload.commit_message) form.append('commit_message', payload.commit_message)
     if (payload.keep_old_version) form.append('keep_old_version', 'true')
-    await http.put(`/demos/${encodeURIComponent(slug)}`, form, { timeout: 120000 })
+    await http.put(`/demos/${encodeURIComponent(slug)}`, form, {
+      timeout: 120000,
+      onUploadProgress: onProgress
+        ? (e) => {
+            if (e.total) onProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)))
+          }
+        : undefined,
+    })
   },
   async deleteDemo(slug: string): Promise<void> {
     await http.delete(`/demos/${encodeURIComponent(slug)}`)

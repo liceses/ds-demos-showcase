@@ -682,8 +682,11 @@ export const mockApi = {
     return out
   },
 
-  async createDemo(payload: CreateDemoPayload): Promise<{ slug: string; status: string }> {
+  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
     await delay(500)
+    onProgress?.(50)
+    await delay(500)
+    onProgress?.(100)
     if (!currentUser) throw new Error('请先登录')
     if (payload.demo_type !== 'link' && !payload.file) throw new Error('请上传 zip 文件')
     const slug = 'demo_' + Math.random().toString(16).slice(2, 10)
@@ -713,8 +716,9 @@ export const mockApi = {
     return { slug: demo.slug, status: demo.status as string }
   },
 
-  async updateDemo(slug: string, payload: UpdateDemoPayload): Promise<void> {
+  async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {
     await delay(400)
+    onProgress?.(100)
     const d = findDemo(slug)
     if (!d) throw new Error('Demo 不存在')
     if (payload.title) d.title = payload.title

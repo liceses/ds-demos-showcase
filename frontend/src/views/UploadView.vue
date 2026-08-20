@@ -20,6 +20,7 @@ const zipFile = ref<File | null>(null)
 const commitMessage = ref('')
 const keepOldVersion = ref(false)
 const submitting = ref(false)
+const uploadProgress = ref(0)
 const error = ref('')
 const success = ref<{ slug: string; status: string } | null>(null)
 const loading = ref(false)
@@ -214,6 +215,8 @@ const hasChanges = computed(() => {
 })
 
 async function submit() {
+  // 防抖：提交中忽略重复触发（连点 / 回车连按）
+  if (submitting.value) return
   if (!title.value.trim()) {
     error.value = '请填写标题'
     return
@@ -236,36 +239,47 @@ async function submit() {
   }
 
   submitting.value = true
+  uploadProgress.value = 0
   error.value = ''
   success.value = null
+  const onProgress = (p: number) => {
+    uploadProgress.value = p
+  }
   try {
     if (editSlug) {
-      await api.updateDemo(editSlug, {
-        title: title.value.trim(),
-        description: description.value.trim(),
-        tags,
-        demo_type: demoType.value,
-        external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
-        prompt: prompt.value.trim(),
-        video_url: videoUrl.value.trim() || undefined,
-        cover: coverFile.value,
-        file: zipFile.value,
-        commit_message: commitMessage.value.trim() || undefined,
-        keep_old_version: keepOldVersion.value,
-      })
+      await api.updateDemo(
+        editSlug,
+        {
+          title: title.value.trim(),
+          description: description.value.trim(),
+          tags,
+          demo_type: demoType.value,
+          external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
+          prompt: prompt.value.trim(),
+          video_url: videoUrl.value.trim() || undefined,
+          cover: coverFile.value,
+          file: zipFile.value,
+          commit_message: commitMessage.value.trim() || undefined,
+          keep_old_version: keepOldVersion.value,
+        },
+        onProgress,
+      )
       success.value = { slug: editSlug, status: 'updated' }
     } else {
-      success.value = await api.createDemo({
-        title: title.value.trim(),
-        description: description.value.trim(),
-        tags,
-        demo_type: demoType.value,
-        external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
-        prompt: prompt.value.trim(),
-        video_url: videoUrl.value.trim() || undefined,
-        cover: coverFile.value,
-        file: zipFile.value,
-      })
+      success.value = await api.createDemo(
+        {
+          title: title.value.trim(),
+          description: description.value.trim(),
+          tags,
+          demo_type: demoType.value,
+          external_url: demoType.value === 'link' ? externalUrl.value.trim() : externalUrl.value.trim() || undefined,
+          prompt: prompt.value.trim(),
+          video_url: videoUrl.value.trim() || undefined,
+          cover: coverFile.value,
+          file: zipFile.value,
+        },
+        onProgress,
+      )
     }
   } catch (e) {
     error.value = (e as Error).message
@@ -379,8 +393,17 @@ async function submit() {
           </div>
         </div>
 
+        <div v-if="submitting" class="upload-progress">
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
+          </div>
+          <span class="hint">
+            {{ uploadProgress >= 100 ? '已上传，服务器处理中（解压 / 传 OSS）…' : `上传中 ${uploadProgress}%` }}
+          </span>
+        </div>
+
         <button class="btn btn-primary btn-lg btn-block" type="submit" :disabled="submitting">
-          {{ submitting ? '提交中…' : editSlug ? '保存修改' : '上传' }}
+          {{ submitting ? (uploadProgress >= 100 ? '处理中…' : `上传中 ${uploadProgress}%`) : editSlug ? '保存修改' : '上传' }}
         </button>
       </form>
       </div>

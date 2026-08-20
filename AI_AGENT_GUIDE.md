@@ -125,7 +125,8 @@ GET {BASE_URL}/api/v1/meta/agent-guide
    ```
    - `status: approved` → 已上线，完成
    - `status: pending` → 已进审核队列，提示管理员在后台放行
-   - 报错 → 按错误信息修正后重试（422 通常是标签/字段问题，413 是文件过大）
+   - `409`（内容重复）→ detail 含 `/demo/xxx`：同作者已有相同内容的 demo，不要重复上传，改用已有 slug 或换内容；管理员可用 `force:true` 强制
+   - 其他报错 → 按错误信息修正后重试（422 通常是标签/字段问题，413 是文件过大）
 
 ## 自检清单（提交前逐项确认）
 - [ ] title / description 都写了，且是中文、通顺、准确

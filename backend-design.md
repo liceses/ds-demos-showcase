@@ -123,6 +123,12 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
 
+### 上传去重（幂等键 + 内容哈希）
+
+- **幂等键**：`idempotency_key`（8~128 位，唯一索引）；agent 超时/失败重试带同一 key → 返回已有结果 `created:false`，不重复创建。
+- **内容哈希**：`content_hash` = zip 原始字节 sha256（普通索引）。**按作者去重**：同作者上传相同 zip → 409 + existing demo 链接；匿名（public）共享同一去重池；同 demo 自我更新上传相同文件不算重复；link 无 zip 不校验；`force`（仅 admin）可强制上传。
+- 历史数据**不回填**哈希，只对新上传生效；`content_hash` 列由启动迁移自动补。
+
 ### 封面自动压缩
 
 - **策略**：上传原图**不限大小** → 后端 Pillow 压缩为 **WebP（最大边 1280px、质量 82、method 4）** → **只保存压缩版**；SVG 为文本直接原样直存。

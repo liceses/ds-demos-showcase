@@ -88,6 +88,8 @@ class Demo(Base):
     guest_name: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # 幂等键：agent 重试去重（非空唯一）
     idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True, index=True)
+    # zip 内容哈希（sha256，按作者去重，普通索引）
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 

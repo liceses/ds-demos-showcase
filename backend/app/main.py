@@ -152,6 +152,7 @@ def _ensure_demo_columns() -> None:
         ("video_url", "TEXT"),
         ("guest_name", "TEXT"),
         ("idempotency_key", "TEXT"),
+        ("content_hash", "TEXT"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:
@@ -159,6 +160,8 @@ def _ensure_demo_columns() -> None:
                 conn.exec_driver_sql(f"ALTER TABLE demos ADD COLUMN {name} {ddl}")
         # 幂等键唯一索引（SQLite 中 NULL 可重复，不影响无 key 的历史行）
         conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_demos_idempotency_key ON demos (idempotency_key)")
+        # 内容哈希普通索引（按作者去重查询）
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_content_hash ON demos (content_hash)")
 
 
 def init_db() -> None:

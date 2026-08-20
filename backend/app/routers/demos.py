@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import ipaddress
 import json
 import os
@@ -336,6 +337,41 @@ def _oss_upload_safe(slug: str, zip_bytes: bytes | None = None) -> None:
         print(f"[warn] OSS 上传失败（降级本地存储）: {slug} {e}", flush=True)
 
 
+def _zip_content_hash(data: bytes) -> str:
+    """zip 原始字节 sha256（按作者去重）。"""
+    return hashlib.sha256(data).hexdigest()
+
+
+def _author_scope_id(user: User | None) -> int | None:
+    """作者去重作用域：登录用 user.id；匿名（public）共用 None。"""
+    return user.id if user else None
+
+
+def _find_duplicate_demo(
+    db: Session,
+    content_hash: str,
+    author_scope_id: int | None,
+    exclude_id: int | None = None,
+) -> Demo | None:
+    """查找同一作者下内容相同（同 content_hash）的已有 demo。
+    匿名（author_scope_id=None）表示所有 public 上传共享同一去重池。"""
+    q = db.query(Demo).filter(Demo.content_hash == content_hash)
+    if author_scope_id is None:
+        q = q.filter(Demo.author_id.is_(None))
+    else:
+        q = q.filter(Demo.author_id == author_scope_id)
+    if exclude_id is not None:
+        q = q.filter(Demo.id != exclude_id)
+    return q.first()
+
+
+def _dup_conflict(demo: Demo) -> HTTPException:
+    return HTTPException(
+        status_code=409,
+        detail=f"已存在相同内容的 Demo（同一作者）：/demo/{demo.slug}",
+    )
+
+
 async def _create_demo_record(
     db: Session,
     user: User | None,
@@ -353,12 +389,14 @@ async def _create_demo_record(
     zip_bytes: bytes | None = None,
     trusted: bool = False,
     idempotency_key: str | None = None,
+    content_hash: str | None = None,
 ) -> tuple[Demo, str, bool]:
     """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
     - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
     - trusted（UPLOAD_CODE 匹配）或已登录且 auto_approve → approved
     - 匿名：auto_approve_all 或 auto_approve_public 任一开 → approved，否则 pending
     - idempotency_key：唯一幂等键；并发/重试撞键时返回已有结果（created=False）
+    - content_hash：zip 内容哈希（按作者去重，由调用方校验后传入）
     - 解压/OSS/封面上传等阻塞操作放线程池，避免卡死事件循环（批量上传时其他接口还能响应）
     """
     demo = Demo(
@@ -370,6 +408,7 @@ async def _create_demo_record(
         prompt=(prompt or "").strip(),
         video_url=_clean_url(video_url),
         idempotency_key=idempotency_key,
+        content_hash=content_hash,
     )
     demo.author_id = user.id if user else None
 
@@ -473,6 +512,7 @@ async def create_demo(
     video_url: str | None = Form(None),
     upload_code: str | None = Form(None),
     idempotency_key: str | None = Form(None),
+    force: bool = Form(False),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
@@ -485,6 +525,10 @@ async def create_demo(
     if existing is not None:
         return DemoCreateResult(slug=existing.slug, status=existing.status, created=False)
 
+    # force 仅管理员生效
+    allow_force = bool(force) and user is not None and user.role == "admin"
+    content_hash = None
+
     if demo_type == "link":
         ext_url = _validate_url(external_url, "external_url")
         zip_bytes = None
@@ -493,6 +537,11 @@ async def create_demo(
         if file is None or not file.filename or not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+        # 内容一致性：同一作者不允许上传相同 zip（管理员 force 可跳过）
+        content_hash = _zip_content_hash(zip_bytes)
+        dup = _find_duplicate_demo(db, content_hash, _author_scope_id(user))
+        if dup is not None and not allow_force:
+            raise _dup_conflict(dup)
 
     cover_bytes = None
     cover_ext = "png"
@@ -517,6 +566,7 @@ async def create_demo(
         zip_bytes=zip_bytes,
         trusted=trusted,
         idempotency_key=idem_key,
+        content_hash=content_hash,
     )
     return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
@@ -546,6 +596,7 @@ async def create_demo_from_url(
     if demo_type == "link":
         ext_url = _validate_url(body.external_url, "external_url")
         zip_bytes = None
+        content_hash = None
     else:
         ext_url = None
         if not body.zip_url:
@@ -554,6 +605,12 @@ async def create_demo_from_url(
         zip_bytes = await asyncio.to_thread(_download_url_bytes, body.zip_url, settings.max_upload_size, "zip")
         if zip_bytes[:2] != b"PK":
             raise HTTPException(status_code=400, detail="zip_url 下载的内容不是 zip 文件", )
+        # 内容一致性：同一作者不允许上传相同 zip（管理员 force 可跳过）
+        allow_force = bool(body.force) and user is not None and user.role == "admin"
+        content_hash = _zip_content_hash(zip_bytes)
+        dup = _find_duplicate_demo(db, content_hash, _author_scope_id(user))
+        if dup is not None and not allow_force:
+            raise _dup_conflict(dup)
 
     cover_bytes = None
     cover_ext = "png"
@@ -580,6 +637,7 @@ async def create_demo_from_url(
         zip_bytes=zip_bytes,
         trusted=trusted,
         idempotency_key=idem_key,
+        content_hash=content_hash,
     )
     return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
@@ -598,6 +656,7 @@ async def update_demo(
     file: UploadFile | None = File(None),
     commit_message: str | None = Form(None),
     keep_old_version: bool = Form(False),
+    force: bool = Form(False),
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
@@ -644,6 +703,13 @@ async def update_demo(
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
         zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+        # 内容一致性：不更新成与同作者其他 demo 相同的 zip（排除自身；管理员 force 可跳过）
+        allow_force = bool(force) and user.role == "admin"
+        h = _zip_content_hash(zip_bytes)
+        dup = _find_duplicate_demo(db, h, demo.author_id, exclude_id=demo.id)
+        if dup is not None and not allow_force:
+            raise _dup_conflict(dup)
+        demo.content_hash = h
         # 勾选「保留旧版本」：先把当前文件快照成独立 demo 页面，再覆盖
         if keep_old_version:
             snapshot = _snapshot_demo(db, demo, user)
@@ -708,6 +774,7 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
         video_url=demo.video_url,
         status=demo.status,
         author_id=demo.author_id,
+        content_hash=demo.content_hash,
     )
     db.add(snapshot)
     db.flush()

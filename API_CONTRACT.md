@@ -279,6 +279,7 @@ commit_message / keep_old_version  同前（编辑时）
 - web/zip：创建时必须上传 zip；web 解压要求含 index.html，zip 不要求
 - 更新时若切换类型：link ↔ web/zip 均可；link 下上传 file → 400
 - **封面自动压缩**：上传原图**无大小限制**（受整体请求上限约束），后端自动压缩为 WebP（最大边 1280、质量 82），**只保留压缩版**，返回 `/media/covers/xxx.webp`
+- **zip 内容去重**（按作者）：同作者上传相同 zip（sha256 原始字节）→ **409** + 已有 demo 链接；`force=1`（仅管理员）可强制上传；link 类型无 zip 不校验；同 demo 自我更新上传相同文件不算重复
 
 ### 响应新增字段
 
@@ -382,6 +383,7 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
 - `demo_type` 规则同第 5 节：web/zip 必填 `zip_url`，link 必填 `external_url` 且禁传 zip
 - **AI 上传质量强制**：`description` 必填（非空）、`tags` 至少 1 个——从 URL 通道上传必须带简介和标签，否则 422
 - **幂等去重（agent 必用）**：每次上传生成唯一 `idempotency_key`（8~128 位，字母数字 `_ . -`）；请求超时/失败后**用同一 key 重试** → 返回第一次的结果 `created:false`，不重复创建
+- **内容去重**：同一作者上传与已有 demo **相同 zip**（sha256）→ **409**，detail 含已有 demo 链接；到 `force:true` + 管理员 token 可强制（`created:true`）
 
 ### 方式二：multipart 直传（文件在本地时用）
 

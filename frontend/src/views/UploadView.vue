@@ -65,11 +65,21 @@ function ensureList(key: string): { value: string; description: string }[] {
   return selected.value[key]
 }
 
-function toggleValue(key: string, value: string) {
+function toggleValue(key: string, value: string, description = '') {
   const list = ensureList(key)
   const i = list.findIndex((x) => x.value === value)
   if (i >= 0) list.splice(i, 1)
-  else list.push({ value, description: '' })
+  else list.push({ value, description })
+}
+
+// open/int 的「已有值」建议：默认露前 8 个，更多可展开
+const SUGGEST_SHOW = 8
+const suggestExpanded = ref<Record<string, boolean>>({})
+function suggestionValues(k: { key: string; values: { value: string; description: string; demo_count: number }[] }) {
+  return suggestExpanded.value[k.key] ? k.values : k.values.slice(0, SUGGEST_SHOW)
+}
+function toggleSuggest(key: string) {
+  suggestExpanded.value = { ...suggestExpanded.value, [key]: !suggestExpanded.value[key] }
 }
 
 function addValue(key: string) {
@@ -469,6 +479,30 @@ async function submit() {
                 @keyup.enter="addValue(k.key)"
               />
               <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
+            </div>
+            <!-- 已有值建议：点选已存在的 value，避免重复造词 -->
+            <div v-if="k.values.length" class="filter-row tag-suggest-row">
+              <span class="filter-label tag-suggest-label">已有值</span>
+              <button
+                v-for="v in suggestionValues(k)"
+                :key="v.value"
+                class="tag-chip"
+                :class="['mode-' + k.mode, { active: selectedOf(k.key).some((x) => x.value === v.value) }]"
+                type="button"
+                :title="v.description || v.value"
+                @click="toggleValue(k.key, v.value, v.description || '')"
+              >
+                {{ v.value }}
+                <span class="count">{{ v.demo_count }}</span>
+              </button>
+              <button
+                v-if="k.values.length > SUGGEST_SHOW"
+                class="tag-chip tag-strip-toggle"
+                type="button"
+                @click="toggleSuggest(k.key)"
+              >
+                {{ suggestExpanded[k.key] ? '收起' : `更多 +${k.values.length - SUGGEST_SHOW}` }}
+              </button>
             </div>
             <div v-if="tagErrors[k.key]" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">
               {{ tagErrors[k.key] }}

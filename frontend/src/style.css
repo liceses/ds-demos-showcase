@@ -2135,3 +2135,13 @@ table.data tr.inconsistent td {
   background: var(--teal);
   color: var(--ink);
 }
+
+/* 上传页 open/int 已有值建议行 */
+.tag-suggest-row {
+  margin: 6px 0 0;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tag-suggest-label {
+  align-self: center;
+}

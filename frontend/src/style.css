@@ -339,6 +339,52 @@ label.field .hint {
   transition: width 0.2s ease;
 }
 
+/* DSH 会话轨迹 */
+.dsh-trajectory {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dsh-block {
+  border: 2px solid var(--ink);
+  padding: 10px 12px;
+  background: var(--paper);
+}
+.dsh-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.dsh-user {
+  border-left: 6px solid var(--coral);
+}
+.dsh-assistant {
+  border-left: 6px solid var(--teal);
+}
+.dsh-tool {
+  border-left: 6px solid var(--yellow);
+}
+.dsh-toolresult {
+  border-left: 6px solid #aaa;
+}
+.dsh-reason {
+  border-style: dashed;
+  opacity: 0.85;
+}
+.dsh-text {
+  margin: 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.dsh-code {
+  margin: 0;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
 /* ---------- 标签 ---------- */
 .tag-chip {
   display: inline-flex;

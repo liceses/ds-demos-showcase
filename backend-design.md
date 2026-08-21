@@ -121,6 +121,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **上传限制**：zip `MAX_UPLOAD_SIZE` 默认 200MB；封面**无大小限制**（自动压缩，见下节）。
 - **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
+- **DSH 会话轨迹**：dsh 导出的 zip 常含 `session.jsonl`；`extract_zip` 会把 `*.jsonl` / `session*.json` / `trace*.json/l` 自动提取进 `demo_sessions/`，进「会话日志」Tab；前端对 `.jsonl` 走 DSH 渲染器。
 - **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
 
 ### 上传去重（幂等键 + 内容哈希）

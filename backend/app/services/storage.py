@@ -116,6 +116,26 @@ def extract_zip(zip_bytes: bytes, slug: str, require_index: bool = True) -> None
                 shutil.copy2(item, dst)
         shutil.rmtree(sessions_in, ignore_errors=True)
 
+    # DSH 会话轨迹：dsh 导出的 zip 常带 session.jsonl / trace*.jsonl 等，
+    # 自动提取进会话日志目录（demo_sessions/），供「会话日志」Tab 展示
+    _DSH_PATTERNS = ("*.jsonl", "session*.json", "trace*.json", "trace*.jsonl")
+    dsh_files: list[Path] = []
+    for pat in _DSH_PATTERNS:
+        dsh_files.extend(target.rglob(pat))
+    if dsh_files:
+        sessions_out = demo_sessions_dir(slug)
+        sessions_out.mkdir(parents=True, exist_ok=True)
+        seen: set[str] = set()
+        for p in dsh_files:
+            name = p.name
+            final = name
+            i = 1
+            while final in seen or (sessions_out / final).exists():
+                final = f"{p.stem}-{i}{p.suffix}"
+                i += 1
+            seen.add(final)
+            shutil.move(str(p), str(sessions_out / final))
+
 
 def dir_size(path: Path) -> int:
     total = 0

@@ -52,6 +52,7 @@
 - **封面**：新上传/历史迁移后 cover_url 都是 `.webp`，`<img>` 无需特殊处理。
 - **标签**：已下线旧 `GET /tags` 扁平接口，一律用 `tag-keys`；`post /tags` 仅 admin 加 fixed 值。
 - **搜索/过滤**：`GET /demos?q=&tag=k:v&author=&sort=&page=`；首屏首页用 `page_size=6~8` 精选即可。
+- **DSH 会话轨迹**：上传 zip 若含 `*.jsonl`（如 dsh 的 `session.jsonl`）会自动进「会话日志」；`selectedLog` 以 `.jsonl` 结尾时用 `DshTrajectoryView` 渲染（不要用 MarkdownView）。
 
 ## 7. 上云/本地
 - 联调：`frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指 `localhost:8000`。

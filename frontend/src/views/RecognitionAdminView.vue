@@ -13,7 +13,8 @@ const error = ref('')
 const form = ref({
   kind: 'sponsor' as 'sponsor' | 'thanks',
   name: '',
-  amount: null as number | null,
+  // v-model.number 在输入被清空时会是 ''，类型如实反映运行时值
+  amount: null as number | '' | null,
   message: '',
   show_amount: true,
   sort: 0,
@@ -60,8 +61,8 @@ async function save() {
     ui.toast('名字必填', 'error')
     return
   }
-  // v-model.number 清空后可能是 ''，这里显式拓宽类型统一归一
-  const rawAmount = form.value.amount as unknown as number | string | null
+  // 类型已如实包含 ''，这里直接安全归一
+  const rawAmount = form.value.amount
   const amount =
     form.value.kind === 'sponsor' && rawAmount !== null && rawAmount !== ''
       ? Number(rawAmount)

@@ -229,3 +229,34 @@ export interface SponsorBoard {
   total_amount: string
   updated_at?: string
 }
+
+/** 致谢榜 */
+export interface ThanksItem {
+  name: string
+  message?: string
+}
+export interface ThanksBoard {
+  thanks: ThanksItem[]
+  updated_at?: string
+}
+
+/** 管理端：赞助/致谢记录 */
+export interface RecognitionItem {
+  id: number
+  kind: 'sponsor' | 'thanks'
+  name: string
+  amount?: number | null
+  message?: string
+  show_amount: boolean
+  sort: number
+  active: boolean
+}
+export interface RecognitionInput {
+  kind: 'sponsor' | 'thanks'
+  name: string
+  amount?: number | null
+  message?: string
+  show_amount?: boolean
+  sort?: number
+  active?: boolean
+}

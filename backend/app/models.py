@@ -171,6 +171,22 @@ class VisitDaily(Base):
     ips: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
 
 
+class Acknowledgment(Base):
+    """赞助 / 致谢榜：单表，kind 区分（sponsor / thanks）。"""
+
+    __tablename__ = "acknowledgments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(16), default="sponsor", nullable=False, index=True)  # sponsor | thanks
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 仅 sponsor
+    message: Mapped[str] = mapped_column(String(200), default="", nullable=False)  # 备注/致谢语
+    show_amount: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # sponsor 是否公开金额
+    sort: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # 软下架
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
 class Announcement(Base):
     __tablename__ = "announcements"
 

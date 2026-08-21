@@ -18,11 +18,20 @@ import type {
   SponsorBoard,
   Tag,
   TagKeyInfo,
+  ThanksBoard,
   UpdateDemoPayload,
   User,
+  RecognitionInput,
+  RecognitionItem,
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
+
+const recognition: RecognitionItem[] = [
+  { id: 1, kind: 'sponsor', name: 'Alice', amount: 500, message: '支持 AI 全民制作人！', show_amount: true, sort: 0, active: true },
+  { id: 2, kind: 'sponsor', name: 'Bob', amount: 300, message: '作品很棒', show_amount: true, sort: 0, active: true },
+  { id: 3, kind: 'thanks', name: '小明', message: '感谢提供了这么好的 demo', show_amount: true, sort: 0, active: true },
+]
 
 const announcements: Announcement[] = [
   { id: 1, type: 'manual', title: '站点公告', content: '欢迎来到 AI 全民制作人站，欢迎大家投稿 AI 生成的网页 Demo！', demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
@@ -734,6 +743,51 @@ export const mockApi = {
         { name: 'Dave', amount: '¥ 100' },
       ],
     }
+  },
+  async getThanks(): Promise<ThanksBoard> {
+    await delay()
+    const items = recognition.filter((r) => r.kind === 'thanks' && r.active)
+    return {
+      updated_at: new Date().toISOString().slice(0, 10),
+      thanks: items.map((r) => ({ name: r.name, ...(r.message ? { message: r.message } : {}) })),
+    }
+  },
+  async listRecognition(): Promise<{ items: RecognitionItem[] }> {
+    await delay()
+    return { items: clone(recognition) }
+  },
+  async createRecognition(payload: RecognitionInput): Promise<{ id: number }> {
+    await delay()
+    const item: RecognitionItem = {
+      id: Date.now(),
+      kind: payload.kind,
+      name: payload.name,
+      amount: payload.kind === 'sponsor' ? payload.amount ?? 0 : null,
+      message: payload.message || '',
+      show_amount: payload.kind === 'sponsor' ? !!payload.show_amount : true,
+      sort: payload.sort || 0,
+      active: payload.active ?? true,
+    }
+    recognition.push(item)
+    return { id: item.id }
+  },
+  async updateRecognition(id: number, payload: RecognitionInput): Promise<{ id: number }> {
+    await delay()
+    const r = recognition.find((x) => x.id === id)
+    if (!r) throw new Error('记录不存在')
+    r.kind = payload.kind
+    r.name = payload.name
+    r.amount = payload.kind === 'sponsor' ? payload.amount ?? 0 : null
+    r.message = payload.message || ''
+    r.show_amount = payload.kind === 'sponsor' ? !!payload.show_amount : true
+    r.sort = payload.sort || 0
+    r.active = payload.active ?? true
+    return { id }
+  },
+  async deleteRecognition(id: number): Promise<void> {
+    await delay()
+    const i = recognition.findIndex((x) => x.id === id)
+    if (i >= 0) recognition.splice(i, 1)
   },
 
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {

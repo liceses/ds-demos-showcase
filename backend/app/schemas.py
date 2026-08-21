@@ -222,6 +222,17 @@ class SettingsOut(BaseModel):
     auto_approve_public: bool = False
 
 
+# ---------- 赞助/致谢 ----------
+class RecognitionIn(BaseModel):
+    kind: str = Field(pattern="^(sponsor|thanks)$")
+    name: str = Field(min_length=1, max_length=64)
+    amount: int | None = Field(default=None, ge=0)
+    message: str = Field(default="", max_length=200)
+    show_amount: bool = True
+    sort: int = 0
+    active: bool = True
+
+
 # ---------- Admin ----------
 class AdminUserOut(UserPublic):
     pass

@@ -448,10 +448,43 @@ GET /api/v1/demos?status=approved&author=public
 
 ### GET `/api/v1/stats/sponsors`（公开）
 
-返回赞助榜。当前**尚未接入赞助系统**，返回空榜：
+赞助榜：按金额降序。未公开金额（`show_amount=false`）的条目不返回金额字段。
 
 ```json
-{ "total_amount": "", "updated_at": "2026-08-19", "sponsors": [] }
+{
+  "total_amount": "¥ 1280",
+  "updated_at": "2026-08-19",
+  "sponsors": [
+    { "name": "Alice", "amount": "¥ 500", "message": "支持 AI 全民制作人！" },
+    { "name": "Bob", "amount": "¥ 300" }
+  ]
+}
 ```
 
-前端约定：无缓存、不鉴权；失败（网络/404/5xx）各自兜底成空态，不阻塞页面。
+### GET `/api/v1/stats/thanks`（公开）
+
+致谢榜：按添加时间倒序。
+
+```json
+{
+  "updated_at": "2026-08-19",
+  "thanks": [
+    { "name": "小明", "message": "感谢提供了这么好的 demo" }
+  ]
+}
+```
+
+### 管理端：赞助 / 致谢（admin only）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/v1/stats/recognition` | 列出全部记录（含下架） |
+| POST | `/api/v1/stats/recognition` | 添加 `{kind:'sponsor'\|'thanks', name, amount?, message?, show_amount?, sort?, active?}` |
+| PUT | `/api/v1/stats/recognition/{id}` | 更新同字段 |
+| DELETE | `/api/v1/stats/recognition/{id}` | 删除 |
+
+- 单表双 kind：`sponsor`（可带 amount、show_amount 隐私开关）/ `thanks`（无金额，带 message 备注）
+- `sponsor` 按金额降序 → sort；`thanks` 按 created_at 倒序
+- `active=false` 软下架（公开榜不展示）
+
+前端约定：`/stats/visits`、`/stats/sponsors`、`/stats/thanks` 无缓存、不鉴权；失败各自兜底成空态，不阻塞页面。

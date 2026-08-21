@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { SiteStats, SponsorBoard } from '../api/types'
+import type { SiteStats, SponsorBoard, ThanksBoard } from '../api/types'
 
 const stats = ref<SiteStats | null>(null)
 const sponsors = ref<SponsorBoard | null>(null)
+const thanks = ref<ThanksBoard | null>(null)
 const error = ref('')
 const loading = ref(true)
 
@@ -13,12 +14,14 @@ const recent48h = computed(() => (stats.value ? stats.value.today + stats.value.
 
 onMounted(async () => {
   try {
-    const [s, sp] = await Promise.all([
+    const [s, sp, th] = await Promise.all([
       api.getSiteStats(),
       api.getSponsors().catch(() => null),
+      api.getThanks().catch(() => null),
     ])
     stats.value = s
     sponsors.value = sp
+    thanks.value = th
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -78,6 +81,19 @@ onMounted(async () => {
         </div>
       </div>
       <div v-else class="empty-box">暂无上榜，欢迎打赏支持</div>
+
+      <!-- 致谢榜 -->
+      <div class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">致谢榜</h2>
+      </div>
+      <div v-if="thanks?.thanks?.length" class="sponsor-list">
+        <div v-for="(t, i) in thanks.thanks" :key="t.name + i" class="sponsor-row">
+          <span class="sponsor-rank">{{ i + 1 }}</span>
+          <span class="sponsor-name">{{ t.name }}</span>
+          <span v-if="t.message" class="sponsor-msg">{{ t.message }}</span>
+        </div>
+      </div>
+      <div v-else class="empty-box">暂无致谢</div>
 
       <!-- 杂项 -->
       <div class="section-head" style="margin-top: 28px">

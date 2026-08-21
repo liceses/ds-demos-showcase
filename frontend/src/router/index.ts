@@ -17,6 +17,7 @@ const router = createRouter({
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '账户设置', requiresAuth: true } },
     { path: '/upload', name: 'upload', component: () => import('../views/UploadView.vue'), meta: { title: '上传 Demo' } },
     { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { title: '管理后台', requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/sponsors', name: 'admin-recognition', component: () => import('../views/RecognitionAdminView.vue'), meta: { title: '赞助/致谢管理', requiresAuth: true, requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue'), meta: { title: '404' } },
   ],
   scrollBehavior() {

@@ -18,8 +18,11 @@ import type {
   SponsorBoard,
   Tag,
   TagKeyInfo,
+  ThanksBoard,
   UpdateDemoPayload,
   User,
+  RecognitionInput,
+  RecognitionItem,
 } from './types'
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
@@ -223,6 +226,26 @@ const realApi = {
   async getSponsors(): Promise<SponsorBoard> {
     const { data } = await http.get('/stats/sponsors')
     return data
+  },
+  async getThanks(): Promise<ThanksBoard> {
+    const { data } = await http.get('/stats/thanks')
+    return data
+  },
+  // 管理：赞助 / 致谢
+  async listRecognition(): Promise<{ items: RecognitionItem[] }> {
+    const { data } = await http.get('/stats/recognition')
+    return data
+  },
+  async createRecognition(payload: RecognitionInput): Promise<{ id: number }> {
+    const { data } = await http.post('/stats/recognition', payload)
+    return data
+  },
+  async updateRecognition(id: number, payload: RecognitionInput): Promise<{ id: number }> {
+    const { data } = await http.put(`/stats/recognition/${id}`, payload)
+    return data
+  },
+  async deleteRecognition(id: number): Promise<void> {
+    await http.delete(`/stats/recognition/${id}`)
   },
 
   // ---------- 公告 ----------

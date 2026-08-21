@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import asyncio
-
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -65,7 +63,7 @@ async def count_visits(request: Request, call_next):
     if request.method == "GET" and path in _PAGE_VIEW_PATHS:
         fwd = request.headers.get("x-forwarded-for", "")
         ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")
-        await asyncio.to_thread(visits.record_visit, ip)
+        visits.record_visit(ip)  # 纯内存，不再每请求写 DB
     return response
 
 

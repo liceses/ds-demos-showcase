@@ -497,7 +497,7 @@ async def _create_demo_record(
         title="新 Demo 发布",
         content=demo.title,
         demo_slug=slug,
-        created_by=user.id,
+        created_by=user.id if user else None,
     ))
     _add_timeline(db, demo.id, "v1", "创建", None)
     db.commit()

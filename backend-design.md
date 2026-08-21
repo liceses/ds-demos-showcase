@@ -122,7 +122,8 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **DSH 会话轨迹**：dsh 导出的 zip 常含 `session.jsonl`；`extract_zip` 会把 `*.jsonl` / `session*.json` / `trace*.json/l` 自动提取进 `demo_sessions/`，进「会话日志」Tab；前端对 `.jsonl` 走 DSH 渲染器。
-- **会话日志存储与防护**：会话日志非热资源，**只进 OSS**（`demos/{slug}/sessions/`），本地不落盘（OSS 未启用时本地兜底）；列表走 OSS 前缀，**内容经后端代理 + 每 IP 限流（60 次/小时）**，不暴露 OSS 公网直链，避免 bot 爬取刷 OSS 下行流量。
+- **会话日志存储与防护**：默认**本地存储**；启用 OSS 备份时 log **只进 OSS**（`demos/{slug}/sessions/`）、本地不落盘（OSS 未启用时本地兜底）；列表走 OSS 前缀，**内容经后端代理 + 每 IP 限流（60 次/小时）**，不暴露 OSS 公网直链，避免 bot 爬取刷 OSS 下行流量。
+- **存储模式**：`OSS_SERVE_LOCAL=true`（默认）→ 预览/封面/zip 本地服务器下发，OSS 仅**双写备份**（上行免费）；`false` → 直连 OSS 省服务器带宽。
 - **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
 
 ### 上传去重（幂等键 + 内容哈希）

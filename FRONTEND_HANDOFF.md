@@ -53,7 +53,8 @@
 - **标签**：已下线旧 `GET /tags` 扁平接口，一律用 `tag-keys`；`post /tags` 仅 admin 加 fixed 值。
 - **搜索/过滤**：`GET /demos?q=&tag=k:v&author=&sort=&page=`；首屏首页用 `page_size=6~8` 精选即可。
 - **DSH 会话轨迹**：上传 zip 若含 `*.jsonl`（如 dsh 的 `session.jsonl`）会自动进「会话日志」；`selectedLog` 以 `.jsonl` 结尾时用 `DshTrajectoryView` 渲染（不要用 MarkdownView）。
-- **会话日志**：只存 OSS、本地不落盘；前端通过 `GET /session-logs/{filename}` 经后端代理取（每 IP 限流 60 次/小时，429 提示请稍后再试）。渲染能力保留，但不必把它当热内容设计；`429` 需静默降级为空「访问太频繁」。
+- **会话日志**：默认本地存储；启用 OSS 备份时只存 OSS、本地不落盘。前端经 `GET /session-logs/{filename}` 取（每 IP 限流 60/小时，429 请稍后再试）。渲染能力保留，但不必当热内容设计；429 需静默降级。
+- **存储模式**：预览/封面/zip 默认服务器本地下发（OSS 仅备份），前端无感知（`preview_url`/`/preview/`/`/media/` 路径仍可用）。
 
 ## 7. 上云/本地
 - 联调：`frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指 `localhost:8000`。

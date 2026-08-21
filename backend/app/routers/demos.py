@@ -922,8 +922,8 @@ def download_demo(slug: str, db: Session = Depends(get_db)):
     demo.download_count += 1
     db.commit()
 
-    # OSS 已启用：直接 302 到 OSS 公有读地址，不占服务器带宽
-    if oss.enabled():
+    # OSS 已启用且非「本地服务」模式：302 到 OSS 公有读地址，不占服务器带宽
+    if oss.enabled() and not settings.oss_serve_local:
         return RedirectResponse(
             oss.public_url(f"demos/{slug}/{slug}.zip"),
             headers={"Cache-Control": "public, max-age=60"},

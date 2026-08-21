@@ -16,6 +16,8 @@ services:
       OSS_BUCKET: ${OSS_BUCKET:-}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      # 本地服务模式：true=本地服务器下发，OSS 仅作备份/存 log（省 OSS 下行钱，推荐）
+      OSS_SERVE_LOCAL: ${OSS_SERVE_LOCAL:-true}
       # 可选：OSS 自定义域名（如 https://oss.deepdemos.top），规避默认域名对 HTML 的强制下载策略
       OSS_CUSTOM_DOMAIN: ${OSS_CUSTOM_DOMAIN:-}
       # 预览入口公开地址：demo 预览 iframe 所用主机（如 http://demo.deepdemos.top）

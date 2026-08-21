@@ -57,7 +57,7 @@ def serialize_demo(
                 if settings.preview_base_url
                 else (
                     oss.public_url(f"demos/{demo.slug}/files/index.html")
-                    if oss.enabled()
+                    if oss.enabled() and not settings.oss_serve_local
                     else f"/preview/{demo.slug}/index.html"
                 )
             )

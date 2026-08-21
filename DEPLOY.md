@@ -25,7 +25,7 @@ AUTO_APPROVE=false           # 生产建议关闭自动审核（新上传需管�
 
 生成密钥：`openssl rand -hex 32`
 
-> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面会上传阿里云 OSS 并提供直链；不配置则使用本地 `storage/`。
+> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面**双写备份到阿里云 OSS**（上行免费，作为备份）；`OSS_SERVE_LOCAL`（默认 `true`）让预览/下载**走本地服务器**，不产生 OSS 下行费用。会话日志在启用 OSS 备份时**只存 OSS**。不配置 `OSS_*` 则全部使用本地 `storage/`。
 
 ### 2. 构建并启动
 

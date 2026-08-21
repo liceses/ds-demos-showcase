@@ -22,13 +22,16 @@ class Settings(BaseSettings):
     max_file_size: int = 200 * 1024 * 1024
     max_cover_size: int = 5 * 1024 * 1024     # 5MB
 
-    # 阿里云 OSS（可选；配置后文件走 OSS 直连，不占服务器带宽）
-    # oss_enabled 总开关：false 时即使填了 AK 也强制走本地存储
+    # 阿里云 OSS（可选；配置后文件双写备份到 OSS，log 只存 OSS）
+    # oss_enabled 总开关：false 时即使填了 AK 也强制走本地存储（含 log）
     oss_enabled_flag: bool = Field(default=True, validation_alias=AliasChoices("oss_enabled_flag", "OSS_ENABLED"))
     oss_endpoint: str = ""
     oss_bucket: str = ""
     oss_access_key_id: str = ""
     oss_access_key_secret: str = ""
+    # 服务模式：True=本地服务器下发（OSS 仅作备份/存 log，省 OSS 下行钱）；
+    # False=预览/下载直连 OSS 省服务器带宽（需 OSS 公有读）
+    oss_serve_local: bool = Field(default=True, validation_alias=AliasChoices("oss_serve_local", "OSS_SERVE_LOCAL"))
     # 可选：绑定到 OSS 的自定义域名（如 https://oss.deepdemos.top）。
     # 阿里云对 OSS 默认域名访问 HTML 会强制附加 x-oss-force-download 下载，
     # 用自定义域名访问可规避该安全策略（详情：OSS 文档「如何配置访问 OSS 文件时的预览行为」）。

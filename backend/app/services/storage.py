@@ -33,6 +33,19 @@ def demo_sessions_dir(slug: str) -> Path:
     return demo_dir(slug) / "sessions"
 
 
+def save_source_zip(slug: str, data: bytes) -> None:
+    """保存原始 zip 到 demo 目录（非 OSS 时下载直接返回，避免每次现场压缩）。"""
+    validate_slug(slug)
+    p = demo_dir(slug) / "source.zip"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(data)
+
+
+def source_zip_path(slug: str) -> Path:
+    validate_slug(slug)
+    return demo_dir(slug) / "source.zip"
+
+
 def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
     for member in zf.infolist():
         raw = member.filename.replace("\\", "/")

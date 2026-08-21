@@ -76,7 +76,7 @@ onMounted(async () => {
         <div v-for="(s, i) in sponsors.sponsors" :key="s.name + i" class="sponsor-row" :class="'rank-' + (i + 1)">
           <span class="sponsor-rank">{{ i + 1 }}</span>
           <span class="sponsor-name">{{ s.name }}</span>
-          <span class="sponsor-amount">{{ s.amount }}</span>
+          <span v-if="s.amount" class="sponsor-amount">{{ s.amount }}</span>
           <span v-if="s.message" class="sponsor-msg">{{ s.message }}</span>
         </div>
       </div>
@@ -88,7 +88,7 @@ onMounted(async () => {
       </div>
       <div v-if="thanks?.thanks?.length" class="sponsor-list">
         <div v-for="(t, i) in thanks.thanks" :key="t.name + i" class="sponsor-row">
-          <span class="sponsor-rank">{{ i + 1 }}</span>
+          <span class="sponsor-rank thanks-rank" aria-hidden="true">{{ i + 1 }}</span>
           <span class="sponsor-name">{{ t.name }}</span>
           <span v-if="t.message" class="sponsor-msg">{{ t.message }}</span>
         </div>

@@ -2258,3 +2258,9 @@ table.data tr.inconsistent td {
 .sponsor-name { font-weight: 800; }
 .sponsor-amount { margin-left: auto; font-weight: 800; flex-shrink: 0; }
 .sponsor-msg { width: 100%; font-size: 12px; color: #555; }
+
+/* 致谢榜：不排名，用青色方块代替名次 */
+.sponsor-rank.thanks-rank {
+  color: transparent;
+  background: var(--teal);
+}

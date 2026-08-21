@@ -60,10 +60,16 @@ async function save() {
     ui.toast('名字必填', 'error')
     return
   }
+  // v-model.number 清空后可能是 ''，这里显式拓宽类型统一归一
+  const rawAmount = form.value.amount as unknown as number | string | null
+  const amount =
+    form.value.kind === 'sponsor' && rawAmount !== null && rawAmount !== ''
+      ? Number(rawAmount)
+      : null
   const payload = {
     kind: form.value.kind,
     name: form.value.name.trim(),
-    amount: form.value.kind === 'sponsor' ? form.value.amount : null,
+    amount,
     message: form.value.message,
     show_amount: form.value.show_amount,
     sort: Number(form.value.sort) || 0,
@@ -125,7 +131,7 @@ onMounted(load)
       <h2 style="margin-bottom: 12px">{{ editing ? '编辑' : '添加' }}（{{ form.kind === 'sponsor' ? '赞助' : '致谢' }}）</h2>
       <div class="form-stack">
         <div class="filter-row" style="margin-bottom: 0">
-          <select v-model="form.kind" class="input" style="max-width: 120px" @change="resetForm">
+          <select v-model="form.kind" class="input" style="max-width: 120px" @change="kind = form.kind; resetForm()">
             <option value="sponsor">赞助</option>
             <option value="thanks">致谢</option>
           </select>

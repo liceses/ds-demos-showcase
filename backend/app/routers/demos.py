@@ -7,7 +7,6 @@ import random
 import re
 import shutil
 import socket
-import threading
 import time
 import urllib.error
 import urllib.request
@@ -25,7 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..database import SessionLocal, get_db
+from ..database import get_db
 from ..deps import current_user, optional_user
 from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoSummaryOut, Paginated
@@ -49,43 +48,6 @@ def _anon_rate_limit(request: Request) -> None:
     if len(_anon_uploads[ip]) >= ANON_RATE_LIMIT:
         raise HTTPException(status_code=429, detail=f"匿名上传过于频繁（{ANON_RATE_LIMIT} 次/小时），请稍后再试或登录", )
     _anon_uploads[ip].append(now)
-
-
-# ---- 高并发缓存：相关推荐 / 首页随机 ----
-_CACHE_LOCK = threading.Lock()
-_RELATED_CACHE: dict[str, tuple[float, list]] = {}          # slug -> (exp, result)
-_RANDOM_IDS: list[int] = []                                  # 随机排序的 demo id 列表
-_RANDOM_EXP = 0.0
-_RANDOM_TTL = 60  # 秒
-
-
-def _get_cached_related(slug: str) -> list | None:
-    with _CACHE_LOCK:
-        hit = _RELATED_CACHE.get(slug)
-        if hit and hit[0] > time.time():
-            return hit[1]
-    return None
-
-
-def _set_cached_related(slug: str, result: list, ttl: int = 60) -> None:
-    with _CACHE_LOCK:
-        _RELATED_CACHE[slug] = (time.time() + ttl, result)
-
-
-def _random_slice(page: int, page_size: int) -> list[int]:
-    """返回一次随机排序下的 [offset, offset+page_size) 的已上架 demo id（60s 缓存整份随机序）。"""
-    global _RANDOM_IDS, _RANDOM_EXP
-    with _CACHE_LOCK:
-        if time.time() > _RANDOM_EXP or not _RANDOM_IDS:
-            db = SessionLocal()
-            try:
-                _RANDOM_IDS = [d for (d,) in db.query(Demo.id).filter(Demo.status == "approved").all()]
-            finally:
-                db.close()
-            random.shuffle(_RANDOM_IDS)
-            _RANDOM_EXP = time.time() + _RANDOM_TTL
-        start = (page - 1) * page_size
-        return _RANDOM_IDS[start : start + page_size]
 
 
 def _find_demo(db: Session, slug: str) -> Demo:
@@ -276,24 +238,15 @@ def list_demos(
 
     if sort == "popular":
         query = query.order_by(Demo.view_count.desc(), Demo.created_at.desc(), Demo.id.desc())
-        total = query.count()
-        items = query.offset((page - 1) * page_size).limit(page_size).all()
     elif sort == "random":
-        # 首页精选整批随机：缓存整份随机 id 序，避免每次 ORDER BY RANDOM() 全表扫
-        total = query.count()
-        ids = _random_slice(page, page_size)
-        if ids:
-            items = db.query(Demo).filter(Demo.id.in_(ids)).all()
-            order = {did: i for i, did in enumerate(ids)}
-            items.sort(key=lambda d: order.get(d.id, 10**9))
-        else:
-            items = []
+        # 首页精选整批随机
+        query = query.order_by(func.random())
     else:
         # 次级键 id 兜底：同一秒发布的 demo 也有确定顺序，避免刷新/翻页抖动
         query = query.order_by(Demo.created_at.desc(), Demo.id.desc())
-        total = query.count()
-        items = query.offset((page - 1) * page_size).limit(page_size).all()
 
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
     return Paginated(
         items=[serialize_demo(db, d) for d in items],
         total=total,
@@ -316,16 +269,8 @@ def related_demos(
     limit: int = Query(default=30, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    """相关推荐候选池：标签重合度 + 同类型 + 热度 + 随机（60s 缓存，缓解高并发）。"""
-    cached = _get_cached_related(slug)
-    if cached is None:
-        cached = _compute_related(db, slug)
-        _set_cached_related(slug, cached)
-    return cached[:limit]
-
-
-def _compute_related(db: Session, slug: str) -> list:
-    """真正计算相关推荐（结果已序列化为 DemoSummary 字典）。"""
+    """相关推荐候选池：按标签重合度 + 同类型 + 热度 + 随机抖动排序（排除自身）。
+    返回 top N；前端拿整池后本地洗牌「换一批」，无需再发请求。"""
     current = _find_demo(db, slug)
     cur_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in current.tag_associations}
     cur_type = current.demo_type
@@ -351,7 +296,7 @@ def _compute_related(db: Session, slug: str) -> list:
         scored.append((score, d))
 
     scored.sort(key=lambda x: -x[0])
-    return [serialize_demo(db, d) for _, d in scored[:50]]
+    return [serialize_demo(db, d) for _, d in scored[:limit]]
 
 
 def _validate_demo_type(t: str) -> str:
@@ -543,7 +488,6 @@ async def _create_demo_record(
             shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
             raise
         await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
-        await asyncio.to_thread(storage.save_source_zip, slug, zip_bytes)
 
     _set_demo_tags(db, demo, _parse_tags(tags_raw))
     db.commit()
@@ -553,7 +497,7 @@ async def _create_demo_record(
         title="新 Demo 发布",
         content=demo.title,
         demo_slug=slug,
-        created_by=user.id if user else None,
+        created_by=user.id,
     ))
     _add_timeline(db, demo.id, "v1", "创建", None)
     db.commit()
@@ -811,7 +755,6 @@ async def update_demo(
             snapshot = _snapshot_demo(db, demo, user)
         await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo.demo_type == "web"))
         await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
-        await asyncio.to_thread(storage.save_source_zip, slug, zip_bytes)
         changed = True
 
     demo.updated_at = datetime.utcnow()
@@ -859,10 +802,6 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
             dst = storage.demo_sessions_dir(new_slug)
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(sessions_src, dst)
-        # 连带复制预生成的原 zip，旧版页面下载也直接返回文件
-        src_zip = storage.source_zip_path(old_slug)
-        if src_zip.exists():
-            storage.save_source_zip(new_slug, src_zip.read_bytes())
 
     snapshot = DemoModel(
         slug=new_slug,
@@ -929,11 +868,6 @@ def download_demo(slug: str, db: Session = Depends(get_db)):
             oss.public_url(f"demos/{slug}/{slug}.zip"),
             headers={"Cache-Control": "public, max-age=60"},
         )
-
-    # 非 OSS：优先返回上传时预生成的原 zip，避免每次现场压缩
-    src_zip = storage.source_zip_path(slug)
-    if src_zip.exists():
-        return FileResponse(src_zip, media_type="application/zip", filename=f"{slug}.zip")
 
     files_dir = storage.demo_files_dir(slug)
     if not files_dir.exists():

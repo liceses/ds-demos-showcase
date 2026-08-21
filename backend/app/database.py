@@ -12,14 +12,7 @@ if _db_url.drivername == "sqlite" and _db_url.database not in (None, "", ":memor
     Path(_db_url.database).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 
 connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-engine = create_engine(
-    settings.database_url,
-    connect_args=connect_args,
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=20,
-    future=True,
-)
+engine = create_engine(settings.database_url, connect_args=connect_args, future=True)
 
 
 @event.listens_for(engine, "connect")

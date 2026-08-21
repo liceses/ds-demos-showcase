@@ -14,6 +14,8 @@ import type {
   Paginated,
   SessionLog,
   Settings,
+  SiteStats,
+  SponsorBoard,
   Tag,
   TagKeyInfo,
   UpdateDemoPayload,
@@ -706,6 +708,32 @@ export const mockApi = {
       .slice(0, 30)
       .map((x) => x.d)
     return clone(others)
+  },
+
+  async getSiteStats(): Promise<SiteStats> {
+    await delay()
+    const now = new Date()
+    const d = (n: number) => { const x = new Date(now); x.setDate(x.getDate() - n); return x.toISOString().slice(0, 10) }
+    const last7 = [6, 5, 4, 3, 2, 1, 0].map((n, i) => ({ date: d(n), count: 40 + ((i * 37) % 60) }))
+    return {
+      today: 168,
+      yesterday: 132,
+      total: 45678,
+      last7,
+    }
+  },
+  async getSponsors(): Promise<SponsorBoard> {
+    await delay()
+    return {
+      total_amount: '¥ 1280',
+      updated_at: '2026-08-19',
+      sponsors: [
+        { name: 'Alice', amount: '¥ 500', message: '支持 AI 全民制作人！' },
+        { name: 'Bob', amount: '¥ 300', message: '作品很棒，继续加油' },
+        { name: 'Charlie', amount: '¥ 200' },
+        { name: 'Dave', amount: '¥ 100' },
+      ],
+    }
   },
 
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {

@@ -422,3 +422,36 @@ GET /api/v1/demos?status=approved&author=public
 3. 直接 `POST /demos/from-url`（匿名）→ 拿到 `slug`（`pending` 或 `approved`）
 4. 若需即时上线：配置并带上 `UPLOAD_CODE`（找站点管理员要）
 5. 可选：`GET /demos/{slug}` 校验状态；管理员在后台审核 `pending` 的公开上传
+
+## 7. 站点统计 + 赞助榜（关于本站页）
+
+### GET `/api/v1/stats/visits`（公开，无需登录）
+
+返回站点访问统计：
+
+```json
+{
+  "today": 168,
+  "yesterday": 132,
+  "total": 45678,
+  "last7": [
+    { "date": "2026-08-13", "count": 120 },
+    { "date": "2026-08-14", "count": 135 }
+  ]
+}
+```
+
+- `today` / `yesterday`：按日去重后的站点访问量；「近 48 小时」由前端 `today + yesterday` 计算
+- `total`：累计
+- `last7`：近 7 天逐日计数，**升序（旧→新），当天在最后**，前端画柱状图
+- **计数方式**：后端 request middleware 只统计整站页面入口对应的 API（`/api/v1`、`/api/v1/demos`、`/api/v1/announcements`、`/api/v1/tags/tag-keys`），并按「天 + 每 IP 去重」——同一天同一访客只计 1 次；跨天滚动；只保留近 90 天。不计静态资源与普通 API 打点。
+
+### GET `/api/v1/stats/sponsors`（公开）
+
+返回赞助榜。当前**尚未接入赞助系统**，返回空榜：
+
+```json
+{ "total_amount": "", "updated_at": "2026-08-19", "sponsors": [] }
+```
+
+前端约定：无缓存、不鉴权；失败（网络/404/5xx）各自兜底成空态，不阻塞页面。

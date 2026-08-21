@@ -14,6 +14,8 @@ import type {
   Paginated,
   SessionLog,
   Settings,
+  SiteStats,
+  SponsorBoard,
   Tag,
   TagKeyInfo,
   UpdateDemoPayload,
@@ -210,6 +212,16 @@ const realApi = {
   },
   async updateUser(id: number, patch: Partial<Pick<User, 'role' | 'status'>>): Promise<User> {
     const { data } = await http.patch(`/users/${id}`, patch)
+    return data
+  },
+
+  // ---------- 站点统计 / 赞助榜（关于本站页） ----------
+  async getSiteStats(): Promise<SiteStats> {
+    const { data } = await http.get('/stats/visits')
+    return data
+  },
+  async getSponsors(): Promise<SponsorBoard> {
+    const { data } = await http.get('/stats/sponsors')
     return data
   },
 

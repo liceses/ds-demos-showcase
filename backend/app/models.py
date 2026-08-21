@@ -161,6 +161,16 @@ class Setting(Base):
     value: Mapped[str] = mapped_column(String(500), nullable=False)
 
 
+class VisitDaily(Base):
+    """站点访问统计：按「天 + IP 去重」；ips 存当天已计的访客 IP（JSON 数组）。"""
+
+    __tablename__ = "visit_daily"
+
+    date: Mapped[str] = mapped_column(String(10), primary_key=True)  # YYYY-MM-DD
+    count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    ips: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+
+
 class Announcement(Base):
     __tablename__ = "announcements"
 

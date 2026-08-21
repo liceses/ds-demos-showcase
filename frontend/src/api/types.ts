@@ -204,3 +204,28 @@ export interface Announcement {
   created_by: number | null
   created_at: string
 }
+
+/** 站点访问统计（关于本站页） */
+export interface VisitStat {
+  date: string
+  count: number
+}
+export interface SiteStats {
+  today: number
+  yesterday: number
+  total: number
+  /** 近 7 天，按日期升序（旧→新），用于趋势图 */
+  last7: VisitStat[]
+}
+
+/** 赞助榜 */
+export interface Sponsor {
+  name: string
+  amount: string
+  message?: string
+}
+export interface SponsorBoard {
+  sponsors: Sponsor[]
+  total_amount: string
+  updated_at?: string
+}

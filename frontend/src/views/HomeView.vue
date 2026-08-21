@@ -62,7 +62,10 @@ onMounted(async () => {
 <template>
   <section class="page-hero">
     <span class="eyebrow">AI 网页 Demo 作品集</span>
-    <h1 class="huge">AI 全民<br />制作人</h1>
+    <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
+      <h1 class="huge">AI 全民<br />制作人</h1>
+      <span class="home-title-hint">关于本站 →</span>
+    </RouterLink>
     <p class="sub">
       这里收集由 AI 模型生成的网页 Demo —— 每个作品都附带生成会话日志与版本时间线，过程全透明。
       <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">查看公告 →</a>

@@ -136,6 +136,33 @@ def extract_zip(zip_bytes: bytes, slug: str, require_index: bool = True) -> None
             seen.add(final)
             shutil.move(str(p), str(sessions_out / final))
 
+    # 会话日志只进 OSS、不占服务器磁盘（OSS 未启用时保留本地兜底）
+    _offload_sessions_to_oss(slug)
+
+
+def _offload_sessions_to_oss(slug: str) -> None:
+    """若启用 OSS：把会话日志上传到 OSS（demos/{slug}/sessions/）并清空本地磁盘。
+    OSS 未启用则保留本地（功能照常）。"""
+    if not oss.enabled():
+        return
+    sessions_dir = demo_sessions_dir(slug)
+    if not sessions_dir.exists():
+        return
+    prefix = f"demos/{slug}/sessions"
+    oss.delete_prefix(prefix + "/")
+    for p in sessions_dir.rglob("*"):
+        if p.is_file():
+            rel = p.relative_to(sessions_dir).as_posix()
+            content_type = "application/json" if p.suffix in (".json", ".jsonl") else "text/plain; charset=utf-8"
+            oss.put_file(
+                f"{prefix}/{rel}",
+                p,
+                content_type,
+                extra_headers={"Content-Disposition": "inline"},
+            )
+    # 释放本地磁盘
+    shutil.rmtree(sessions_dir, ignore_errors=True)
+
 
 def dir_size(path: Path) -> int:
     total = 0

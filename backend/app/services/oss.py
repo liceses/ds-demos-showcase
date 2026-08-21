@@ -77,6 +77,21 @@ def delete_object(key: str) -> None:
         pass
 
 
+def list_prefix(prefix: str) -> list[dict]:
+    """列出某前缀下的对象信息（key / size / last_modified）。"""
+    if not enabled():
+        return []
+    bucket = _bucket()
+    out = []
+    for obj in oss2.ObjectIterator(bucket, prefix=prefix):
+        out.append({
+            "key": obj.key,
+            "size": obj.size,
+            "last_modified": obj.last_modified,
+        })
+    return out
+
+
 def delete_prefix(prefix: str) -> None:
     """删除某前缀下的所有对象（演示用，默认每次最多 1000 个）。"""
     if not enabled():

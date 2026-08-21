@@ -298,6 +298,7 @@ commit_message / keep_old_version  同前（编辑时）
 - 详情接口（`GET /demos/{slug}`）额外返回 `prompt` / `video_url`
 - 相关推荐：`GET /demos/{slug}/related?limit=30` → 按标签重合+同类型+热度+随机排序的候选池（排除自身），前端拿整池本地「换一批」，无需再请求
 - **DSH 会话轨迹**：上传 zip 时若含 `*.jsonl` / `session*.json` / `trace*.json/l`（如 dsh 导出的 `session.jsonl`），自动提取进该 demo 的「会话日志」；前端对 `.jsonl` 用 DSH 轨迹渲染器展示（用户消息/AI 回复/工具调用/推理/模型信息）
+- **会话日志（session logs）**：非热资源，只存 OSS（`demos/{slug}/sessions/`），本地不落盘；`GET /demos/{slug}/session-logs` 列 OSS，`GET /demos/{slug}/session-logs/{filename}` 经后端代理 + **每 IP 限流 60 次/小时（429）**，不暴露 OSS 公网直链——防 bot 爬取刷 OSS 下行流量
 
 ### 前端对齐建议
 

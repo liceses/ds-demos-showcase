@@ -7,6 +7,7 @@ import random
 import re
 import shutil
 import socket
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -48,6 +49,48 @@ def _anon_rate_limit(request: Request) -> None:
     if len(_anon_uploads[ip]) >= ANON_RATE_LIMIT:
         raise HTTPException(status_code=429, detail=f"匿名上传过于频繁（{ANON_RATE_LIMIT} 次/小时），请稍后再试或登录", )
     _anon_uploads[ip].append(now)
+
+
+# ---- 高并发缓存：相关推荐 / 首页随机（锁只护缓存字典，不护 DB 查询）----
+_CACHE_LOCK = threading.Lock()
+_RELATED_CACHE: dict[str, tuple[float, list]] = {}
+_RANDOM_EXP = 0.0
+_RANDOM_IDS: list[int] = []
+_RANDOM_TTL = 60  # 秒
+_RANDOM_TTL_REL = 60  # related 缓存秒数
+
+
+def _related_cache_get(slug: str) -> list | None:
+    with _CACHE_LOCK:
+        hit = _RELATED_CACHE.get(slug)
+        if hit and hit[0] > time.time():
+            return hit[1]
+    return None
+
+
+def _related_cache_set(slug: str, result: list) -> None:
+    with _CACHE_LOCK:
+        _RELATED_CACHE[slug] = (time.time() + _RANDOM_TTL_REL, result)
+
+
+def _random_ids(db, page: int, page_size: int) -> list[int]:
+    """返回一次随机序下的 [offset, offset+page_size) 的已上架 demo id（60s 缓存整份随机序）。
+    锁只护缓存；DB 查询在锁外执行（复用请求会话），避免锁内二次开会话导致连接竞争/500。"""
+    global _RANDOM_IDS, _RANDOM_EXP
+    with _CACHE_LOCK:
+        fresh = time.time() <= _RANDOM_EXP and bool(_RANDOM_IDS)
+        ids = list(_RANDOM_IDS) if fresh else None
+    if ids is None:
+        # 锁外：用请求会话查库 + 洗牌
+        live_ids = [d for (d,) in db.query(Demo.id).filter(Demo.status == "approved").all()]
+        random.shuffle(live_ids)
+        with _CACHE_LOCK:
+            if time.time() > _RANDOM_EXP:
+                _RANDOM_IDS = live_ids
+                _RANDOM_EXP = time.time() + _RANDOM_TTL
+            ids = live_ids
+    start = (page - 1) * page_size
+    return ids[start : start + page_size]
 
 
 def _find_demo(db: Session, slug: str) -> Demo:
@@ -238,15 +281,24 @@ def list_demos(
 
     if sort == "popular":
         query = query.order_by(Demo.view_count.desc(), Demo.created_at.desc(), Demo.id.desc())
+        total = query.count()
+        items = query.offset((page - 1) * page_size).limit(page_size).all()
     elif sort == "random":
-        # 首页精选整批随机
-        query = query.order_by(func.random())
+        # 首页精选整批随机：缓存整份随机 id 序（60s），避免每次 ORDER BY RANDOM() 全表扫
+        total = query.count()
+        ids = _random_ids(db, page, page_size)
+        if ids:
+            items = db.query(Demo).filter(Demo.id.in_(ids)).all()
+            order = {did: i for i, did in enumerate(ids)}
+            items.sort(key=lambda d: order.get(d.id, 10**9))
+        else:
+            items = []
     else:
         # 次级键 id 兜底：同一秒发布的 demo 也有确定顺序，避免刷新/翻页抖动
         query = query.order_by(Demo.created_at.desc(), Demo.id.desc())
+        total = query.count()
+        items = query.offset((page - 1) * page_size).limit(page_size).all()
 
-    total = query.count()
-    items = query.offset((page - 1) * page_size).limit(page_size).all()
     return Paginated(
         items=[serialize_demo(db, d) for d in items],
         total=total,
@@ -269,8 +321,16 @@ def related_demos(
     limit: int = Query(default=30, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    """相关推荐候选池：按标签重合度 + 同类型 + 热度 + 随机抖动排序（排除自身）。
-    返回 top N；前端拿整池后本地洗牌「换一批」，无需再发请求。"""
+    """相关推荐候选池：标签重合度 + 同类型 + 热度 + 随机（60s 缓存，缓解高并发）。"""
+    cached = _related_cache_get(slug)
+    if cached is None:
+        cached = _compute_related(db, slug)
+        _related_cache_set(slug, cached)
+    return cached[:limit]
+
+
+def _compute_related(db: Session, slug: str) -> list:
+    """计算相关推荐（结果已序列化为字典；锁外执行 DB 查询）。"""
     current = _find_demo(db, slug)
     cur_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in current.tag_associations}
     cur_type = current.demo_type
@@ -296,7 +356,7 @@ def related_demos(
         scored.append((score, d))
 
     scored.sort(key=lambda x: -x[0])
-    return [serialize_demo(db, d) for _, d in scored[:limit]]
+    return [serialize_demo(db, d) for _, d in scored[:50]]
 
 
 def _validate_demo_type(t: str) -> str:

@@ -116,12 +116,11 @@ async function load(reset = false) {
 function reset() {
   if (loading.value) return
   refreshing.value = true
-  // 立即清空并回顶，显示明确加载态；避免「旧卡留着→数据返回后一次性整体替换」的突然消失/出现
+  // 立即清空，显示明确加载态；不回顶，避免点击按钮时滚动条跳动
   demos.value = []
   error.value = ''
   page.value = 1
   hasMore.value = true
-  window.scrollTo({ top: 0, behavior: 'auto' })
   void load(true)
 }
 

@@ -2600,7 +2600,6 @@ table.data tr.inconsistent td {
   font-weight: 800;
   color: var(--ink);
   cursor: pointer;
-  z-index: 1;
 }
 .mode-rail-knob {
   position: absolute;
@@ -2608,6 +2607,7 @@ table.data tr.inconsistent td {
   left: 0;
   width: 50%;
   height: 100%;
+  z-index: 2;
   background: var(--ink);
   color: var(--paper);
   display: flex;

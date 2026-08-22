@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { api } from '../api'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -42,6 +43,8 @@ router.beforeEach(async (to) => {
 router.afterEach((to) => {
   const base = 'AI 全民制作人'
   document.title = to.meta.title ? `${String(to.meta.title)} · ${base}` : base
+  // 页面访问打点：一次路由切换 = 一次浏览（原始 PV +1）
+  api.reportVisit()
 })
 
 export default router

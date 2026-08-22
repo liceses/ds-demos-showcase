@@ -444,10 +444,10 @@ GET /api/v1/demos?status=approved&author=public
 }
 ```
 
-- `today` / `yesterday`：**页面访问量（原始 PV）**，一次访问 +1；「近 48 小时」由前端 `today + yesterday` 计算
+- `today` / `yesterday`：**页面访问量（原始 PV）**，一次页面浏览计 1；「近 48 小时」由前端 `today + yesterday` 计算
 - `total`：累计 PV
 - `last7`：近 7 天逐日 PV，**升序（旧→新），当天在最后**，前端画柱状图
-- **计数方式**：后端 request middleware 统计整站页面入口对应的 API，**累加式**（`count += 增量`，绝不覆盖历史值），跨天滚动，只保留近 90 天；`ips` 字段保留当日去重 IP（UV 备用）
+- **计数方式**：前端每次路由切换打点 `POST /api/v1/stats/visit`（原始 PV +1，带每 IP 每分钟 30 次限流），后端内存缓冲 + 定时落库，**累加式**（绝不覆盖历史值），跨天滚动，只保留近 90 天；`ips` 字段保留当日去重 IP（UV 备用）
 
 ### GET `/api/v1/stats/sponsors`（公开）
 

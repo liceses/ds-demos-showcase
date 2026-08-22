@@ -1,6 +1,9 @@
+import asyncio
+import time
+from collections import defaultdict
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -11,12 +14,36 @@ from ..services import visits
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
+# 页面打点限流：每 IP 每分钟最多 30 次（防 bot 刷 PV）
+_visit_hits: dict[str, list[float]] = defaultdict(list)
+_VISIT_RATE = 30  # 次/分钟/IP
+
+
+def _visit_rate_limit(request: Request) -> None:
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    now = time.time()
+    _visit_hits[ip] = [t for t in _visit_hits[ip] if t > now - 60]
+    if len(_visit_hits[ip]) >= _VISIT_RATE:
+        raise HTTPException(status_code=429, detail="访问统计打点过于频繁", )
+    _visit_hits[ip].append(now)
+
 
 # ---------- 公开 ----------
 @router.get("/visits")
 def stats_visits() -> dict:
     """站点访问统计：today/yesterday/total/last7（升序，当天在最后）。公开。"""
     return visits.get_stats()
+
+
+@router.post("/visit")
+async def stats_visit(request: Request) -> dict:
+    """页面访问打点：前端每次页面浏览发一次（原始 PV +1）。带每 IP 限流。"""
+    _visit_rate_limit(request)
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
+    await asyncio.to_thread(visits.record_visit, ip)
+    return {"ok": True}
 
 
 @router.get("/sponsors")

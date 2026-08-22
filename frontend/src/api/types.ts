@@ -96,6 +96,8 @@ export interface DemoDetail extends DemoSummary {
   video_url?: string | null
   file_size?: number
   storage_size?: number
+  /** 单文件项目（下载按钮显示「下载文件」而非「下载 ZIP」） */
+  single_file?: boolean
   inconsistency?: boolean
   timeline?: DemoTimelineEntry[]
   /** Mock 模式专用：iframe srcdoc */

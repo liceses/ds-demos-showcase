@@ -2387,3 +2387,51 @@ table.data tr.inconsistent td {
 .search-submit {
   flex-shrink: 0;
 }
+
+/* RatingWidget 布局（替代内联样式） */
+.rating-section {
+  padding: 8px 0 0;
+}
+.rating-card {
+  padding: 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.rating-stars {
+  display: flex;
+  gap: 6px;
+}
+.rating-star:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+}
+.rating-meta {
+  line-height: 1.5;
+  min-width: 220px;
+  flex: 1;
+}
+.rating-sub {
+  font-size: 12px;
+  color: #666;
+}
+.rating-god {
+  color: var(--teal);
+  font-weight: 700;
+}
+.rating-ghost {
+  color: var(--red);
+  font-weight: 700;
+}
+.rating-sub .sep {
+  margin: 0 6px;
+}
+.rating-legend {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+}
+.rating-anon-hint {
+  margin-top: 6px;
+}

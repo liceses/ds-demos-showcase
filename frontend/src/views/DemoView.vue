@@ -4,13 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { Comment, DemoDetail, DemoSummary, RatingStats, SessionLog } from '../api/types'
+import type { Comment, DemoDetail, DemoSummary, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import CommentTree from '../components/CommentTree.vue'
 import DemoCard from '../components/DemoCard.vue'
-import { getDeviceId } from '../utils/anon'
+import RatingWidget from '../components/RatingWidget.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,42 +38,6 @@ const relatedPool = ref<DemoSummary[]>([])
 const relatedShown = ref<DemoSummary[]>([])
 const relatedSeen = ref<string[]>([])
 const relatedLoading = ref(false)
-
-// 评分：1~5（5=神作，1=鬼作）；匿名用 localStorage device_id
-const rating = ref<RatingStats | null>(null)
-const ratingLoading = ref(false)
-const deviceId = ref('')
-
-async function loadRating() {
-  deviceId.value = getDeviceId()
-  try {
-    rating.value = await api.getRating(slug, auth.isLoggedIn() ? undefined : deviceId.value)
-  } catch {
-    rating.value = null
-  }
-}
-
-async function setScore(score: number) {
-  if (ratingLoading.value) return
-  ratingLoading.value = true
-  try {
-    const did = auth.isLoggedIn() ? undefined : deviceId.value
-    rating.value = rating.value?.my_score === score
-      ? await api.unrateDemo(slug, did)
-      : await api.rateDemo(slug, score, did)
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    ratingLoading.value = false
-  }
-}
-
-const SCORE_LABEL: Record<number, string> = { 5: '神作', 4: '佳作', 3: '一般', 2: '差', 1: '鬼作' }
-function scoreLabel(score: number | null | undefined) {
-  return score ? SCORE_LABEL[score] || `${score} 分` : '未评分'
-}
-
-const maxDist = computed(() => Math.max(1, ...(rating.value?.distribution?.map((d) => d.count) || [1])))
 
 function drawRelated() {
   if (!relatedPool.value.length) return
@@ -116,7 +80,6 @@ async function load() {
     ])
     sessionLogs.value = s
     comments.value = cm
-    await loadRating()
     await loadRelated()
     drawRelated()
     if (!relatedShown.value.length && relatedPool.value.length) drawRelated()
@@ -210,7 +173,7 @@ onMounted(load)
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
         <div class="btn-group">
           <template v-if="demo.demo_type === 'link'">
-            <a class="btn btn-sm btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 ↗</a>
+            <a class="btn btn-sm btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 →</a>
           </template>
           <template v-else>
             <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? '下载文件' : '下载 ZIP' }}</button>
@@ -224,41 +187,7 @@ onMounted(load)
     </section>
 
     <!-- 评分 -->
-    <section class="section" style="padding: 8px 0 0">
-      <div class="card card-default rating-card" style="padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
-        <div class="rating-stars" style="display: flex; gap: 6px">
-          <button
-            v-for="s in [1,2,3,4,5]"
-            :key="s"
-            class="rating-star"
-            :class="{ active: (rating?.my_score ?? 0) >= s, mine: rating?.my_score === s }"
-            type="button"
-            :disabled="ratingLoading"
-            :title="`${s} 分`"
-            @click="setScore(s)"
-          >★</button>
-        </div>
-        <div style="line-height: 1.5">
-          <div class="rating-avg"><b>{{ rating?.avg ?? demo.rating_avg ?? 0 }}</b> / 5
-            <span class="muted">（{{ rating?.count ?? demo.rating_count ?? 0 }} 人评）</span>
-            <span class="hint" style="margin-left: 8px">{{ scoreLabel(rating?.my_score) }}</span>
-          </div>
-          <div class="muted" style="font-size: 12px">
-            <span style="color:#4ecdc4">神 {{ rating?.god ?? demo.rating_god ?? 0 }}</span> ·
-            <span style="color:#f38181">鬼 {{ rating?.ghost ?? demo.rating_ghost ?? 0 }}</span>
-            <span v-if="rating?.my_score" class="hint" style="margin-left: 8px">我的评分：{{ rating.my_score }}（再点一次取消）</span>
-          </div>
-          <div v-if="rating?.distribution?.length" class="rating-dist">
-            <div v-for="d in rating.distribution" :key="d.score" class="rating-dist-col" :title="`${d.score} 分：${d.count} 票`">
-              <div class="rating-dist-bar" :class="'dist-' + d.score" :style="{ height: Math.max(4, Math.round((d.count / maxDist) * 42)) + 'px' }"></div>
-              <div class="rating-dist-score">{{ d.score }}</div>
-            </div>
-          </div>
-          <div class="muted" style="font-size: 11px; margin-top: 4px">1 鬼作 · 2 差 · 3 一般 · 4 佳作 · 5 神作</div>
-          <p v-if="!auth.isLoggedIn()" class="hint" style="margin-top: 6px">匿名评分会在当前浏览器记住，换浏览器/清缓存后无法找回</p>
-        </div>
-      </div>
-    </section>
+    <RatingWidget :slug="demo.slug" />
 
     <template v-if="demo.demo_type === 'web'">
       <IframePreview
@@ -300,14 +229,14 @@ onMounted(load)
               <p style="line-height: 1.8">{{ demo.description }}</p>
 
               <template v-if="demo.prompt">
-                <h2 style="margin: 22px 0 12px">💬 第一轮提示词</h2>
+                <h2 style="margin: 22px 0 12px">第一轮提示词</h2>
                 <div class="card card-mint" style="padding: 16px; border-left: 4px solid var(--ink)">
                   <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; font-family: var(--font-mono); font-size: 13px">{{ demo.prompt }}</p>
                 </div>
               </template>
 
               <template v-if="demo.video_url">
-                <h2 style="margin: 22px 0 12px">🎬 介绍视频</h2>
+                <h2 style="margin: 22px 0 12px">介绍视频</h2>
                 <a class="btn btn-sm btn-outline" :href="demo.video_url" target="_blank" rel="noopener">观看介绍视频 ↗</a>
               </template>
 

@@ -61,9 +61,12 @@ async def count_visits(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
     if request.method == "GET" and path in _PAGE_VIEW_PATHS:
-        fwd = request.headers.get("x-forwarded-for", "")
-        ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")
-        visits.record_visit(ip)  # 纯内存，不再每请求写 DB
+        try:
+            fwd = request.headers.get("x-forwarded-for", "")
+            ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")
+            visits.record_visit(ip)  # 纯内存；统计失败静默，绝不 500
+        except Exception:  # noqa: BLE001
+            pass
     return response
 
 

@@ -507,7 +507,7 @@ GET /api/v1/demos?status=approved&author=public
 ```json
 { "score": 5, "device_id": "匿名设备ID(登录用户可不传)" }
 ```
-返回 `{my_score, avg, count, god, ghost}`；再传同分 = 覆盖，点同分取消用 DELETE。
+返回 `{my_score, avg, count, god, ghost, distribution:[{score,count}...]}`（distribution 为 1~5 各档票数，升序，供前端分布条）；再传同分 = 覆盖，点同分取消用 DELETE。
 
 #### 撤分
 `DELETE /api/v1/demos/{slug}/rating?device_id=xxx` → 返回更新后的统计。

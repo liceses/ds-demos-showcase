@@ -73,6 +73,7 @@ export interface RatingStats {
   count: number
   god: number
   ghost: number
+  distribution?: { score: number; count: number }[]
 }
 
 export interface DemoTimelineEntry {

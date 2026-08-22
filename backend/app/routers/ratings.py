@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -80,12 +81,22 @@ def _rating_out(db: Session, demo: Demo, rater_key: str | None) -> RatingOut:
     if rater_key:
         row = db.query(DemoRating).filter(DemoRating.demo_id == demo.id, DemoRating.rater_key == rater_key).first()
         my = row.score if row else None
+    # 评分分布：1~5 各档票数（升序）
+    dist_rows = (
+        db.query(DemoRating.score, func.count(DemoRating.id))
+        .filter(DemoRating.demo_id == demo.id)
+        .group_by(DemoRating.score)
+        .all()
+    )
+    dist_map = {score: count for score, count in dist_rows}
+    distribution = [{"score": s, "count": dist_map.get(s, 0)} for s in range(1, 6)]
     return RatingOut(
         my_score=my,
         avg=demo.rating_avg,
         count=demo.rating_count,
         god=demo.rating_god,
         ghost=demo.rating_ghost,
+        distribution=distribution,
     )
 
 

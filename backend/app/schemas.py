@@ -144,6 +144,7 @@ class RatingOut(BaseModel):
     count: int = 0
     god: int = 0
     ghost: int = 0
+    distribution: list[dict] = []  # [{score:1..5, count}] 各档票数，按 score 升序
 
 
 class DemoTimelineOut(BaseModel):

@@ -24,6 +24,7 @@
 | 封面 | 上传不限大小，后端自动压缩为 WebP（最大边 1280），`cover_url` 返回 `/media/covers/xxx.webp`。 |
 | 公告 | `GET /announcements` 4 类：`manual`/`auto`/`update`/`demo_update`（`update`=站点 git commit 实时合并，60s 缓存）。 |
 | 推荐 | `GET /demos/{slug}/related?limit=30`（相关候选池）；`GET /demos?sort=random`（精选随机）。 |
+| 访问统计 | `GET /stats/visits` 读 PV；**前端必须打点**：`router.afterEach` 调 `api.reportVisit()`（`POST /stats/visit`），一次路由切换 = 1 PV。 |
 
 ## 3. 匿名（public）上传
 - 未登录上传：作者恒为 `public`（无 nickname），`author_id=null`；不能评论、不能编辑/删除。
@@ -55,6 +56,7 @@
 - **DSH 会话轨迹**：上传 zip 若含 `*.jsonl`（如 dsh 的 `session.jsonl`）会自动进「会话日志」；`selectedLog` 以 `.jsonl` 结尾时用 `DshTrajectoryView` 渲染（不要用 MarkdownView）。
 - **会话日志**：默认本地存储；启用 OSS 备份时只存 OSS、本地不落盘。前端经 `GET /session-logs/{filename}` 取（每 IP 限流 60/小时，429 请稍后再试）。渲染能力保留，但不必当热内容设计；429 需静默降级。
 - **存储模式**：预览/封面/zip 默认服务器本地下发（OSS 仅备份），前端无感知（`preview_url`/`/preview/`/`/media/` 路径仍可用）。
+- **访问统计打点**：`router.afterEach` 已调 `api.reportVisit()`（fire-and-forget，失败静默）；**不要移除**，否则 About 页 PV 不涨。打点接口有每 IP 限流，429 静默即可。
 
 ## 7. 上云/本地
 - 联调：`frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指 `localhost:8000`。

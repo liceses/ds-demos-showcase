@@ -9,6 +9,7 @@ const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
 const selectedTags = ref<string[]>([])
 const q = ref('')
+const submittedQ = ref('')
 const sort = ref<'newest' | 'popular'>('newest')
 const page = ref(1)
 const pageSize = 12
@@ -86,7 +87,7 @@ async function load(reset = false) {
     const res = await api.listDemos({
       status: 'approved',
       tags: selectedTags.value,
-      q: q.value.trim() || undefined,
+      q: submittedQ.value || undefined,
       sort: sort.value,
       page: p,
       page_size: pageSize,
@@ -126,10 +127,27 @@ function applySort() {
   reset()
 }
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-function onSearch() {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(reset, 300)
+// 显式提交搜索：只有回车 / 点「搜索」才触发请求
+function submitSearch() {
+  const next = q.value.trim()
+  if (next === submittedQ.value) {
+    // 没有新词：空提交等同清除搜索；否则什么都不做
+    if (!next && submittedQ.value) {
+      submittedQ.value = ''
+      reset()
+    }
+    return
+  }
+  submittedQ.value = next
+  reset()
+}
+
+function clearSearch() {
+  q.value = ''
+  if (submittedQ.value) {
+    submittedQ.value = ''
+    reset()
+  }
 }
 
 onMounted(async () => {
@@ -165,14 +183,28 @@ onBeforeUnmount(() => observer?.disconnect())
 
   <section class="section" style="padding-top: 8px">
     <div class="toolbar">
-      <div class="search-box">
-        <input v-model="q" class="input" type="search" placeholder="搜索标题 / 描述 / 标签…" @input="onSearch" />
-        <span class="search-icon">Q</span>
+      <div class="search-box" style="flex: 1">
+        <input
+          v-model="q"
+          class="input"
+          type="search"
+          placeholder="搜索标题 / 描述 / 标签…（回车提交）"
+          @keyup.enter="submitSearch"
+        />
+        <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">搜索</button>
       </div>
       <div class="tabs" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
       </div>
+    </div>
+
+    <!-- 已应用搜索词 -->
+    <div v-if="submittedQ" class="filter-row tag-selected-row">
+      <span class="filter-label">搜索</span>
+      <button class="tag-chip active" type="button" title="点击移除搜索" @click="clearSearch">
+        {{ submittedQ }}<span class="chip-x">X</span>
+      </button>
     </div>
 
     <!-- 已选标签：置顶、可单独/一键移除 -->

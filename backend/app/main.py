@@ -10,7 +10,7 @@ from .database import Base, SessionLocal, engine
 from .models import Setting, Tag, TagKey, User
 from .routers import admin, announcements, auth, comments, demos, meta, sessions, stats, tags, users
 from .security import hash_password
-from .services import oss, visits
+from .services import oss
 from .services.settings_service import KEY_AUTO_APPROVE
 
 app = FastAPI(title="DS 民间科研成果展示 API", version="0.1.0")
@@ -44,27 +44,6 @@ app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(announcements.router, prefix=API_PREFIX)
 app.include_router(meta.router, prefix=API_PREFIX)
 app.include_router(stats.router, prefix=API_PREFIX)
-
-
-# 站点访问统计：按「天 + IP 去重」。只统计整站页面入口对应的 API
-# （首页/作品库/标签等页面加载必调这些接口），不计静态资源与普通 API 打点。
-_PAGE_VIEW_PATHS = {
-    API_PREFIX,
-    f"{API_PREFIX}/demos",
-    f"{API_PREFIX}/announcements",
-    f"{API_PREFIX}/tags/tag-keys",
-}
-
-
-@app.middleware("http")
-async def count_visits(request: Request, call_next):
-    response = await call_next(request)
-    path = request.url.path
-    if request.method == "GET" and path in _PAGE_VIEW_PATHS:
-        fwd = request.headers.get("x-forwarded-for", "")
-        ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")
-        visits.record_visit(ip)  # 纯内存，不再每请求写 DB
-    return response
 
 
 @app.get(API_PREFIX)

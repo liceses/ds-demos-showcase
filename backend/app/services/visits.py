@@ -1,7 +1,5 @@
-"""站点访问统计：按「天 + IP 去重」，跨天滚动，只保留近 90 天。
-
-性能：不每个请求写 DB —— 进程内缓存当日 IP 集合，后台线程定时落库（默认 30s）。
-单 worker 下内存安全；读统计时合并当日内存值保证实时。
+"""站点访问统计：原始 PV（一次页面打点 +1），跨天滚动，只保留近 90 天。
+同时维护当日 IP 集合（UV 备用）。内存缓冲 + 后台线程定时落库（默认 30s）。
 """
 
 import json
@@ -17,40 +15,45 @@ FLUSH_INTERVAL = 30  # 秒
 _lock = threading.Lock()
 _today: str = date.today().isoformat()
 _today_ips: set[str] = set()
+_today_count: int = 0
 
 
 def _roll_if_needed() -> None:
-    global _today
+    global _today, _today_count
     now = date.today().isoformat()
     if now != _today:
         _flush_locked()   # 跨天：先落盘昨天的
         _today = now
         _today_ips.clear()
+        _today_count = 0
 
 
-def record_visit(ip: str) -> None:
-    """记录一次整站访问：同一天该 IP 已计过则忽略。仅内存操作，不落库。"""
-    if not ip:
-        return
+def record_visit(ip: str | None = None) -> None:
+    """记录一次页面访问：原始 PV +1（ip 可选，仅用于 UV 集合）。仅内存，不落库。"""
     with _lock:
         _roll_if_needed()
-        _today_ips.add(ip)
+        _today_count += 1
+        if ip:
+            _today_ips.add(ip)
 
 
 def _flush_locked() -> None:
     """把今日内存计数写入 DB（调用方须已持有 _lock）。"""
     day = _today
-    ips = list(_today_ips)
-    if not ips:
+    if _today_count == 0:
         return
+    ips = list(_today_ips)
     db = SessionLocal()
     try:
         row = db.get(VisitDaily, day)
         if row is None:
             row = VisitDaily(date=day, count=0, ips="[]")
             db.add(row)
-        row.count = len(ips)
-        row.ips = json.dumps(ips, ensure_ascii=False)
+        # 原始 PV：累加本次批次的计数量
+        row.count += _today_count
+        existing = set(json.loads(row.ips)) if row.ips else set()
+        existing.update(ips)
+        row.ips = json.dumps(list(existing), ensure_ascii=False)
         db.commit()
         cutoff = (date.today() - timedelta(days=KEEP_DAYS)).isoformat()
         db.query(VisitDaily).filter(VisitDaily.date < cutoff).delete()
@@ -78,7 +81,7 @@ def get_stats() -> dict:
     """返回 today/yesterday/total/last7（升序，当天在最后）。"""
     with _lock:
         _roll_if_needed()
-        live_today = len(_today_ips)
+        live_today = _today_count
 
     db = SessionLocal()
     try:
@@ -89,7 +92,7 @@ def get_stats() -> dict:
     today = date.today().isoformat()
     yesterday = (date.today() - timedelta(days=1)).isoformat()
 
-    today_count = max(rows.get(today, 0), live_today)
+    today_count = rows.get(today, 0) + live_today
     yesterday_count = rows.get(yesterday, 0)
     rows[today] = today_count
     total = sum(rows.values())

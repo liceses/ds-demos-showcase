@@ -336,7 +336,7 @@ async function submit() {
         <label class="field">
           Demo 类型
           <select v-model="demoType" class="input" style="max-width: 280px">
-            <option value="web">网页应用（zip 含 index.html）</option>
+            <option value="web">网页应用（zip 或单个 .html/.svg）</option>
             <option value="zip">文件包（zip，无需 index.html）</option>
             <option value="link">外部链接（不传文件）</option>
           </select>

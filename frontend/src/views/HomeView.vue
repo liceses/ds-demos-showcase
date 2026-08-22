@@ -7,12 +7,49 @@ import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 
 const featured = ref<DemoSummary[]>([])
+const featuredPool = ref<DemoSummary[]>([])
+const featuredBusy = ref(false)
 const grayTest = ref<DemoSummary[]>([])
 const announcements = ref<Announcement[]>([])
 const totalDemos = ref(0)
 const totalTags = ref(0)
 const loading = ref(true)
 const error = ref('')
+
+/** 原地 Fisher-Yates 洗牌，返回新数组 */
+function shuffle<T>(arr: T[]): T[] {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+async function loadFeatured() {
+  // 首页精选整批随机（后端随机序缓存 60s）：拉 24 个做池，本地洗牌后取 6，
+  // 保证「换一批」点击即时变化、且能从池里换入不同 demo（不依赖后端 60s 缓存过期）。
+  const f = await api.listDemos({ status: 'approved', sort: 'random', page: 1, page_size: 24 })
+  featuredPool.value = f.items
+  featured.value = shuffle(f.items).slice(0, 6)
+  totalDemos.value = f.total
+}
+
+async function shuffleFeatured() {
+  if (featuredBusy.value) return
+  if (!featuredPool.value.length) {
+    featuredBusy.value = true
+    try {
+      await loadFeatured()
+    } finally {
+      featuredBusy.value = false
+    }
+    return
+  }
+  featuredBusy.value = true
+  featured.value = shuffle(featuredPool.value).slice(0, 6)
+  featuredBusy.value = false
+}
 
 // 灰测模型标签（mock/后端统一为 model:ds-unknown）
 const GRAY_TAG = 'model:ds-unknown'
@@ -33,13 +70,6 @@ const entries = [
   { to: '/leaderboard', stamp: '榜', cls: 'rank', title: '排行榜', desc: '神作 / 鬼作 / 评分口碑榜' },
   { to: '/upload', stamp: '投', cls: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
 ]
-
-async function loadFeatured() {
-  // 首页精选整批随机，可点「换一批」刷新
-  const f = await api.listDemos({ status: 'approved', sort: 'random', page: 1, page_size: 6 })
-  featured.value = f.items
-  totalDemos.value = f.total
-}
 
 onMounted(async () => {
   try {
@@ -111,7 +141,9 @@ onMounted(async () => {
     <div class="section-head">
       <h2 class="section-title">精选作品</h2>
       <div class="filter-row" style="margin: 0">
-        <button class="btn btn-sm btn-secondary" type="button" @click="loadFeatured">换一批</button>
+        <button class="btn btn-sm btn-secondary" type="button" :disabled="featuredBusy" @click="shuffleFeatured">
+          {{ featuredBusy ? '换一批…' : '换一批' }}
+        </button>
         <RouterLink class="btn btn-sm btn-outline" to="/demos">查看全部 →</RouterLink>
       </div>
     </div>

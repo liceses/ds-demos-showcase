@@ -89,7 +89,7 @@ onMounted(loadRating)
             <div
               class="rating-dist-bar"
               :class="'dist-' + d.score"
-              :style="{ height: Math.max(4, Math.round((d.count / maxDist) * 42)) + 'px' }"
+              :style="{ height: Math.max(3, Math.round((d.count / maxDist) * 22)) + 'px' }"
             ></div>
             <div class="rating-dist-score">{{ d.score }}</div>
           </div>

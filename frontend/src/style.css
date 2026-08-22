@@ -2346,19 +2346,19 @@ table.data tr.inconsistent td {
 
 /* 评分分布条 */
 .rating-dist {
-  display: flex;
+  display: inline-flex;
   align-items: flex-end;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 4px;
+  margin: 0;
 }
 .rating-dist-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 .rating-dist-bar {
-  width: 18px;
+  width: 14px;
   border: 2px solid var(--ink);
   background: var(--ink);
 }
@@ -2390,14 +2390,14 @@ table.data tr.inconsistent td {
 
 /* RatingWidget 布局（替代内联样式） */
 .rating-section {
-  padding: 8px 0 0;
+  padding: 8px 0 28px;
 }
 .rating-card {
-  padding: 10px 16px;
+  padding: 8px 14px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 10px 16px;
   transform: none;
   background: var(--paper);
   border-left: 10px solid var(--teal);
@@ -2405,30 +2405,41 @@ table.data tr.inconsistent td {
 }
 .rating-stars {
   display: flex;
-  gap: 4px;
-  padding: 5px 10px;
+  gap: 3px;
+  padding: 4px 8px;
   background: var(--yellow);
   border: 3px solid var(--ink);
   box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
   flex-shrink: 0;
 }
 .rating-card .rating-star {
-  font-size: 18px;
-  width: 30px;
-  height: 30px;
+  font-size: 16px;
+  width: 26px;
+  height: 26px;
 }
 .rating-star:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
 }
 .rating-meta {
-  line-height: 1.45;
-  min-width: 200px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  line-height: 1.2;
+  min-width: 0;
   flex: 1;
 }
+.rating-meta > div,
+.rating-meta > p {
+  margin: 0;
+}
 .rating-sub {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
   color: #666;
+  white-space: nowrap;
 }
 .rating-god {
   color: var(--teal);
@@ -2442,10 +2453,15 @@ table.data tr.inconsistent td {
   margin: 0 6px;
 }
 .rating-legend {
+  display: inline-flex;
+  align-items: center;
   font-size: 11px;
   color: #666;
-  margin-top: 4px;
+  white-space: nowrap;
 }
 .rating-anon-hint {
-  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  margin: 0;
 }

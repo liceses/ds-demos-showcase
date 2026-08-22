@@ -31,6 +31,7 @@ def _roll_if_needed() -> None:
 def record_visit(ip: str | None = None) -> None:
     """记录一次页面访问：原始 PV +1（ip 可选，仅用于 UV 集合）。仅内存，不落库。
     统计失败必须静默，绝不能影响业务请求。"""
+    global _today_count
     try:
         with _lock:
             _roll_if_needed()

@@ -213,7 +213,7 @@ onMounted(load)
             <a class="btn btn-sm btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 ↗</a>
           </template>
           <template v-else>
-            <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">下载 ZIP</button>
+            <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? '下载文件' : '下载 ZIP' }}</button>
           </template>
           <template v-if="canEdit">
             <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>

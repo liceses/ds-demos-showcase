@@ -155,6 +155,7 @@ def _ensure_demo_columns() -> None:
         ("guest_name", "TEXT"),
         ("idempotency_key", "TEXT"),
         ("content_hash", "TEXT"),
+        ("single_file", "TEXT"),
         ("rating_sum", "INTEGER NOT NULL DEFAULT 0"),
         ("rating_count", "INTEGER NOT NULL DEFAULT 0"),
         ("rating_avg", "REAL NOT NULL DEFAULT 0"),

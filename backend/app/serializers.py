@@ -53,12 +53,12 @@ def serialize_demo(
             ""
             if demo.demo_type != "web"
             else (
-                f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/index.html"
+                f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/index.{'svg' if demo.single_file == 'svg' else 'html'}"
                 if settings.preview_base_url
                 else (
-                    oss.public_url(f"demos/{demo.slug}/files/index.html")
+                    oss.public_url(f"demos/{demo.slug}/files/index.{'svg' if demo.single_file == 'svg' else 'html'}")
                     if oss.enabled() and not settings.oss_serve_local
-                    else f"/preview/{demo.slug}/index.html"
+                    else f"/preview/{demo.slug}/index.{'svg' if demo.single_file == 'svg' else 'html'}"
                 )
             )
         ),

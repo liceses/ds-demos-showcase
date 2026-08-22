@@ -58,6 +58,7 @@
 - **会话日志**：默认本地存储；启用 OSS 备份时只存 OSS、本地不落盘。前端经 `GET /session-logs/{filename}` 取（每 IP 限流 60/小时，429 请稍后再试）。渲染能力保留，但不必当热内容设计；429 需静默降级。
 - **存储模式**：预览/封面/zip 默认服务器本地下发（OSS 仅备份），前端无感知（`preview_url`/`/preview/`/`/media/` 路径仍可用）。
 - **访问统计打点**：`router.afterEach` 已调 `api.reportVisit()`（fire-and-forget，失败静默）；**不要移除**，否则 About 页 PV 不涨。打点接口有每 IP 限流，429 静默即可。
+- **单文件上传**：`web` 类型可直接传 `.html/.svg`（按后缀识别）；上传页文件框 accept 已含 `.html,.svg`，提示「单 HTML 必须自包含」。详情页 `demo.single_file` 存在时下载按钮显示「下载文件」。
 
 ## 7. 上云/本地
 - 联调：`frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指 `localhost:8000`。

@@ -238,7 +238,7 @@ async function submit() {
       return
     }
   } else if (!editSlug && !zipFile.value) {
-    error.value = '请上传 zip 文件'
+    error.value = '请上传文件（zip 或单个 .html/.svg）'
     return
   }
   const tags = collectTags()
@@ -383,9 +383,13 @@ async function submit() {
           </div>
         </label>
         <label v-if="demoType !== 'link'" class="field">
-          zip 文件{{ editSlug ? '（可选，不选则保留原文件）' : '' }}
-          <input class="input" type="file" accept=".zip,application/zip" @change="onZipChange" />
-          <span class="hint">{{ demoType === 'web' ? '根目录需包含 index.html；大小上限 50MB' : '不要求 index.html；大小上限 50MB' }}</span>
+          文件{{ editSlug ? '（可选，不选则保留原文件）' : '' }}
+          <input class="input" type="file" accept=".zip,application/zip,.html,.htm,.svg,text/html,image/svg+xml" @change="onZipChange" />
+          <span class="hint">
+            {{ demoType === 'web'
+              ? '支持 zip（根目录需含 index.html）或单个 .html/.svg；单 HTML 必须自包含（内联 CSS/JS，双击可直接打开）'
+              : 'zip 文件包（不要求 index.html）' }}
+          </span>
         </label>
         <label v-if="editSlug" class="field">
           更新说明 / commit 信息（可选）

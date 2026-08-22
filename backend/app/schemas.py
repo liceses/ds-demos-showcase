@@ -106,6 +106,7 @@ class DemoFromUrlIn(BaseModel):
     prompt: str = ""
     video_url: str | None = None
     zip_url: str | None = None
+    file_url: str | None = None  # 单文件（.html/.svg）直传 URL，与 zip_url 二选一
     cover_url: str | None = None
     upload_code: str = ""  # 可选：信任通道密钥（未登录时生效，匹配则直接放行）
     idempotency_key: str = ""  # 可选：8~128 位幂等键；重试带同一 key 不重复创建

@@ -164,6 +164,17 @@ def _offload_sessions_to_oss(slug: str) -> None:
     shutil.rmtree(sessions_dir, ignore_errors=True)
 
 
+def save_single_file(slug: str, ext: str, data: bytes) -> None:
+    """保存单文件 demo（html/svg）到 files 目录。ext: 'html' | 'svg'。"""
+    validate_slug(slug)
+    target = demo_files_dir(slug)
+    if target.exists():
+        shutil.rmtree(target, ignore_errors=True)
+    target.mkdir(parents=True, exist_ok=True)
+    name = "index.html" if ext == "html" else "index.svg"
+    (target / name).write_bytes(data)
+
+
 def dir_size(path: Path) -> int:
     total = 0
     for p in path.rglob("*"):

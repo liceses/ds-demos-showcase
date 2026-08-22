@@ -365,6 +365,28 @@ def _validate_demo_type(t: str) -> str:
     return t
 
 
+def _single_file_ext(filename: str | None) -> str | None:
+    """按后缀识别单文件模式：.html/.htm → html，.svg → svg，否则 None。"""
+    if not filename:
+        return None
+    name = filename.lower()
+    if name.endswith(".html") or name.endswith(".htm"):
+        return "html"
+    if name.endswith(".svg"):
+        return "svg"
+    return None
+
+
+def _validate_single_file(data: bytes, ext: str) -> None:
+    head = data[:512].lstrip().lower()
+    if ext == "html":
+        if not (head.startswith(b"<!doctype html") or head.startswith(b"<html")):
+            raise HTTPException(status_code=400, detail="单 HTML 文件内容不是有效 HTML（需以 <!doctype html> 或 <html 开头）", )
+    else:
+        if not head.startswith(b"<svg"):
+            raise HTTPException(status_code=400, detail="单 SVG 文件内容不是有效 SVG（需以 <svg 开头）", )
+
+
 def _clean_url(url: str | None) -> str | None:
     """可选链接字段：空则 None，非空必须是 http(s)。"""
     if not url or not url.strip():
@@ -490,13 +512,15 @@ async def _create_demo_record(
     trusted: bool = False,
     idempotency_key: str | None = None,
     content_hash: str | None = None,
+    single_file: str | None = None,
 ) -> tuple[Demo, str, bool]:
     """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
     - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
     - trusted（UPLOAD_CODE 匹配）或已登录且 auto_approve → approved
     - 匿名：auto_approve_all 或 auto_approve_public 任一开 → approved，否则 pending
     - idempotency_key：唯一幂等键；并发/重试撞键时返回已有结果（created=False）
-    - content_hash：zip 内容哈希（按作者去重，由调用方校验后传入）
+    - content_hash：zip/单文件内容哈希（按作者去重，由调用方校验后传入）
+    - single_file：'html' | 'svg' 时按单文件保存（zip_bytes 存的是该文件内容）
     - 解压/OSS/封面上传等阻塞操作放线程池，避免卡死事件循环（批量上传时其他接口还能响应）
     """
     demo = Demo(
@@ -509,6 +533,7 @@ async def _create_demo_record(
         video_url=_clean_url(video_url),
         idempotency_key=idempotency_key,
         content_hash=content_hash,
+        single_file=single_file,
     )
     demo.author_id = user.id if user else None
 
@@ -539,7 +564,11 @@ async def _create_demo_record(
             raise
         return existing, existing.status, False
 
-    if zip_bytes is not None:
+    if single_file:
+        # 单文件 demo：直接保存 index.html / index.svg，不解压
+        await asyncio.to_thread(storage.save_single_file, slug, single_file, zip_bytes or b"")
+        await asyncio.to_thread(_oss_upload_safe, slug)
+    elif zip_bytes is not None:
         try:
             await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo_type == "web"))
         except HTTPException:
@@ -632,12 +661,22 @@ async def create_demo(
     if demo_type == "link":
         ext_url = _validate_url(external_url, "external_url")
         zip_bytes = None
+        single_file = None
     else:
         ext_url = None
-        if file is None or not file.filename or not file.filename.lower().endswith(".zip"):
-            raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
-        zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
-        # 内容一致性：同一作者不允许上传相同 zip（管理员 force 可跳过）
+        if file is None or not file.filename:
+            raise HTTPException(status_code=400, detail="必须上传文件", )
+        single_file = _single_file_ext(file.filename)
+        if single_file:
+            if demo_type == "zip":
+                raise HTTPException(status_code=400, detail="zip 类型需要上传 zip 文件", )
+            zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+            _validate_single_file(zip_bytes, single_file)
+        else:
+            if not file.filename.lower().endswith(".zip"):
+                raise HTTPException(status_code=400, detail="必须上传 zip 文件或单个 .html/.svg 文件", )
+            zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+        # 内容一致性：同一作者不允许上传相同内容（管理员 force 可跳过）
         content_hash = _zip_content_hash(zip_bytes)
         dup = _find_duplicate_demo(db, content_hash, _author_scope_id(user))
         if dup is not None and not allow_force:
@@ -667,6 +706,7 @@ async def create_demo(
         trusted=trusted,
         idempotency_key=idem_key,
         content_hash=content_hash,
+        single_file=single_file,
     )
     return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
@@ -697,15 +737,25 @@ async def create_demo_from_url(
         ext_url = _validate_url(body.external_url, "external_url")
         zip_bytes = None
         content_hash = None
+        single_file = None
     else:
         ext_url = None
-        if not body.zip_url:
-            raise HTTPException(status_code=422, detail="web/zip 类型需要提供 zip_url", )
-        # URL 下载放线程池，避免阻塞事件循环
-        zip_bytes = await asyncio.to_thread(_download_url_bytes, body.zip_url, settings.max_upload_size, "zip")
-        if zip_bytes[:2] != b"PK":
-            raise HTTPException(status_code=400, detail="zip_url 下载的内容不是 zip 文件", )
-        # 内容一致性：同一作者不允许上传相同 zip（管理员 force 可跳过）
+        single_file = None
+        if body.file_url:
+            if demo_type == "zip":
+                raise HTTPException(status_code=422, detail="zip 类型需要提供 zip_url", )
+            single_file = _single_file_ext(urlparse(body.file_url).path)
+            if not single_file:
+                raise HTTPException(status_code=422, detail="file_url 需为 .html/.svg 单文件", )
+            zip_bytes = await asyncio.to_thread(_download_url_bytes, body.file_url, settings.max_upload_size, "单文件")
+            _validate_single_file(zip_bytes, single_file)
+        elif body.zip_url:
+            zip_bytes = await asyncio.to_thread(_download_url_bytes, body.zip_url, settings.max_upload_size, "zip")
+            if zip_bytes[:2] != b"PK":
+                raise HTTPException(status_code=400, detail="zip_url 下载的内容不是 zip 文件", )
+        else:
+            raise HTTPException(status_code=422, detail="web/zip 类型需要提供 zip_url 或 file_url", )
+        # 内容一致性：同一作者不允许上传相同内容（管理员 force 可跳过）
         allow_force = bool(body.force) and user is not None and user.role == "admin"
         content_hash = _zip_content_hash(zip_bytes)
         dup = _find_duplicate_demo(db, content_hash, _author_scope_id(user))
@@ -738,6 +788,7 @@ async def create_demo_from_url(
         trusted=trusted,
         idempotency_key=idem_key,
         content_hash=content_hash,
+        single_file=single_file,
     )
     return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
@@ -799,22 +850,34 @@ async def update_demo(
         changed = True
     if file is not None and file.filename:
         if demo.demo_type == "link":
-            raise HTTPException(status_code=400, detail="链接类型不需要上传 zip 文件", )
-        if not file.filename.lower().endswith(".zip"):
-            raise HTTPException(status_code=400, detail="必须上传 zip 文件", )
-        zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
-        # 内容一致性：不更新成与同作者其他 demo 相同的 zip（排除自身；管理员 force 可跳过）
+            raise HTTPException(status_code=400, detail="链接类型不需要上传文件", )
+        single_file = _single_file_ext(file.filename)
+        if single_file:
+            if demo.demo_type == "zip":
+                raise HTTPException(status_code=400, detail="zip 类型需要上传 zip 文件", )
+            zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+            _validate_single_file(zip_bytes, single_file)
+        else:
+            if not file.filename.lower().endswith(".zip"):
+                raise HTTPException(status_code=400, detail="必须上传 zip 文件或单个 .html/.svg 文件", )
+            zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+        # 内容一致性：不更新成与同作者其他 demo 相同的内容（排除自身；管理员 force 可跳过）
         allow_force = bool(force) and user.role == "admin"
         h = _zip_content_hash(zip_bytes)
         dup = _find_duplicate_demo(db, h, demo.author_id, exclude_id=demo.id)
         if dup is not None and not allow_force:
             raise _dup_conflict(dup)
         demo.content_hash = h
+        demo.single_file = single_file
         # 勾选「保留旧版本」：先把当前文件快照成独立 demo 页面，再覆盖
         if keep_old_version:
             snapshot = _snapshot_demo(db, demo, user)
-        await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo.demo_type == "web"))
-        await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
+        if single_file:
+            await asyncio.to_thread(storage.save_single_file, slug, single_file, zip_bytes)
+            await asyncio.to_thread(_oss_upload_safe, slug)
+        else:
+            await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo.demo_type == "web"))
+            await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
         changed = True
 
     demo.updated_at = datetime.utcnow()
@@ -875,6 +938,7 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
         status=demo.status,
         author_id=demo.author_id,
         content_hash=demo.content_hash,
+        single_file=demo.single_file,
     )
     db.add(snapshot)
     db.flush()
@@ -921,6 +985,15 @@ def download_demo(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="链接类型无下载，请直接访问外部链接", )
     demo.download_count += 1
     db.commit()
+
+    # 单文件 demo：直接返回原文件（不打包 zip）
+    if demo.single_file:
+        name = "index.html" if demo.single_file == "html" else "index.svg"
+        path = storage.demo_files_dir(slug) / name
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="Demo 文件不存在", )
+        media = "text/html" if demo.single_file == "html" else "image/svg+xml"
+        return FileResponse(path, media_type=media, filename=f"{slug}.{demo.single_file}")
 
     # OSS 已启用且非「本地服务」模式：302 到 OSS 公有读地址，不占服务器带宽
     if oss.enabled() and not settings.oss_serve_local:

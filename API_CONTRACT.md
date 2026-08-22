@@ -251,9 +251,11 @@
 
 | 类型 | 含义 | 必填 | 预览/展示 |
 |---|---|---|---|
-| `web`（默认） | 网页应用 | zip（根目录需含 index.html） | iframe 在线预览 + 下载 ZIP |
+| `web`（默认） | 网页应用 | zip（根目录需含 index.html）**或单个 .html/.svg** | iframe 在线预览 + 下载 |
 | `zip` | 文件包（不大的 zip，无需 index.html） | zip（解包后仅提供下载） | 无 iframe，展示「文件包项目」+ 下载 ZIP |
 | `link` | 外部链接（服务器不存内容） | `external_url`（http/https） | 「打开链接」按钮跳转，无下载 |
+
+> **单文件模式**：`web` 类型可直接上传单个 `.html` 或 `.svg`（按后缀自动识别，无需新增类型）。单 HTML 会存为 `index.html`、单 SVG 存为 `index.svg` 并直接预览；下载返回原文件（不打包 zip）。**单 HTML 必须自包含**（内联 CSS/JS，双击可直接打开）。from-url 用 `file_url` 字段传单文件 URL。
 
 ### 新增表单字段（create/update demo）
 

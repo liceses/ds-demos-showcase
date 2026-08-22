@@ -91,6 +91,8 @@ class Demo(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True, index=True)
     # zip 内容哈希（sha256，按作者去重，普通索引）
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # 单文件模式：html | svg（直接上传单个自包含文件，非 zip）
+    single_file: Mapped[str | None] = mapped_column(String(8), nullable=True)
     # 评分冗余统计列（榜单排序用，随评分事务更新）
     rating_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

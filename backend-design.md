@@ -119,6 +119,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 - **鉴权**：JWT（HS256，`JWT_SECRET` 需改）；token 同时放 body 与 HttpOnly Cookie，兼容 Bearer 头。密码用 PBKDF2（std 库，无额外依赖）。
 - **上传限制**：zip `MAX_UPLOAD_SIZE` 默认 200MB；封面**无大小限制**（自动压缩，见下节）。
+- **单文件模式**：`web` 类型可直接上传单个 `.html/.svg`（按后缀识别，`single_file` 列标记）；单 HTML 存 `index.html`、单 SVG 存 `index.svg`，预览/下载直接服务原文件；单 HTML 要求自包含。
 - **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **DSH 会话轨迹**：dsh 导出的 zip 常含 `session.jsonl`；`extract_zip` 会把 `*.jsonl` / `session*.json` / `trace*.json/l` 自动提取进 `demo_sessions/`，进「会话日志」Tab；前端对 `.jsonl` 走 DSH 渲染器。

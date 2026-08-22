@@ -339,6 +339,29 @@ label.field .hint {
   transition: width 0.2s ease;
 }
 
+/* 评分 */
+.rating-star {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  color: #ccc;
+  font-size: 22px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+.rating-star.active {
+  color: var(--yellow);
+}
+.rating-star.mine {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px var(--teal);
+}
+.rating-star:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* DSH 会话轨迹 */
 .dsh-trajectory {
   display: flex;

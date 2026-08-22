@@ -127,6 +127,23 @@ class DemoSummaryOut(BaseModel):
     status: str
     demo_type: str = "web"
     external_url: str | None = None
+    rating_avg: float = 0.0
+    rating_count: int = 0
+    rating_god: int = 0
+    rating_ghost: int = 0
+
+
+class RatingIn(BaseModel):
+    score: int = Field(ge=1, le=5)
+    device_id: str = Field(default="", max_length=128)
+
+
+class RatingOut(BaseModel):
+    my_score: int | None = None
+    avg: float = 0.0
+    count: int = 0
+    god: int = 0
+    ghost: int = 0
 
 
 class DemoTimelineOut(BaseModel):

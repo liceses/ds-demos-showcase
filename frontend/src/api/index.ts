@@ -23,6 +23,7 @@ import type {
   User,
   RecognitionInput,
   RecognitionItem,
+  RatingStats,
 } from './types'
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
@@ -104,6 +105,22 @@ const realApi = {
   },
   async getRelated(slug: string): Promise<DemoSummary[]> {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/related`)
+    return data
+  },
+  async getRating(slug: string, deviceId?: string): Promise<RatingStats> {
+    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/rating`, { params: deviceId ? { device_id: deviceId } : {} })
+    return data
+  },
+  async rateDemo(slug: string, score: number, deviceId?: string): Promise<RatingStats> {
+    const { data } = await http.post(`/demos/${encodeURIComponent(slug)}/rating`, { score, device_id: deviceId || '' })
+    return data
+  },
+  async unrateDemo(slug: string, deviceId?: string): Promise<RatingStats> {
+    const { data } = await http.delete(`/demos/${encodeURIComponent(slug)}/rating`, { params: deviceId ? { device_id: deviceId } : {} })
+    return data
+  },
+  async getLeaderboard(sort: 'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat', page = 1, pageSize = 20): Promise<Paginated<DemoSummary>> {
+    const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize } })
     return data
   },
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {

@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     jwt_secret: str = "please-change-me-to-a-long-random-string"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 天
+    # 匿名评分 salt：用于 sha256(device_id|ip|salt) 生成 rater_key；留空则用 jwt_secret 派生
+    rating_salt: str = ""
 
     auto_approve: bool = True
     # 匿名上传信任通道：agent 带 UPLOAD_CODE 上传 = 可信（绕过审核，见 API_CONTRACT 第 6 节）

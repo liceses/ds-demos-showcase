@@ -161,6 +161,14 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **保留**：近 90 天，跨天滚动。
 - **防 500**：`record_visit` 与打点接口均 try/except 静默，统计异常绝不影响业务请求。
 
+### 用户评分 + 排行榜
+
+- **模型**：`demo_ratings`（demo_id FK CASCADE、user_id FK SET NULL、rater_key、score 1~5、UNIQUE(demo_id,rater_key)）；`demos` 冗余 `rating_sum/count/avg/god/ghost`。
+- **身份**：登录 `user:{id}`；匿名 `anon:sha256(device_id|ip|rating_salt)`（salt 缺省派生自 jwt_secret），每 IP 每 demo 10 次/小时 + 全局 60 次/小时限流。
+- **事务**：评分 upsert/撤分与冗余列重算同事务（`_recalc_demo_rating`），保证榜单不漂移。
+- **榜单**：`GET /leaderboard?sort=avg|god|ghost|net|count|heat`，只统计 approved；质量榜排除 0 评。
+- **外键**：`database.py` 已开启 `PRAGMA foreign_keys=ON`，删 demo 级联删评分。
+
 ---
 
 ## 5. 部署（后续）

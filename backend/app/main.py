@@ -8,7 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .models import Setting, Tag, TagKey, User
-from .routers import admin, announcements, auth, comments, demos, meta, sessions, stats, tags, users
+from .routers import admin, announcements, auth, comments, demos, meta, ratings, sessions, stats, tags, users
 from .security import hash_password
 from .services import oss
 from .services.settings_service import KEY_AUTO_APPROVE
@@ -44,6 +44,7 @@ app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(announcements.router, prefix=API_PREFIX)
 app.include_router(meta.router, prefix=API_PREFIX)
 app.include_router(stats.router, prefix=API_PREFIX)
+app.include_router(ratings.router, prefix=API_PREFIX)
 
 
 @app.get(API_PREFIX)
@@ -154,6 +155,11 @@ def _ensure_demo_columns() -> None:
         ("guest_name", "TEXT"),
         ("idempotency_key", "TEXT"),
         ("content_hash", "TEXT"),
+        ("rating_sum", "INTEGER NOT NULL DEFAULT 0"),
+        ("rating_count", "INTEGER NOT NULL DEFAULT 0"),
+        ("rating_avg", "REAL NOT NULL DEFAULT 0"),
+        ("rating_god", "INTEGER NOT NULL DEFAULT 0"),
+        ("rating_ghost", "INTEGER NOT NULL DEFAULT 0"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:

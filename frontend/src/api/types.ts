@@ -61,6 +61,18 @@ export interface DemoSummary {
   /** web=网页应用 zip=文件包 link=外部链接 */
   demo_type?: 'web' | 'zip' | 'link'
   external_url?: string | null
+  rating_avg?: number
+  rating_count?: number
+  rating_god?: number
+  rating_ghost?: number
+}
+
+export interface RatingStats {
+  my_score: number | null
+  avg: number
+  count: number
+  god: number
+  ghost: number
 }
 
 export interface DemoTimelineEntry {

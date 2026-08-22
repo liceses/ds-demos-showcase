@@ -23,6 +23,7 @@ import type {
   User,
   RecognitionInput,
   RecognitionItem,
+  RatingStats,
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
@@ -717,6 +718,38 @@ export const mockApi = {
       .slice(0, 30)
       .map((x) => x.d)
     return clone(others)
+  },
+  async getRating(slug: string, _deviceId?: string): Promise<RatingStats> {
+    await delay(100)
+    const d = findDemo(slug)
+    if (!d) throw new Error('Demo 不存在')
+    return { my_score: null, avg: d.rating_avg || 4.0, count: d.rating_count || 12, god: d.rating_god || 6, ghost: d.rating_ghost || 1 }
+  },
+  async rateDemo(slug: string, score: number, _deviceId?: string): Promise<RatingStats> {
+    await delay(150)
+    const d = findDemo(slug)
+    if (!d) throw new Error('Demo 不存在')
+    d.rating_count = (d.rating_count || 0) + 1
+    d.rating_avg = score
+    return { my_score: score, avg: d.rating_avg, count: d.rating_count, god: score === 5 ? (d.rating_god || 0) + 1 : d.rating_god || 0, ghost: score === 1 ? (d.rating_ghost || 0) + 1 : d.rating_ghost || 0 }
+  },
+  async unrateDemo(slug: string, _deviceId?: string): Promise<RatingStats> {
+    await delay(100)
+    const d = findDemo(slug)
+    if (!d) throw new Error('Demo 不存在')
+    return { my_score: null, avg: d.rating_avg || 0, count: d.rating_count || 0, god: d.rating_god || 0, ghost: d.rating_ghost || 0 }
+  },
+  async getLeaderboard(sort: 'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat', page = 1, pageSize = 20): Promise<Paginated<DemoSummary>> {
+    await delay(200)
+    let items = [...demos].filter((d) => d.status === 'approved')
+    if (sort === 'god') items.sort((a, b) => (b.rating_god || 0) - (a.rating_god || 0))
+    else if (sort === 'ghost') items.sort((a, b) => (b.rating_ghost || 0) - (a.rating_ghost || 0))
+    else if (sort === 'count') items.sort((a, b) => (b.rating_count || 0) - (a.rating_count || 0))
+    else if (sort === 'heat') items.sort((a, b) => (b.view_count + b.download_count) - (a.view_count + a.download_count))
+    else if (sort === 'net') items.sort((a, b) => ((b.rating_god || 0) - (b.rating_ghost || 0)) - ((a.rating_god || 0) - (a.rating_ghost || 0)))
+    else items.sort((a, b) => (b.rating_avg || 0) - (a.rating_avg || 0))
+    const start = (page - 1) * pageSize
+    return { items: clone(items.slice(start, start + pageSize)), total: items.length, page, page_size: pageSize }
   },
 
   async getSiteStats(): Promise<SiteStats> {

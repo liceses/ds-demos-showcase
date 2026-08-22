@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { Comment, DemoDetail, DemoSummary, SessionLog } from '../api/types'
+import type { Comment, DemoDetail, DemoSummary, RatingStats, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import MarkdownView from '../components/MarkdownView.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
@@ -37,6 +37,44 @@ const relatedPool = ref<DemoSummary[]>([])
 const relatedShown = ref<DemoSummary[]>([])
 const relatedSeen = ref<string[]>([])
 const relatedLoading = ref(false)
+
+// 评分：1~5（5=神作，1=鬼作）；匿名用 localStorage device_id
+const rating = ref<RatingStats | null>(null)
+const ratingLoading = ref(false)
+const deviceId = ref('')
+
+function getDeviceId(): string {
+  let id = localStorage.getItem('dsh_device_id')
+  if (!id) {
+    id = (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string
+    localStorage.setItem('dsh_device_id', id)
+  }
+  return id
+}
+
+async function loadRating() {
+  deviceId.value = getDeviceId()
+  try {
+    rating.value = await api.getRating(slug, auth.isLoggedIn() ? undefined : deviceId.value)
+  } catch {
+    rating.value = null
+  }
+}
+
+async function setScore(score: number) {
+  if (ratingLoading.value) return
+  ratingLoading.value = true
+  try {
+    const did = auth.isLoggedIn() ? undefined : deviceId.value
+    rating.value = rating.value?.my_score === score
+      ? await api.unrateDemo(slug, did)
+      : await api.rateDemo(slug, score, did)
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    ratingLoading.value = false
+  }
+}
 
 function drawRelated() {
   if (!relatedPool.value.length) return
@@ -79,6 +117,7 @@ async function load() {
     ])
     sessionLogs.value = s
     comments.value = cm
+    await loadRating()
     await loadRelated()
     drawRelated()
     if (!relatedShown.value.length && relatedPool.value.length) drawRelated()
@@ -181,6 +220,34 @@ onMounted(load)
             <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
             <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
           </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- 评分 -->
+    <section class="section" style="padding: 8px 0 0">
+      <div class="card card-default rating-card" style="padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+        <div class="rating-stars" style="display: flex; gap: 6px">
+          <button
+            v-for="s in [1,2,3,4,5]"
+            :key="s"
+            class="rating-star"
+            :class="{ active: (rating?.my_score ?? 0) >= s, mine: rating?.my_score === s }"
+            type="button"
+            :disabled="ratingLoading"
+            :title="`${s} 分`"
+            @click="setScore(s)"
+          >★</button>
+        </div>
+        <div style="line-height: 1.5">
+          <div class="rating-avg"><b>{{ rating?.avg ?? demo.rating_avg ?? 0 }}</b> / 5
+            <span class="muted">（{{ rating?.count ?? demo.rating_count ?? 0 }} 人评）</span>
+          </div>
+          <div class="muted" style="font-size: 12px">
+            <span style="color:#4ecdc4">神 {{ rating?.god ?? demo.rating_god ?? 0 }}</span> ·
+            <span style="color:#f38181">鬼 {{ rating?.ghost ?? demo.rating_ghost ?? 0 }}</span>
+            <span v-if="rating?.my_score" class="hint" style="margin-left: 8px">我的评分：{{ rating.my_score }}（再点一次取消）</span>
+          </div>
         </div>
       </div>
     </section>

@@ -70,6 +70,10 @@ def serialize_demo(
         "comment_count": comment_count,
         "created_at": demo.created_at,
         "status": demo.status,
+        "rating_avg": round(demo.rating_avg or 0.0, 2),
+        "rating_count": demo.rating_count,
+        "rating_god": demo.rating_god,
+        "rating_ghost": demo.rating_ghost,
     }
 
     if detail:

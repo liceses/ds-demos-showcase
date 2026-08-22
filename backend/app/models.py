@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -90,6 +91,12 @@ class Demo(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True, index=True)
     # zip 内容哈希（sha256，按作者去重，普通索引）
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # 评分冗余统计列（榜单排序用，随评分事务更新）
+    rating_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rating_avg: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    rating_god: Mapped[int] = mapped_column(Integer, default=0, nullable=False)    # score == 5 神作
+    rating_ghost: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # score == 1 鬼作
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
@@ -97,6 +104,7 @@ class Demo(Base):
     tag_associations: Mapped[list["DemoTag"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     comments: Mapped[list["Comment"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     session_logs: Mapped[list["SessionLog"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    ratings: Mapped[list["DemoRating"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     timeline: Mapped[list["DemoTimeline"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
 
 
@@ -185,6 +193,23 @@ class Acknowledgment(Base):
     sort: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # 软下架
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class DemoRating(Base):
+    """用户评分：1~5 分（5=神作，1=鬼作）。登录 user:{id}；匿名 anon:{sha256}。"""
+
+    __tablename__ = "demo_ratings"
+    __table_args__ = (UniqueConstraint("demo_id", "rater_key", name="uq_demo_rater"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    rater_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)  # 1~5
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    demo: Mapped["Demo"] = relationship(back_populates="ratings")
 
 
 class Announcement(Base):

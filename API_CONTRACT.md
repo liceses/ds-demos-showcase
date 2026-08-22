@@ -491,3 +491,35 @@ GET /api/v1/demos?status=approved&author=public
 - `active=false` 软下架（公开榜不展示）
 
 前端约定：`/stats/visits`、`/stats/sponsors`、`/stats/thanks` 无缓存、不鉴权；失败各自兜底成空态，不阻塞页面。
+
+## 8. 用户评分 + 排行榜
+
+### 评分规则
+- 1~5 分整数：5=神作（神）、4=佳作、3=一般、2=差、1=鬼作（鬼）
+- 登录用户：一人一个 Demo 一票，可改分/撤分；`rater_key = user:{user_id}`
+- 匿名用户：浏览器 localStorage `device_id` + 客户端 IP + salt 生成 `rater_key`；可改分/撤分；**每 IP 每 demo 限流 10 次/小时，每 IP 全局 60 次/小时**
+- 榜单只展示 `status=approved`；质量榜（avg/god/ghost/net）排除 0 评
+
+### 接口
+
+#### 提交/修改评分
+`POST /api/v1/demos/{slug}/rating`
+```json
+{ "score": 5, "device_id": "匿名设备ID(登录用户可不传)" }
+```
+返回 `{my_score, avg, count, god, ghost}`；再传同分 = 覆盖，点同分取消用 DELETE。
+
+#### 撤分
+`DELETE /api/v1/demos/{slug}/rating?device_id=xxx` → 返回更新后的统计。
+
+#### 查看评分
+`GET /api/v1/demos/{slug}/rating?device_id=xxx` → 同上（未登录无 device_id 时 my_score=null）。
+
+#### 排行榜
+`GET /api/v1/leaderboard?sort=avg|god|ghost|net|count|heat&page=&page_size=`
+- `avg` 平均分、`god` 神作票数、`ghost` 鬼作票数、`net` 神票-鬼票、`count` 评分人数、`heat` 浏览+2*下载+评分人数
+- 返回标准 `Paginated`，item 为 DemoSummary（含 `rating_avg/count/god/ghost`）
+
+### 数据
+- `demos` 冗余列：`rating_sum/count/avg/god/ghost`，随评分事务同步
+- `demo_ratings` 表：`UNIQUE(demo_id, rater_key)`，删 demo 级联删评分，删用户评分保留但 `user_id` 置 NULL

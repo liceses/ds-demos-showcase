@@ -2343,3 +2343,32 @@ table.data tr.inconsistent td {
 .entry-card.entry-rank {
   border-top: 8px solid var(--ink);
 }
+
+/* 评分分布条 */
+.rating-dist {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+.rating-dist-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.rating-dist-bar {
+  width: 18px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+}
+.rating-dist-bar.dist-1 { background: var(--red); }
+.rating-dist-bar.dist-2 { background: var(--paper); }
+.rating-dist-bar.dist-3 { background: var(--yellow); }
+.rating-dist-bar.dist-4 { background: var(--teal); }
+.rating-dist-bar.dist-5 { background: var(--ink); }
+.rating-dist-score {
+  font-size: 10px;
+  font-weight: 700;
+  color: #555;
+}

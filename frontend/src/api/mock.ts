@@ -518,6 +518,15 @@ function ratingStore(d: DemoDetail) {
     ghost: d.rating_ghost || 1,
   }
 }
+function ratingDistribution(d: DemoDetail) {
+  return [
+    { score: 1, count: d.rating_ghost || 1 },
+    { score: 2, count: 2 },
+    { score: 3, count: 3 },
+    { score: 4, count: 2 },
+    { score: 5, count: d.rating_god || 6 },
+  ]
+}
 
 export const mockApi = {
   // ---------- 认证 ----------
@@ -745,7 +754,7 @@ export const mockApi = {
     if (!d) throw new Error('Demo 不存在')
     const st = ratingStore(d)
     const my = deviceId ? readMyScore(slug, deviceId) : null
-    return { my_score: my, avg: st.avg, count: st.count, god: st.god, ghost: st.ghost }
+    return { my_score: my, avg: st.avg, count: st.count, god: st.god, ghost: st.ghost, distribution: ratingDistribution(d) }
   },
   async rateDemo(slug: string, score: number, deviceId?: string): Promise<RatingStats> {
     await delay(150)

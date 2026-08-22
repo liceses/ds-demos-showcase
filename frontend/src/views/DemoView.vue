@@ -73,6 +73,8 @@ function scoreLabel(score: number | null | undefined) {
   return score ? SCORE_LABEL[score] || `${score} 分` : '未评分'
 }
 
+const maxDist = computed(() => Math.max(1, ...(rating.value?.distribution?.map((d) => d.count) || [1])))
+
 function drawRelated() {
   if (!relatedPool.value.length) return
   const out: DemoSummary[] = []
@@ -245,6 +247,12 @@ onMounted(load)
             <span style="color:#4ecdc4">神 {{ rating?.god ?? demo.rating_god ?? 0 }}</span> ·
             <span style="color:#f38181">鬼 {{ rating?.ghost ?? demo.rating_ghost ?? 0 }}</span>
             <span v-if="rating?.my_score" class="hint" style="margin-left: 8px">我的评分：{{ rating.my_score }}（再点一次取消）</span>
+          </div>
+          <div v-if="rating?.distribution?.length" class="rating-dist">
+            <div v-for="d in rating.distribution" :key="d.score" class="rating-dist-col" :title="`${d.score} 分：${d.count} 票`">
+              <div class="rating-dist-bar" :class="'dist-' + d.score" :style="{ height: Math.max(4, Math.round((d.count / maxDist) * 42)) + 'px' }"></div>
+              <div class="rating-dist-score">{{ d.score }}</div>
+            </div>
           </div>
           <div class="muted" style="font-size: 11px; margin-top: 4px">1 鬼作 · 2 差 · 3 一般 · 4 佳作 · 5 神作</div>
           <p v-if="!auth.isLoggedIn()" class="hint" style="margin-top: 6px">匿名评分会在当前浏览器记住，换浏览器/清缓存后无法找回</p>

@@ -934,7 +934,7 @@ export const mockApi = {
     return clone(settings)
   },
 
-  async ossSync(force = false): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
+  async ossSync(_force = false): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
     await delay(500)
     return { demos_ok: demos.length, demos_fail: 0, covers_ok: 0, covers_fail: 0 }
   },

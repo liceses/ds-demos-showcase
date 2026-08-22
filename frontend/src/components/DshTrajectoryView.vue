@@ -18,7 +18,6 @@ interface Block {
 
 const model = ref('')
 const preset = ref('')
-const meta: string[] = []
 
 function parse(): Block[] {
   const out: Block[] = []

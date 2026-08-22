@@ -1,7 +1,6 @@
-import asyncio
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -18,15 +17,6 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 def stats_visits() -> dict:
     """站点访问统计：today/yesterday/total/last7（升序，当天在最后）。公开。"""
     return visits.get_stats()
-
-
-@router.post("/visit")
-async def stats_visit(request: Request) -> dict:
-    """页面访问打点：前端每次页面浏览发一次（原始 PV +1）。"""
-    fwd = request.headers.get("x-forwarded-for", "")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
-    await asyncio.to_thread(visits.record_visit, ip)
-    return {"ok": True}
 
 
 @router.get("/sponsors")

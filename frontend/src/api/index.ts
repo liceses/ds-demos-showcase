@@ -223,10 +223,6 @@ const realApi = {
     const { data } = await http.get('/stats/visits')
     return data
   },
-  async reportVisit(): Promise<void> {
-    // 页面访问打点：原始 PV +1（失败静默，不影响浏览）
-    http.post('/stats/visit').catch(() => undefined)
-  },
   async getSponsors(): Promise<SponsorBoard> {
     const { data } = await http.get('/stats/sponsors')
     return data

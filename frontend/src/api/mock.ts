@@ -731,9 +731,6 @@ export const mockApi = {
       last7,
     }
   },
-  async reportVisit(): Promise<void> {
-    return
-  },
   async getSponsors(): Promise<SponsorBoard> {
     await delay()
     return {

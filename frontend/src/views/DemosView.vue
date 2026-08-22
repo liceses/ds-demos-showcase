@@ -202,13 +202,21 @@ onBeforeUnmount(() => observer?.disconnect())
         />
         <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">搜索</button>
       </div>
-      <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: cardMode === 'normal' }" type="button" @click="setCardMode('normal')">常规</button>
-        <button class="tab" :class="{ active: cardMode === 'prompt' }" type="button" @click="setCardMode('prompt')">提示词</button>
-        <template v-if="cardMode === 'normal'">
-          <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
-          <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
-        </template>
+      <div class="mode-tool">
+        <span class="mode-rail-stamp">模式</span>
+        <div class="mode-rail" :class="{ prompt: cardMode === 'prompt' }" role="group" aria-label="卡片模式">
+          <button class="mode-rail-item" type="button" @click="setCardMode('normal')">常规</button>
+          <button class="mode-rail-item" type="button" @click="setCardMode('prompt')">提示词</button>
+          <span class="mode-rail-knob" :class="{ prompt: cardMode === 'prompt' }">
+            {{ cardMode === 'prompt' ? '提示词' : '常规' }}
+          </span>
+        </div>
+        <span v-if="cardMode === 'prompt'" class="mode-rail-badge">PROMPT</span>
+      </div>
+
+      <div v-if="cardMode === 'normal'" class="tabs" style="margin: 0">
+        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
+        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
       </div>
     </div>
 

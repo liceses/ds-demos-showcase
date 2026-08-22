@@ -2398,6 +2398,8 @@ table.data tr.inconsistent td {
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
+  transform: none;
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
 }
 .rating-stars {
   display: flex;

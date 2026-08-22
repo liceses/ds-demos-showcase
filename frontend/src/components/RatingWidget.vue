@@ -52,7 +52,7 @@ onMounted(loadRating)
 
 <template>
   <section class="section rating-section">
-    <div class="card card-default rating-card">
+    <div class="card rating-card">
       <div class="rating-stars">
         <button
           v-for="s in [1, 2, 3, 4, 5]"

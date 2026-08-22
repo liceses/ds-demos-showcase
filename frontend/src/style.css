@@ -2634,3 +2634,15 @@ table.data tr.inconsistent td {
   box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
   flex-shrink: 0;
 }
+
+/* 视图栏：独立一行，与搜索/标签区隔 */
+.view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 3px solid var(--ink);
+}

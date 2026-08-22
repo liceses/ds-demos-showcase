@@ -191,17 +191,8 @@ onBeforeUnmount(() => observer?.disconnect())
   </section>
 
   <section class="section" style="padding-top: 8px">
-    <div class="toolbar">
-      <div class="search-box" style="flex: 1">
-        <input
-          v-model="q"
-          class="input"
-          type="search"
-          placeholder="搜索标题 / 描述 / 标签…（回车提交）"
-          @keyup.enter="submitSearch"
-        />
-        <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">搜索</button>
-      </div>
+    <!-- 视图栏：模式轨道 + 排序，独立一行，不与搜索/标签混排 -->
+    <div class="view-bar">
       <div class="mode-tool">
         <span class="mode-rail-stamp">模式</span>
         <div class="mode-rail" :class="{ prompt: cardMode === 'prompt' }" role="group" aria-label="卡片模式">
@@ -217,6 +208,19 @@ onBeforeUnmount(() => observer?.disconnect())
       <div v-if="cardMode === 'normal'" class="tabs" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box" style="flex: 1">
+        <input
+          v-model="q"
+          class="input"
+          type="search"
+          placeholder="搜索标题 / 描述 / 标签…（回车提交）"
+          @keyup.enter="submitSearch"
+        />
+        <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">搜索</button>
       </div>
     </div>
 

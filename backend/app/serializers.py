@@ -74,6 +74,7 @@ def serialize_demo(
         "rating_count": demo.rating_count,
         "rating_god": demo.rating_god,
         "rating_ghost": demo.rating_ghost,
+        "prompt": demo.prompt,
     }
 
     if detail:

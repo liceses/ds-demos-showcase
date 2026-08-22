@@ -296,7 +296,7 @@ commit_message / keep_old_version  同前（编辑时）
 }
 ```
 
-- 列表接口（`GET /demos`）也会返回 `demo_type` / `external_url`；`sort` 支持 `newest|popular|random`
+- 列表接口（`GET /demos`）也会返回 `demo_type` / `external_url` / `prompt`；`sort` 支持 `newest|popular|random|prompt`（`prompt` = 填了提示词的排前面，同组按最新，SQL 层排序跨页稳定）
 - 详情接口（`GET /demos/{slug}`）额外返回 `prompt` / `video_url`
 - 相关推荐：`GET /demos/{slug}/related?limit=30` → 按标签重合+同类型+热度+随机排序的候选池（排除自身），前端拿整池本地「换一批」，无需再请求
 - **DSH 会话轨迹**：上传 zip 时若含 `*.jsonl` / `session*.json` / `trace*.json/l`（如 dsh 导出的 `session.jsonl`），自动提取进该 demo 的「会话日志」；前端对 `.jsonl` 用 DSH 轨迹渲染器展示（用户消息/AI 回复/工具调用/推理/模型信息）

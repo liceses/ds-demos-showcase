@@ -132,6 +132,7 @@ class DemoSummaryOut(BaseModel):
     rating_count: int = 0
     rating_god: int = 0
     rating_ghost: int = 0
+    prompt: str = ""
 
 
 class RatingIn(BaseModel):

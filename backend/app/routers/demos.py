@@ -231,7 +231,7 @@ def list_demos(
     tag: list[str] = Query(default=[]),
     q: str | None = None,
     author: str | None = None,
-    sort: str = Query(default="newest", pattern="^(newest|popular|random)$"),
+    sort: str = Query(default="newest", pattern="^(newest|popular|random|prompt)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -293,6 +293,11 @@ def list_demos(
             items.sort(key=lambda d: order.get(d.id, 10**9))
         else:
             items = []
+    elif sort == "prompt":
+        # 提示词优先：填了 prompt 的排前面（SQL 层排序，跨页稳定），同组按最新
+        query = query.order_by((Demo.prompt == "").asc(), Demo.created_at.desc(), Demo.id.desc())
+        total = query.count()
+        items = query.offset((page - 1) * page_size).limit(page_size).all()
     else:
         # 次级键 id 兜底：同一秒发布的 demo 也有确定顺序，避免刷新/翻页抖动
         query = query.order_by(Demo.created_at.desc(), Demo.id.desc())

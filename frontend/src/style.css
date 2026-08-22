@@ -2333,3 +2333,13 @@ table.data tr.inconsistent td {
   color: transparent;
   background: var(--teal);
 }
+
+/* 评分迷你徽标（DemoCard） */
+.stat-mint {
+  background: var(--mint);
+}
+
+/* 首页入口：排行榜 */
+.entry-card.entry-rank {
+  border-top: 8px solid var(--ink);
+}

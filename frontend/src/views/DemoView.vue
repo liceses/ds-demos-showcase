@@ -10,6 +10,7 @@ import MarkdownView from '../components/MarkdownView.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import CommentTree from '../components/CommentTree.vue'
 import DemoCard from '../components/DemoCard.vue'
+import { getDeviceId } from '../utils/anon'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,15 +44,6 @@ const rating = ref<RatingStats | null>(null)
 const ratingLoading = ref(false)
 const deviceId = ref('')
 
-function getDeviceId(): string {
-  let id = localStorage.getItem('dsh_device_id')
-  if (!id) {
-    id = (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string
-    localStorage.setItem('dsh_device_id', id)
-  }
-  return id
-}
-
 async function loadRating() {
   deviceId.value = getDeviceId()
   try {
@@ -74,6 +66,11 @@ async function setScore(score: number) {
   } finally {
     ratingLoading.value = false
   }
+}
+
+const SCORE_LABEL: Record<number, string> = { 5: '神作', 4: '佳作', 3: '一般', 2: '差', 1: '鬼作' }
+function scoreLabel(score: number | null | undefined) {
+  return score ? SCORE_LABEL[score] || `${score} 分` : '未评分'
 }
 
 function drawRelated() {
@@ -242,12 +239,15 @@ onMounted(load)
         <div style="line-height: 1.5">
           <div class="rating-avg"><b>{{ rating?.avg ?? demo.rating_avg ?? 0 }}</b> / 5
             <span class="muted">（{{ rating?.count ?? demo.rating_count ?? 0 }} 人评）</span>
+            <span class="hint" style="margin-left: 8px">{{ scoreLabel(rating?.my_score) }}</span>
           </div>
           <div class="muted" style="font-size: 12px">
             <span style="color:#4ecdc4">神 {{ rating?.god ?? demo.rating_god ?? 0 }}</span> ·
             <span style="color:#f38181">鬼 {{ rating?.ghost ?? demo.rating_ghost ?? 0 }}</span>
             <span v-if="rating?.my_score" class="hint" style="margin-left: 8px">我的评分：{{ rating.my_score }}（再点一次取消）</span>
           </div>
+          <div class="muted" style="font-size: 11px; margin-top: 4px">1 鬼作 · 2 差 · 3 一般 · 4 佳作 · 5 神作</div>
+          <p v-if="!auth.isLoggedIn()" class="hint" style="margin-top: 6px">匿名评分会在当前浏览器记住，换浏览器/清缓存后无法找回</p>
         </div>
       </div>
     </section>
@@ -262,7 +262,7 @@ onMounted(load)
 
     <template v-else-if="demo.demo_type === 'zip'">
       <div class="card card-mint" style="padding: 32px; text-align: center">
-        <h2 style="margin-bottom: 10px">📦 文件包项目</h2>
+        <h2 style="margin-bottom: 10px">文件包项目</h2>
         <p class="muted" style="margin-bottom: 18px">这是一个项目文件包（非网页应用），不提供在线预览，请下载后本地查看。</p>
         <button class="btn btn-primary" type="button" @click="onDownload">下载 ZIP（{{ demo.download_count }} 次）</button>
       </div>
@@ -270,9 +270,9 @@ onMounted(load)
 
     <template v-else>
       <div class="card card-coral" style="padding: 32px; text-align: center">
-        <h2 style="margin-bottom: 10px">🔗 外部链接项目</h2>
+        <h2 style="margin-bottom: 10px">外部链接项目</h2>
         <p class="muted" style="margin-bottom: 18px">内容托管在外部站点，点击下方按钮跳转访问。</p>
-        <a class="btn btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 ↗</a>
+        <a class="btn btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 →</a>
       </div>
     </template>
 

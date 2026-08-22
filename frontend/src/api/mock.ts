@@ -499,6 +499,26 @@ function toTagRef(t: string | { key: string; value: string; description?: string
   return { key: t.key, value: t.value }
 }
 
+function mockRatingKey(slug: string, deviceId: string) {
+  return `ds_mock_rating_${slug}_${deviceId}`
+}
+function readMyScore(slug: string, deviceId: string): number | null {
+  try {
+    const v = localStorage.getItem(mockRatingKey(slug, deviceId))
+    return v ? Number(v) : null
+  } catch {
+    return null
+  }
+}
+function ratingStore(d: DemoDetail) {
+  return {
+    avg: d.rating_avg || 4.0,
+    count: d.rating_count || 12,
+    god: d.rating_god || 6,
+    ghost: d.rating_ghost || 1,
+  }
+}
+
 export const mockApi = {
   // ---------- 认证 ----------
   async login(username: string, password: string): Promise<AuthResponse> {
@@ -719,29 +739,64 @@ export const mockApi = {
       .map((x) => x.d)
     return clone(others)
   },
-  async getRating(slug: string, _deviceId?: string): Promise<RatingStats> {
+  async getRating(slug: string, deviceId?: string): Promise<RatingStats> {
     await delay(100)
     const d = findDemo(slug)
     if (!d) throw new Error('Demo 不存在')
-    return { my_score: null, avg: d.rating_avg || 4.0, count: d.rating_count || 12, god: d.rating_god || 6, ghost: d.rating_ghost || 1 }
+    const st = ratingStore(d)
+    const my = deviceId ? readMyScore(slug, deviceId) : null
+    return { my_score: my, avg: st.avg, count: st.count, god: st.god, ghost: st.ghost }
   },
-  async rateDemo(slug: string, score: number, _deviceId?: string): Promise<RatingStats> {
+  async rateDemo(slug: string, score: number, deviceId?: string): Promise<RatingStats> {
     await delay(150)
     const d = findDemo(slug)
     if (!d) throw new Error('Demo 不存在')
-    d.rating_count = (d.rating_count || 0) + 1
-    d.rating_avg = score
-    return { my_score: score, avg: d.rating_avg, count: d.rating_count, god: score === 5 ? (d.rating_god || 0) + 1 : d.rating_god || 0, ghost: score === 1 ? (d.rating_ghost || 0) + 1 : d.rating_ghost || 0 }
+    if (deviceId) {
+      const prev = readMyScore(slug, deviceId)
+      localStorage.setItem(mockRatingKey(slug, deviceId), String(score))
+      if (prev) {
+        // 改分：人数不变，神/鬼票回退旧值再累计新值
+        if (prev === 5) d.rating_god = Math.max(0, (d.rating_god || 0) - 1)
+        if (prev === 1) d.rating_ghost = Math.max(0, (d.rating_ghost || 0) - 1)
+      } else {
+        d.rating_count = (d.rating_count || 0) + 1
+      }
+      d.rating_avg = score // mock 简化：不精确维护历史均值
+      if (score === 5) d.rating_god = (d.rating_god || 0) + 1
+      if (score === 1) d.rating_ghost = (d.rating_ghost || 0) + 1
+    }
+    return this.getRating(slug, deviceId)
   },
-  async unrateDemo(slug: string, _deviceId?: string): Promise<RatingStats> {
+  async unrateDemo(slug: string, deviceId?: string): Promise<RatingStats> {
     await delay(100)
     const d = findDemo(slug)
     if (!d) throw new Error('Demo 不存在')
-    return { my_score: null, avg: d.rating_avg || 0, count: d.rating_count || 0, god: d.rating_god || 0, ghost: d.rating_ghost || 0 }
+    if (deviceId) {
+      const prev = readMyScore(slug, deviceId)
+      localStorage.removeItem(mockRatingKey(slug, deviceId))
+      if (prev) {
+        d.rating_count = Math.max(0, (d.rating_count || 0) - 1)
+        if (prev === 5) d.rating_god = Math.max(0, (d.rating_god || 0) - 1)
+        if (prev === 1) d.rating_ghost = Math.max(0, (d.rating_ghost || 0) - 1)
+      }
+    }
+    return this.getRating(slug, deviceId)
   },
-  async getLeaderboard(sort: 'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat', page = 1, pageSize = 20): Promise<Paginated<DemoSummary>> {
+  async getLeaderboard(
+    sort: 'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat',
+    page = 1,
+    pageSize = 20,
+    range: 'all' | 'week' | 'month' = 'all',
+  ): Promise<Paginated<DemoSummary>> {
     await delay(200)
-    let items = [...demos].filter((d) => d.status === 'approved')
+    const now = Date.now()
+    const week = 7 * 86400000
+    const month = 30 * 86400000
+    let items = [...demos].filter((d) => {
+      if (d.status !== 'approved') return false
+      if (range === 'all') return true
+      return now - new Date(d.created_at).getTime() <= (range === 'week' ? week : month)
+    })
     if (sort === 'god') items.sort((a, b) => (b.rating_god || 0) - (a.rating_god || 0))
     else if (sort === 'ghost') items.sort((a, b) => (b.rating_ghost || 0) - (a.rating_ghost || 0))
     else if (sort === 'count') items.sort((a, b) => (b.rating_count || 0) - (a.rating_count || 0))
@@ -751,6 +806,7 @@ export const mockApi = {
     const start = (page - 1) * pageSize
     return { items: clone(items.slice(start, start + pageSize)), total: items.length, page, page_size: pageSize }
   },
+
 
   async getSiteStats(): Promise<SiteStats> {
     await delay()

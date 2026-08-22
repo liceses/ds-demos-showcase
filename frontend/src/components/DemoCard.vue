@@ -40,6 +40,7 @@ function label(tag: { key: string; value: string }) {
         </span>
       </div>
       <div class="demo-stats">
+        <span v-if="demo.rating_count" class="stat stat-mint">RATE {{ Number(demo.rating_avg || 0).toFixed(1) }} ({{ demo.rating_count }})</span>
         <span class="stat stat-yellow">VIEW {{ demo.view_count }}</span>
         <span class="stat stat-teal">DL {{ demo.download_count }}</span>
         <span class="stat stat-red">CMT {{ demo.comment_count }}</span>

@@ -119,8 +119,13 @@ const realApi = {
     const { data } = await http.delete(`/demos/${encodeURIComponent(slug)}/rating`, { params: deviceId ? { device_id: deviceId } : {} })
     return data
   },
-  async getLeaderboard(sort: 'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat', page = 1, pageSize = 20): Promise<Paginated<DemoSummary>> {
-    const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize } })
+  async getLeaderboard(
+    sort: 'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat',
+    page = 1,
+    pageSize = 20,
+    range: 'all' | 'week' | 'month' = 'all',
+  ): Promise<Paginated<DemoSummary>> {
+    const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize, range } })
     return data
   },
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {

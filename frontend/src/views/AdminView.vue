@@ -245,11 +245,11 @@ async function saveSettings() {
 }
 
 const ossSyncing = ref(false)
-async function runOssSync() {
+async function runOssSync(force = false) {
   ossSyncing.value = true
   try {
-    const r = await api.ossSync()
-    ui.toast(`OSS 同步完成：demo ${r.demos_ok} 成功 / ${r.demos_fail} 失败，封面 ${r.covers_ok} 成功 / ${r.covers_fail} 失败`, r.demos_fail || r.covers_fail ? 'error' : 'success')
+    const r = await api.ossSync(force)
+    ui.toast(`OSS ${force ? '强制全量' : ''}同步完成：demo ${r.demos_ok} 成功 / ${r.demos_fail} 失败，封面 ${r.covers_ok} 成功 / ${r.covers_fail} 失败`, r.demos_fail || r.covers_fail ? 'error' : 'success')
   } catch (e) {
     ui.toast((e as Error).message, 'error')
   } finally {
@@ -707,8 +707,11 @@ onMounted(loadAll)
               </div>
               <p class="hint" style="margin-bottom: 12px">本地是完整存储（全量文件在服务器），OSS 只是镜像。切换模式：修改服务器 .env 的 <code>OSS_ENABLED</code>（false=本地 / true=OSS）+ <code>docker compose up -d backend</code> 重建生效。</p>
               <div class="filter-row" style="margin-bottom: 0">
-                <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync">
+                <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync()">
                   {{ ossSyncing ? '同步中…' : '同步本地文件到 OSS' }}
+                </button>
+                <button class="btn btn-dark" type="button" :disabled="ossSyncing" @click="runOssSync(true)">
+                  {{ ossSyncing ? '同步中…' : '强制全量同步' }}
                 </button>
               </div>
             </div>

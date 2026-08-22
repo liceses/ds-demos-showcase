@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -73,12 +73,11 @@ def update_settings(body: SettingsOut, db: Session = Depends(get_db), _: User = 
 
 
 @router.post("/oss-sync")
-def oss_sync(_: User = Depends(require_admin)):
-    """把本地已有 demo 文件/zip/封面补传到 OSS（幂等，缺失才传）。
-    启动时会自动执行一次；此接口供管理后台手动触发。"""
+def oss_sync(force: bool = Query(False), _: User = Depends(require_admin)):
+    """把本地已有 demo 文件/zip/封面补传到 OSS（幂等，缺失才传）；force=true 强制全量重传。"""
     from ..services.oss_sync import sync_all
 
-    return sync_all()
+    return sync_all(force=force)
 
 
 @router.get("/storage-status")

@@ -205,8 +205,8 @@ const realApi = {
     const { data } = await http.put('/admin/settings', next)
     return data
   },
-  async ossSync(): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
-    const { data } = await http.post('/admin/oss-sync')
+  async ossSync(force = false): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
+    const { data } = await http.post('/admin/oss-sync', null, { params: force ? { force: true } : {} })
     return data
   },
   async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {

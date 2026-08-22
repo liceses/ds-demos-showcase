@@ -692,6 +692,14 @@ export const mockApi = {
         const j = Math.floor(Math.random() * (i + 1))
         ;[items[i], items[j]] = [items[j], items[i]]
       }
+    } else if (sort === 'prompt') {
+      // 提示词模式：填了提示词的 demo 优先，同组按最新
+      items = [...items].sort(
+        (a, b) =>
+          Number(Boolean(b.prompt)) - Number(Boolean(a.prompt)) ||
+          b.created_at.localeCompare(a.created_at) ||
+          bySlug(a, b),
+      )
     } else if (sort === 'popular') {
       items = [...items].sort(
         (a, b) => b.view_count - a.view_count || b.created_at.localeCompare(a.created_at) || bySlug(a, b),

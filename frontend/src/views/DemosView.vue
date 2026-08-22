@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import PromptDemoCard from '../components/PromptDemoCard.vue'
 
 const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
@@ -11,6 +12,14 @@ const selectedTags = ref<string[]>([])
 const q = ref('')
 const submittedQ = ref('')
 const sort = ref<'newest' | 'popular'>('newest')
+const cardMode = ref<'normal' | 'prompt'>(localStorage.getItem('ds_card_mode') === 'prompt' ? 'prompt' : 'normal')
+
+function setCardMode(m: 'normal' | 'prompt') {
+  if (cardMode.value === m) return
+  cardMode.value = m
+  localStorage.setItem('ds_card_mode', m)
+  reset()
+}
 const page = ref(1)
 const pageSize = 12
 const total = ref(0)
@@ -88,7 +97,7 @@ async function load(reset = false) {
       status: 'approved',
       tags: selectedTags.value,
       q: submittedQ.value || undefined,
-      sort: sort.value,
+      sort: cardMode.value === 'prompt' ? 'prompt' : sort.value,
       page: p,
       page_size: pageSize,
     })
@@ -194,8 +203,12 @@ onBeforeUnmount(() => observer?.disconnect())
         <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">搜索</button>
       </div>
       <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
-        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
+        <button class="tab" :class="{ active: cardMode === 'normal' }" type="button" @click="setCardMode('normal')">常规</button>
+        <button class="tab" :class="{ active: cardMode === 'prompt' }" type="button" @click="setCardMode('prompt')">提示词</button>
+        <template v-if="cardMode === 'normal'">
+          <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
+          <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
+        </template>
       </div>
     </div>
 
@@ -289,7 +302,8 @@ onBeforeUnmount(() => observer?.disconnect())
 
     <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">
-        <DemoCard :demo="item as DemoSummary" />
+        <PromptDemoCard v-if="cardMode === 'prompt'" :demo="item as DemoSummary" />
+        <DemoCard v-else :demo="item as DemoSummary" />
       </template>
     </MasonryGrid>
 

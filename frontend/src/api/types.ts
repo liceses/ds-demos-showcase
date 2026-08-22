@@ -61,6 +61,8 @@ export interface DemoSummary {
   /** web=网页应用 zip=文件包 link=外部链接 */
   demo_type?: 'web' | 'zip' | 'link'
   external_url?: string | null
+  /** 第一轮提示词（列表摘要返回，供提示词模式展示/复制） */
+  prompt?: string
   rating_avg?: number
   rating_count?: number
   rating_god?: number
@@ -178,7 +180,7 @@ export interface DemoListParams {
   q?: string
   /** 作者过滤：public = 未注册上传；其他 = 用户名 */
   author?: string
-  sort?: 'newest' | 'popular' | 'random'
+  sort?: 'newest' | 'popular' | 'random' | 'prompt'
   page?: number
   page_size?: number
 }

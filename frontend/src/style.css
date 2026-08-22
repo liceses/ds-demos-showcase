@@ -2393,25 +2393,37 @@ table.data tr.inconsistent td {
   padding: 8px 0 0;
 }
 .rating-card {
-  padding: 16px 20px;
+  padding: 10px 16px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   transform: none;
+  background: var(--paper);
+  border-left: 10px solid var(--teal);
   box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
 }
 .rating-stars {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  padding: 5px 10px;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  flex-shrink: 0;
+}
+.rating-card .rating-star {
+  font-size: 18px;
+  width: 30px;
+  height: 30px;
 }
 .rating-star:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
 }
 .rating-meta {
-  line-height: 1.5;
-  min-width: 220px;
+  line-height: 1.45;
+  min-width: 200px;
   flex: 1;
 }
 .rating-sub {

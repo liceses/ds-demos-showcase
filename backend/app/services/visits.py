@@ -43,7 +43,8 @@ def record_visit(ip: str | None = None) -> None:
 
 
 def _flush_locked() -> None:
-    """把今日内存计数写入 DB（调用方须已持有 _lock）。累加式，绝不覆盖历史值。"""
+    """把今日内存计数写入 DB（调用方须已持有 _lock）。累加式，绝不覆盖历史值。
+    成功落库后清零内存批次，_today_count 仅代表「距上次 flush 的增量」，避免同一批重复累加。"""
     day = _today
     if _today_count == 0:
         return
@@ -54,12 +55,15 @@ def _flush_locked() -> None:
         if row is None:
             row = VisitDaily(date=day, count=0, ips="[]")
             db.add(row)
-        # 原始 PV：累加本次批次的计数量（不覆盖）
+        # 原始 PV：累加本次批次的增量（不覆盖）
         row.count += _today_count
         existing = set(json.loads(row.ips)) if row.ips else set()
         existing.update(ips)
         row.ips = json.dumps(list(existing), ensure_ascii=False)
         db.commit()
+        # 落库成功后清零，防止下一轮 flush 把同一批数据再算一遍
+        _today_count = 0
+        _today_ips.clear()
         cutoff = (date.today() - timedelta(days=KEEP_DAYS)).isoformat()
         db.query(VisitDaily).filter(VisitDaily.date < cutoff).delete()
         db.commit()

@@ -25,9 +25,11 @@ const maxDist = computed(() => Math.max(1, ...(rating.value?.distribution?.map((
 async function loadRating() {
   deviceId.value = getDeviceId()
   try {
-    rating.value = await api.getRating(props.slug, auth.isLoggedIn() ? undefined : deviceId.value)
+    const fresh = await api.getRating(props.slug, auth.isLoggedIn() ? undefined : deviceId.value)
+    // 竞态保护：若用户已在此期间提交评分，保留新结果，避免慢一步的旧数据覆盖
+    if (!rating.value) rating.value = fresh
   } catch {
-    rating.value = null
+    if (!rating.value) rating.value = null
   }
 }
 

@@ -118,9 +118,11 @@ def rate_demo(
     if row is None:
         row = DemoRating(demo_id=demo.id, user_id=user.id if user else None, rater_key=rater_key, score=body.score)
         db.add(row)
+        db.flush()   # 让新行进入事务，聚合才能包含它
     else:
         row.score = body.score
         row.updated_at = datetime.utcnow()
+        db.flush()   # 更新也 flush，确保聚合读到新分数
     _recalc_demo_rating(db, demo)
     db.commit()
     return _rating_out(db, demo, rater_key)
@@ -140,6 +142,7 @@ def unrate_demo(
     row = db.query(DemoRating).filter(DemoRating.demo_id == demo.id, DemoRating.rater_key == rater_key).first()
     if row is not None:
         db.delete(row)
+        db.flush()   # 让删除立即生效，聚合才能剔除
         _recalc_demo_rating(db, demo)
         db.commit()
     return _rating_out(db, demo, rater_key)

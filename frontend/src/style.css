@@ -351,7 +351,7 @@ label.field .hint {
   cursor: pointer;
 }
 .rating-star.active {
-  color: var(--yellow);
+  color: var(--ink);
 }
 .rating-star.mine {
   border-color: var(--teal);

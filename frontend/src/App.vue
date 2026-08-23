@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isMock } from './api'
@@ -9,6 +9,23 @@ import ToastHost from './components/ToastHost.vue'
 const auth = useAuthStore()
 const route = useRoute()
 const username = computed(() => auth.user?.username ?? '')
+const mobileOpen = ref(false)
+
+watch(
+  () => route.fullPath,
+  () => {
+    mobileOpen.value = false
+  },
+)
+
+const menuItems = [
+  { to: '/', label: '首页' },
+  { to: '/demos', label: '作品库' },
+  { to: '/leaderboard', label: '排行榜' },
+  { to: '/tags', label: '标签' },
+  { to: '/upload', label: '上传 Demo' },
+  { to: '/about', label: '关于本站' },
+]
 </script>
 
 <template>
@@ -19,7 +36,7 @@ const username = computed(() => auth.user?.username ?? '')
         <span class="brand-name">AI 全民<br />制作人</span>
       </RouterLink>
 
-      <nav class="topnav">
+      <nav class="topnav topnav-desktop">
         <RouterLink class="nav-link" to="/">首页</RouterLink>
         <RouterLink class="nav-link" to="/demos">作品库</RouterLink>
         <RouterLink class="nav-link" to="/leaderboard">排行榜</RouterLink>
@@ -28,7 +45,7 @@ const username = computed(() => auth.user?.username ?? '')
         <RouterLink v-if="auth.isAdmin()" class="nav-link" to="/admin">管理后台</RouterLink>
       </nav>
 
-      <div class="topnav">
+      <div class="topnav topnav-desktop">
         <template v-if="auth.isLoggedIn()">
           <RouterLink class="nav-link" :to="`/user/${username}`">{{ username }}</RouterLink>
           <button class="btn btn-sm btn-dark" type="button" @click="auth.logout()">退出</button>
@@ -38,7 +55,54 @@ const username = computed(() => auth.user?.username ?? '')
           <RouterLink class="btn btn-sm btn-primary" to="/register">注册</RouterLink>
         </template>
       </div>
+
+      <button
+        class="mobile-nav-toggle"
+        type="button"
+        :aria-expanded="mobileOpen"
+        aria-label="打开菜单"
+        @click="mobileOpen = !mobileOpen"
+      >
+        <span></span><span></span><span></span>
+      </button>
     </header>
+
+    <!-- 移动端抽屉 -->
+    <Transition name="mobile-drawer">
+      <div v-if="mobileOpen" class="mobile-drawer" @click.self="mobileOpen = false">
+        <div class="mobile-drawer-inner">
+          <div class="mobile-drawer-head">
+            <span class="mode-rail-stamp">菜单</span>
+            <button class="mobile-drawer-close" type="button" @click="mobileOpen = false">X</button>
+          </div>
+          <nav class="mobile-drawer-nav">
+            <RouterLink
+              v-for="m in menuItems"
+              :key="m.to"
+              class="mobile-drawer-link"
+              :class="{ active: route.path === m.to }"
+              :to="m.to"
+            >
+              {{ m.label }}
+              <span class="mobile-drawer-arrow">→</span>
+            </RouterLink>
+            <RouterLink v-if="auth.isAdmin()" class="mobile-drawer-link" :to="'/admin'">
+              管理后台 <span class="mobile-drawer-arrow">→</span>
+            </RouterLink>
+          </nav>
+          <div class="mobile-drawer-foot">
+            <template v-if="auth.isLoggedIn()">
+              <RouterLink class="btn btn-outline btn-block" :to="`/user/${username}`">{{ username }}</RouterLink>
+              <button class="btn btn-dark btn-block" type="button" @click="auth.logout()">退出</button>
+            </template>
+            <template v-else>
+              <RouterLink class="btn btn-outline btn-block" to="/login">登录</RouterLink>
+              <RouterLink class="btn btn-primary btn-block" to="/register">注册</RouterLink>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <div v-if="isMock" class="container">
       <div class="notice notice-warn" style="margin-top: 14px">

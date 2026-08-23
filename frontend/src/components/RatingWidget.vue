@@ -22,28 +22,33 @@ function scoreLabel(score: number | null | undefined) {
 
 const maxDist = computed(() => Math.max(1, ...(rating.value?.distribution?.map((d) => d.count) || [1])))
 
+// 请求序号：只有「最新一次请求」的结果能写入 rating，防止旧响应覆盖新状态
+let reqSeq = 0
+
 async function loadRating() {
   deviceId.value = getDeviceId()
+  const my = ++reqSeq
   try {
     const fresh = await api.getRating(props.slug, auth.isLoggedIn() ? undefined : deviceId.value)
-    // 竞态保护：若用户已在此期间提交评分，保留新结果，避免慢一步的旧数据覆盖
-    if (!rating.value) rating.value = fresh
+    if (my === reqSeq) rating.value = fresh
   } catch {
-    if (!rating.value) rating.value = null
+    if (my === reqSeq) rating.value = null
   }
 }
 
 async function setScore(score: number) {
   if (ratingLoading.value) return
   ratingLoading.value = true
+  const my = ++reqSeq
   try {
     const did = auth.isLoggedIn() ? undefined : deviceId.value
-    rating.value =
+    const result =
       rating.value?.my_score === score
         ? await api.unrateDemo(props.slug, did)
         : await api.rateDemo(props.slug, score, did)
+    if (my === reqSeq) rating.value = result
   } catch (e) {
-    ui.toast((e as Error).message, 'error')
+    if (my === reqSeq) ui.toast((e as Error).message, 'error')
   } finally {
     ratingLoading.value = false
   }

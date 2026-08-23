@@ -514,7 +514,7 @@ function readMyScore(slug: string, deviceId: string): number | null {
 function ratingStore(d: DemoDetail) {
   return {
     avg: d.rating_avg || 4.0,
-    count: d.rating_count || 12,
+    count: d.rating_count ?? 12,
     god: d.rating_god || 6,
     ghost: d.rating_ghost || 1,
   }
@@ -777,7 +777,7 @@ export const mockApi = {
         if (prev === 5) d.rating_god = Math.max(0, (d.rating_god || 0) - 1)
         if (prev === 1) d.rating_ghost = Math.max(0, (d.rating_ghost || 0) - 1)
       } else {
-        d.rating_count = (d.rating_count || 0) + 1
+        d.rating_count = (d.rating_count ?? 12) + 1
       }
       d.rating_avg = score // mock 简化：不精确维护历史均值
       if (score === 5) d.rating_god = (d.rating_god || 0) + 1
@@ -793,7 +793,7 @@ export const mockApi = {
       const prev = readMyScore(slug, deviceId)
       localStorage.removeItem(mockRatingKey(slug, deviceId))
       if (prev) {
-        d.rating_count = Math.max(0, (d.rating_count || 0) - 1)
+        d.rating_count = Math.max(0, (d.rating_count ?? 12) - 1)
         if (prev === 5) d.rating_god = Math.max(0, (d.rating_god || 0) - 1)
         if (prev === 1) d.rating_ghost = Math.max(0, (d.rating_ghost || 0) - 1)
       }

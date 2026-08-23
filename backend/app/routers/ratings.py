@@ -67,13 +67,23 @@ def _find_approved_demo(db: Session, slug: str) -> Demo:
     return demo
 
 
-def _recalc_demo_rating(db: Session, demo: Demo) -> None:
-    rows = db.query(DemoRating).filter(DemoRating.demo_id == demo.id).all()
-    demo.rating_count = len(rows)
-    demo.rating_sum = sum(r.score for r in rows)
+def _apply_rating_delta(demo: Demo, old_score: int | None, new_score: int | None) -> None:
+    """增量更新 demos 冗余评分列：old_score→new_score（None 表示新增/删除）。"""
+    if old_score is not None:
+        demo.rating_count -= 1
+        demo.rating_sum -= old_score
+        if old_score == 5:
+            demo.rating_god -= 1
+        elif old_score == 1:
+            demo.rating_ghost -= 1
+    if new_score is not None:
+        demo.rating_count += 1
+        demo.rating_sum += new_score
+        if new_score == 5:
+            demo.rating_god += 1
+        elif new_score == 1:
+            demo.rating_ghost += 1
     demo.rating_avg = round(demo.rating_sum / demo.rating_count, 2) if demo.rating_count else 0.0
-    demo.rating_god = sum(1 for r in rows if r.score == 5)
-    demo.rating_ghost = sum(1 for r in rows if r.score == 1)
 
 
 def _rating_out(db: Session, demo: Demo, rater_key: str | None) -> RatingOut:
@@ -115,6 +125,7 @@ def rate_demo(
     rater_key = _rater_key(user, body.device_id, ip)
 
     row = db.query(DemoRating).filter(DemoRating.demo_id == demo.id, DemoRating.rater_key == rater_key).first()
+    old_score = row.score if row else None
     if row is None:
         row = DemoRating(demo_id=demo.id, user_id=user.id if user else None, rater_key=rater_key, score=body.score)
         db.add(row)
@@ -123,7 +134,7 @@ def rate_demo(
         row.score = body.score
         row.updated_at = datetime.utcnow()
         db.flush()   # 更新也 flush，确保聚合读到新分数
-    _recalc_demo_rating(db, demo)
+    _apply_rating_delta(demo, old_score, body.score)
     db.commit()
     return _rating_out(db, demo, rater_key)
 
@@ -141,9 +152,10 @@ def unrate_demo(
     rater_key = _rater_key(user, device_id, ip)
     row = db.query(DemoRating).filter(DemoRating.demo_id == demo.id, DemoRating.rater_key == rater_key).first()
     if row is not None:
+        old_score = row.score
         db.delete(row)
         db.flush()   # 让删除立即生效，聚合才能剔除
-        _recalc_demo_rating(db, demo)
+        _apply_rating_delta(demo, old_score, None)
         db.commit()
     return _rating_out(db, demo, rater_key)
 

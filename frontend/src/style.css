@@ -2789,6 +2789,8 @@ table.data tr.inconsistent td {
     display: flex;
   }
   .topbar {
+    flex-direction: row;
+    align-items: center;
     flex-wrap: nowrap;
   }
   .tabs {

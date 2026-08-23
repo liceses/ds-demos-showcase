@@ -159,6 +159,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **打点**：前端 `router.afterEach` 调 `POST /api/v1/stats/visit`（一次路由切换 = 1 PV），带每 IP 每分钟 30 次限流（429）。
 - **计数**：`visits.record_visit()` 内存 +1，后台线程每 30s 落库 `visit_daily`，**累加式**（`count += 增量`，绝不覆盖历史值）；`ips` 字段保留当日去重 IP（UV 备用）。
 - **读取**：`GET /api/v1/stats/visits` 返回 `today/yesterday/total/last7`（升序，当天在最后）；today = 库值 + 内存未落库实时量。
+- **实时**：`POST /stats/heartbeat`（30s 心跳，每 IP 10 次/分钟限流）维护内存 `_online`；`GET /stats/live` 返回 `online/last1min/last5min/today`（近期 PV 时间戳在内存 deque，10 分钟窗口）。单 worker 内存即可，多 worker 需 Redis。
 - **保留**：近 90 天，跨天滚动。
 - **防 500**：`record_visit` 与打点接口均 try/except 静默，统计异常绝不影响业务请求。
 

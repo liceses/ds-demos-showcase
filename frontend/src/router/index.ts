@@ -48,4 +48,7 @@ router.afterEach((to) => {
   api.reportVisit()
 })
 
+// 实时在线心跳：每 30s 发一次（模块级，单页一次）
+setInterval(() => api.reportHeartbeat(), 30_000)
+
 export default router

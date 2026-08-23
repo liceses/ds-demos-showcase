@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { SiteStats, SponsorBoard, ThanksBoard } from '../api/types'
+import type { SiteStats, SponsorBoard, ThanksBoard, LiveStats } from '../api/types'
 
 const stats = ref<SiteStats | null>(null)
 const sponsors = ref<SponsorBoard | null>(null)
 const thanks = ref<ThanksBoard | null>(null)
+const live = ref<LiveStats | null>(null)
 const error = ref('')
 const loading = ref(true)
 
 const maxDay = computed(() => Math.max(1, ...(stats.value?.last7.map((d) => d.count) || [1])))
 const recent48h = computed(() => (stats.value ? stats.value.today + stats.value.yesterday : 0))
+
+let liveTimer: ReturnType<typeof setInterval> | null = null
+
+async function loadLive() {
+  try {
+    live.value = await api.getLiveStats()
+  } catch {
+    /* 实时失败静默 */
+  }
+}
 
 onMounted(async () => {
   try {
@@ -27,6 +38,12 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  await loadLive()
+  liveTimer = setInterval(loadLive, 10_000)
+})
+
+onBeforeUnmount(() => {
+  if (liveTimer) clearInterval(liveTimer)
 })
 </script>
 
@@ -42,8 +59,19 @@ onMounted(async () => {
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载站点信息…</div>
 
     <template v-else>
-      <!-- 访问统计 -->
+      <!-- 实时访问 -->
       <div class="section-head">
+        <h2 class="section-title">实时访问</h2>
+      </div>
+      <div class="dash-stats">
+        <div class="stat-card stat-ok"><b>{{ live?.online ?? 0 }}</b>在线</div>
+        <div class="stat-card"><b>{{ live?.last1min ?? 0 }}</b>近 1 分钟</div>
+        <div class="stat-card"><b>{{ live?.last5min ?? 0 }}</b>近 5 分钟</div>
+        <div class="stat-card stat-warn"><b>{{ live?.today ?? stats?.today ?? 0 }}</b>今日</div>
+      </div>
+
+      <!-- 访问统计 -->
+      <div class="section-head" style="margin-top: 28px">
         <h2 class="section-title">访问统计</h2>
       </div>
       <div class="dash-stats">

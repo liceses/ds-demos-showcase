@@ -46,6 +46,37 @@ async def stats_visit(request: Request) -> dict:
     return {"ok": True}
 
 
+# 心跳限流：每 IP 每分钟 10 次（30s 一次正常，留余量）
+_heartbeat_hits: dict[str, list[float]] = defaultdict(list)
+_HEARTBEAT_RATE = 10
+
+
+def _heartbeat_rate_limit(request: Request) -> None:
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    now = time.time()
+    _heartbeat_hits[ip] = [t for t in _heartbeat_hits[ip] if t > now - 60]
+    if len(_heartbeat_hits[ip]) >= _HEARTBEAT_RATE:
+        raise HTTPException(status_code=429, detail="心跳过于频繁", )
+    _heartbeat_hits[ip].append(now)
+
+
+@router.post("/heartbeat")
+async def stats_heartbeat(request: Request) -> dict:
+    """实时在线心跳：前端每 30s 发一次；后端仅更新内存在线表。"""
+    _heartbeat_rate_limit(request)
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
+    await asyncio.to_thread(visits.heartbeat, ip)
+    return {"ok": True}
+
+
+@router.get("/live")
+def stats_live() -> dict:
+    """实时访问：在线人数 + 近1/5分钟 PV + 今日 PV。"""
+    return visits.get_live_stats()
+
+
 @router.get("/sponsors")
 def stats_sponsors(db: Session = Depends(get_db)) -> dict:
     """赞助榜：按金额降序（→sort）；未公开金额的条目不返回金额字段。公开。"""

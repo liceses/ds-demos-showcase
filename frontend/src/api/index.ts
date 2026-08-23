@@ -24,6 +24,7 @@ import type {
   RecognitionInput,
   RecognitionItem,
   RatingStats,
+  LiveStats,
 } from './types'
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
@@ -248,6 +249,14 @@ const realApi = {
   async reportVisit(): Promise<void> {
     // 页面访问打点：一次路由切换 = 一次浏览（原始 PV +1）；失败静默
     http.post('/stats/visit').catch(() => undefined)
+  },
+  async reportHeartbeat(): Promise<void> {
+    // 实时在线心跳：每 30s 一次；失败静默
+    http.post('/stats/heartbeat').catch(() => undefined)
+  },
+  async getLiveStats(): Promise<LiveStats> {
+    const { data } = await http.get('/stats/live')
+    return data
   },
   async getSponsors(): Promise<SponsorBoard> {
     const { data } = await http.get('/stats/sponsors')

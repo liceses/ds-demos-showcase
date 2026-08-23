@@ -1,9 +1,11 @@
-"""站点访问统计：原始 PV（每次访问 +1，累加不覆盖），跨天滚动，只保留近 90 天。
-同时维护当日 IP 集合（UV 备用）。内存缓冲 + 后台线程定时落库（默认 30s）。
+"""站点访问统计：原始 PV（每次访问 +1，累加不覆盖）+ 实时在线/近期访问（内存）。
+跨天滚动，只保留近 90 天；同时维护当日 IP 集合（UV 备用）。
 """
 
 import json
 import threading
+import time
+from collections import deque
 from datetime import date, timedelta
 
 from ..database import SessionLocal
@@ -11,11 +13,15 @@ from ..models import VisitDaily
 
 KEEP_DAYS = 90
 FLUSH_INTERVAL = 30  # 秒
+RECENT_WINDOW = 600  # 实时近期时间戳窗口：10 分钟
+ONLINE_WINDOW = 120  # 在线判定：最后 2 分钟心跳
 
 _lock = threading.Lock()
 _today: str = date.today().isoformat()
 _today_ips: set[str] = set()
 _today_count: int = 0
+_recent_hits: deque[float] = deque()   # 实时 PV 时间戳（最近 10 分钟）
+_online: dict[str, float] = {}         # ip -> 最后心跳时间
 
 
 def _roll_if_needed() -> None:
@@ -38,8 +44,41 @@ def record_visit(ip: str | None = None) -> None:
             _today_count += 1
             if ip:
                 _today_ips.add(ip)
+            _recent_hits.append(time.time())
+            # 顺手清理过期时间戳，保持队列只存近 RECENT_WINDOW
+            cutoff = time.time() - RECENT_WINDOW
+            while _recent_hits and _recent_hits[0] < cutoff:
+                _recent_hits.popleft()
     except Exception:  # noqa: BLE001 —— 统计失败不影响业务
         pass
+
+
+def heartbeat(ip: str | None = None) -> None:
+    """实时在线心跳：记录 IP 最后在线时间；超过 ONLINE_WINDOW 视为下线。仅内存。"""
+    if not ip:
+        return
+    try:
+        with _lock:
+            now = time.time()
+            _online[ip] = now
+            cutoff = now - ONLINE_WINDOW
+            stale = [k for k, v in _online.items() if v < cutoff]
+            for k in stale:
+                _online.pop(k, None)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def get_live_stats() -> dict:
+    """实时访问：在线人数 + 近1/5分钟 PV + 今日 PV。"""
+    now = time.time()
+    with _lock:
+        online = sum(1 for v in _online.values() if v > now - ONLINE_WINDOW)
+        recent = [t for t in _recent_hits if t > now - 300]
+        last1 = sum(1 for t in recent if t > now - 60)
+        last5 = len(recent)
+    today = get_stats()["today"]
+    return {"online": online, "last1min": last1, "last5min": last5, "today": today}
 
 
 def _flush_locked() -> None:

@@ -451,6 +451,21 @@ GET /api/v1/demos?status=approved&author=public
 - `last7`：近 7 天逐日 PV，**升序（旧→新），当天在最后**，前端画柱状图
 - **计数方式**：前端每次路由切换打点 `POST /api/v1/stats/visit`（原始 PV +1，带每 IP 每分钟 30 次限流），后端内存缓冲 + 定时落库，**累加式**（绝不覆盖历史值），跨天滚动，只保留近 90 天；`ips` 字段保留当日去重 IP（UV 备用）
 
+### GET `/api/v1/stats/live`（公开，实时访问）
+
+```json
+{ "online": 12, "last1min": 8, "last5min": 35, "today": 168 }
+```
+
+- `online`：当前在线人数（最后 2 分钟内有心跳的 IP 数）
+- `last1min` / `last5min`：近 1/5 分钟页面访问 PV
+- `today`：今日 PV
+- 数据在**进程内存**，不落库；单 worker 下有效，多 worker 需 Redis
+
+### POST `/api/v1/stats/heartbeat`（公开）
+
+实时在线心跳：前端每 30s 发一次（fire-and-forget），带每 IP 每分钟 10 次限流；后端仅更新内存在线表。
+
 ### GET `/api/v1/stats/sponsors`（公开）
 
 赞助榜：按金额降序。未公开金额（`show_amount=false`）的条目不返回金额字段。

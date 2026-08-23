@@ -78,6 +78,13 @@ export interface RatingStats {
   distribution?: { score: number; count: number }[]
 }
 
+export interface LiveStats {
+  online: number
+  last1min: number
+  last5min: number
+  today: number
+}
+
 export interface DemoTimelineEntry {
   id: number
   version_label: string

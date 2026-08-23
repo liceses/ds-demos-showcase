@@ -25,6 +25,7 @@
 | 公告 | `GET /announcements` 4 类：`manual`/`auto`/`update`/`demo_update`（`update`=站点 git commit 实时合并，60s 缓存）。 |
 | 推荐 | `GET /demos/{slug}/related?limit=30`（相关候选池）；`GET /demos?sort=random`（精选随机）。 |
 | 访问统计 | `GET /stats/visits` 读 PV；**前端必须打点**：`router.afterEach` 调 `api.reportVisit()`（`POST /stats/visit`），一次路由切换 = 1 PV。 |
+| 实时访问 | `GET /stats/live`（在线/近1/5分钟/今日）；**前端必须心跳**：模块级每 30s `api.reportHeartbeat()`（`POST /stats/heartbeat`）。About 页每 10s 拉一次 live。 |
 | 评分/榜单 | `GET/POST/DELETE /demos/{slug}/rating`（1~5，5=神/1=鬼，可改可撤）；`GET /leaderboard?sort=avg|god|ghost|net|count|heat`。匿名评分需传 localStorage `device_id`。 |
 
 ## 3. 匿名（public）上传

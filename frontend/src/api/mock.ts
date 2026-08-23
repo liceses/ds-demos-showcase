@@ -24,6 +24,7 @@ import type {
   RecognitionInput,
   RecognitionItem,
   RatingStats,
+  LiveStats,
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
@@ -839,6 +840,13 @@ export const mockApi = {
   },
   async reportVisit(): Promise<void> {
     return
+  },
+  async reportHeartbeat(): Promise<void> {
+    return
+  },
+  async getLiveStats(): Promise<LiveStats> {
+    await delay(100)
+    return { online: 12, last1min: 8, last5min: 35, today: 168 }
   },
   async getSponsors(): Promise<SponsorBoard> {
     await delay()

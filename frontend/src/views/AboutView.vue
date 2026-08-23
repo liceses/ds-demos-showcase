@@ -62,13 +62,15 @@ onBeforeUnmount(() => {
       <!-- 实时访问 -->
       <div class="section-head">
         <h2 class="section-title">实时访问</h2>
+        <span class="live-badge"><span class="live-dot"></span>LIVE</span>
       </div>
       <div class="dash-stats">
-        <div class="stat-card stat-ok"><b>{{ live?.online ?? 0 }}</b>在线</div>
-        <div class="stat-card"><b>{{ live?.last1min ?? 0 }}</b>近 1 分钟</div>
-        <div class="stat-card"><b>{{ live?.last5min ?? 0 }}</b>近 5 分钟</div>
-        <div class="stat-card stat-warn"><b>{{ live?.today ?? stats?.today ?? 0 }}</b>今日</div>
+        <div class="stat-card stat-live"><b>{{ live?.online ?? '—' }}</b>在线</div>
+        <div class="stat-card"><b>{{ live?.last1min ?? '—' }}</b>近 1 分钟</div>
+        <div class="stat-card"><b>{{ live?.last5min ?? '—' }}</b>近 5 分钟</div>
+        <div class="stat-card stat-warn"><b>{{ live?.today ?? stats?.today ?? '—' }}</b>今日</div>
       </div>
+      <p class="hint live-hint">页面停留时每 10s 自动刷新；离开页面不计入在线。</p>
 
       <!-- 访问统计 -->
       <div class="section-head" style="margin-top: 28px">

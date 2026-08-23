@@ -2646,3 +2646,42 @@ table.data tr.inconsistent td {
   padding-bottom: 14px;
   border-bottom: 3px solid var(--ink);
 }
+
+/* 实时访问 LIVE 徽标 */
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 3px solid var(--ink);
+  background: var(--red);
+  color: #fff;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  transform: rotate(2deg);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+}
+.live-dot {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  animation: live-pulse 1.2s infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+.stat-card.stat-live {
+  border-top: 8px solid var(--red);
+  background: var(--yellow);
+}
+.stat-card.stat-live b {
+  color: var(--ink);
+}
+.live-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+}

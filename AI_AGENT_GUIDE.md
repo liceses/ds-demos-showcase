@@ -100,7 +100,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
        "prompt": "第一轮提示词(可选)",
        "upload_code": "免审核密钥(有就给)",
        "idempotency_key": "本次上传的唯一幂等键",
-       "tags": ["model:dsv4-flash", {"key":"game","value":"mc","description":"我的世界"}]
+       "tags": ["model:DeepSeek-V4", {"key":"game","value":"mc","description":"我的世界"}]
      }'
    ```
    > 注意：web/zip 必须给 `zip_url`；link 必须给 `external_url` 且不要给 zip_url。
@@ -113,7 +113,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
      -F "demo_type=web" \
      -F "upload_code=免审核密钥(有就给)" \
      -F "idempotency_key=本次上传的唯一幂等键" \
-     -F 'tags=["model:dsv4-flash", {"key":"game","value":"mc"}]' \
+     -F 'tags=["model:DeepSeek-V4", {"key":"game","value":"mc"}]' \
      -F "prompt=第一轮提示词(可选)" \
      -F "file=@本地zip路径.zip" \
      -F "cover=@本地封面.png(可选)"
@@ -194,6 +194,8 @@ curl https://deepdemos.top/api/v1/tags/tag-keys
 curl "https://deepdemos.top/api/v1/demos?page_size=100"
 ```
 
+> 当前 `model` 标签已内置 **97 个常见固定值**（2026-08 更新，按厂商分组：DeepSeek / OpenAI / Anthropic / Google / Qwen / 智谱 / Kimi / 字节 / 腾讯 / Meta / Mistral / xAI / MiniMax / 微软 等）。打标签时优先从 `tag-keys` 返回的候选里选，确实没有再新建。
+
 ### 3. 分析并决定标签
 
 - 对每个 demo 判断 `type/category/model` 等适宜标签
@@ -206,7 +208,7 @@ curl "https://deepdemos.top/api/v1/demos?page_size=100"
 # 直接创建 fixed value（可带 group 分组）
 curl -X POST https://deepdemos.top/api/v1/tags \
   -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"key":"model","value":"dsv4-ultra","description":"…","group":"DeepSeek"}'
+  -d '{"key":"model","value":"DeepSeek-V4.1","description":"…","group":"DeepSeek"}'
 
 # 或：一键把主流模型写入 pending 建议（人工审核后生效）
 curl -X POST https://deepdemos.top/api/v1/tags/admin/fetch-models \
@@ -226,7 +228,7 @@ curl -X POST https://deepdemos.top/api/v1/tags/admin/suggestions/1/review \
 # 更新 demo 的 tags（会覆盖该 demo 全部标签，先 GET 详情拿现有 tags 再合并）
 curl -X PUT https://deepdemos.top/api/v1/demos/<slug> \
   -H "Authorization: Bearer <token>" \
-  -F 'tags=["type:game","model:dsv4-flash","rounds:3"]'
+  -F 'tags=["type:game","model:DeepSeek-V4","rounds:3"]'
 ```
 
 > 注意：`PUT /demos/{slug}` 的 `tags` 是**整体替换**，不是增量追加。维护时先 `GET /demos/{slug}` 拿现有 tags，合并后再提交。
@@ -242,14 +244,14 @@ curl "https://deepdemos.top/api/v1/demos?tag=rounds:3-10"
 
 - 只有 **admin 账号**能改标签/demo；**不要把 admin 密码写进公开文档或提交到仓库**
 - agent 操作前先确认自己有 admin token；没有就只读，不要尝试绕过
-- 建议给 AI 用**专用 admin 账号**（如 `ai-agent` + 强密码），与人工 admin 分开，便于审计
+- 本站已配置专用 AI 管理员账号 `AI_AGENT`（密码不写入文档），与人工 admin 分开，便于审计
 
 ### 接口速查补充
 
 | 接口 | 用途 |
 |---|---|
 | `POST /api/v1/tags` | admin 创建 fixed value（可带 group） |
-| `POST /api/v1/tags/admin/fetch-models` | 主流模型写入 pending 建议 |
+| `POST /api/v1/tags/admin/fetch-models` | 内置主流模型（2026-08 列表）写入 pending 建议 |
 | `GET /api/v1/tags/admin/suggestions` | 列建议（pending/approved/rejected） |
 | `POST /api/v1/tags/admin/suggestions/{id}/review` | 审核建议（approve/reject） |
 | `PUT /api/v1/demos/{slug}` | 更新 demo（含整体替换 tags） |

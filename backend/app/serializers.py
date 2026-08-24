@@ -90,7 +90,6 @@ def serialize_demo(
         data.update(
             {
                 "session_log_count": session_log_count,
-                "commit_count": 0,  # git 功能已移除
                 "is_author": bool(current_user_id is not None and demo.author_id == current_user_id),
                 "prompt": demo.prompt,
                 "video_url": demo.video_url,

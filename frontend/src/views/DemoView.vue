@@ -126,7 +126,7 @@ async function onDownload() {
 }
 
 const canEdit = computed(
-  () => !!demo.value && auth.isLoggedIn() && (auth.user?.role === 'admin' || auth.user?.username === demo.value.author),
+  () => !!demo.value && auth.isLoggedIn() && (auth.user?.role === 'admin' || !!demo.value.is_author),
 )
 
 async function onDelete() {

@@ -23,7 +23,10 @@ const submitting = ref(false)
 const uploadProgress = ref(0)
 const error = ref('')
 const dupSlug = ref<string | null>(null)
-const success = ref<{ slug: string; status: string } | null>(null)
+const success = ref<{ slug: string; status: string; created?: boolean } | null>(null)
+const idempotencyKey = ref('')
+const uploadCode = ref('')
+const forceUpload = ref(false)
 const loading = ref(false)
 
 // 标签选择器
@@ -271,6 +274,7 @@ function prefillTags(tags: { key: string; value: string }[]) {
 }
 
 onMounted(async () => {
+  idempotencyKey.value = (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string
   try {
     tagKeys.value = await api.listTagKeys()
   } catch {
@@ -301,7 +305,7 @@ onMounted(async () => {
         prompt: demo.prompt || '',
         videoUrl: demo.video_url || '',
       }
-      const canEdit = auth.user?.role === 'admin' || auth.user?.username === demo.author
+      const canEdit = auth.user?.role === 'admin' || !!demo.is_author
       if (!canEdit) {
         denied.value = true
         error.value = '你没有权限编辑这个 Demo'
@@ -411,6 +415,9 @@ async function submit() {
           video_url: videoUrl.value.trim() || undefined,
           cover: coverFile.value,
           file: zipFile.value,
+          idempotency_key: idempotencyKey.value || undefined,
+          upload_code: uploadCode.value.trim() || undefined,
+          force: forceUpload.value || undefined,
         },
         onProgress,
       )
@@ -468,6 +475,15 @@ async function submit() {
           <input v-model="externalUrl" class="input" placeholder="https://…" />
           <span class="hint">直接跳转打开，服务器不存储内容</span>
         </label>
+        <label class="field">
+          信任通道 upload_code（可选，未登录免审核）
+          <input v-model="uploadCode" class="input" placeholder="UPLOAD_CODE（有则填）" />
+        </label>
+        <label v-if="auth.isAdmin()" class="field" style="display: flex; gap: 8px; align-items: center">
+          <input v-model="forceUpload" type="checkbox" style="width: 18px; height: 18px" />
+          强制上传（跳过 zip 去重 409）
+        </label>
+        <p class="hint" style="margin: 0 0 12px">幂等键已自动生成：<code>{{ idempotencyKey }}</code>（重试不会重复创建）</p>
         <label class="field">
           第一轮提示词（可选，展示为提示词卡片）
           <textarea v-model="prompt" class="input textarea" rows="4" placeholder="生成这个 Demo 时使用的第一轮提示词…"></textarea>

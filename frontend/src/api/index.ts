@@ -126,7 +126,7 @@ const realApi = {
     return data
   },
   async getRelated(slug: string): Promise<DemoSummary[]> {
-    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/related`)
+    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/related`, { params: { limit: 30 } })
     return data
   },
   async getRating(slug: string, deviceId?: string): Promise<RatingStats> {
@@ -150,7 +150,7 @@ const realApi = {
     const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize, range } })
     return data
   },
-  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
+  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {
     const form = new FormData()
     form.append('title', payload.title)
     if (payload.description) form.append('description', payload.description)
@@ -161,6 +161,9 @@ const realApi = {
     if (payload.video_url) form.append('video_url', payload.video_url)
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
+    if (payload.idempotency_key) form.append('idempotency_key', payload.idempotency_key)
+    if (payload.upload_code) form.append('upload_code', payload.upload_code)
+    if (payload.force) form.append('force', 'true')
     // 上传含解压 + OSS 传输，放宽超时（默认 15s 不够）；onUploadProgress 给前端进度条
     const { data } = await http.post('/demos', form, {
       timeout: 120000,
@@ -170,6 +173,10 @@ const realApi = {
           }
         : undefined,
     })
+    return data
+  },
+  async createDemoFromUrl(payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
+    const { data } = await http.post('/demos/from-url', payload, { timeout: 120000 })
     return data
   },
   async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {

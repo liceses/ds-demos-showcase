@@ -111,7 +111,6 @@ export interface DemoDetail extends DemoSummary {
   /** 预览入口：OSS 直链（跨源）或 /preview 相对路径；跨源时前端才会对 iframe 开 allow-same-origin */
   preview_url?: string
   session_log_count: number
-  commit_count: number
   is_author: boolean
   /** 第一轮提示词 */
   prompt?: string
@@ -143,29 +142,6 @@ export interface Comment {
   content: string
   created_at: string
   children?: Comment[]
-}
-
-export interface CommitInfo {
-  hash_short: string
-  message: string
-  author: string
-  date: string
-}
-
-export interface CommitFile {
-  path: string
-  status: string
-  additions: number
-  deletions: number
-}
-
-export interface CommitDetail {
-  hash: string
-  message: string
-  author: string
-  date: string
-  files: CommitFile[]
-  diff_text: string
 }
 
 export interface SessionLog {
@@ -216,6 +192,21 @@ export interface CreateDemoPayload {
   video_url?: string
   cover?: File | null
   file?: File | null
+}
+
+export interface CreateDemoFromUrlPayload {
+  title: string
+  description?: string
+  tags?: TagInput[]
+  demo_type?: 'web' | 'zip' | 'link'
+  external_url?: string
+  prompt?: string
+  video_url?: string
+  zip_url?: string
+  cover_url?: string
+  upload_code?: string
+  idempotency_key?: string
+  force?: boolean
 }
 
 export interface UpdateDemoPayload {

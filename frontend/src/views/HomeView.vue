@@ -133,7 +133,7 @@ onMounted(async () => {
   </section>
 
   <p class="muted" style="text-align: center; padding: 0 16px 8px">
-    AI 自动上传：读取 <code>/api/v1/meta/agent-guide</code> 后即可发布
+    AI 自动上传：读取 <a href="/api/v1/meta/agent-guide" target="_blank" rel="noopener" class="hero-ann-link"><code>/api/v1/meta/agent-guide</code></a> 后即可发布
   </p>
 
   <!-- 精选展示 -->

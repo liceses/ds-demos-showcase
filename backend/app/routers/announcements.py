@@ -88,8 +88,8 @@ def update_announcement(
         raise HTTPException(status_code=404, detail="公告不存在", )
     ann.title = body.title
     ann.content = body.content
-    if body.demo_slug is not None:
-        ann.demo_slug = body.demo_slug
+    # 允许清空：demo_slug 传 null 即置空
+    ann.demo_slug = body.demo_slug
     db.commit()
     db.refresh(ann)
     return ann

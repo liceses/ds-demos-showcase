@@ -14,6 +14,7 @@ from ..schemas import (
     TagCreate,
     TagDetail,
     TagKeyOut,
+    TagKeyUpdate,
     TagKeyUpsert,
     TagKeyValueOut,
     TagOut,
@@ -59,11 +60,11 @@ def get_tag(key_value: str, db: Session = Depends(get_db)):
 @router.post("", status_code=201, response_model=TagOut)
 def create_tag(body: TagCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """新增固定值标签（仅 admin）。"""
-    if body.key == "author":
-        raise HTTPException(status_code=400, detail="author 为保留 key", )
+    if body.key in RESERVED_TAG_KEYS:
+        raise HTTPException(status_code=400, detail=f"{body.key} 为保留 key", )
     key_def = db.get(TagKey, body.key)
     if key_def is None:
-        raise HTTPException(status_code=400, detail="未知标签 key，请先在标签键管理中创建", )
+        raise HTTPException(status_code=422, detail="未知标签 key，请先在标签键管理中创建", )
     if key_def.mode != "fixed":
         raise HTTPException(status_code=400, detail=f"{body.key} 为 {key_def.mode} 模式，无需预定义 value", )
     duplicate = db.query(Tag).filter(Tag.key == body.key, Tag.value == body.value).first()
@@ -112,13 +113,15 @@ RESERVED_TAG_KEYS = {"author", "version-of"}
 @router.put("/admin/tag-keys/{key}", response_model=TagKeyOut)
 def update_tag_key(
     key: str,
-    body: TagKeyUpsert,
+    body: TagKeyUpdate,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
     k = db.get(TagKey, key)
     if k is None:
         raise HTTPException(status_code=404, detail="标签键不存在", )
+    if key in RESERVED_TAG_KEYS:
+        raise HTTPException(status_code=409, detail=f"{key} 为保留 key，禁止修改", )
     k.mode = body.mode
     k.label = body.label
     k.description = body.description
@@ -311,14 +314,20 @@ def review_suggestion(
 def fetch_models(db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """抓取/整理主流 AI 模型：写入 model 键的 pending 建议（人工审核后生效）。"""
     curated = [
-        ("DeepSeek", ["dsv4-flash", "dsv4-pro", "dsv4", "ds-unknown", "dsv4flash"]),
-        ("OpenAI", ["gpt-4o", "gpt-4o-mini", "o1", "o3"]),
-        ("Anthropic", ["claude-3-5-sonnet", "claude-3-7-sonnet", "claude-4-sonnet"]),
-        ("Google", ["gemini-1.5-pro", "gemini-2.0-flash", "gemini-3.7-flash"]),
-        ("Meta", ["llama-3.1-70b", "llama-3.3-70b"]),
-        ("Mistral", ["mistral-large", "mistral-medium"]),
-        ("Qwen", ["qwen2.5-72b", "qwen3-235b"]),
-        ("Kimi", ["moonshot-v1-32k", "kimi-k2"]),
+        ("DeepSeek", ["dsv4-flash", "dsv4-pro", "dsv4", "ds-unknown", "dsv4flash", "deepseek-chat", "deepseek-reasoner"]),
+        ("OpenAI", ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o1", "o1-mini", "o3", "o3-mini", "o4-mini"]),
+        ("Anthropic", ["claude-3-5-sonnet", "claude-3-5-haiku", "claude-3-7-sonnet", "claude-4-sonnet", "claude-4-opus", "claude-4-haiku"]),
+        ("Google", ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.7-pro"]),
+        ("Meta", ["llama-3.1-8b", "llama-3.1-70b", "llama-3.1-405b", "llama-3.3-70b", "llama-4-maverick", "llama-4-scout"]),
+        ("Mistral", ["mistral-large", "mistral-medium", "mistral-small", "mistral-nemo", "codestral"]),
+        ("Qwen", ["qwen2.5-7b", "qwen2.5-72b", "qwen2.5-coder", "qwen3-30b", "qwen3-235b", "qwen3-coder"]),
+        ("Kimi", ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k", "kimi-k2", "kimi-k2-thinking"]),
+        ("GLM", ["glm-4", "glm-4-flash", "glm-4-plus", "glm-4.5", "glm-4.6", "glm-4.6v"]),
+        ("MiniMax", ["abab6.5", "abab6.5s", "minimax-text-01"]),
+        ("智谱", ["chatglm-4", "chatglm-4-air", "chatglm-4-long"]),
+        ("百川", ["baichuan2-7b", "baichuan2-13b", "baichuan3"]),
+        ("月之暗面", ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"]),
+        ("阿里", ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-long"]),
     ]
     created = 0
     for group, models in curated:
@@ -349,16 +358,17 @@ def ai_suggest(
     text = (f"{demo.title} {demo.description}" if demo else body.text or "").lower()
     suggestions: list[dict] = []
 
+    # type 固定值：effect/widget/game/demo；category 固定值：3D建模/仿真/动画/图形学
     type_map = [
-        ("游戏", ["游戏", "play", "game", "小游戏"]),
-        ("动画", ["动画", "animation", "canvas"]),
-        ("3D建模", ["3d", "建模", "three", "webgl"]),
-        ("仿真", ["仿真", "simulation", "物理"]),
-        ("图形学", ["图形", "graphics", "shader", "粒子"]),
+        ("type", "game", ["游戏", "play", "game", "小游戏"]),
+        ("type", "effect", ["动画", "animation", "canvas", "特效", "粒子"]),
+        ("category", "3D建模", ["3d", "建模", "three", "webgl"]),
+        ("category", "仿真", ["仿真", "simulation", "物理"]),
+        ("category", "图形学", ["图形", "graphics", "shader"]),
     ]
-    for label, kws in type_map:
+    for key, value, kws in type_map:
         if any(k in text for k in kws):
-            suggestions.append({"key": "type", "value": label, "reason": f"描述命中关键词：{kws[0]}"})
+            suggestions.append({"key": key, "value": value, "reason": f"描述命中关键词：{kws[0]}"})
             break
 
     if "deepseek" in text or "dsv" in text:

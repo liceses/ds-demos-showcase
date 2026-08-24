@@ -412,6 +412,16 @@ async function rejectSuggestion(s: TagSuggestion) {
   }
 }
 
+async function runFetchModels() {
+  try {
+    const r = await api.fetchModels()
+    ui.toast(`已写入 ${r.created} 条模型建议`, 'success')
+    await loadSuggestions()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
 async function runAiSuggest() {
   aiLoading.value = true
   aiResult.value = []
@@ -584,8 +594,8 @@ onMounted(loadAll)
           <!-- 标签管理 -->
           <template v-else-if="tab === 'tags' && tagSub === 'keys'">
             <div class="filter-row" style="margin-bottom: 14px">
-              <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'keys'">键管理</button>
-              <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
+              <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
+              <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
             </div>
             <!-- 新建键 -->
             <div class="card card-mint" style="padding: 16px 20px; margin-bottom: 16px; max-width: 720px">
@@ -679,8 +689,8 @@ onMounted(loadAll)
           <!-- 标签审核 / AI 整理（并入标签管理） -->
           <template v-else-if="tab === 'tags' && tagSub === 'review'">
             <div class="filter-row" style="margin-bottom: 14px">
-              <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'keys'">键管理</button>
-              <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
+              <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
+              <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
             </div>
             <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 720px">
               <h2 style="margin-bottom: 12px">AI 整理标签</h2>
@@ -692,6 +702,7 @@ onMounted(loadAll)
                   </select>
                   <input v-model="aiText" class="input" style="flex: 1" placeholder="或直接粘贴描述文本（可选）" />
                   <button class="btn btn-secondary" type="button" :disabled="aiLoading" @click="runAiSuggest">{{ aiLoading ? '分析中…' : 'AI 推荐' }}</button>
+                  <button class="btn btn-outline" type="button" @click="runFetchModels">写入主流模型建议</button>
                 </div>
                 <div v-if="aiResult.length" class="form-stack">
                   <div class="filter-row" style="margin: 0">

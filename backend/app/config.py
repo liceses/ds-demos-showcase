@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     jwt_secret: str = "please-change-me-to-a-long-random-string"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 天
+    # CORS 允许来源（逗号分隔）
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     # 匿名评分 salt：用于 sha256(device_id|ip|salt) 生成 rater_key；留空则用 jwt_secret 派生
     rating_salt: str = ""
 
@@ -22,7 +24,6 @@ class Settings(BaseSettings):
 
     max_upload_size: int = 200 * 1024 * 1024  # 200MB
     max_file_size: int = 200 * 1024 * 1024
-    max_cover_size: int = 5 * 1024 * 1024     # 5MB
 
     # 阿里云 OSS（可选；配置后文件双写备份到 OSS，log 只存 OSS）
     # oss_enabled 总开关：false 时即使填了 AK 也强制走本地存储（含 log）

@@ -3,7 +3,7 @@
 import hashlib
 import time
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func
@@ -177,12 +177,17 @@ def get_rating(
 @router.get("/leaderboard", response_model=Paginated)
 def leaderboard(
     sort: str = Query(default="avg", pattern="^(avg|god|ghost|net|count|heat)$"),
+    range: str = Query(default="all", pattern="^(all|week|month)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """排行榜：只展示 approved demo。质量榜（avg/god/ghost/net）排除 0 评。"""
+    """排行榜：只展示 approved demo。质量榜（avg/god/ghost/net）排除 0 评。range=all|week|month。"""
     query = db.query(Demo).filter(Demo.status == "approved")
+    if range == "week":
+        query = query.filter(Demo.created_at >= datetime.utcnow() - timedelta(days=7))
+    elif range == "month":
+        query = query.filter(Demo.created_at >= datetime.utcnow() - timedelta(days=30))
     if sort in ("avg", "god", "ghost", "net"):
         query = query.filter(Demo.rating_count > 0)
 

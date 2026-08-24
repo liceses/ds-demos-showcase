@@ -10,6 +10,7 @@
           /api、/preview、/media → backend:8000（FastAPI）
           /assets                → 静态（长缓存）
           其余                    → SPA 回退 index.html
+demo.deepdemos.top → Nginx 独立 server 块 → /preview、/media 反代 backend（预览隔离域）
 ```
 
 ## 首次部署
@@ -21,11 +22,17 @@
 ```bash
 JWT_SECRET=<强随机串>        # 必须！compose 兜底值是公开的 please-change-me
 AUTO_APPROVE=false           # 生产建议关闭自动审核（新上传需管理员通过）
+# 可选：
+# OSS_ENABLED=true/false     # 总开关；false 强制纯本地
+# OSS_SERVE_LOCAL=true       # zip 下载走本地，OSS 仅备份（默认 true）
+# UPLOAD_CODE=<信任通道密钥>  # 匿名 AI agent 免审核上传
+# RATING_SALT=<随机串>       # 匿名评分指纹盐
+# SITE_REPO_DIR=/site-repo   # 站点仓库只读挂载（站点更新公告用）
 ```
 
 生成密钥：`openssl rand -hex 32`
 
-> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面**双写备份到阿里云 OSS**（上行免费，作为备份）；`OSS_SERVE_LOCAL`（默认 `true`）让预览/下载**走本地服务器**，不产生 OSS 下行费用。会话日志在启用 OSS 备份时**只存 OSS**。不配置 `OSS_*` 则全部使用本地 `storage/`。
+> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面**双写备份到阿里云 OSS**（上行免费，作为备份）；`OSS_SERVE_LOCAL`（默认 `true`）让 zip 下载**走本地服务器**，不产生 OSS 下行费用。⚠️ 已知问题：预览子资源与 `/media` 封面目前仍可能直连 OSS（待后端修复）。会话日志在启用 OSS 备份时**只存 OSS**。不配置 `OSS_*` 则全部使用本地 `storage/`。
 
 ### 2. 构建并启动
 
@@ -73,7 +80,8 @@ cd web && git pull && docker compose up -d --build
 3. `AUTO_APPROVE=false`。
 4. **配 HTTPS（强烈建议）**：当前 `nginx.conf` 仅监听 80，登录凭据与 Cookie 明文传输。可用 certbot（Let's Encrypt）为 `deepdemos.top` 发证书并改 nginx 配置：
    - `listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
-5. 建议后续补：登录/上传/评论/下载限流、zip 解压防护（压缩比/条目数/符号链接）、安全响应头（CSP/nosniff 等）、`/health` `/ready`、审计日志。这些属于"生产规范"项，当前代码尚未实现。
+5. 建议后续补：zip 解压防护（压缩比/条目数/符号链接）、安全响应头（CSP/nosniff 等）、`/health` `/ready`、审计日志。这些属于"生产规范"项，当前代码尚未实现。
+6. ⚠️ 已知问题：后端容器未安装 `git`，`site_git.py` 的站点更新公告在 Docker 内为空；如需该功能，需在 `backend/Dockerfile` 安装 git 或改实现。
 
 ## 备份
 

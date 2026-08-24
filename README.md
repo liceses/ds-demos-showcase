@@ -62,13 +62,13 @@ Windows 双击 `start-dev.bat`，或在 `web/` 下执行：
 | 8 | 用户/登录/评论 + 作者附加 tag | ✅ | JWT(HttpOnly Cookie) 本地账号 + 评论树（深度≤5）+ 自动 `author:` 标签（gh 登录为 todo，未做） |
 | 9 | 优良扩展性的底层架构 | ⚠️ | 模块化清晰（APIRouter/services），但无 Alembic/状态机/配额，SQLite 单写，属"单机级"扩展 |
 | 10 | 生成占位 demos | ✅ | 前端 Mock 6 个占位 demo（`VITE_USE_MOCK`）；后端无 seed 脚本 |
-| 11 | 初始 tags | ✅ | `model:dsv4`(+flash/pro)、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*` |
-| 12 | 上传下载 + 自动限流 | ⚠️ | 上传/下载 ✅（下载计数）；「自动限制流量」❌（无限流/无配额/无压缩比防护） |
+| 11 | 初始 tags | ✅ | `model:*`（97 个常见值，2026-08 更新，按厂商分组）、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*`、`category:*` 等 |
+| 12 | 上传下载 + 自动限流 | ⚠️ | 上传/下载 ✅（下载计数）；限流已实现：匿名上传 20 次/小时、标签建议 10 次/小时、评分 10+60 次/小时、访问打点 30 次/分、会话日志 60 次/小时；zip 解压防护（压缩比/条目数/符号链接）❌ |
 | 13 | UI 完全参考参考站 | ⚠️ | 采用 neo-brutalist-playful 规范（stylepkg/），是否"完全参考"需人工比对 |
 | todo | gh 登录 | ❌ | 未实现 |
 | todo | demos 的 gh 仓库一步迁移 | ❌ | 未实现 |
 
-> 生产规范（项目计划书）中尚未落地的工程条目：登录/上传/评论/下载限流、zip 解压防护（压缩比/条目数/符号链接）、安全响应头、审计日志、备份脚本、health/ready、CI/测试、非 root 容器——详见 `DEPLOY.md`「上线前安全清单」。
+> 生产规范（项目计划书）中尚未落地的工程条目：zip 解压防护（压缩比/条目数/符号链接）、安全响应头、审计日志、备份脚本、health/ready、CI/测试、非 root 容器——详见 `DEPLOY.md`「上线前安全清单」。
 
 ## 安全须知
 

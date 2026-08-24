@@ -685,6 +685,8 @@ async def create_demo(
 
     if demo_type == "link":
         ext_url = _validate_url(external_url, "external_url")
+        if file is not None and file.filename:
+            raise HTTPException(status_code=400, detail="链接类型不需要上传文件", )
         zip_bytes = None
         single_file = None
     else:
@@ -760,6 +762,8 @@ async def create_demo_from_url(
 
     if demo_type == "link":
         ext_url = _validate_url(body.external_url, "external_url")
+        if body.zip_url or body.file_url:
+            raise HTTPException(status_code=400, detail="链接类型不需要提供 zip_url/file_url", )
         zip_bytes = None
         content_hash = None
         single_file = None

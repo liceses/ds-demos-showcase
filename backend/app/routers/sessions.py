@@ -37,8 +37,9 @@ def _find_demo(db: Session, slug: str) -> Demo:
 
 
 @router.get("/demos/{slug}/session-logs", response_model=list[SessionLogOut])
-def list_session_logs(slug: str, db: Session = Depends(get_db)):
+def list_session_logs(slug: str, request: Request, db: Session = Depends(get_db)):
     _find_demo(db, slug)
+    _rate_limit(request)
     out: list[SessionLogOut] = []
 
     if oss.enabled():

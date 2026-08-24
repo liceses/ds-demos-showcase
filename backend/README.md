@@ -16,7 +16,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 首次启动自动建表并写入初始数据：
 - 管理员：`admin / admin123`
-- 初始标签：`model:dsv4*`、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*`
+- 初始标签：`model:*`（当前 97 个常见值，2026-08 更新，按厂商分组）、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*`、`category:*` 等；完整 seed 见 `app/main.py`
 
 ## 配置
 

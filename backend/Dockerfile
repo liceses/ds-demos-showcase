@@ -6,6 +6,9 @@ ENV TZ=Asia/Shanghai \
 
 WORKDIR /app
 
+# site_git.py 需要 git 读取站点 commit（更新公告）
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

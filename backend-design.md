@@ -20,8 +20,8 @@ web/
     │   ├── security.py      # 密码 / JWT / Cookie
     │   ├── deps.py          # 当前用户 / 管理员依赖
     │   ├── serializers.py   # Demo/Tag 序列化
-    │   ├── routers/         # auth, users, tags, demos, comments, sessions, admin, announcements
-    │   └── services/        # storage(解压/封面/大小), oss, settings_service, site_git
+    │   ├── routers/         # auth, users, tags, demos, comments, sessions, admin, announcements, meta, stats, ratings
+    │   └── services/        # storage(解压/封面/大小), oss, oss_sync, settings_service, site_git, visits, git_service
     ├── requirements.txt
     ├── .env.example
     └── storage/             # demo 文件、封面（运行时生成）
@@ -45,7 +45,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 首次启动自动建表并写入：
 - 管理员：`admin / admin123`
-- 初始标签：`model:dsv4*`、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*`
+- 初始标签：`model:*`（当前 97 个常见值，2026-08 更新，按厂商分组）、`plugin:routing-suite`、`skills:J-space`、`preset:router-standard`、`type:*`、`category:*`（3D建模/仿真/动画/图形学）等；完整 seed 见 `main.py` 的 `_DEFAULT_TAG_KEYS` / `_DEFAULT_TAGS`
 
 前端联调：`web/frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指向 `localhost:8000`。
 
@@ -66,17 +66,17 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | GET | `/users/{username}` | 用户公开信息 + `demo_count` |
 | PATCH | `/users/{id}` | admin：`{role?,status?}` |
 
-### 标签（扁平数组）
+### 标签（分级，扁平列表已下线）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/tags` | `[{id,key,value,description,parent_id,demo_count,child_count}]` |
+| GET | `/tags/tag-keys` | 标签键定义（mode/values/group/min/max/demo_count） |
 | GET | `/tags/{key}:{value}` | 详情 + `parent` + `children` |
-| POST | `/tags` | 创建（key=`author` 保留 → 400） |
+| POST | `/tags` | 创建 fixed value（key=`author`/`version-of` 应保留 → 400/409；当前 `version-of` 校验待修） |
 
 ### Demo
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/demos` | `?status=&tag=k:v&q=&sort=newest\|popular&page=&page_size=` |
+| GET | `/demos` | `?status=&tag=k:v&q=&author=&sort=newest\|popular\|random\|prompt&page=&page_size=` |
 | GET | `/demos/{slug}` | 详情（含 session_log_count/timeline/is_author/大小） |
 | POST | `/demos` | multipart：`title, description?, tags(JSON), cover?, file(zip必填)` → 201 `{slug,status}` |
 | PUT | `/demos/{slug}` | 作者/admin，同字段 → 204 |
@@ -111,21 +111,21 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | POST | `/admin/review/{slug}` | `{action:"approve"\|"reject"}` |
 | GET | `/admin/demos` | 全部 + storage_size/inconsistency |
 | GET | `/admin/users` | 用户列表 |
-| GET/PUT | `/admin/settings` | `{auto_approve}` |
+| GET/PUT | `/admin/settings` | `{auto_approve, auto_approve_public}` |
 
 ---
 
 ## 4. 关键实现点
 
 - **鉴权**：JWT（HS256，`JWT_SECRET` 需改）；token 同时放 body 与 HttpOnly Cookie，兼容 Bearer 头。密码用 PBKDF2（std 库，无额外依赖）。
-- **上传限制**：zip `MAX_UPLOAD_SIZE` 默认 200MB；封面**无大小限制**（自动压缩，见下节）。
+- **上传限制**：zip `MAX_UPLOAD_SIZE` 默认 200MB；封面同样受整体上传上限（默认 200MB）约束，自动压缩（见下节）。
 - **单文件模式**：`web` 类型可直接上传单个 `.html/.svg`（按后缀识别，`single_file` 列标记）；单 HTML 存 `index.html`、单 SVG 存 `index.svg`，预览/下载直接服务原文件；单 HTML 要求自包含。
 - **预览安全**：`/preview/{slug}/{path}` 解析到 `storage/demos/{slug}/files`，做路径穿越防护。
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **DSH 会话轨迹**：dsh 导出的 zip 常含 `session.jsonl`；`extract_zip` 会把 `*.jsonl` / `session*.json` / `trace*.json/l` 自动提取进 `demo_sessions/`，进「会话日志」Tab；前端对 `.jsonl` 走 DSH 渲染器。
 - **会话日志存储与防护**：默认**本地存储**；启用 OSS 备份时 log **只进 OSS**（`demos/{slug}/sessions/`）、本地不落盘（OSS 未启用时本地兜底）；列表走 OSS 前缀，**内容经后端代理 + 每 IP 限流（60 次/小时）**，不暴露 OSS 公网直链，避免 bot 爬取刷 OSS 下行流量。
-- **存储模式**：`OSS_SERVE_LOCAL=true`（默认）→ 预览/封面/zip 本地服务器下发，OSS 仅**双写备份**（上行免费）；`false` → 直连 OSS 省服务器带宽。
-- **标签**：扁平存储 + `parent_id` 层级，`GET /tags` 返回扁平数组（与前端不一致的旧分组设计已废弃）。
+- **存储模式**：`OSS_SERVE_LOCAL=true`（默认）→ zip 下载走本地服务器，OSS 仅**双写备份**（上行免费）；`false` → 直连 OSS 省服务器带宽。⚠️ **已知问题**：`main.py` 的预览子资源与 `/media` 封面目前只要 `oss.enabled()` 就 302 直连 OSS，未完全遵守 `OSS_SERVE_LOCAL`，仍会产生 OSS 下行流量（待后端修复）。
+- **标签**：扁平存储 + `parent_id` 层级，对外用 `GET /tags/tag-keys` 返回键定义与候选值（旧 `GET /tags` 扁平列表已下线）。
 
 ### 上传去重（幂等键 + 内容哈希）
 
@@ -135,7 +135,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ### 封面自动压缩
 
-- **策略**：上传原图**不限大小** → 后端 Pillow 压缩为 **WebP（最大边 1280px、质量 82、method 4）** → **只保存压缩版**；SVG 为文本直接原样直存。
+- **策略**：上传原图受整体上传上限（默认 200MB）约束 → 后端 Pillow 压缩为 **WebP（最大边 1280px、质量 82、method 4）** → **只保存压缩版**；SVG 为文本直接原样直存。
 - **全通道覆盖**：网页 multipart `cover`、AI agent `from-url` 的 `cover_url`、编辑更新封面，统一走 `storage.save_cover()`。
 - **流量收益**：封面文件名唯一 + `Cache-Control: immutable` 长期缓存；压缩后通常从 MB 级降到几十 KB，首页/列表高频拉取成本大幅下降。
 - **依赖**：`Pillow>=10.0`（已加入 requirements.txt）。
@@ -151,7 +151,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ### 推荐（轻量）
 
 - **相关推荐** `GET /demos/{slug}/related?limit=30`：score = 标签重合（type/game=3、model/category=2、其余 1）+ 同类型 +0.5 + 热度(view+2*download)*0.001 + 随机抖动；排除自身；返回排序候选池。
-- **首页精选** `GET /demos?sort=random`：SQLite `ORDER BY RANDOM()` 整批随机。
+- **首页精选** `GET /demos?sort=random`：内存缓存洗牌 id 序（60s TTL），避免每次 `ORDER BY RANDOM()` 全表随机。
 - 前端拿到相关候选池后**本地洗牌「换一批」**（不重复、不额外请求）；标签过少的 demo 用「同类型 + 热度 + 随机」保底，保证池子不空。
 
 ### 访问统计（前端打点 PV）
@@ -175,7 +175,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 - **模型**：`Tag.group`（固定值分组/厂商）；`TagValueSuggestion`（用户申请 fixed 值，pending/approved/rejected，可带 demo_id 审核后补挂）。
 - **审核流**：用户 `POST /tags/suggestions` 只写 pending；admin `POST /tags/admin/suggestions/{id}/review` approve 才创建 Tag。
-- **AI 辅助**：`POST /tags/admin/fetch-models` 写主流模型为 pending 建议；`POST /tags/admin/ai-suggest` 返回规则启发式建议（占位，不落库）。
+- **AI 辅助**：`POST /tags/admin/fetch-models` 写内置主流模型（2026-08 列表）为 pending 建议；`POST /tags/admin/ai-suggest` 返回规则启发式建议（占位，不落库）。⚠️ 当前 `fetch-models` 内置列表仍是旧版，与线上 97 个值不一致，待后端同步。
 - **范围检索**：`GET /demos?tag=rounds:3-10` 对 int 键用 `CAST(Tag.value AS INTEGER)` 范围比较；fixed/open 精确。
 - **分布**：`GET /tags/tag-keys` 的 int 键返回 `min/max`，前端可做滑条/直方图；fixed value 返回 `group` 分组。
 

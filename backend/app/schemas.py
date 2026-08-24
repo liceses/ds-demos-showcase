@@ -127,6 +127,14 @@ class TagKeyUpsert(BaseModel):
     sort: int = 0
 
 
+class TagKeyUpdate(BaseModel):
+    """更新标签键：不含 key（key 在 URL 路径里）。"""
+    mode: str = Field(pattern="^(fixed|open|int)$")
+    label: str = Field(min_length=1, max_length=64)
+    description: str = ""
+    sort: int = 0
+
+
 # ---------- Demo ----------
 class DemoFromUrlIn(BaseModel):
     """AI agent 友好：JSON 提交，zip 走 URL（后端下载），免 multipart。
@@ -193,7 +201,6 @@ class DemoTimelineOut(BaseModel):
 class DemoDetailOut(DemoSummaryOut):
     preview_url: str = ""
     session_log_count: int
-    commit_count: int
     is_author: bool
     prompt: str = ""
     video_url: str | None = None
@@ -245,30 +252,6 @@ class SessionLogOut(ORMModel):
     created_at: datetime
 
 
-# ---------- Git ----------
-class CommitInfoOut(BaseModel):
-    hash_short: str
-    message: str
-    author: str
-    date: str
-
-
-class CommitFileOut(BaseModel):
-    path: str
-    status: str
-    additions: int
-    deletions: int
-
-
-class CommitDetailOut(BaseModel):
-    hash: str
-    message: str
-    author: str
-    date: str
-    files: list[CommitFileOut]
-    diff_text: str
-
-
 # ---------- Settings ----------
 class SettingsOut(BaseModel):
     auto_approve: bool = True
@@ -303,7 +286,7 @@ class UserPatch(BaseModel):
 # ---------- Announcements ----------
 class AnnouncementOut(ORMModel):
     id: int
-    type: str  # manual | auto | update
+    type: str  # manual | auto | update | demo_update
     title: str
     content: str
     demo_slug: str | None = None

@@ -9,7 +9,7 @@
 8. 需要 用户/登录/评论 系统 ,demos作者等信息以附加tag的形式添加到demos的信息中.
 9. 需要具有优良扩展性的底层架构.
 10. 可以先生成一些 占位 demos  来看效果
-11. 初始 tags : model:dsv4-flash , model:dsv4-pro , plugin:routing-suite , skills:J-space , preset:router-standard
+11. 初始 tags : model:*（97 个常见值，2026-08 更新，按厂商分组）、plugin:routing-suite、skills:J-space、preset:router-standard、type:*、category:*
 12. 支持demos 的上传下载功能. 自动限制流量
 13. ui完全参考https://dsgames.askhow.top/这个网站, 其他设计也可以参照.
 todo:

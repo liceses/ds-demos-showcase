@@ -78,7 +78,7 @@
 |---|---|---|
 | `title` | string | 新标题 |
 | `description` | string | 新描述 |
-| `tags` | string | JSON 字符串数组，如 `["model:dsv4-flash","type:game"]` |
+| `tags` | string | JSON 字符串数组，如 `["model:DeepSeek-V4","type:game"]` |
 | `cover` | file | 新封面（可选） |
 | `file` | file | 新 zip 包（可选，不传保留原文件） |
 | `commit_message` | string | 更新说明（可选），用于生成「作品更新公告」 |
@@ -141,7 +141,7 @@
 
 | mode | 含义 | value 规则 | 示例 |
 |---|---|---|---|
-| `fixed` | 固定值 | 只能选已存在的 value（管理员维护） | `model:dsv4-flash`、`plugin:routing-suite`、`type:game` |
+| `fixed` | 固定值 | 只能选已存在的 value（管理员维护） | `model:DeepSeek-V4`、`plugin:routing-suite`、`type:game` |
 | `open` | 开放值 | key 固定，value 用户自定义 | `game:mc`、`game:pvz` |
 | `int` | 数字值 | value 必须为整数（自动规范化存储） | `rounds:3` |
 
@@ -165,15 +165,24 @@
     "label": "模型",
     "description": "AI 模型版本（固定值）",
     "sort": 1,
-    "demo_count": 6,
+    "demo_count": 97,
     "values": [
-      { "value": "dsv4-flash", "description": "DeepSeek V4 Flash —— 快速推理", "demo_count": 3 }
+      { "value": "DeepSeek-V4", "description": "DeepSeek V4 通用模型", "demo_count": 0, "group": "DeepSeek" },
+      { "value": "GPT-5.5", "description": "OpenAI GPT-5.5", "demo_count": 0, "group": "OpenAI" },
+      { "value": "Claude Sonnet 5", "description": "Anthropic Claude Sonnet 5", "demo_count": 0, "group": "Anthropic" },
+      { "value": "Gemini 3.1 Pro", "description": "Google Gemini 3.1 Pro", "demo_count": 0, "group": "Google" },
+      { "value": "Qwen3.8-Max", "description": "阿里 Qwen3.8-Max", "demo_count": 0, "group": "Qwen" },
+      { "value": "GLM-5.2", "description": "智谱 GLM-5.2", "demo_count": 0, "group": "Zhipu" },
+      { "value": "Kimi-K3", "description": "月之暗面 Kimi K3", "demo_count": 0, "group": "Kimi" },
+      { "value": "Doubao-Seed-2.1-pro", "description": "字节豆包 Seed 2.1 Pro", "demo_count": 0, "group": "ByteDance" }
     ]
   },
   { "key": "game", "mode": "open", "label": "游戏", "description": "游戏名称（自定义值）", "sort": 6, "demo_count": 2, "values": [{ "value": "pvz", "description": "", "demo_count": 2 }] },
   { "key": "rounds", "mode": "int", "label": "轮数", "description": "生成轮数（必须为整数）", "sort": 7, "demo_count": 1, "values": [{ "value": "3", "description": "", "demo_count": 1 }] }
 ]
 ```
+
+> 当前 `model` 标签共 **97 个固定值**（2026-08 更新），按厂商分组：DeepSeek / OpenAI / Anthropic / Google / Qwen / 智谱 / Kimi / 字节 / 腾讯 / Meta / Mistral / xAI / MiniMax / 微软 等。完整列表以 `GET /api/v1/tags/tag-keys` 返回为准。
 
 #### POST `/api/v1/tags/admin/tag-keys`（仅 admin）
 
@@ -217,11 +226,11 @@
 
 `tags` 为 JSON 数组，元素支持两种形式：
 
-1. 字符串：`"model:dsv4-flash"`（固定值用这种即可）
+1. 字符串：`"model:DeepSeek-V4"`（固定值用这种即可）
 2. 对象（**open/int 创建时可选带介绍**）：
 ```json
 [
-  "model:dsv4-flash",
+  "model:DeepSeek-V4",
   { "key": "game", "value": "mc", "description": "我的世界像素风地图" },
   { "key": "rounds", "value": "3" }
 ]
@@ -280,7 +289,7 @@ commit_message / keep_old_version  同前（编辑时）
 - link：`external_url` 必填且 http(s)；上传 file → 400
 - web/zip：创建时必须上传 zip；web 解压要求含 index.html，zip 不要求
 - 更新时若切换类型：link ↔ web/zip 均可；link 下上传 file → 400
-- **封面自动压缩**：上传原图**无大小限制**（受整体请求上限约束），后端自动压缩为 WebP（最大边 1280、质量 82），**只保留压缩版**，返回 `/media/covers/xxx.webp`
+- **封面自动压缩**：上传原图受整体上传上限（默认 200MB）约束，后端自动压缩为 WebP（最大边 1280、质量 82），**只保留压缩版**，返回 `/media/covers/xxx.webp`
 - **zip 内容去重**（按作者）：同作者上传相同 zip（sha256 原始字节）→ **409** + 已有 demo 链接；`force=1`（仅管理员）可强制上传；link 类型无 zip 不校验；同 demo 自我更新上传相同文件不算重复
 
 ### 响应新增字段
@@ -368,7 +377,7 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
     "cover_url": "https://your-oss-or-any-public-host/cover.png",
     "prompt": "用 canvas 画一个机械表…",
     "idempotency_key": "mech-watch-20240819-001",
-    "tags": ["model:dsv4-flash", {"key":"game","value":"watch","description":"机械表主题"}]
+    "tags": ["model:DeepSeek-V4", {"key":"game","value":"watch","description":"机械表主题"}]
   }'
 # → {"slug":"ji-xie-biao-mo-ni","status":"approved" | "pending","created":true}
 # 重试带同一 idempotency_key → {"slug":"ji-xie-biao-mo-ni",...,"created":false}（不重复创建）
@@ -384,7 +393,7 @@ curl -X POST https://deepdemos.top/api/v1/demos/from-url \
   }'
 ```
 
-- `zip_url` 后端自行下载（限 `max_upload_size` 50MB、60s 超时），**只允许公网 http(s)**：内网/回环/保留地址返回 422（SSRF 防护）
+- `zip_url` 后端自行下载（限 `max_upload_size` 默认 200MB、60s 超时），**只允许公网 http(s)**：内网/回环/保留地址返回 422（SSRF 防护）
 - 封面 `cover_url` 可选；`tags` 支持字符串或对象数组（同第 4 节）
 - `demo_type` 规则同第 5 节：web/zip 必填 `zip_url`，link 必填 `external_url` 且禁传 zip
 - **AI 上传质量强制**：`description` 必填（非空）、`tags` 至少 1 个——从 URL 通道上传必须带简介和标签，否则 422
@@ -402,7 +411,7 @@ curl -X POST https://deepdemos.top/api/v1/demos \
   -F "description=AI 生成的机械表网页 demo" \
   -F "demo_type=web" \
   -F "idempotency_key=mech-watch-20240819-002" \
-  -F 'tags=["model:dsv4-flash"]' \
+  -F 'tags=["model:DeepSeek-V4"]' \
   -F "prompt=用 canvas 画一个机械表…" \
   -F "file=@D:/path/机械表.zip" \
   -F "cover=@D:/path/cover.png"
@@ -514,7 +523,7 @@ GET /api/v1/demos?status=approved&author=public
 ### 评分规则
 - 1~5 分整数：5=神作（神）、4=佳作、3=一般、2=差、1=鬼作（鬼）
 - 登录用户：一人一个 Demo 一票，可改分/撤分；`rater_key = user:{user_id}`
-- 匿名用户：浏览器 localStorage `device_id` + 客户端 IP + salt 生成 `rater_key`；可改分/撤分；**每 IP 每 demo 限流 10 次/小时，每 IP 全局 60 次/小时**
+- 匿名用户：浏览器 localStorage `device_id`（**≥8 位**）+ 客户端 IP + salt 生成 `rater_key`；可改分/撤分；**每 IP 每 demo 限流 10 次/小时，每 IP 全局 60 次/小时**
 - 榜单只展示 `status=approved`；质量榜（avg/god/ghost/net）排除 0 评
 
 ### 接口
@@ -551,7 +560,7 @@ GET /api/v1/demos?status=approved&author=public
 ### 用户申请新固定值（审核流）
 - `POST /tags/suggestions`（登录/匿名均可，每 IP 每小时 10 次限流）
   ```json
-  { "key": "model", "value": "dsv4-ultra", "description": "…", "group": "DeepSeek", "demo_id": null }
+  { "key": "model", "value": "DeepSeek-V4.1", "description": "…", "group": "DeepSeek", "demo_id": null }
   ```
   只写 `pending` 建议，**不直接创建 Tag**
 - `GET /tags/admin/suggestions?status=pending`（admin）列出建议
@@ -562,9 +571,61 @@ GET /api/v1/demos?status=approved&author=public
   approve → 创建正式 Tag（若不存在），并可选补挂到 `demo_id` 对应 demo；reject → 标记拒绝
 
 ### AI 辅助整理（admin，只建议不落库）
-- `POST /tags/admin/fetch-models`：把主流 AI 模型写入 `model` 键的 **pending 建议**（人工审核后生效）
+- `POST /tags/admin/fetch-models`：把内置主流模型（2026-08 列表）写入 `model` 键的 **pending 建议**（人工审核后生效）
 - `POST /tags/admin/ai-suggest`：输入 `{demo_id?|text?}`，返回推荐标签 `{suggestions:[{key,value,reason}], note}`；当前为规则启发式占位，接入真实 LLM 后更准
 
 ### 数字标签范围搜索
 - `GET /demos?tag=rounds:3-10`：int 键支持 `key:lo-hi` 范围过滤（SQL CAST 数值比较）
 - fixed/open 仍为 `key:value` 精确匹配
+
+## 10. 补充接口（代码已有，文档补录）
+
+> 以下接口在代码中已实现，原文档未列全，现补录。
+
+### 认证 / 用户
+- `POST /api/v1/auth/register`（201）：`{username, password}`；用户名重复 409
+- `POST /api/v1/auth/logout`（204）：清除登录态
+- `GET /api/v1/auth/me`：返回当前登录用户
+- `GET /api/v1/users/{username}`：公开用户信息（含 `demo_count`）
+- `PATCH /api/v1/users/{user_id}`（仅 admin）：`{role?, status?}`
+
+### 管理后台
+- `GET /api/v1/admin/review`：待审核 demo 列表
+- `POST /api/v1/admin/review/{slug}`：审核通过/拒绝
+- `GET /api/v1/admin/demos`：管理端 demo 列表
+- `GET /api/v1/admin/users`：用户管理列表
+- `GET /api/v1/admin/settings` / `PUT /api/v1/admin/settings`：`{auto_approve, auto_approve_public}`
+- `POST /api/v1/admin/oss-sync`：强制全量 OSS 同步
+- `GET /api/v1/admin/storage-status`：存储/OSS 状态
+
+### Demo / 评论 / 会话日志
+- `GET /api/v1/demos/{slug}/download`：下载原始文件（zip 或单文件）
+- `GET /api/v1/demos/{slug}/comments`、`POST /api/v1/demos/{slug}/comments`、`DELETE /api/v1/comments/{comment_id}`：评论树
+- `GET /api/v1/demos/{slug}/session-logs`：会话日志列表
+- `GET /api/v1/demos/{slug}/session-logs/{filename}`：会话日志内容（每 IP 60 次/小时限流）
+
+### 统计响应结构
+- `POST /api/v1/stats/visit`、`POST /api/v1/stats/heartbeat` 返回 `{"ok": true}`
+- `GET /api/v1/stats/recognition` 返回 `{"items": [...]}`
+- `POST /api/v1/stats/recognition`、`PUT /api/v1/stats/recognition/{id}` 返回 `{"id": ...}`
+
+### 标签
+- `POST /api/v1/tags` 支持 `parent_id`（层级标签）；返回的是**标签值对象** `TagOut`（含 `id/key/value/description/parent_id/demo_count/child_count/mode`），不是标签键对象
+
+## 11. 已知问题 / 代码待修（文档为预期行为，代码尚未完全对齐）
+
+> 以下条目是审计发现的“文档预期 vs 代码实际”差异，**待后端修复**；修复前请以本节为准。
+
+1. **`link` 类型创建时未拒绝文件/zip**：`POST /demos` 与 `POST /demos/from-url` 对 link 类型传 `file`/`zip_url`/`file_url` 是静默忽略，未按文档返回 400（`PUT /demos/{slug}` 已实现 400）。
+2. **会话日志列表接口未限流**：`GET /demos/{slug}/session-logs` 未加每 IP 60 次/小时限流，只有内容接口有限流。
+3. **`PUT /admin/announcements/{id}` 无法清空 `demo_slug`**：传 `demo_slug: null` 不会生效。
+4. **`PUT /admin/tag-keys/{key}` 请求体必须带 `key`**：文档预期“不含 key”，当前复用 `TagKeyUpsert` 导致 key 必填。
+5. **保留 key 校验不完整**：`POST /tags` 只拦 `author` 漏 `version-of`；`PUT /admin/tag-keys/{key}` 完全不校验保留 key。
+6. **`OSS_SERVE_LOCAL=true` 未完全生效**：zip 下载已走本地，但 `main.py` 的预览子资源与 `/media` 封面仍直连 OSS（只要 `oss.enabled()`），仍会产生 OSS 下行流量。
+7. **Docker 后端未安装 git**：`site_git.py` 依赖 git 读站点仓库 commit，容器内无 git → `update` 站点更新公告线上为空。
+8. **排行榜 `range` 参数后端不支持**：前端传 `range=all/week/month`，后端 `leaderboard()` 未接收，静默无效。
+9. **`_ensure_demo_columns` 迁移漏 `updated_at`**：旧库不会自动补该列。
+10. **`max_cover_size` 是死配置**：定义 5MB 但从未使用，封面实际受 `max_upload_size`（默认 200MB）约束。
+11. **commits 死代码残留**：`commits.py`、`git_service.py`、`Commit*` schema、`DemoDetailOut.commit_count` 仍在，但功能已移除且未挂载路由。
+12. **CORS 硬编码本地开发源**：`main.py` 仅允许 `localhost:5173` / `127.0.0.1:5173`，生产不可配置。
+13. **`.env.example` 缺配置项**：`RATING_SALT`、`UPLOAD_CODE`、`OSS_ENABLED`、`OSS_SERVE_LOCAL`、`SITE_REPO_DIR`、`MAX_COVER_SIZE` 未列出。

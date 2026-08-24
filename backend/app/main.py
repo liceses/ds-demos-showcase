@@ -27,7 +27,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,8 +88,8 @@ def preview_file(slug: str, path: str):
             headers={"Cache-Control": "public, max-age=60"},
         )
 
-    # 非 HTML（js/css/图片等）：OSS 已启用则 302 直连 OSS，不占服务器带宽
-    if oss.enabled():
+    # 非 HTML（js/css/图片等）：OSS 已启用且非「本地服务」模式才 302 直连 OSS
+    if oss.enabled() and not settings.oss_serve_local:
         # HEAD 检查存在性（不要 get_bytes 全量下载，避免服务器重复拉取）
         if oss.object_exists(f"demos/{slug}/files/{safe}"):
             return RedirectResponse(
@@ -116,7 +116,7 @@ def _read_preview_byte(slug: str, safe: str) -> bytes | None:
 def media_file(path: str):
     from pathlib import Path as _P
     safe = _P(path).as_posix().replace("\\", "/")
-    if oss.enabled():
+    if oss.enabled() and not settings.oss_serve_local:
         # HEAD 检查存在性，避免全量下载对象（重定向本身 no-store，最终对象自带 immutable 缓存）
         if oss.object_exists(f"media/{safe}"):
             return RedirectResponse(
@@ -161,6 +161,7 @@ def _ensure_demo_columns() -> None:
         ("rating_avg", "REAL NOT NULL DEFAULT 0"),
         ("rating_god", "INTEGER NOT NULL DEFAULT 0"),
         ("rating_ghost", "INTEGER NOT NULL DEFAULT 0"),
+        ("updated_at", "DATETIME"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:

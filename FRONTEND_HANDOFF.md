@@ -22,7 +22,7 @@
 | 上传 | `POST /demos`（multipart）与 `POST /demos/from-url`（JSON），均可匿名。 |
 | 幂等 | `idempotency_key`（8~128 位字母数字 `_ . -`）；重试同 key → `created:false`。 |
 | 内容去重 | 同作者相同 zip（sha256）→ **409**，detail 含 `/demo/<slug>`；管理员 `force` 可跳过。 |
-| 封面 | 上传不限大小，后端自动压缩为 WebP（最大边 1280），`cover_url` 返回 `/media/covers/xxx.webp`。 |
+| 封面 | 上传受整体上限（默认 200MB）约束，后端自动压缩为 WebP（最大边 1280），`cover_url` 返回 `/media/covers/xxx.webp`。 |
 | 公告 | `GET /announcements` 4 类：`manual`/`auto`/`update`/`demo_update`（`update`=站点 git commit 实时合并，60s 缓存）。 |
 | 推荐 | `GET /demos/{slug}/related?limit=30`（相关候选池）；`GET /demos?sort=random`（精选随机）。 |
 | 访问统计 | `GET /stats/visits` 读 PV；**前端必须打点**：`router.afterEach` 调 `api.reportVisit()`（`POST /stats/visit`），一次路由切换 = 1 PV。 |
@@ -43,13 +43,16 @@
 - 类型选择（web/zip/link）+ 条件表单（link 填 external_url；web/zip 传 zip）+ 提示词 prompt + 视频链接 video_url + 封面上传（自动压缩）。标签用 tagKeys 选择器（fixed chips / open 输入+介绍 / int 数字）。
 
 待做/可选：
-- 管理后台「标签键管理」的删除/编辑已有接口支持（`DELETE /tags/admin/tag-keys/{key}` 等），但管理 UI 目前只有新建键 + 加固定值；删除键/值可补按钮。
+- 管理后台「标签键管理」的删除/编辑已有接口支持（`DELETE /tags/admin/tag-keys/{key}` 等），管理 UI 已实现新建/编辑/删除键、删除值、建议审核、AI 建议。
+- 前端尚未接 `POST /demos/from-url`、`idempotency_key`、`upload_code`、`force` 字段（上传页无幂等键/upload_code 输入），如需 agent 友好上传可后续补。
+- 排行榜 `range=all/week/month` 前端已传，但后端暂不支持（静默无效），待后端修复或前端移除。
 
 ## 5. 已拆页面 / 路由
 - `/` 首页：欢迎/展示/入口卡片 + 精选 + 公告（无搜索）。
 - `/demos` 探索页：作品库（搜索/列表/分页）。
 - `/tags` 标签主页、`/tag/:k/:v` 标签详情、`/user/:username` 用户页、`/author/public` 公开用户页。
 - `/upload` 上传（无需登录）、`/admin` 管理后台（admin）、`/login`、`/register`、`/settings`。
+- `/leaderboard` 排行榜、`/about` 关于/统计/赞助/致谢、`/admin/sponsors` 赞助/致谢管理、`/:pathMatch(.*)*` 404。
 
 ## 6. 注意事项
 - **OSS 降级**：后端 OSS 失败会降级本地存储并在日志 warn，前端无需感知（`preview_url` 或 `/preview/` 路径仍可用）。
@@ -57,8 +60,8 @@
 - **标签**：已下线旧 `GET /tags` 扁平接口，一律用 `tag-keys`；`post /tags` 仅 admin 加 fixed 值。
 - **搜索/过滤**：`GET /demos?q=&tag=k:v&author=&sort=&page=`；首屏首页用 `page_size=6~8` 精选即可。
 - **DSH 会话轨迹**：上传 zip 若含 `*.jsonl`（如 dsh 的 `session.jsonl`）会自动进「会话日志」；`selectedLog` 以 `.jsonl` 结尾时用 `DshTrajectoryView` 渲染（不要用 MarkdownView）。
-- **会话日志**：默认本地存储；启用 OSS 备份时只存 OSS、本地不落盘。前端经 `GET /session-logs/{filename}` 取（每 IP 限流 60/小时，429 请稍后再试）。渲染能力保留，但不必当热内容设计；429 需静默降级。
-- **存储模式**：预览/封面/zip 默认服务器本地下发（OSS 仅备份），前端无感知（`preview_url`/`/preview/`/`/media/` 路径仍可用）。
+- **会话日志**：默认本地存储；启用 OSS 备份时只存 OSS、本地不落盘。前端经 `GET /demos/{slug}/session-logs/{filename}` 取（每 IP 限流 60/小时，429 请稍后再试）。渲染能力保留，但不必当热内容设计；429 需静默降级。
+- **存储模式**：zip 下载默认服务器本地下发（OSS 仅备份）；⚠️ 已知问题：预览子资源与 `/media` 封面目前仍可能直连 OSS（待后端修复），前端无感知（`preview_url`/`/preview/`/`/media/` 路径仍可用）。
 - **访问统计打点**：`router.afterEach` 已调 `api.reportVisit()`（fire-and-forget，失败静默）；**不要移除**，否则 About 页 PV 不涨。打点接口有每 IP 限流，429 静默即可。
 - **单文件上传**：`web` 类型可直接传 `.html/.svg`（按后缀识别）；上传页文件框 accept 已含 `.html,.svg`，提示「单 HTML 必须自包含」。详情页 `demo.single_file` 存在时下载按钮显示「下载文件」。
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'LeaderboardView' })
 import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { DemoSummary } from '../api/types'

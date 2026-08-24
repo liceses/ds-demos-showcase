@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'HomeView' })
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'

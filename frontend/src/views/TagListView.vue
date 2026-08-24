@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'TagListView' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import type { TagKeyInfo } from '../api/types'

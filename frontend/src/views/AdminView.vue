@@ -220,10 +220,19 @@ async function deleteAnnouncement(id: number) {
 }
 
 async function review(slug: string, action: 'approve' | 'reject') {
+  const idx = pending.value.findIndex((d) => d.slug === slug)
+  const item = idx >= 0 ? pending.value[idx] : null
+  if (item) pending.value.splice(idx, 1)
+  if (action === 'approve' && item) {
+    const inDemos = demos.value.find((d) => d.slug === slug)
+    if (inDemos) inDemos.status = 'approved'
+    else demos.value.unshift({ ...item, storage_size: 0, inconsistency: false } as AdminDemo)
+  }
   try {
     await api.adminApprove(slug, action)
-    await loadAll()
+    ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
   } catch (e) {
+    if (item) pending.value.splice(idx, 0, item)
     ui.toast((e as Error).message, 'error')
   }
 }
@@ -318,11 +327,14 @@ function setDemoPage(p: number) {
 }
 
 async function setDemoStatus(slug: string, action: 'approve' | 'reject') {
+  const d = demos.value.find((x) => x.slug === slug)
+  const old = d?.status
+  if (d) d.status = action === 'approve' ? 'approved' : 'rejected'
   try {
     await api.adminApprove(slug, action)
     ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
-    await loadAll()
   } catch (e) {
+    if (d && old) d.status = old
     ui.toast((e as Error).message, 'error')
   }
 }
@@ -335,11 +347,18 @@ async function deleteDemoRow(d: AdminDemo) {
     danger: true,
   })
   if (!ok) return
+  const idx = demos.value.findIndex((x) => x.slug === d.slug)
+  const removed = idx >= 0 ? demos.value[idx] : null
+  if (idx >= 0) demos.value.splice(idx, 1)
+  const pIdx = pending.value.findIndex((x) => x.slug === d.slug)
+  const pRemoved = pIdx >= 0 ? pending.value[pIdx] : null
+  if (pIdx >= 0) pending.value.splice(pIdx, 1)
   try {
     await api.deleteDemo(d.slug)
     ui.toast('Demo 已删除', 'success')
-    await loadAll()
   } catch (e) {
+    if (removed) demos.value.splice(idx, 0, removed)
+    if (pRemoved) pending.value.splice(pIdx, 0, pRemoved)
     ui.toast((e as Error).message, 'error')
   }
 }

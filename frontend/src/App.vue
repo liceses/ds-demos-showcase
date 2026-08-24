@@ -10,6 +10,7 @@ const auth = useAuthStore()
 const route = useRoute()
 const username = computed(() => auth.user?.username ?? '')
 const mobileOpen = ref(false)
+const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView']
 
 watch(
   () => route.fullPath,
@@ -112,11 +113,9 @@ const menuItems = [
 
     <main class="container" style="flex: 1">
       <RouterView v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
-          <div :key="route.fullPath" class="page-wrap">
-            <component :is="Component" />
-          </div>
-        </Transition>
+        <KeepAlive :include="keepAlivePages">
+          <component :is="Component" :key="route.name" />
+        </KeepAlive>
       </RouterView>
     </main>
 

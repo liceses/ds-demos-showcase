@@ -22,7 +22,9 @@ const router = createRouter({
     { path: '/admin/sponsors', name: 'admin-recognition', component: () => import('../views/RecognitionAdminView.vue'), meta: { title: '赞助/致谢管理', requiresAuth: true, requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue'), meta: { title: '404' } },
   ],
-  scrollBehavior() {
+  scrollBehavior(_to, _from, savedPosition) {
+    // 浏览器返回/前进时恢复滚动位置；新导航回顶部
+    if (savedPosition) return savedPosition
     return { top: 0 }
   },
 })

@@ -1,5 +1,7 @@
 <script setup lang="ts">
+defineOptions({ name: 'DemosView' })
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
@@ -15,6 +17,17 @@ const submittedQ = ref('')
 const sort = ref<'newest' | 'popular' | 'random'>('newest')
 const cardMode = ref<'normal' | 'prompt'>(localStorage.getItem('ds_card_mode') === 'prompt' ? 'prompt' : 'normal')
 const stripsOpen = ref(false)
+const route = useRoute()
+const router = useRouter()
+
+// 状态同步到 URL query（搜索/标签/排序可分享、可刷新还原）
+function syncQuery() {
+  const query: Record<string, string> = {}
+  if (submittedQ.value) query.q = submittedQ.value
+  if (selectedTags.value.length) query.tag = selectedTags.value.join(',')
+  if (sort.value !== 'newest') query.sort = sort.value
+  router.replace({ query })
+}
 
 function setCardMode(m: 'normal' | 'prompt') {
   if (cardMode.value === m) return
@@ -146,17 +159,20 @@ function applyIntRange(k: FilterGroup) {
     selectedTags.value.push(`${k.key}:${r.lo}-${r.hi}`)
   }
   reset()
+  syncQuery()
 }
 
 function clearIntRange(k: FilterGroup) {
   intRange.value = { ...intRange.value, [k.key]: { lo: k.min ?? 0, hi: k.max ?? 999 } }
   selectedTags.value = selectedTags.value.filter((t) => !t.startsWith(k.key + ':'))
   reset()
+  syncQuery()
 }
 
 function clearTags() {
   selectedTags.value = []
   reset()
+  syncQuery()
 }
 
 const sentinel = ref<HTMLElement | null>(null)
@@ -204,10 +220,12 @@ function toggleTag(t: string) {
   if (i >= 0) selectedTags.value.splice(i, 1)
   else selectedTags.value.push(t)
   reset()
+  syncQuery()
 }
 
 function applySort() {
   reset()
+  syncQuery()
 }
 
 // 显式提交搜索：只有回车 / 点「搜索」才触发请求
@@ -223,6 +241,7 @@ function submitSearch() {
   }
   submittedQ.value = next
   reset()
+  syncQuery()
 }
 
 function clearSearch() {
@@ -230,10 +249,21 @@ function clearSearch() {
   if (submittedQ.value) {
     submittedQ.value = ''
     reset()
+    syncQuery()
   }
 }
 
 onMounted(async () => {
+  // 从 URL query 还原状态
+  const qq = typeof route.query.q === 'string' ? route.query.q : ''
+  if (qq) {
+    q.value = qq
+    submittedQ.value = qq
+  }
+  const tagQ = typeof route.query.tag === 'string' ? route.query.tag : ''
+  if (tagQ) selectedTags.value = tagQ.split(',').filter(Boolean)
+  const sortQ = route.query.sort
+  if (sortQ === 'popular' || sortQ === 'random') sort.value = sortQ
   try {
     tagKeys.value = await api.listTagKeys()
   } catch {

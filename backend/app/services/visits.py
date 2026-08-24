@@ -84,6 +84,7 @@ def get_live_stats() -> dict:
 def _flush_locked() -> None:
     """把今日内存计数写入 DB（调用方须已持有 _lock）。累加式，绝不覆盖历史值。
     成功落库后清零内存批次，_today_count 仅代表「距上次 flush 的增量」，避免同一批重复累加。"""
+    global _today_count
     day = _today
     if _today_count == 0:
         return

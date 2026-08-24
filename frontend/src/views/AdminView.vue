@@ -2,11 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
-import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, TagKeyInfo } from '../api/types'
+import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, TagKeyInfo, TagSuggestion } from '../api/types'
 
 const ui = useUiStore()
 
-const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings' | 'announcements'>('review')
+const tab = ref<'review' | 'demos' | 'tags' | 'tag-suggestions' | 'users' | 'settings' | 'announcements'>('review')
 
 const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
@@ -371,6 +371,89 @@ async function saveEditKey() {
   }
 }
 
+// ---------- 标签审核 / AI 整理 ----------
+const suggestions = ref<TagSuggestion[]>([])
+const aiDemoSlug = ref('')
+const aiText = ref('')
+const aiResult = ref<{ key: string; value: string; reason: string }[]>([])
+const aiChecked = ref<Record<string, boolean>>({})
+const aiNote = ref('')
+const aiLoading = ref(false)
+
+async function loadSuggestions() {
+  try {
+    suggestions.value = await api.listTagSuggestions('pending')
+  } catch {
+    suggestions.value = []
+  }
+}
+
+async function approveSuggestion(s: TagSuggestion) {
+  try {
+    await api.reviewTagSuggestion(s.id, 'approve', s.group || undefined)
+    ui.toast('已批准', 'success')
+    await loadSuggestions()
+    tagKeys.value = await api.listTagKeys()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
+async function rejectSuggestion(s: TagSuggestion) {
+  try {
+    await api.reviewTagSuggestion(s.id, 'reject')
+    ui.toast('已拒绝', 'success')
+    await loadSuggestions()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
+async function runAiSuggest() {
+  aiLoading.value = true
+  aiResult.value = []
+  aiChecked.value = {}
+  aiNote.value = ''
+  try {
+    const demo = demos.value.find((d) => d.slug === aiDemoSlug.value)
+    const text = aiText.value.trim() || demo?.description || undefined
+    const r = await api.aiSuggest({ text })
+    aiResult.value = r.suggestions
+    aiNote.value = r.note
+    for (const s of r.suggestions) aiChecked.value[s.key + ':' + s.value] = true
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+async function saveAiTags() {
+  const demo = demos.value.find((d) => d.slug === aiDemoSlug.value)
+  if (!demo) {
+    ui.toast('请先选择 Demo', 'error')
+    return
+  }
+  const checked = aiResult.value.filter((s) => aiChecked.value[s.key + ':' + s.value])
+  if (!checked.length) {
+    ui.toast('未勾选任何推荐标签', 'error')
+    return
+  }
+  const existing = demo.tags.map((t) => `${t.key}:${t.value}`)
+  const merged = [...existing]
+  for (const s of checked) {
+    const kv = `${s.key}:${s.value}`
+    if (!merged.includes(kv)) merged.push(kv)
+  }
+  try {
+    await api.updateDemo(demo.slug, { tags: merged })
+    ui.toast('标签已保存', 'success')
+    await loadAll()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
 onMounted(loadAll)
 </script>
 
@@ -388,6 +471,7 @@ onMounted(loadAll)
       </button>
       <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
       <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
+      <button class="tab" :class="{ active: tab === 'tag-suggestions' }" type="button" @click="tab = 'tag-suggestions'; loadSuggestions()">标签审核</button>
       <button class="tab" :class="{ active: tab === 'users' }" type="button" @click="tab = 'users'">用户管理</button>
       <button class="tab" :class="{ active: tab === 'announcements' }" type="button" @click="tab = 'announcements'">公告管理</button>
       <button class="tab" :class="{ active: tab === 'settings' }" type="button" @click="tab = 'settings'">站点设置</button>
@@ -587,6 +671,59 @@ onMounted(loadAll)
                     <td>
                       <button class="btn btn-sm btn-outline" type="button" @click="startEditKey(k)">编辑</button>
                       <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(k.key)">删除键</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+
+          <!-- 标签审核 / AI 整理 -->
+          <template v-else-if="tab === 'tag-suggestions'">
+            <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 720px">
+              <h2 style="margin-bottom: 12px">AI 整理标签</h2>
+              <div class="form-stack">
+                <div class="filter-row" style="margin: 0">
+                  <select v-model="aiDemoSlug" class="input" style="max-width: 260px">
+                    <option value="">选择 Demo…</option>
+                    <option v-for="d in demos" :key="d.slug" :value="d.slug">{{ d.title }}（{{ d.slug }}）</option>
+                  </select>
+                  <input v-model="aiText" class="input" style="flex: 1" placeholder="或直接粘贴描述文本（可选）" />
+                  <button class="btn btn-secondary" type="button" :disabled="aiLoading" @click="runAiSuggest">{{ aiLoading ? '分析中…' : 'AI 推荐' }}</button>
+                </div>
+                <div v-if="aiResult.length" class="form-stack">
+                  <div class="filter-row" style="margin: 0">
+                    <span class="filter-label">推荐</span>
+                    <label v-for="s in aiResult" :key="s.key + ':' + s.value" class="tag-chip" :class="{ active: aiChecked[s.key + ':' + s.value] }" style="cursor: pointer">
+                      <input v-model="aiChecked[s.key + ':' + s.value]" type="checkbox" style="display: none" />
+                      {{ s.key }}:{{ s.value }}<span class="count">{{ s.reason }}</span>
+                    </label>
+                  </div>
+                  <p v-if="aiNote" class="hint">{{ aiNote }}</p>
+                  <div class="filter-row" style="margin: 0">
+                    <button class="btn btn-primary" type="button" @click="saveAiTags">保存到 Demo</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-head">
+              <h2 class="section-title">待审固定值建议</h2>
+            </div>
+            <div v-if="!suggestions.length" class="empty-box">暂无待审建议</div>
+            <div v-else class="table-wrap">
+              <table class="data">
+                <thead><tr><th>键</th><th>值</th><th>说明</th><th>分组</th><th>时间</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in suggestions" :key="s.id">
+                    <td>{{ s.key }}</td>
+                    <td><b>{{ s.value }}</b></td>
+                    <td style="max-width: 240px; overflow-wrap: anywhere">{{ s.description }}</td>
+                    <td>{{ s.group || '-' }}</td>
+                    <td>{{ new Date(s.created_at).toLocaleString('zh-CN') }}</td>
+                    <td>
+                      <button class="btn btn-sm btn-primary" type="button" @click="approveSuggestion(s)">批准</button>
+                      <button class="btn btn-sm btn-dark" type="button" @click="rejectSuggestion(s)">拒绝</button>
                     </td>
                   </tr>
                 </tbody>

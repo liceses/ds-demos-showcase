@@ -8,6 +8,12 @@ const ui = useUiStore()
 
 const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings' | 'announcements'>('review')
 const tagSub = ref<'keys' | 'review'>('keys')
+const adminActiveKey = ref('')
+const adminActiveTagKey = computed(() => tagKeys.value.find((k) => k.key === adminActiveKey.value) || null)
+function selectAdminKey(k: TagKeyInfo) {
+  adminActiveKey.value = k.key
+  startEditKey(k)
+}
 
 const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
@@ -73,7 +79,6 @@ const newValue = ref({ key: '', value: '', description: '' })
 const valueError = ref('')
 const valueOk = ref('')
 
-const fixedKeys = computed(() => tagKeys.value.filter((k) => k.mode === 'fixed'))
 const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
 
 const loading = ref(false)
@@ -348,9 +353,6 @@ function startEditKey(k: TagKeyInfo) {
   editKeyForm.value = { mode: k.mode, label: k.label, description: k.description, sort: k.sort ?? 0 }
   keyEditError.value = ''
 }
-function cancelEditKey() {
-  editingKey.value = null
-}
 async function saveEditKey() {
   if (!editingKey.value) return
   if (!editKeyForm.value.label.trim()) {
@@ -585,100 +587,92 @@ onMounted(loadAll)
               <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'keys'">键管理</button>
               <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
             </div>
-            <div v-if="editingKey" class="card card-default" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
-              <h2 style="margin-bottom: 12px">编辑标签键 <code>{{ editingKey.key }}</code></h2>
+            <!-- 新建键 -->
+            <div class="card card-mint" style="padding: 16px 20px; margin-bottom: 16px; max-width: 720px">
+              <h2 style="margin-bottom: 10px">新建标签键</h2>
               <div class="form-stack">
                 <div class="filter-row" style="margin-bottom: 0">
-                  <select v-model="editKeyForm.mode" class="input" style="max-width: 140px">
+                  <input v-model="newKey.key" class="input" style="max-width: 140px" placeholder="key" />
+                  <select v-model="newKey.mode" class="input" style="max-width: 120px">
                     <option value="fixed">固定值</option>
                     <option value="open">自由值</option>
                     <option value="int">数字值</option>
                   </select>
-                  <input v-model="editKeyForm.label" class="input" style="max-width: 180px" placeholder="显示名" />
-                  <input v-model.number="editKeyForm.sort" class="input" style="max-width: 90px" type="number" placeholder="排序" />
+                  <input v-model="newKey.label" class="input" style="max-width: 140px" placeholder="显示名" />
+                  <input v-model.number="newKey.sort" class="input" style="max-width: 80px" type="number" placeholder="排序" />
+                  <button class="btn btn-secondary" type="button" @click="createTagKey">创建</button>
                 </div>
-                <input v-model="editKeyForm.description" class="input" placeholder="键介绍（可选）" />
-                <div class="filter-row" style="margin-bottom: 0">
-                  <button class="btn btn-primary" type="button" @click="saveEditKey">保存修改</button>
-                  <button class="btn btn-sm btn-dark" type="button" @click="cancelEditKey">取消</button>
-                  <span v-if="keyEditError" class="notice notice-error" style="margin: 0">{{ keyEditError }}</span>
-                </div>
+                <input v-model="newKey.description" class="input" placeholder="键介绍（可选）" />
+                <span v-if="keyError" class="notice notice-error" style="margin: 0">{{ keyError }}</span>
+                <span v-if="keyOk" class="notice notice-success" style="margin: 0">{{ keyOk }}</span>
               </div>
             </div>
 
-            <div class="filter-row" style="align-items: stretch">
-              <div class="card card-mint" style="padding: 20px; margin-bottom: 20px; width: 100%">
-                <h2 style="margin-bottom: 12px">新建标签键</h2>
-                <div class="form-stack">
-                  <div class="filter-row" style="margin-bottom: 0">
-                    <input v-model="newKey.key" class="input" style="max-width: 160px" placeholder="key（如 difficulty）" />
-                    <select v-model="newKey.mode" class="input" style="max-width: 140px">
-                      <option value="fixed">固定值</option>
-                      <option value="open">自由值</option>
-                      <option value="int">数字值</option>
-                    </select>
-                    <input v-model="newKey.label" class="input" style="max-width: 160px" placeholder="显示名" />
-                    <input v-model="newKey.sort" class="input" style="max-width: 90px" type="number" placeholder="排序" />
-                  </div>
-                  <input v-model="newKey.description" class="input" placeholder="键介绍（可选）" />
-                  <div class="filter-row" style="margin-bottom: 0">
-                    <button class="btn btn-secondary" type="button" @click="createTagKey">创建标签键</button>
-                    <span v-if="keyError" class="notice notice-error" style="margin: 0">{{ keyError }}</span>
-                    <span v-if="keyOk" class="notice notice-success" style="margin: 0">{{ keyOk }}</span>
-                  </div>
-                </div>
+            <!-- 两栏：键列表 + 键详情 -->
+            <div class="tag-pane">
+              <div class="tag-pane-keys">
+                <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">
+                  <div v-if="tagKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel[m] }}</div>
+                  <button
+                    v-for="k in tagKeys.filter((k) => k.mode === m)"
+                    :key="k.key"
+                    class="tag-pane-key"
+                    :class="{ active: adminActiveKey === k.key }"
+                    type="button"
+                    @click="selectAdminKey(k)"
+                  >
+                    <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+                    <span class="tag-pane-key-count">{{ k.demo_count }}</span>
+                  </button>
+                </template>
               </div>
-
-              <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; width: 100%">
-                <h2 style="margin-bottom: 12px">添加固定值</h2>
-                <div class="form-stack">
-                  <div class="filter-row" style="margin-bottom: 0">
-                    <select v-model="newValue.key" class="input" style="max-width: 180px">
-                      <option value="">选择固定键…</option>
-                      <option v-for="k in fixedKeys" :key="k.key" :value="k.key">{{ k.key }}（{{ k.label }}）</option>
-                    </select>
-                    <input v-model="newValue.value" class="input" style="max-width: 160px" placeholder="value（如 hard）" />
-                    <input v-model="newValue.description" class="input" style="max-width: 200px" placeholder="介绍（可选）" />
+              <div class="tag-pane-values">
+                <template v-if="adminActiveTagKey">
+                  <div class="tag-key-head">
+                    <b>{{ adminActiveTagKey.label || adminActiveTagKey.key }} <code>{{ adminActiveTagKey.key }}</code></b>
+                    <span class="mode-badge" :class="'mode-badge-' + adminActiveTagKey.mode">{{ modeLabel[adminActiveTagKey.mode] }}</span>
                   </div>
-                  <div class="filter-row" style="margin-bottom: 0">
-                    <button class="btn btn-primary" type="button" :disabled="!newValue.key" @click="addFixedValue">添加固定值</button>
+                  <p class="muted" style="margin: 0 0 10px">{{ adminActiveTagKey.description || '暂无介绍' }}</p>
+
+                  <div class="form-stack" style="margin-bottom: 12px">
+                    <div class="filter-row" style="margin: 0">
+                      <select v-model="editKeyForm.mode" class="input" style="max-width: 120px">
+                        <option value="fixed">固定值</option>
+                        <option value="open">自由值</option>
+                        <option value="int">数字值</option>
+                      </select>
+                      <input v-model="editKeyForm.label" class="input" style="max-width: 140px" placeholder="显示名" />
+                      <input v-model.number="editKeyForm.sort" class="input" style="max-width: 80px" type="number" placeholder="排序" />
+                      <button class="btn btn-sm btn-primary" type="button" @click="saveEditKey">保存</button>
+                    </div>
+                    <input v-model="editKeyForm.description" class="input" placeholder="键介绍（可选）" />
+                    <span v-if="keyEditError" class="notice notice-error" style="margin: 0">{{ keyEditError }}</span>
+                  </div>
+
+                  <div v-if="adminActiveTagKey.mode === 'fixed'" class="form-stack" style="margin-bottom: 12px">
+                    <div class="filter-row" style="margin: 0">
+                      <input v-model="newValue.value" class="input" style="max-width: 140px" placeholder="value" />
+                      <input v-model="newValue.description" class="input" style="max-width: 180px" placeholder="介绍（可选）" />
+                      <button class="btn btn-sm btn-secondary" type="button" @click="newValue.key = adminActiveTagKey.key; addFixedValue()">添加固定值</button>
+                    </div>
                     <span v-if="valueError" class="notice notice-error" style="margin: 0">{{ valueError }}</span>
                     <span v-if="valueOk" class="notice notice-success" style="margin: 0">{{ valueOk }}</span>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            <div class="table-wrap">
-              <table class="data">
-                <thead>
-                  <tr><th>键</th><th>类型</th><th>显示名</th><th>介绍</th><th>Demo 数</th><th>值</th><th>操作</th></tr>
-                </thead>
-                <tbody>
-                  <tr v-for="k in tagKeys" :key="k.key">
-                    <td><b>{{ k.key }}</b></td>
-                    <td><span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span></td>
-                    <td>{{ k.label }}</td>
-                    <td style="max-width: 220px; overflow-wrap: anywhere">{{ k.description }}</td>
-                    <td>{{ k.demo_count }}</td>
-                    <td style="max-width: 300px">
-                      <div class="filter-row" style="margin: 0; gap: 6px">
-                        <template v-for="v in k.values" :key="v.value">
-                          <RouterLink class="tag-chip" :class="'mode-' + k.mode" :to="`/tag/${k.key}/${v.value}`">
-                            {{ v.value }}<span class="count">{{ v.demo_count }}</span>
-                          </RouterLink>
-                          <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(k.key, v.value)">×</button>
-                        </template>
-                        <span v-if="!k.values.length" class="muted">无</span>
-                      </div>
-                    </td>
-                    <td>
-                      <button class="btn btn-sm btn-outline" type="button" @click="startEditKey(k)">编辑</button>
-                      <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(k.key)">删除键</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  <div class="filter-row" style="margin: 0; gap: 6px">
+                    <template v-for="v in adminActiveTagKey.values" :key="v.value">
+                      <RouterLink class="tag-chip" :class="'mode-' + adminActiveTagKey.mode" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
+                      <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
+                    </template>
+                    <span v-if="!adminActiveTagKey.values.length" class="muted">无</span>
+                  </div>
+
+                  <div class="filter-row" style="margin-top: 14px">
+                    <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(adminActiveTagKey.key)">删除键</button>
+                  </div>
+                </template>
+                <div v-else class="muted">请选择左侧标签键</div>
+              </div>
             </div>
           </template>
 

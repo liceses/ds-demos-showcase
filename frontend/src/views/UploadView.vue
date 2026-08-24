@@ -37,7 +37,6 @@ const tagsOpen = ref(false)
 const suggest = ref({ key: '', value: '', description: '' })
 const suggestMsg = ref('')
 const suggestError = ref('')
-const fixedKeys = computed(() => tagKeys.value.filter((k) => k.mode === 'fixed'))
 
 async function submitSuggestion() {
   suggestMsg.value = ''
@@ -152,9 +151,9 @@ function toggleSuggestPanel(key: string) {
     return
   }
   suggestPanelKey.value = key
-  suggest.key = key
-  suggest.value = ''
-  suggest.description = ''
+  suggest.value.key = key
+  suggest.value.value = ''
+  suggest.value.description = ''
   suggestMsg.value = ''
   suggestError.value = ''
 }

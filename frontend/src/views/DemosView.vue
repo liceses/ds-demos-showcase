@@ -14,6 +14,7 @@ const q = ref('')
 const submittedQ = ref('')
 const sort = ref<'newest' | 'popular'>('newest')
 const cardMode = ref<'normal' | 'prompt'>(localStorage.getItem('ds_card_mode') === 'prompt' ? 'prompt' : 'normal')
+const stripsOpen = ref(false)
 
 function setCardMode(m: 'normal' | 'prompt') {
   if (cardMode.value === m) return
@@ -292,10 +293,13 @@ onBeforeUnmount(() => observer?.disconnect())
         {{ g.key }}:{{ g.value }}
         <span class="count">{{ g.count }}</span>
       </button>
+      <button class="btn btn-sm btn-outline" type="button" @click="stripsOpen = !stripsOpen">
+        {{ stripsOpen ? '收起标签' : '展开全部标签' }}
+      </button>
     </div>
 
-    <!-- 分组筛选（细条）：每键一行、默认折叠只露前 4 个，点「展开」看全部 -->
-    <div v-if="filterGroups.length" class="tag-strips">
+    <!-- 分组筛选（细条）：默认完全折叠，点「展开全部标签」才显示 -->
+    <div v-if="stripsOpen && filterGroups.length" class="tag-strips">
       <div v-for="k in filterGroups" :key="k.key" class="tag-strip-row" :class="'mode-' + k.mode">
         <span class="tag-strip-title">
           {{ k.label }} <code>{{ k.key }}</code>

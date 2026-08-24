@@ -3194,3 +3194,10 @@ table.data tr.inconsistent td {
   outline: 3px solid var(--red);
   outline-offset: 2px;
 }
+
+/* 两栏加高（Tags 页 / 管理页键管理） */
+.tag-pane-tall .tag-pane-keys,
+.tag-pane-tall .tag-pane-values {
+  max-height: calc(100vh - 240px);
+  min-height: 60vh;
+}

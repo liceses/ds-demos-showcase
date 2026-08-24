@@ -88,7 +88,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="tag-pane">
+      <div class="tag-pane tag-pane-tall">
         <!-- 左：键列表 -->
         <div class="tag-pane-keys">
           <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">

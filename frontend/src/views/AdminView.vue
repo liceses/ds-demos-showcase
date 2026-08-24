@@ -609,7 +609,7 @@ onMounted(loadAll)
             </div>
 
             <!-- 两栏：键列表 + 键详情 -->
-            <div class="tag-pane">
+            <div class="tag-pane tag-pane-tall">
               <div class="tag-pane-keys">
                 <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">
                   <div v-if="tagKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel[m] }}</div>

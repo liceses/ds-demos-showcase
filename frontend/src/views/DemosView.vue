@@ -69,8 +69,8 @@ const hotChips = computed(() =>
 const COLLAPSED_SHOW = 4
 const groupExpanded = ref<Record<string, boolean>>({})
 function isExpanded(k: FilterGroup) {
-  // 默认只展开 model，其余折叠
-  return groupExpanded.value[k.key] ?? k.key === 'model'
+  // 默认全部折叠（含 model）
+  return groupExpanded.value[k.key] ?? false
 }
 function isCollapsed(k: FilterGroup) {
   return !isExpanded(k)
@@ -84,6 +84,51 @@ function visibleValues(k: FilterGroup) {
 }
 function hiddenCount(k: FilterGroup) {
   return isCollapsed(k) ? Math.max(0, k.values.length - COLLAPSED_SHOW) : 0
+}
+
+// model 厂商分组（与上传页一致）
+const VENDOR_PREFIX: [string, string][] = [
+  ['dsv', 'DeepSeek'],
+  ['deepseek', 'DeepSeek'],
+  ['gpt', 'OpenAI'],
+  ['o1', 'OpenAI'],
+  ['o3', 'OpenAI'],
+  ['claude', 'Anthropic'],
+  ['gemini', 'Google'],
+  ['qwen', '阿里'],
+  ['doubao', '字节'],
+]
+function guessVendor(value: string): string {
+  const v = value.toLowerCase()
+  for (const [prefix, name] of VENDOR_PREFIX) {
+    if (v.startsWith(prefix)) return name
+  }
+  return '其他'
+}
+function vendorGroupsOf(k: FilterGroup) {
+  const map = new Map<string, { value: string; count: number }[]>()
+  for (const v of k.values) {
+    const g = guessVendor(v.value)
+    if (!map.has(g)) map.set(g, [])
+    map.get(g)!.push(v)
+  }
+  return [...map.entries()].map(([group, values]) => ({ group, values }))
+}
+const vendorExpanded = ref<Record<string, boolean>>({})
+function isVendorCollapsed(group: string) {
+  return vendorExpanded.value[group] === true
+}
+function toggleVendor(group: string) {
+  vendorExpanded.value = { ...vendorExpanded.value, [group]: !isVendorCollapsed(group) }
+}
+const VENDOR_DOT: Record<string, string> = {
+  DeepSeek: 'var(--teal)',
+  OpenAI: 'var(--ink)',
+  Anthropic: 'var(--red)',
+  Google: 'var(--mint)',
+  阿里: 'var(--yellow)',
+  字节: 'var(--paper)',
+  其他: '#999',
 }
 
 // int 键范围筛选：双滑块 → key:lo-hi 加入 selectedTags（后端已支持范围解析）
@@ -313,35 +358,63 @@ onBeforeUnmount(() => observer?.disconnect())
             <span v-if="activeRangeOf(k)" class="tag-chip active">{{ activeRangeOf(k) }}</span>
           </div>
         </template>
-        <div v-else class="filter-row tag-strip-chips">
-          <button
-            v-for="v in visibleValues(k)"
-            :key="v.value"
-            class="tag-chip"
-            :class="['mode-' + k.mode, { active: selectedTags.includes(k.key + ':' + v.value) }]"
-            type="button"
-            @click="toggleTag(k.key + ':' + v.value)"
-          >
-            {{ v.value }}
-            <span class="count">{{ v.count }}</span>
-          </button>
-          <button
-            v-if="isCollapsed(k) && k.values.length > COLLAPSED_SHOW"
-            class="tag-chip tag-strip-toggle"
-            type="button"
-            @click="toggleGroup(k)"
-          >
-            展开 +{{ hiddenCount(k) }}
-          </button>
-          <button
-            v-if="!isCollapsed(k)"
-            class="tag-chip tag-strip-toggle"
-            type="button"
-            @click="toggleGroup(k)"
-          >
-            收起
-          </button>
-        </div>
+        <template v-else>
+          <!-- model：厂商分组 + 彩色点，默认收起 -->
+          <template v-if="k.mode === 'fixed' && k.key === 'model'">
+            <div v-if="isCollapsed(k)" class="filter-row tag-strip-chips">
+              <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">模型 · 展开 +{{ k.values.length }}</button>
+            </div>
+            <div v-else class="tag-strip-chips">
+              <div v-for="g in vendorGroupsOf(k)" :key="g.group" class="vendor-strip">
+                <span class="vendor-strip-head" role="button" @click="toggleVendor(g.group)">
+                  <span class="vendor-dot" :style="{ background: VENDOR_DOT[g.group] || '#999' }"></span>
+                  <span class="vendor-strip-name">{{ g.group }}</span>
+                  <span class="vendor-strip-toggle">{{ isVendorCollapsed(g.group) ? '展开' : '收起' }}</span>
+                </span>
+                <div v-if="!isVendorCollapsed(g.group)" class="filter-row" style="margin: 0">
+                  <button
+                    v-for="v in g.values"
+                    :key="v.value"
+                    class="tag-chip mode-fixed"
+                    :class="{ active: selectedTags.includes(k.key + ':' + v.value) }"
+                    type="button"
+                    @click="toggleTag(k.key + ':' + v.value)"
+                  >{{ v.value }}<span class="count">{{ v.count }}</span></button>
+                </div>
+              </div>
+              <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">收起</button>
+            </div>
+          </template>
+          <div v-else class="filter-row tag-strip-chips">
+            <button
+              v-for="v in visibleValues(k)"
+              :key="v.value"
+              class="tag-chip"
+              :class="['mode-' + k.mode, { active: selectedTags.includes(k.key + ':' + v.value) }]"
+              type="button"
+              @click="toggleTag(k.key + ':' + v.value)"
+            >
+              {{ v.value }}
+              <span class="count">{{ v.count }}</span>
+            </button>
+            <button
+              v-if="isCollapsed(k) && k.values.length > COLLAPSED_SHOW"
+              class="tag-chip tag-strip-toggle"
+              type="button"
+              @click="toggleGroup(k)"
+            >
+              展开 +{{ hiddenCount(k) }}
+            </button>
+            <button
+              v-if="!isCollapsed(k)"
+              class="tag-chip tag-strip-toggle"
+              type="button"
+              @click="toggleGroup(k)"
+            >
+              收起
+            </button>
+          </div>
+        </template>
       </div>
     </div>
 

@@ -3201,3 +3201,41 @@ table.data tr.inconsistent td {
   max-height: calc(100vh - 240px);
   min-height: 60vh;
 }
+
+/* 作品集 model 厂商分组 */
+.vendor-strip {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  margin-bottom: 8px;
+}
+.vendor-strip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  background: var(--mint);
+  border-bottom: 2px solid var(--ink);
+}
+.vendor-strip-head:hover {
+  background: var(--yellow);
+}
+.vendor-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  flex-shrink: 0;
+}
+.vendor-strip-name {
+  font-weight: 800;
+  font-size: 12px;
+}
+.vendor-strip-toggle {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+.vendor-strip .filter-row {
+  padding: 8px;
+}

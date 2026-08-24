@@ -28,6 +28,11 @@ const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: numbe
   local_files: 0,
   local_size_bytes: 0,
 })
+const storageModeLabel = computed(() => {
+  if (storageInfo.value.mode === 'oss') return 'OSS 直连'
+  if (storageInfo.value.mode === 'oss_backup') return '本地存储（OSS 备份）'
+  return '本地存储'
+})
 
 const newAnn = ref({ title: '', content: '' })
 const annError = ref('')
@@ -520,7 +525,7 @@ onMounted(loadAll)
         <div class="stat-card stat-warn"><b>{{ dashStats.pending }}</b>待审</div>
         <div class="stat-card stat-err"><b>{{ dashStats.rejected }}</b>已拒</div>
         <div class="stat-card"><b>{{ dashStats.users }}</b>用户</div>
-        <div class="stat-card"><b>{{ storageInfo.mode === 'oss' ? 'OSS' : '本地' }}</b>存储</div>
+        <div class="stat-card"><b>{{ storageModeLabel }}</b>存储</div>
       </div>
 
       <Transition name="tab-pane" mode="out-in">
@@ -870,7 +875,7 @@ onMounted(loadAll)
             <div class="card card-mint" style="max-width: 520px; padding: 24px; margin-bottom: 20px">
               <h2 style="margin-bottom: 12px">存储</h2>
               <div class="filter-row" style="margin-bottom: 10px">
-                <span class="mini-stat"><b>{{ storageInfo.mode === 'oss' ? 'OSS 直连' : '本地存储' }}</b> 模式</span>
+                <span class="mini-stat"><b>{{ storageModeLabel }}</b> 模式</span>
                 <span class="mini-stat"><b>{{ storageInfo.local_demos }}</b> demo</span>
                 <span class="mini-stat"><b>{{ storageInfo.local_files }}</b> 文件</span>
                 <span class="mini-stat"><b>{{ fmtSize(storageInfo.local_size_bytes) }}</b> 本地占用</span>

@@ -258,7 +258,8 @@ const realApi = {
     return data
   },
   async ossSync(force = false): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
-    const { data } = await http.post('/admin/oss-sync', null, { params: force ? { force: true } : {} })
+    // 全量同步可能较久，默认 15s 会超时；这里放宽到 5 分钟
+    const { data } = await http.post('/admin/oss-sync', null, { params: force ? { force: true } : {}, timeout: 300000 })
     return data
   },
   async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {

@@ -98,7 +98,8 @@ def storage_status(_: User = Depends(require_admin)):
                     pass
     return {
         "oss_enabled": oss.enabled(),
-        "mode": "oss" if oss.enabled() else "local",
+        # 模式：oss=OSS 直连（serve_local=false）；oss_backup=本地存储+OSS 备份（serve_local=true）；local=纯本地
+        "mode": "oss" if (oss.enabled() and not settings.oss_serve_local) else ("oss_backup" if oss.enabled() else "local"),
         "local_demos": demo_dirs,
         "local_files": files,
         "local_size_bytes": size,

@@ -5,12 +5,12 @@ import { api } from '../api'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'home', component: () => import('../views/HomeView.vue'), meta: { title: '首页' } },
+    { path: '/', name: 'home', component: () => import('../views/HomeView.vue'), meta: { title: '首页', keepAlive: true } },
     { path: '/about', name: 'about', component: () => import('../views/AboutView.vue'), meta: { title: '关于本站' } },
-    { path: '/demos', name: 'demos', component: () => import('../views/DemosView.vue'), meta: { title: '作品库' } },
-    { path: '/leaderboard', name: 'leaderboard', component: () => import('../views/LeaderboardView.vue'), meta: { title: '排行榜' } },
+    { path: '/demos', name: 'demos', component: () => import('../views/DemosView.vue'), meta: { title: '作品库', keepAlive: true } },
+    { path: '/leaderboard', name: 'leaderboard', component: () => import('../views/LeaderboardView.vue'), meta: { title: '排行榜', keepAlive: true } },
     { path: '/demo/:slug', name: 'demo', component: () => import('../views/DemoView.vue'), props: true, meta: { title: 'Demo' } },
-    { path: '/tags', name: 'tags', component: () => import('../views/TagListView.vue'), meta: { title: '标签' } },
+    { path: '/tags', name: 'tags', component: () => import('../views/TagListView.vue'), meta: { title: '标签', keepAlive: true } },
     { path: '/tag/:k/:v', name: 'tag-detail', component: () => import('../views/TagDetailView.vue'), props: true, meta: { title: '标签详情' } },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { title: '登录' } },
     { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { title: '注册' } },

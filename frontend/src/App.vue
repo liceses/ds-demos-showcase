@@ -11,6 +11,8 @@ const route = useRoute()
 const username = computed(() => auth.user?.username ?? '')
 const mobileOpen = ref(false)
 const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView']
+// 保留页按 name 做 key（同页返回复用实例）；其他页按 fullPath（参数变化强制重挂载）
+const pageKey = computed(() => (route.meta.keepAlive ? route.name : route.fullPath))
 
 watch(
   () => route.fullPath,
@@ -114,7 +116,7 @@ const menuItems = [
     <main class="container" style="flex: 1">
       <RouterView v-slot="{ Component }">
         <KeepAlive :include="keepAlivePages">
-          <component :is="Component" :key="route.name" />
+          <component :is="Component" :key="pageKey" />
         </KeepAlive>
       </RouterView>
     </main>

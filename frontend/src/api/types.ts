@@ -33,6 +33,7 @@ export interface TagKeyValue {
   value: string
   description: string
   demo_count: number
+  group?: string | null
 }
 
 export interface TagKeyInfo {
@@ -43,6 +44,19 @@ export interface TagKeyInfo {
   sort: number
   values: TagKeyValue[]
   demo_count: number
+  min?: number | null
+  max?: number | null
+}
+
+export interface TagSuggestion {
+  id: number
+  key: string
+  value: string
+  description: string
+  group?: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  demo_id?: number | null
+  created_at: string
 }
 
 export interface DemoSummary {

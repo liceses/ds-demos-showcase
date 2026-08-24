@@ -172,6 +172,19 @@ def _ensure_demo_columns() -> None:
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_content_hash ON demos (content_hash)")
 
 
+def _ensure_tag_columns() -> None:
+    """SQLite 增量迁移：给已存在的 tags 表补充 group 列（固定值分组/厂商）。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "tags" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("tags")}
+    if "group" not in cols:
+        with engine.begin() as conn:
+            conn.exec_driver_sql("ALTER TABLE tags ADD COLUMN group TEXT")
+
+
 def init_db() -> None:
     settings.demos_path.mkdir(parents=True, exist_ok=True)
     settings.media_path.mkdir(parents=True, exist_ok=True)
@@ -201,6 +214,7 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
     _ensure_demo_columns()
+    _ensure_tag_columns()
 
     db = SessionLocal()
     try:

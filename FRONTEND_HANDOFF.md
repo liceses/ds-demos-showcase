@@ -16,7 +16,8 @@
 ## 2. 关键接口（已实现，前端必须对齐）
 | 主题 | 说明 |
 |---|---|
-| 标签分级 | `GET /tags/tag-keys` 返回 `[{key,mode(fixed/open/int),label,description,sort,values[{value,description,demo_count}],demo_count}]`；fixed 只能选候选值、int 值必须整数。 |
+| 标签分级 | `GET /tags/tag-keys` 返回 `[{key,mode(fixed/open/int),label,description,sort,values[{value,description,demo_count,group}],demo_count,min,max}]`；fixed 只能选候选值、int 值必须整数；int 键带 `min/max` 供滑条。 |
+| 标签申请 | `POST /tags/suggestions` 提交新 fixed 值（pending）；admin `GET /tags/admin/suggestions` + `POST /tags/admin/suggestions/{id}/review` 审核。 |
 | Demo 类型 | `demo_type`：`web`（zip 含 index.html，可预览）/ `zip`（文件包，下载）/ `link`（外部链接，跳外链）。详情 `GET /demos/{slug}` 返回这些字段 + `prompt`/`video_url`。 |
 | 上传 | `POST /demos`（multipart）与 `POST /demos/from-url`（JSON），均可匿名。 |
 | 幂等 | `idempotency_key`（8~128 位字母数字 `_ . -`）；重试同 key → `created:false`。 |

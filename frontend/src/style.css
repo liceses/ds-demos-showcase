@@ -362,6 +362,35 @@ label.field .hint {
   cursor: not-allowed;
 }
 
+/* 数字标签分布 */
+.int-dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.int-dist-label {
+  width: 40px;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.int-dist-track {
+  flex: 1;
+  height: 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  overflow: hidden;
+}
+.int-dist-fill {
+  height: 100%;
+  background: var(--teal);
+}
+.int-dist-count {
+  width: 30px;
+  font-family: var(--font-mono);
+}
+
 /* DSH 会话轨迹 */
 .dsh-trajectory {
   display: flex;

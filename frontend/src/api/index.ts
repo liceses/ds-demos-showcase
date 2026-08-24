@@ -18,6 +18,7 @@ import type {
   SponsorBoard,
   Tag,
   TagKeyInfo,
+  TagSuggestion,
   ThanksBoard,
   UpdateDemoPayload,
   User,
@@ -63,6 +64,26 @@ const realApi = {
   },
   async createTag(key: string, value: string, description?: string, parent_id?: number | null): Promise<Tag> {
     const { data } = await http.post('/tags', { key, value, description, parent_id })
+    return data
+  },
+  async suggestTagValue(payload: { key: string; value: string; description?: string; group?: string; demo_id?: number | null }): Promise<TagSuggestion> {
+    const { data } = await http.post('/tags/suggestions', payload)
+    return data
+  },
+  async listTagSuggestions(status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
+    const { data } = await http.get('/tags/admin/suggestions', { params: status ? { status } : {} })
+    return data
+  },
+  async reviewTagSuggestion(id: number, action: 'approve' | 'reject', group?: string): Promise<TagSuggestion> {
+    const { data } = await http.post(`/tags/admin/suggestions/${id}/review`, { action, group })
+    return data
+  },
+  async fetchModels(): Promise<{ created: number; note: string }> {
+    const { data } = await http.post('/tags/admin/fetch-models')
+    return data
+  },
+  async aiSuggest(payload: { demo_id?: number; text?: string }): Promise<{ suggestions: { key: string; value: string; reason: string }[]; note: string }> {
+    const { data } = await http.post('/tags/admin/ai-suggest', payload)
     return data
   },
   async listTagKeys(): Promise<TagKeyInfo[]> {

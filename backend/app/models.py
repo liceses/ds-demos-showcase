@@ -42,6 +42,8 @@ class Tag(Base):
     key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     value: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    # 固定值分组/厂商（如 model 的 "DeepSeek"、"OpenAI"），用于前端分组展示
+    group: Mapped[str | None] = mapped_column(String(64), nullable=True)
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("tags.id"), nullable=True, index=True)
 
     parent: Mapped["Tag | None"] = relationship(remote_side=[id], back_populates="children")
@@ -66,6 +68,24 @@ class TagKey(Base):
     label: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
     sort: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class TagValueSuggestion(Base):
+    """固定值申请建议：用户申请新增 fixed value，管理员审核通过后才创建正式 Tag。"""
+
+    __tablename__ = "tag_value_suggestions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    value: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    group: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)  # pending | approved | rejected
+    demo_id: Mapped[int | None] = mapped_column(ForeignKey("demos.id", ondelete="SET NULL"), nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class Demo(Base):

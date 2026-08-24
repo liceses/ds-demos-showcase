@@ -19,6 +19,10 @@ const sortedKeys = computed(() =>
 const keyCount = computed(() => keys.value.length)
 const valueCount = computed(() => keys.value.reduce((n, k) => n + k.values.length, 0))
 
+function maxCount(k: TagKeyInfo) {
+  return Math.max(1, ...k.values.map((v) => v.demo_count))
+}
+
 onMounted(async () => {
   try {
     keys.value = await api.listTagKeys()
@@ -79,6 +83,16 @@ onMounted(async () => {
             <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
           </div>
           <p class="muted" style="margin-bottom: 12px">{{ k.description || '暂无介绍' }}</p>
+          <div v-if="k.mode === 'int' && k.min != null && k.max != null" class="muted" style="font-size: 12px; margin-bottom: 8px">
+            值域：{{ k.min }} ~ {{ k.max }}
+          </div>
+          <div v-if="k.mode === 'int' && k.values.length" class="int-dist" style="margin-bottom: 12px">
+            <div v-for="v in k.values" :key="v.value" class="int-dist-row">
+              <span class="int-dist-label">{{ v.value }}</span>
+              <div class="int-dist-track"><div class="int-dist-fill" :style="{ width: (v.demo_count / maxCount(k)) * 100 + '%' }"></div></div>
+              <span class="int-dist-count">{{ v.demo_count }}</span>
+            </div>
+          </div>
           <div class="filter-row" style="margin-bottom: 0">
             <RouterLink
               v-for="v in k.values"

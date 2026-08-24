@@ -540,3 +540,31 @@ GET /api/v1/demos?status=approved&author=public
 ### 数据
 - `demos` 冗余列：`rating_sum/count/avg/god/ghost`，随评分事务同步
 - `demo_ratings` 表：`UNIQUE(demo_id, rater_key)`，删 demo 级联删评分，删用户评分保留但 `user_id` 置 NULL
+
+## 9. 标签系统升级（可生长 / AI 整理 / 范围检索 / 分布展示）
+
+### 固定值分组与数字值域
+- `GET /tags/tag-keys` 的 fixed value 新增 `group`（厂商/分组，如 DeepSeek、OpenAI）
+- int 键新增 `min` / `max`（由现有值计算），供前端滑条范围
+- `POST /tags`（admin 创建 fixed value）支持 `group` 字段
+
+### 用户申请新固定值（审核流）
+- `POST /tags/suggestions`（登录/匿名均可，每 IP 每小时 10 次限流）
+  ```json
+  { "key": "model", "value": "dsv4-ultra", "description": "…", "group": "DeepSeek", "demo_id": null }
+  ```
+  只写 `pending` 建议，**不直接创建 Tag**
+- `GET /tags/admin/suggestions?status=pending`（admin）列出建议
+- `POST /tags/admin/suggestions/{id}/review`（admin）
+  ```json
+  { "action": "approve", "group": "DeepSeek" }
+  ```
+  approve → 创建正式 Tag（若不存在），并可选补挂到 `demo_id` 对应 demo；reject → 标记拒绝
+
+### AI 辅助整理（admin，只建议不落库）
+- `POST /tags/admin/fetch-models`：把主流 AI 模型写入 `model` 键的 **pending 建议**（人工审核后生效）
+- `POST /tags/admin/ai-suggest`：输入 `{demo_id?|text?}`，返回推荐标签 `{suggestions:[{key,value,reason}], note}`；当前为规则启发式占位，接入真实 LLM 后更准
+
+### 数字标签范围搜索
+- `GET /demos?tag=rounds:3-10`：int 键支持 `key:lo-hi` 范围过滤（SQL CAST 数值比较）
+- fixed/open 仍为 `key:value` 精确匹配

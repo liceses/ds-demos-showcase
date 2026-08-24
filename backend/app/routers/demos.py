@@ -251,16 +251,36 @@ def list_demos(
             query = query.filter(Demo.author_id == user.id)
 
     for kv in tag:
-        from sqlalchemy import select
+        from sqlalchemy import cast, select
+        from sqlalchemy import Integer as SAInteger
 
         parts = kv.split(":", 1)
         if len(parts) != 2:
             raise HTTPException(status_code=422, detail=f"非法标签过滤: {kv}", )
-        sub = (
-            select(DemoTag.demo_id)
-            .join(Tag, DemoTag.tag_id == Tag.id)
-            .where(Tag.key == parts[0], Tag.value == parts[1])
-        )
+        key, val = parts[0], parts[1]
+        key_def = db.get(TagKey, key)
+        if key_def is not None and key_def.mode == "int" and "-" in val:
+            # int 键范围：tag=rounds:3-10
+            lo_s, _, hi_s = val.partition("-")
+            try:
+                lo, hi = int(lo_s), int(hi_s)
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"int 标签范围格式需为 key:lo-hi，如 rounds:3-10", )
+            sub = (
+                select(DemoTag.demo_id)
+                .join(Tag, DemoTag.tag_id == Tag.id)
+                .where(
+                    Tag.key == key,
+                    cast(Tag.value, SAInteger) >= lo,
+                    cast(Tag.value, SAInteger) <= hi,
+                )
+            )
+        else:
+            sub = (
+                select(DemoTag.demo_id)
+                .join(Tag, DemoTag.tag_id == Tag.id)
+                .where(Tag.key == key, Tag.value == val)
+            )
         query = query.filter(Demo.id.in_(sub))
 
     if q:

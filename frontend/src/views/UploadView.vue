@@ -33,6 +33,32 @@ const inputs = ref<Record<string, { value: string; description: string }>>({})
 const initialTagsKey = ref('')
 const tagsOpen = ref(false)
 
+// 申请新固定值（进入管理员审核）
+const suggest = ref({ key: '', value: '', description: '' })
+const suggestMsg = ref('')
+const suggestError = ref('')
+const fixedKeys = computed(() => tagKeys.value.filter((k) => k.mode === 'fixed'))
+
+async function submitSuggestion() {
+  suggestMsg.value = ''
+  suggestError.value = ''
+  if (!suggest.value.key || !suggest.value.value.trim()) {
+    suggestError.value = '请选择固定键并填写新值'
+    return
+  }
+  try {
+    await api.suggestTagValue({
+      key: suggest.value.key,
+      value: suggest.value.value.trim(),
+      description: suggest.value.description.trim(),
+    })
+    suggestMsg.value = '已提交，等待管理员审核'
+    suggest.value = { key: '', value: '', description: '' }
+  } catch (e) {
+    suggestError.value = (e as Error).message
+  }
+}
+
 // 宽屏（≥1281px）两栏布局：标签面板常驻右侧；窄屏默认收起、点横条展开
 const isWide = ref(false)
 let wideMq: MediaQueryList | null = null
@@ -524,6 +550,27 @@ async function submit() {
                 <span class="chip-x">X</span>
               </span>
             </TransitionGroup>
+          </div>
+        </div>
+
+        <!-- 申请新固定值（进入管理员审核） -->
+        <div class="tag-key-row" style="margin-top: 12px">
+          <div class="tag-key-head">
+            <b>申请新固定值</b>
+            <span class="hint">提交后管理员审核，通过才成为正式候选</span>
+          </div>
+          <div class="form-stack">
+            <div class="filter-row" style="margin: 0">
+              <select v-model="suggest.key" class="input" style="max-width: 160px">
+                <option value="">选择固定键…</option>
+                <option v-for="k in fixedKeys" :key="k.key" :value="k.key">{{ k.key }}（{{ k.label }}）</option>
+              </select>
+              <input v-model="suggest.value" class="input" style="max-width: 180px" placeholder="新值，如 dsv4-ultra" />
+              <input v-model="suggest.description" class="input" style="max-width: 200px" placeholder="介绍（可选）" />
+              <button class="btn btn-sm btn-secondary" type="button" @click="submitSuggestion">申请</button>
+            </div>
+            <span v-if="suggestError" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestError }}</span>
+            <span v-if="suggestMsg" class="notice notice-success" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestMsg }}</span>
           </div>
         </div>
       </div>

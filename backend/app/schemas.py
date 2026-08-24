@@ -67,6 +67,7 @@ class TagCreate(BaseModel):
     key: str = Field(min_length=1, max_length=64)
     value: str = Field(min_length=1, max_length=128)
     description: str = ""
+    group: str | None = Field(default=None, max_length=64)
     parent_id: int | None = None
 
 
@@ -74,6 +75,7 @@ class TagKeyValueOut(BaseModel):
     value: str
     description: str = ""
     demo_count: int = 0
+    group: str | None = None  # 固定值分组/厂商（如 DeepSeek、OpenAI）
 
 
 class TagKeyOut(BaseModel):
@@ -84,6 +86,37 @@ class TagKeyOut(BaseModel):
     sort: int = 0
     values: list[TagKeyValueOut] = []
     demo_count: int = 0
+    min: int | None = None  # int 键：值域下界（供滑条）
+    max: int | None = None  # int 键：值域上界（供滑条）
+
+
+class TagValueSuggestionIn(BaseModel):
+    key: str = Field(min_length=1, max_length=64)
+    value: str = Field(min_length=1, max_length=128)
+    description: str = Field(default="", max_length=1000)
+    group: str | None = Field(default=None, max_length=64)
+    demo_id: int | None = None
+
+
+class TagValueSuggestionOut(BaseModel):
+    id: int
+    key: str
+    value: str
+    description: str = ""
+    group: str | None = None
+    status: str = "pending"
+    demo_id: int | None = None
+    created_at: datetime
+
+
+class TagSuggestionReview(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+    group: str | None = Field(default=None, max_length=64)
+
+
+class AiSuggestIn(BaseModel):
+    demo_id: int | None = None
+    text: str = Field(default="", max_length=4000)
 
 
 class TagKeyUpsert(BaseModel):

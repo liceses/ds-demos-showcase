@@ -18,6 +18,7 @@ import type {
   SponsorBoard,
   Tag,
   TagKeyInfo,
+  TagSuggestion,
   ThanksBoard,
   UpdateDemoPayload,
   User,
@@ -613,6 +614,36 @@ export const mockApi = {
     }
     tags.push(tag)
     return clone(tag)
+  },
+  async suggestTagValue(payload: { key: string; value: string; description?: string; group?: string; demo_id?: number | null }): Promise<TagSuggestion> {
+    await delay(200)
+    const s: TagSuggestion = {
+      id: Date.now(),
+      key: payload.key,
+      value: payload.value,
+      description: payload.description || '',
+      group: payload.group || null,
+      status: 'pending',
+      demo_id: payload.demo_id ?? null,
+      created_at: new Date().toISOString(),
+    }
+    return clone(s)
+  },
+  async listTagSuggestions(status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
+    await delay()
+    return []
+  },
+  async reviewTagSuggestion(id: number, action: 'approve' | 'reject', group?: string): Promise<TagSuggestion> {
+    await delay(200)
+    return { id, key: 'model', value: 'x', description: '', group: group || null, status: action, demo_id: null, created_at: new Date().toISOString() }
+  },
+  async fetchModels(): Promise<{ created: number; note: string }> {
+    await delay(300)
+    return { created: 0, note: 'mock' }
+  },
+  async aiSuggest(payload: { demo_id?: number; text?: string }): Promise<{ suggestions: { key: string; value: string; reason: string }[]; note: string }> {
+    await delay(300)
+    return { suggestions: [], note: 'mock' }
   },
 
   async listTagKeys(): Promise<TagKeyInfo[]> {

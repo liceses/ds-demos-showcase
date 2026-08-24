@@ -6,7 +6,8 @@ import type { AdminDemo, AdminUser, Announcement, DemoDetail, Settings, TagKeyIn
 
 const ui = useUiStore()
 
-const tab = ref<'review' | 'demos' | 'tags' | 'tag-suggestions' | 'users' | 'settings' | 'announcements'>('review')
+const tab = ref<'review' | 'demos' | 'tags' | 'users' | 'settings' | 'announcements'>('review')
+const tagSub = ref<'keys' | 'review'>('keys')
 
 const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
@@ -471,7 +472,6 @@ onMounted(loadAll)
       </button>
       <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
       <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
-      <button class="tab" :class="{ active: tab === 'tag-suggestions' }" type="button" @click="tab = 'tag-suggestions'; loadSuggestions()">标签审核</button>
       <button class="tab" :class="{ active: tab === 'users' }" type="button" @click="tab = 'users'">用户管理</button>
       <button class="tab" :class="{ active: tab === 'announcements' }" type="button" @click="tab = 'announcements'">公告管理</button>
       <button class="tab" :class="{ active: tab === 'settings' }" type="button" @click="tab = 'settings'">站点设置</button>
@@ -580,7 +580,11 @@ onMounted(loadAll)
           </template>
 
           <!-- 标签管理 -->
-          <template v-else-if="tab === 'tags'">
+          <template v-else-if="tab === 'tags' && tagSub === 'keys'">
+            <div class="filter-row" style="margin-bottom: 14px">
+              <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'keys'">键管理</button>
+              <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
+            </div>
             <div v-if="editingKey" class="card card-default" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
               <h2 style="margin-bottom: 12px">编辑标签键 <code>{{ editingKey.key }}</code></h2>
               <div class="form-stack">
@@ -678,8 +682,12 @@ onMounted(loadAll)
             </div>
           </template>
 
-          <!-- 标签审核 / AI 整理 -->
-          <template v-else-if="tab === 'tag-suggestions'">
+          <!-- 标签审核 / AI 整理（并入标签管理） -->
+          <template v-else-if="tab === 'tags' && tagSub === 'review'">
+            <div class="filter-row" style="margin-bottom: 14px">
+              <button class="tab" :class="{ active: String(tagSub) === 'review' }" type="button" @click="tagSub = 'keys'">键管理</button>
+              <button class="tab" :class="{ active: String(tagSub) === 'keys' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
+            </div>
             <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 720px">
               <h2 style="margin-bottom: 12px">AI 整理标签</h2>
               <div class="form-stack">
@@ -730,6 +738,7 @@ onMounted(loadAll)
               </table>
             </div>
           </template>
+
 
           <!-- 用户管理 -->
           <template v-else-if="tab === 'users'">

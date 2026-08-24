@@ -86,18 +86,10 @@ onMounted(async () => {
           <div v-if="k.mode === 'int' && k.min != null && k.max != null" class="muted" style="font-size: 12px; margin-bottom: 8px">
             值域：{{ k.min }} ~ {{ k.max }}
           </div>
-          <div v-if="k.mode === 'int' && k.values.length" class="int-dist" style="margin-bottom: 12px">
-            <div v-for="v in k.values" :key="v.value" class="int-dist-row">
-              <span class="int-dist-label">{{ v.value }}</span>
-              <div class="int-dist-track"><div class="int-dist-fill" :style="{ width: (v.demo_count / maxCount(k)) * 100 + '%' }"></div></div>
-              <span class="int-dist-count">{{ v.demo_count }}</span>
-            </div>
-          </div>
-          <div v-else-if="k.values.length" class="int-dist" style="margin-bottom: 12px">
-            <div v-for="v in k.values" :key="v.value" class="int-dist-row">
-              <span class="int-dist-label">{{ v.value }}</span>
-              <div class="int-dist-track"><div class="int-dist-fill" :class="'mode-' + k.mode" :style="{ width: (v.demo_count / maxCount(k)) * 100 + '%' }"></div></div>
-              <span class="int-dist-count">{{ v.demo_count }}</span>
+          <div v-if="k.values.length" class="tag-dist-bars" style="margin-bottom: 12px">
+            <div v-for="v in k.values" :key="v.value" class="tag-dist-bar-col" :title="`${v.value}: ${v.demo_count}`">
+              <div class="tag-dist-bar-fill" :class="'mode-' + k.mode" :style="{ height: Math.max(4, Math.round((v.demo_count / maxCount(k)) * 36)) + 'px' }"></div>
+              <span class="tag-dist-bar-label">{{ v.value }}</span>
             </div>
           </div>
           <div class="filter-row" style="margin-bottom: 0">

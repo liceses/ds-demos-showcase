@@ -5,6 +5,7 @@ import type { DemoSummary, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import PromptDemoCard from '../components/PromptDemoCard.vue'
+import RangeSlider from '../components/RangeSlider.vue'
 
 const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
@@ -67,7 +68,8 @@ const hotChips = computed(() =>
 const COLLAPSED_SHOW = 4
 const groupExpanded = ref<Record<string, boolean>>({})
 function isExpanded(k: FilterGroup) {
-  return !!groupExpanded.value[k.key]
+  // 默认只展开 model，其余折叠
+  return groupExpanded.value[k.key] ?? k.key === 'model'
 }
 function isCollapsed(k: FilterGroup) {
   return !isExpanded(k)
@@ -83,33 +85,25 @@ function hiddenCount(k: FilterGroup) {
   return isCollapsed(k) ? Math.max(0, k.values.length - COLLAPSED_SHOW) : 0
 }
 
-// int 键范围筛选：min/max 输入 → key:lo-hi 加入 selectedTags（后端已支持范围解析）
-const intRange = ref<Record<string, { lo: string; hi: string }>>({})
+// int 键范围筛选：双滑块 → key:lo-hi 加入 selectedTags（后端已支持范围解析）
+const intRange = ref<Record<string, { lo: number; hi: number }>>({})
 
 function activeRangeOf(k: FilterGroup) {
   return selectedTags.value.find((t) => t.startsWith(k.key + ':')) || ''
 }
 
 function applyIntRange(k: FilterGroup) {
-  const r = intRange.value[k.key] || { lo: '', hi: '' }
-  const lo = r.lo.trim()
-  const hi = r.hi.trim()
+  const r = intRange.value[k.key] || { lo: k.min ?? 0, hi: k.max ?? 999 }
   const keyPrefix = k.key + ':'
   selectedTags.value = selectedTags.value.filter((t) => !t.startsWith(keyPrefix))
-  if (lo || hi) {
-    const min = k.min ?? 0
-    const max = k.max ?? 999
-    const loNum = lo ? Number(lo) : min
-    const hiNum = hi ? Number(hi) : max
-    if (!Number.isNaN(loNum) && !Number.isNaN(hiNum) && loNum <= hiNum) {
-      selectedTags.value.push(`${k.key}:${loNum}-${hiNum}`)
-    }
+  if (r.lo <= r.hi) {
+    selectedTags.value.push(`${k.key}:${r.lo}-${r.hi}`)
   }
   reset()
 }
 
 function clearIntRange(k: FilterGroup) {
-  intRange.value = { ...intRange.value, [k.key]: { lo: '', hi: '' } }
+  intRange.value = { ...intRange.value, [k.key]: { lo: k.min ?? 0, hi: k.max ?? 999 } }
   selectedTags.value = selectedTags.value.filter((t) => !t.startsWith(k.key + ':'))
   reset()
 }
@@ -200,7 +194,7 @@ onMounted(async () => {
     tagKeys.value = []
   }
   for (const k of tagKeys.value) {
-    if (k.mode === 'int' && !intRange.value[k.key]) intRange.value[k.key] = { lo: '', hi: '' }
+    if (k.mode === 'int' && !intRange.value[k.key]) intRange.value[k.key] = { lo: k.min ?? 0, hi: k.max ?? 999 }
   }
   await load(true)
   observer = new IntersectionObserver(
@@ -309,9 +303,7 @@ onBeforeUnmount(() => observer?.disconnect())
         </span>
         <template v-if="k.mode === 'int'">
           <div class="filter-row tag-strip-chips int-range-row">
-            <input v-model="intRange[k.key].lo" class="input" type="number" :placeholder="String(k.min ?? 0)" style="width: 70px" />
-            <span class="muted">~</span>
-            <input v-model="intRange[k.key].hi" class="input" type="number" :placeholder="String(k.max ?? 999)" style="width: 70px" />
+            <RangeSlider :min="k.min ?? 0" :max="k.max ?? 999" v-model="intRange[k.key]" />
             <button class="btn btn-sm btn-secondary" type="button" @click="applyIntRange(k)">应用</button>
             <button v-if="activeRangeOf(k)" class="btn btn-sm btn-dark" type="button" @click="clearIntRange(k)">清除</button>
             <span v-if="activeRangeOf(k)" class="tag-chip active">{{ activeRangeOf(k) }}</span>

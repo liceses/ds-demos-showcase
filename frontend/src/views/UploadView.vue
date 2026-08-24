@@ -527,7 +527,14 @@ async function submit() {
       </form>
       </div>
 
-      <div class="tag-drawer-panel" :class="{ 'panel-hidden': !(tagsOpen || isWide) }">
+      <Teleport to="body">
+        <div v-if="tagsOpen" class="tag-modal">
+          <div class="tag-modal-mask" @click="tagsOpen = false"></div>
+          <div class="tag-modal-panel">
+            <div class="tag-modal-head">
+              <span class="filter-label">标签选择</span>
+              <button class="btn btn-sm btn-dark" type="button" @click="tagsOpen = false">关闭</button>
+            </div>
         <div class="tag-drawer-head">
           <span class="hint">固定值点选 · 自定义值输入添加 · 数字值填整数 · author 系统保留</span>
         </div>
@@ -660,7 +667,9 @@ async function submit() {
             <span v-if="suggestMsg" class="notice notice-success" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestMsg }}</span>
           </div>
         </div>
-      </div>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </section>
 </template>

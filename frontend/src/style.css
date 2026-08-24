@@ -2890,3 +2890,127 @@ table.data tr.inconsistent td {
     font-size: 40px;
   }
 }
+
+/* 上传页两栏标签选择器 */
+.tag-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--ink);
+}
+.tag-pane-search {
+  margin-bottom: 10px;
+  max-width: none;
+}
+.tag-pane {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  min-height: 220px;
+}
+.tag-pane-keys {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  overflow-y: auto;
+  max-height: 320px;
+}
+.tag-pane-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 2px solid var(--ink);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.tag-pane-key:hover {
+  background: var(--yellow);
+}
+.tag-pane-key.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.tag-pane-key.active code {
+  background: var(--yellow);
+  color: var(--ink);
+}
+.tag-pane-key-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tag-pane-key-label code {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 0 3px;
+  font-size: 10px;
+}
+.tag-pane-key-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  border: 2px solid currentColor;
+  padding: 0 4px;
+  font-size: 11px;
+}
+.tag-pane-values {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 320px;
+}
+.tag-pane-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid var(--ink);
+}
+.tag-pane-selected-all {
+  margin-top: 0;
+  border-top: none;
+}
+.vendor-group {
+  margin-bottom: 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+.vendor-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  background: var(--mint);
+  border-bottom: 2px solid var(--ink);
+}
+.vendor-group-head:hover {
+  background: var(--yellow);
+}
+.vendor-group-name {
+  font-weight: 800;
+  font-size: 12px;
+}
+.vendor-group-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+.vendor-group .filter-row {
+  padding: 8px;
+}

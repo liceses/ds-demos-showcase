@@ -629,19 +629,19 @@ export const mockApi = {
     }
     return clone(s)
   },
-  async listTagSuggestions(status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
+  async listTagSuggestions(_status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
     await delay()
     return []
   },
   async reviewTagSuggestion(id: number, action: 'approve' | 'reject', group?: string): Promise<TagSuggestion> {
     await delay(200)
-    return { id, key: 'model', value: 'x', description: '', group: group || null, status: action, demo_id: null, created_at: new Date().toISOString() }
+    return { id, key: 'model', value: 'x', description: '', group: group || null, status: action === 'approve' ? 'approved' : 'rejected', demo_id: null, created_at: new Date().toISOString() }
   },
   async fetchModels(): Promise<{ created: number; note: string }> {
     await delay(300)
     return { created: 0, note: 'mock' }
   },
-  async aiSuggest(payload: { demo_id?: number; text?: string }): Promise<{ suggestions: { key: string; value: string; reason: string }[]; note: string }> {
+  async aiSuggest(_payload: { demo_id?: number; text?: string }): Promise<{ suggestions: { key: string; value: string; reason: string }[]; note: string }> {
     await delay(300)
     return { suggestions: [], note: 'mock' }
   },

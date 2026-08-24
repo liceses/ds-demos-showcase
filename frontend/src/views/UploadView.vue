@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
-import type { DemoDetail, TagKeyInfo } from '../api/types'
+import type { DemoDetail, TagKeyInfo, TagKeyValue } from '../api/types'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -108,6 +108,74 @@ function toggleSuggest(key: string) {
   suggestExpanded.value = { ...suggestExpanded.value, [key]: !suggestExpanded.value[key] }
 }
 
+// ---------- 两栏选择器 ----------
+const activeKey = ref('')
+const tagSearch = ref('')
+const onlySelected = ref(false)
+const vendorExpanded = ref<Record<string, boolean>>({})
+
+const filteredKeys = computed(() => {
+  const q = tagSearch.value.trim().toLowerCase()
+  if (!q) return tagKeys.value
+  return tagKeys.value.filter(
+    (k) =>
+      k.key.toLowerCase().includes(q) ||
+      (k.label || '').toLowerCase().includes(q) ||
+      k.values.some((v) => v.value.toLowerCase().includes(q)),
+  )
+})
+
+const activeTagKey = computed(() => tagKeys.value.find((k) => k.key === activeKey.value) || null)
+
+function selectKey(key: string) {
+  activeKey.value = key
+}
+
+function selectedCountOf(key: string) {
+  return selectedOf(key).length
+}
+
+/** model 厂商分组：优先后端 group 字段，缺省按 value 前缀约定 */
+const VENDOR_PREFIX: [string, string][] = [
+  ['dsv', 'DeepSeek'],
+  ['deepseek', 'DeepSeek'],
+  ['gpt', 'OpenAI'],
+  ['o1', 'OpenAI'],
+  ['o3', 'OpenAI'],
+  ['claude', 'Anthropic'],
+  ['gemini', 'Google'],
+  ['qwen', '阿里'],
+  ['doubao', '字节'],
+]
+function guessVendor(value: string): string {
+  const v = value.toLowerCase()
+  for (const [prefix, name] of VENDOR_PREFIX) {
+    if (v.startsWith(prefix)) return name
+  }
+  return '其他'
+}
+
+function vendorGroups(k: TagKeyInfo) {
+  const map = new Map<string, TagKeyValue[]>()
+  for (const v of k.values) {
+    const g = v.group || guessVendor(v.value)
+    if (!map.has(g)) map.set(g, [])
+    map.get(g)!.push(v)
+  }
+  return [...map.entries()].map(([group, values]) => ({ group, values }))
+}
+
+function isVendorCollapsed(group: string) {
+  return vendorExpanded.value[group] === true
+}
+function toggleVendor(group: string) {
+  vendorExpanded.value = { ...vendorExpanded.value, [group]: !isVendorCollapsed(group) }
+}
+
+function clearAllTags() {
+  selected.value = {}
+}
+
 function addValue(key: string) {
   const k = tagKeys.value.find((x) => x.key === key)
   // 注意：type="number" 时 v-model 会转成 number，必须 String() 后再 trim
@@ -181,6 +249,7 @@ onMounted(async () => {
   } catch {
     tagKeys.value = []
   }
+  if (!activeKey.value && tagKeys.value.length) activeKey.value = tagKeys.value[0].key
   for (const k of tagKeys.value) {
     if (k.mode !== 'fixed') inputs.value[k.key] = { value: '', description: '' }
   }
@@ -463,95 +532,113 @@ async function submit() {
           <span class="hint">固定值点选 · 自定义值输入添加 · 数字值填整数 · author 系统保留</span>
         </div>
 
-        <div v-for="k in tagKeys" :key="k.key" class="tag-key-row" :class="'mode-' + k.mode">
-          <div class="tag-key-head">
-            <b>{{ k.label || k.key }} <code>{{ k.key }}</code></b>
-            <span class="mode-badge" :class="'mode-badge-' + k.mode">{{ modeLabel[k.mode] }}</span>
-          </div>
-
-          <div v-if="k.key === 'model'" class="tag-key-hint">
-            灰测 Demo 专属标签：<code>ds-unknown</code>
-          </div>
-
-          <div v-if="k.mode === 'fixed'">
-            <TransitionGroup name="chip" tag="div" class="filter-row" style="margin: 0">
-              <button
-                v-for="v in k.values"
-                :key="v.value"
-                class="tag-chip mode-fixed"
-                :class="{ active: selectedOf(k.key).some((x) => x.value === v.value) }"
-                type="button"
-                @click="toggleValue(k.key, v.value)"
-              >
-                {{ v.value }}
-                <span class="count">{{ v.demo_count }}</span>
-              </button>
-            </TransitionGroup>
-          </div>
-
-          <div v-else class="form-stack">
-            <div class="filter-row" style="margin: 0">
-              <input
-                v-model="inputs[k.key].value"
-                class="input"
-                :type="k.mode === 'int' ? 'number' : 'text'"
-                :placeholder="k.mode === 'int' ? '整数，如 3' : '自定义值，如 pvz'"
-                style="max-width: 200px"
-                @keyup.enter="addValue(k.key)"
-                @input="tagErrors[k.key] = ''"
-              />
-              <input
-                v-model="inputs[k.key].description"
-                class="input"
-                type="text"
-                placeholder="介绍（可选，首次创建时写入）"
-                style="max-width: 220px"
-                @keyup.enter="addValue(k.key)"
-              />
-              <button class="btn btn-sm btn-secondary" type="button" @click="addValue(k.key)">添加</button>
-            </div>
-            <!-- 已有值建议：点选已存在的 value，避免重复造词 -->
-            <div v-if="k.values.length" class="filter-row tag-suggest-row">
-              <span class="filter-label tag-suggest-label">已有值</span>
-              <button
-                v-for="v in suggestionValues(k)"
-                :key="v.value"
-                class="tag-chip"
-                :class="['mode-' + k.mode, { active: selectedOf(k.key).some((x) => x.value === v.value) }]"
-                type="button"
-                :title="v.description || v.value"
-                @click="toggleValue(k.key, v.value, v.description || '')"
-              >
-                {{ v.value }}
-                <span class="count">{{ v.demo_count }}</span>
-              </button>
-              <button
-                v-if="k.values.length > SUGGEST_SHOW"
-                class="tag-chip tag-strip-toggle"
-                type="button"
-                @click="toggleSuggest(k.key)"
-              >
-                {{ suggestExpanded[k.key] ? '收起' : `更多 +${k.values.length - SUGGEST_SHOW}` }}
-              </button>
-            </div>
-            <div v-if="tagErrors[k.key]" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">
-              {{ tagErrors[k.key] }}
-            </div>
-            <TransitionGroup name="chip" tag="div" class="filter-row" style="margin: 0; gap: 6px">
-              <span
-                v-for="v in selectedOf(k.key)"
-                :key="v.value"
-                class="tag-chip active"
-                role="button"
-                :title="v.description || '点击移除'"
-                @click="removeValue(k.key, v.value)"
-              >
-                {{ v.value }}{{ v.description ? `（${v.description}）` : '' }}
-                <span class="chip-x">X</span>
-              </span>
-            </TransitionGroup>
-          </div>
+        <!-- 已选摘要条 -->
+        <div class="tag-summary">
+          <span class="filter-label">已选 {{ selectedCount }}</span>
+          <button class="tag-chip" :class="{ active: onlySelected }" type="button" @click="onlySelected = !onlySelected">只看已选</button>
+          <button v-if="selectedCount" class="btn btn-sm btn-dark" type="button" @click="clearAllTags">清空</button>
         </div>
+
+        <!-- 只看已选：扁平检查模式 -->
+        <div v-if="onlySelected" class="tag-pane-selected tag-pane-selected-all">
+          <span v-for="s in selectedList" :key="s.key + ':' + s.value" class="tag-chip active" role="button" :title="s.description || '点击移除'" @click="removeValue(s.key, s.value)">
+            {{ s.key }}:{{ s.value }}<span class="chip-x">X</span>
+          </span>
+          <div v-if="!selectedList.length" class="muted">还没有已选标签</div>
+        </div>
+
+        <template v-else>
+          <!-- 搜索 -->
+          <div class="search-box tag-pane-search">
+            <input v-model="tagSearch" class="input" type="search" placeholder="搜索标签键 / 值…" />
+          </div>
+
+          <div class="tag-pane">
+            <!-- 左：键列表 -->
+            <div class="tag-pane-keys">
+              <button
+                v-for="k in filteredKeys"
+                :key="k.key"
+                class="tag-pane-key"
+                :class="{ active: activeKey === k.key }"
+                type="button"
+                @click="selectKey(k.key)"
+              >
+                <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+                <span class="tag-pane-key-count">{{ selectedCountOf(k.key) }}</span>
+              </button>
+              <div v-if="!filteredKeys.length" class="muted" style="padding: 8px">无匹配标签</div>
+            </div>
+
+            <!-- 右：值面板 -->
+            <div class="tag-pane-values">
+              <template v-if="activeTagKey">
+                <div class="tag-key-head">
+                  <b>{{ activeTagKey.label || activeTagKey.key }} <code>{{ activeTagKey.key }}</code></b>
+                  <span class="mode-badge" :class="'mode-badge-' + activeTagKey.mode">{{ modeLabel[activeTagKey.mode] }}</span>
+                </div>
+
+                <!-- fixed：厂商分组 chips -->
+                <template v-if="activeTagKey.mode === 'fixed'">
+                  <div v-if="activeTagKey.key === 'model'" class="tag-key-hint">灰测 Demo 专属标签：<code>ds-unknown</code></div>
+                  <div v-for="g in vendorGroups(activeTagKey)" :key="g.group" class="vendor-group">
+                    <div class="vendor-group-head" role="button" @click="toggleVendor(g.group)">
+                      <span class="vendor-group-name">{{ g.group }}</span>
+                      <span class="vendor-group-toggle">{{ isVendorCollapsed(g.group) ? '展开' : '收起' }}</span>
+                    </div>
+                    <div v-if="!isVendorCollapsed(g.group)" class="filter-row" style="margin: 0">
+                      <button
+                        v-for="v in g.values"
+                        :key="v.value"
+                        class="tag-chip mode-fixed"
+                        :class="{ active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }"
+                        type="button"
+                        @click="toggleValue(activeTagKey.key, v.value)"
+                      >{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- open：已有值建议 + 输入 -->
+                <template v-else-if="activeTagKey.mode === 'open'">
+                  <div class="form-stack">
+                    <div class="filter-row" style="margin: 0">
+                      <input v-model="inputs[activeTagKey.key].value" class="input" type="text" placeholder="自定义值，如 pvz" style="max-width: 180px" @keyup.enter="addValue(activeTagKey.key)" @input="tagErrors[activeTagKey.key] = ''" />
+                      <input v-model="inputs[activeTagKey.key].description" class="input" type="text" placeholder="介绍（可选）" style="max-width: 180px" @keyup.enter="addValue(activeTagKey.key)" />
+                      <button class="btn btn-sm btn-secondary" type="button" @click="addValue(activeTagKey.key)">添加</button>
+                    </div>
+                    <div v-if="activeTagKey.values.length" class="filter-row tag-suggest-row">
+                      <span class="filter-label tag-suggest-label">已有值</span>
+                      <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip" :class="['mode-open', { active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }]" type="button" :title="v.description || v.value" @click="toggleValue(activeTagKey.key, v.value, v.description || '')">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                      <button v-if="activeTagKey.values.length > SUGGEST_SHOW" class="tag-chip tag-strip-toggle" type="button" @click="toggleSuggest(activeTagKey.key)">{{ suggestExpanded[activeTagKey.key] ? '收起' : `更多 +${activeTagKey.values.length - SUGGEST_SHOW}` }}</button>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- int：数字输入 + 已有值建议 -->
+                <template v-else>
+                  <div class="form-stack">
+                    <div class="filter-row" style="margin: 0">
+                      <input v-model="inputs[activeTagKey.key].value" class="input" type="number" :placeholder="`整数，如 ${activeTagKey.min ?? 0}~${activeTagKey.max ?? 999}`" style="max-width: 180px" @keyup.enter="addValue(activeTagKey.key)" @input="tagErrors[activeTagKey.key] = ''" />
+                      <button class="btn btn-sm btn-secondary" type="button" @click="addValue(activeTagKey.key)">添加</button>
+                    </div>
+                    <div v-if="activeTagKey.values.length" class="filter-row tag-suggest-row">
+                      <span class="filter-label tag-suggest-label">已有值</span>
+                      <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip" :class="['mode-int', { active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }]" type="button" @click="toggleValue(activeTagKey.key, v.value)">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 已选（当前键） -->
+                <div v-if="selectedOf(activeTagKey.key).length" class="tag-pane-selected">
+                  <span class="filter-label">已选</span>
+                  <span v-for="v in selectedOf(activeTagKey.key)" :key="v.value" class="tag-chip active" role="button" :title="v.description || '点击移除'" @click="removeValue(activeTagKey.key, v.value)">{{ v.value }}<span class="chip-x">X</span></span>
+                </div>
+              </template>
+              <div v-else class="muted">请选择左侧标签键</div>
+            </div>
+          </div>
+        </template>
 
         <!-- 申请新固定值（进入管理员审核） -->
         <div class="tag-key-row" style="margin-top: 12px">

@@ -74,7 +74,13 @@ def preview_file(slug: str, path: str):
             raise HTTPException(status_code=404, detail="文件不存在", )
         import re as _re
         html = data.decode("utf-8", errors="replace")
-        base_url = oss.public_url(f"demos/{slug}/files/") if oss.enabled() else f"/preview/{slug}/"
+        # 本地服务模式（serve_local=true）：base 指回本地 /preview，资源由服务器下发，OSS 仅作备份；
+        # 非本地服务模式：base 指向 OSS，资源 302 直连 OSS 省服务器带宽。
+        base_url = (
+            oss.public_url(f"demos/{slug}/files/")
+            if (oss.enabled() and not settings.oss_serve_local)
+            else f"/preview/{slug}/"
+        )
         if _re.search(r"<base\s", html, _re.IGNORECASE):
             # 若页面自带 base，替换成我们的
             html = _re.sub(r"(?i)<base[^>]*>", f'<base href="{base_url}">', html, count=1)

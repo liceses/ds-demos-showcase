@@ -3014,3 +3014,8 @@ table.data tr.inconsistent td {
 .vendor-group .filter-row {
   padding: 8px;
 }
+
+/* 标签分布条 mode 配色 */
+.int-dist-fill.mode-fixed { background: var(--ink); }
+.int-dist-fill.mode-open { background: var(--yellow); }
+.int-dist-fill.mode-int { background: var(--mint); }

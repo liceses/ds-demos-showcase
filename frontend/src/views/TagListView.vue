@@ -93,6 +93,13 @@ onMounted(async () => {
               <span class="int-dist-count">{{ v.demo_count }}</span>
             </div>
           </div>
+          <div v-else-if="k.values.length" class="int-dist" style="margin-bottom: 12px">
+            <div v-for="v in k.values" :key="v.value" class="int-dist-row">
+              <span class="int-dist-label">{{ v.value }}</span>
+              <div class="int-dist-track"><div class="int-dist-fill" :class="'mode-' + k.mode" :style="{ width: (v.demo_count / maxCount(k)) * 100 + '%' }"></div></div>
+              <span class="int-dist-count">{{ v.demo_count }}</span>
+            </div>
+          </div>
           <div class="filter-row" style="margin-bottom: 0">
             <RouterLink
               v-for="v in k.values"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
@@ -129,6 +129,34 @@ const activeTagKey = computed(() => tagKeys.value.find((k) => k.key === activeKe
 
 function selectKey(key: string) {
   activeKey.value = key
+}
+
+const searchActive = computed(() => tagSearch.value.trim().length > 0)
+function isValueHit(k: TagKeyInfo, value: string) {
+  const q = tagSearch.value.trim().toLowerCase()
+  if (!q) return false
+  return k.key.toLowerCase().includes(q) || value.toLowerCase().includes(q)
+}
+watch(tagSearch, () => {
+  if (!filteredKeys.value.length) return
+  if (!filteredKeys.value.some((k) => k.key === activeKey.value)) {
+    activeKey.value = filteredKeys.value[0].key
+  }
+})
+
+// 申请新值：按 fixed 键展开内联表单
+const suggestPanelKey = ref('')
+function toggleSuggestPanel(key: string) {
+  if (suggestPanelKey.value === key) {
+    suggestPanelKey.value = ''
+    return
+  }
+  suggestPanelKey.value = key
+  suggest.key = key
+  suggest.value = ''
+  suggest.description = ''
+  suggestMsg.value = ''
+  suggestError.value = ''
 }
 
 function selectedCountOf(key: string) {
@@ -563,17 +591,20 @@ async function submit() {
           <div class="tag-pane">
             <!-- 左：键列表 -->
             <div class="tag-pane-keys">
-              <button
-                v-for="k in filteredKeys"
-                :key="k.key"
-                class="tag-pane-key"
-                :class="{ active: activeKey === k.key }"
-                type="button"
-                @click="selectKey(k.key)"
-              >
-                <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
-                <span class="tag-pane-key-count">{{ selectedCountOf(k.key) }}</span>
-              </button>
+              <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">
+                <div v-if="filteredKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel[m] }}</div>
+                <button
+                  v-for="k in filteredKeys.filter((k) => k.mode === m)"
+                  :key="k.key"
+                  class="tag-pane-key"
+                  :class="{ active: activeKey === k.key }"
+                  type="button"
+                  @click="selectKey(k.key)"
+                >
+                  <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+                  <span class="tag-pane-key-count">{{ selectedCountOf(k.key) }}</span>
+                </button>
+              </template>
               <div v-if="!filteredKeys.length" class="muted" style="padding: 8px">无匹配标签</div>
             </div>
 
@@ -591,17 +622,32 @@ async function submit() {
                   <div v-for="g in vendorGroups(activeTagKey)" :key="g.group" class="vendor-group">
                     <div class="vendor-group-head" role="button" @click="toggleVendor(g.group)">
                       <span class="vendor-group-name">{{ g.group }}</span>
-                      <span class="vendor-group-toggle">{{ isVendorCollapsed(g.group) ? '展开' : '收起' }}</span>
+                      <span v-if="!searchActive" class="vendor-group-toggle">{{ isVendorCollapsed(g.group) ? '展开' : '收起' }}</span>
                     </div>
-                    <div v-if="!isVendorCollapsed(g.group)" class="filter-row" style="margin: 0">
+                    <div v-if="!isVendorCollapsed(g.group) || searchActive" class="filter-row" style="margin: 0">
                       <button
                         v-for="v in g.values"
                         :key="v.value"
                         class="tag-chip mode-fixed"
-                        :class="{ active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }"
+                        :class="{ 'search-hit': isValueHit(activeTagKey, v.value), active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }"
                         type="button"
                         @click="toggleValue(activeTagKey.key, v.value)"
                       >{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                    </div>
+                  </div>
+
+                  <!-- 申请新值（内联，渐进披露） -->
+                  <div class="tag-suggest-new">
+                    <button v-if="suggestPanelKey !== activeTagKey.key" class="btn btn-sm btn-outline" type="button" @click="toggleSuggestPanel(activeTagKey.key)">+ 申请新值</button>
+                    <div v-else class="form-stack tag-suggest-new-form">
+                      <div class="filter-row" style="margin: 0">
+                        <input v-model="suggest.value" class="input" style="max-width: 180px" placeholder="新值，如 dsv4-ultra" />
+                        <input v-model="suggest.description" class="input" style="max-width: 200px" placeholder="介绍（可选）" />
+                        <button class="btn btn-sm btn-secondary" type="button" @click="submitSuggestion">申请</button>
+                        <button class="btn btn-sm btn-dark" type="button" @click="toggleSuggestPanel(activeTagKey.key)">取消</button>
+                      </div>
+                      <span v-if="suggestError" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestError }}</span>
+                      <span v-if="suggestMsg" class="notice notice-success" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestMsg }}</span>
                     </div>
                   </div>
                 </template>
@@ -614,10 +660,15 @@ async function submit() {
                       <input v-model="inputs[activeTagKey.key].description" class="input" type="text" placeholder="介绍（可选）" style="max-width: 180px" @keyup.enter="addValue(activeTagKey.key)" />
                       <button class="btn btn-sm btn-secondary" type="button" @click="addValue(activeTagKey.key)">添加</button>
                     </div>
-                    <div v-if="activeTagKey.values.length" class="filter-row tag-suggest-row">
-                      <span class="filter-label tag-suggest-label">已有值</span>
-                      <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip" :class="['mode-open', { active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }]" type="button" :title="v.description || v.value" @click="toggleValue(activeTagKey.key, v.value, v.description || '')">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
-                      <button v-if="activeTagKey.values.length > SUGGEST_SHOW" class="tag-chip tag-strip-toggle" type="button" @click="toggleSuggest(activeTagKey.key)">{{ suggestExpanded[activeTagKey.key] ? '收起' : `更多 +${activeTagKey.values.length - SUGGEST_SHOW}` }}</button>
+                    <div v-if="activeTagKey.values.length" class="tag-suggest-block">
+                      <button v-if="!suggestExpanded[activeTagKey.key] && !searchActive" class="tag-chip tag-strip-toggle" type="button" @click="toggleSuggest(activeTagKey.key)">已有值 {{ activeTagKey.values.length }} · 展开</button>
+                      <template v-else>
+                        <div class="filter-row tag-suggest-row">
+                          <span class="filter-label tag-suggest-label">已有值</span>
+                          <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip" :class="['mode-open', { 'search-hit': isValueHit(activeTagKey, v.value), active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }]" type="button" :title="v.description || v.value" @click="toggleValue(activeTagKey.key, v.value, v.description || '')">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                          <button v-if="activeTagKey.values.length > SUGGEST_SHOW" class="tag-chip tag-strip-toggle" type="button" @click="toggleSuggest(activeTagKey.key)">收起</button>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </template>
@@ -629,9 +680,14 @@ async function submit() {
                       <input v-model="inputs[activeTagKey.key].value" class="input" type="number" :placeholder="`整数，如 ${activeTagKey.min ?? 0}~${activeTagKey.max ?? 999}`" style="max-width: 180px" @keyup.enter="addValue(activeTagKey.key)" @input="tagErrors[activeTagKey.key] = ''" />
                       <button class="btn btn-sm btn-secondary" type="button" @click="addValue(activeTagKey.key)">添加</button>
                     </div>
-                    <div v-if="activeTagKey.values.length" class="filter-row tag-suggest-row">
-                      <span class="filter-label tag-suggest-label">已有值</span>
-                      <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip" :class="['mode-int', { active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }]" type="button" @click="toggleValue(activeTagKey.key, v.value)">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                    <div v-if="activeTagKey.values.length" class="tag-suggest-block">
+                      <button v-if="!suggestExpanded[activeTagKey.key] && !searchActive" class="tag-chip tag-strip-toggle" type="button" @click="toggleSuggest(activeTagKey.key)">已有值 {{ activeTagKey.values.length }} · 展开</button>
+                      <template v-else>
+                        <div class="filter-row tag-suggest-row">
+                          <span class="filter-label tag-suggest-label">已有值</span>
+                          <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip" :class="['mode-int', { 'search-hit': isValueHit(activeTagKey, v.value), active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }]" type="button" @click="toggleValue(activeTagKey.key, v.value)">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </template>
@@ -647,26 +703,6 @@ async function submit() {
           </div>
         </template>
 
-        <!-- 申请新固定值（进入管理员审核） -->
-        <div class="tag-key-row" style="margin-top: 12px">
-          <div class="tag-key-head">
-            <b>申请新固定值</b>
-            <span class="hint">提交后管理员审核，通过才成为正式候选</span>
-          </div>
-          <div class="form-stack">
-            <div class="filter-row" style="margin: 0">
-              <select v-model="suggest.key" class="input" style="max-width: 160px">
-                <option value="">选择固定键…</option>
-                <option v-for="k in fixedKeys" :key="k.key" :value="k.key">{{ k.key }}（{{ k.label }}）</option>
-              </select>
-              <input v-model="suggest.value" class="input" style="max-width: 180px" placeholder="新值，如 dsv4-ultra" />
-              <input v-model="suggest.description" class="input" style="max-width: 200px" placeholder="介绍（可选）" />
-              <button class="btn btn-sm btn-secondary" type="button" @click="submitSuggestion">申请</button>
-            </div>
-            <span v-if="suggestError" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestError }}</span>
-            <span v-if="suggestMsg" class="notice notice-success" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestMsg }}</span>
-          </div>
-        </div>
           </div>
         </div>
       </Teleport>

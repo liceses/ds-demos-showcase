@@ -166,3 +166,91 @@ echo 'UPLOAD_CODE=你自定义的随机密钥' >> /opt/ds-demos-showcase/.env
 | `POST /api/v1/auth/login` | （可选）登录拿 token |
 
 完整字段与校验规则见 `API_CONTRACT.md`。
+
+---
+
+## 五、AI 整理标签工作流（管理员）
+
+> 适用：AI agent 在本地 harness 里调用服务器接口，**维护 demo 标签 / 补全固定值**。
+> 身份：**必须用 admin 账号登录拿 Bearer token**（匿名/普通用户无权改标签）。没有 admin 凭据的 agent 只能读，不能改。
+
+### 1. 登录拿 token
+
+```bash
+curl -s -X POST https://deepdemos.top/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"你的admin密码"}'
+# → {"access_token":"eyJ...", ...}
+# 之后所有写操作带：-H "Authorization: Bearer eyJ..."
+```
+
+### 2. 拉现状（只读，公开）
+
+```bash
+# 标签键定义（含 fixed 候选值、group、int 的 min/max）
+curl https://deepdemos.top/api/v1/tags/tag-keys
+
+# demo 列表（含 title/description/tags/prompt）
+curl "https://deepdemos.top/api/v1/demos?page_size=100"
+```
+
+### 3. 分析并决定标签
+
+- 对每个 demo 判断 `type/category/model` 等适宜标签
+- 只使用 `tag-keys` 里真实存在的 key；fixed 值优先选候选，int 值必须是整数
+- 需要新 fixed 值时，见第 4 步
+
+### 4. 补全固定值（admin）
+
+```bash
+# 直接创建 fixed value（可带 group 分组）
+curl -X POST https://deepdemos.top/api/v1/tags \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"key":"model","value":"dsv4-ultra","description":"…","group":"DeepSeek"}'
+
+# 或：一键把主流模型写入 pending 建议（人工审核后生效）
+curl -X POST https://deepdemos.top/api/v1/tags/admin/fetch-models \
+  -H "Authorization: Bearer <token>"
+
+# 审核用户/模型建议
+curl https://deepdemos.top/api/v1/tags/admin/suggestions?status=pending \
+  -H "Authorization: Bearer <token>"
+curl -X POST https://deepdemos.top/api/v1/tags/admin/suggestions/1/review \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"action":"approve","group":"DeepSeek"}'
+```
+
+### 5. 给 demo 挂/改标签（admin）
+
+```bash
+# 更新 demo 的 tags（会覆盖该 demo 全部标签，先 GET 详情拿现有 tags 再合并）
+curl -X PUT https://deepdemos.top/api/v1/demos/<slug> \
+  -H "Authorization: Bearer <token>" \
+  -F 'tags=["type:game","model:dsv4-flash","rounds:3"]'
+```
+
+> 注意：`PUT /demos/{slug}` 的 `tags` 是**整体替换**，不是增量追加。维护时先 `GET /demos/{slug}` 拿现有 tags，合并后再提交。
+
+### 6. 数字标签范围检索（只读）
+
+```bash
+# int 键范围：rounds 在 [3,10]
+curl "https://deepdemos.top/api/v1/demos?tag=rounds:3-10"
+```
+
+### 安全提醒
+
+- 只有 **admin 账号**能改标签/demo；**不要把 admin 密码写进公开文档或提交到仓库**
+- agent 操作前先确认自己有 admin token；没有就只读，不要尝试绕过
+- 建议给 AI 用**专用 admin 账号**（如 `ai-agent` + 强密码），与人工 admin 分开，便于审计
+
+### 接口速查补充
+
+| 接口 | 用途 |
+|---|---|
+| `POST /api/v1/tags` | admin 创建 fixed value（可带 group） |
+| `POST /api/v1/tags/admin/fetch-models` | 主流模型写入 pending 建议 |
+| `GET /api/v1/tags/admin/suggestions` | 列建议（pending/approved/rejected） |
+| `POST /api/v1/tags/admin/suggestions/{id}/review` | 审核建议（approve/reject） |
+| `PUT /api/v1/demos/{slug}` | 更新 demo（含整体替换 tags） |
+| `GET /api/v1/demos?tag=rounds:3-10` | int 键范围检索 |

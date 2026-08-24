@@ -3151,3 +3151,46 @@ table.data tr.inconsistent td {
   font-size: 11px;
   color: #555;
 }
+
+/* 上传标签弹窗：呼吸感 + 搜索命中 + 申请新值 */
+.tag-modal-panel {
+  width: min(960px, 100%);
+  background: var(--paper);
+  padding: 20px;
+}
+.tag-pane {
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+}
+.tag-pane-group-label {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tag-pane-key {
+  padding: 10px 12px;
+}
+.tag-pane-values {
+  padding: 18px;
+}
+.vendor-group {
+  margin-bottom: 14px;
+}
+.tag-suggest-new {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--ink);
+}
+.tag-suggest-new-form {
+  margin-top: 8px;
+}
+.tag-suggest-block {
+  margin-top: 8px;
+}
+.search-hit {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}

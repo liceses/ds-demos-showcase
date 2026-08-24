@@ -34,6 +34,8 @@ type FilterGroup = {
   mode: 'fixed' | 'open' | 'int'
   label: string
   total: number
+  min?: number | null
+  max?: number | null
   values: { value: string; count: number }[]
 }
 
@@ -47,6 +49,8 @@ const filterGroups = computed<FilterGroup[]>(() =>
       mode: k.mode,
       label: k.label || k.key,
       total: k.values.reduce((n, v) => n + v.demo_count, 0),
+      min: k.min,
+      max: k.max,
       values: [...k.values].sort((a, b) => b.demo_count - a.demo_count).map((v) => ({ value: v.value, count: v.demo_count })),
     })),
 )
@@ -77,6 +81,37 @@ function visibleValues(k: FilterGroup) {
 }
 function hiddenCount(k: FilterGroup) {
   return isCollapsed(k) ? Math.max(0, k.values.length - COLLAPSED_SHOW) : 0
+}
+
+// int 键范围筛选：min/max 输入 → key:lo-hi 加入 selectedTags（后端已支持范围解析）
+const intRange = ref<Record<string, { lo: string; hi: string }>>({})
+
+function activeRangeOf(k: FilterGroup) {
+  return selectedTags.value.find((t) => t.startsWith(k.key + ':')) || ''
+}
+
+function applyIntRange(k: FilterGroup) {
+  const r = intRange.value[k.key] || { lo: '', hi: '' }
+  const lo = r.lo.trim()
+  const hi = r.hi.trim()
+  const keyPrefix = k.key + ':'
+  selectedTags.value = selectedTags.value.filter((t) => !t.startsWith(keyPrefix))
+  if (lo || hi) {
+    const min = k.min ?? 0
+    const max = k.max ?? 999
+    const loNum = lo ? Number(lo) : min
+    const hiNum = hi ? Number(hi) : max
+    if (!Number.isNaN(loNum) && !Number.isNaN(hiNum) && loNum <= hiNum) {
+      selectedTags.value.push(`${k.key}:${loNum}-${hiNum}`)
+    }
+  }
+  reset()
+}
+
+function clearIntRange(k: FilterGroup) {
+  intRange.value = { ...intRange.value, [k.key]: { lo: '', hi: '' } }
+  selectedTags.value = selectedTags.value.filter((t) => !t.startsWith(k.key + ':'))
+  reset()
 }
 
 function clearTags() {
@@ -163,6 +198,9 @@ onMounted(async () => {
     tagKeys.value = await api.listTagKeys()
   } catch {
     tagKeys.value = []
+  }
+  for (const k of tagKeys.value) {
+    if (k.mode === 'int' && !intRange.value[k.key]) intRange.value[k.key] = { lo: '', hi: '' }
   }
   await load(true)
   observer = new IntersectionObserver(
@@ -269,7 +307,17 @@ onBeforeUnmount(() => observer?.disconnect())
           {{ k.label }} <code>{{ k.key }}</code>
           <span class="mode-dot" :class="'mode-dot-' + k.mode"></span>
         </span>
-        <div class="filter-row tag-strip-chips">
+        <template v-if="k.mode === 'int'">
+          <div class="filter-row tag-strip-chips int-range-row">
+            <input v-model="intRange[k.key].lo" class="input" type="number" :placeholder="String(k.min ?? 0)" style="width: 70px" />
+            <span class="muted">~</span>
+            <input v-model="intRange[k.key].hi" class="input" type="number" :placeholder="String(k.max ?? 999)" style="width: 70px" />
+            <button class="btn btn-sm btn-secondary" type="button" @click="applyIntRange(k)">应用</button>
+            <button v-if="activeRangeOf(k)" class="btn btn-sm btn-dark" type="button" @click="clearIntRange(k)">清除</button>
+            <span v-if="activeRangeOf(k)" class="tag-chip active">{{ activeRangeOf(k) }}</span>
+          </div>
+        </template>
+        <div v-else class="filter-row tag-strip-chips">
           <button
             v-for="v in visibleValues(k)"
             :key="v.value"

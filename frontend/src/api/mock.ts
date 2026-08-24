@@ -1,5 +1,5 @@
-﻿// Mock API 鈥斺€?鍓嶇鐙珛杩愯鏃朵娇鐢ㄧ殑鍗犱綅鏁版嵁涓庨€昏緫銆?
-// 鍒囨崲鍒扮湡瀹炲悗绔細璁剧疆鐜鍙橀噺 VITE_USE_MOCK=false锛宎pi/index.ts 浼氭敼璧?axios銆?
+// Mock API —— 前端独立运行时使用的占位数据与逻辑。
+// 切换到真实后端：设置环境变量 VITE_USE_MOCK=false，api/index.ts 会改走 axios。
 
 import type {
   AdminDemo,
@@ -7,6 +7,7 @@ import type {
   Announcement,
   AuthResponse,
   Comment,
+  CreateDemoFromUrlPayload,
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
@@ -31,16 +32,16 @@ import type {
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
 
 const recognition: RecognitionItem[] = [
-  { id: 1, kind: 'sponsor', name: 'Alice', amount: 500, message: '鏀寔 AI 鍏ㄦ皯鍒朵綔浜猴紒', show_amount: true, sort: 0, active: true },
-  { id: 2, kind: 'sponsor', name: 'Bob', amount: 300, message: '浣滃搧寰堟', show_amount: true, sort: 0, active: true },
-  { id: 3, kind: 'thanks', name: '灏忔槑', message: '鎰熻阿鎻愪緵浜嗚繖涔堝ソ鐨?demo', show_amount: true, sort: 0, active: true },
+  { id: 1, kind: 'sponsor', name: 'Alice', amount: 500, message: '支持 AI 全民制作人！', show_amount: true, sort: 0, active: true },
+  { id: 2, kind: 'sponsor', name: 'Bob', amount: 300, message: '作品很棒', show_amount: true, sort: 0, active: true },
+  { id: 3, kind: 'thanks', name: '小明', message: '感谢提供了这么好的 demo', show_amount: true, sort: 0, active: true },
 ]
 
 const announcements: Announcement[] = [
-  { id: 1, type: 'manual', title: '绔欑偣鍏憡', content: '娆㈣繋鏉ュ埌 AI 鍏ㄦ皯鍒朵綔浜虹珯锛屾杩庡ぇ瀹舵姇绋?AI 鐢熸垚鐨勭綉椤?Demo锛?, demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
-  { id: 2, type: 'auto', title: '鏂?Demo 鍙戝竷', content: '妞嶇墿澶ф垬鍍靛案锛堟瀬绠€鐗堬級', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-01T10:00:00Z' },
-  { id: 3, type: 'demo_update', title: 'Demo 鏇存柊锛氭鐗╁ぇ鎴樺兊灏?, content: '淇绗簩鍏抽煶鏁堜笉鍚屾鐨勯棶棰?, demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-02T15:30:00Z' },
-  { id: 4, type: 'update', title: '绔欑偣鏇存柊', content: 'feat: 鏁寸珯鍏憡绯荤粺涓婄嚎', demo_slug: null, created_by: null, created_at: '2025-03-03T09:00:00Z' },
+  { id: 1, type: 'manual', title: '站点公告', content: '欢迎来到 AI 全民制作人站，欢迎大家投稿 AI 生成的网页 Demo！', demo_slug: null, created_by: 1, created_at: '2025-01-02T00:00:00Z' },
+  { id: 2, type: 'auto', title: '新 Demo 发布', content: '植物大战僵尸（极简版）', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-01T10:00:00Z' },
+  { id: 3, type: 'demo_update', title: 'Demo 更新：植物大战僵尸', content: '修复第二关音效不同步的问题', demo_slug: 'pvz-demo', created_by: 2, created_at: '2025-03-02T15:30:00Z' },
+  { id: 4, type: 'update', title: '站点更新', content: 'feat: 整站公告系统上线', demo_slug: null, created_by: null, created_at: '2025-03-03T09:00:00Z' },
 ]
 
 function svgCover(bg: string, text: string, sub: string): string {
@@ -56,9 +57,9 @@ function svgCover(bg: string, text: string, sub: string): string {
 }
 
 const users: User[] = [
-  { id: 1, username: 'admin', role: 'admin', status: 'active', bio: '绔欑偣绠＄悊鍛?, created_at: '2025-01-01T00:00:00Z' },
-  { id: 2, username: 'tester', role: 'user', status: 'active', bio: 'AI Demo 鐖卞ソ鑰?, created_at: '2025-02-11T08:00:00Z' },
-  { id: 3, username: 'alice', role: 'user', status: 'active', bio: '鏀堕泦鍚勭缃戦〉灏忕帺鍏?, created_at: '2025-03-02T10:30:00Z' },
+  { id: 1, username: 'admin', role: 'admin', status: 'active', bio: '站点管理员', created_at: '2025-01-01T00:00:00Z' },
+  { id: 2, username: 'tester', role: 'user', status: 'active', bio: 'AI Demo 爱好者', created_at: '2025-02-11T08:00:00Z' },
+  { id: 3, username: 'alice', role: 'user', status: 'active', bio: '收集各种网页小玩具', created_at: '2025-03-02T10:30:00Z' },
 ]
 
 const passwordOf: Record<string, string> = {
@@ -70,81 +71,81 @@ const passwordOf: Record<string, string> = {
 let currentUser: User | null = null
 
 const tags: Tag[] = [
-  { id: 1, key: 'model', value: 'dsv4', description: '妯″瀷鐗堟湰鎬荤被', parent_id: null, demo_count: 6, child_count: 2 },
-  { id: 2, key: 'model', value: 'dsv4-flash', description: 'DeepSeek V4 Flash 鈥斺€?蹇€熸帹鐞?, parent_id: 1, demo_count: 3, child_count: 0 },
-  { id: 3, key: 'model', value: 'dsv4-pro', description: 'DeepSeek V4 Pro 鈥斺€?寮烘帹鐞?, parent_id: 1, demo_count: 0, child_count: 0 },
-  { id: 10, key: 'model', value: 'dsv4flash', description: '鍘嗗彶鑷敱鍊硷細dsv4-flash 鐨勬棫鍐欐硶', parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 18, key: 'model', value: 'ds-unknown', description: '缃戜紶鐏版祴鐗?, parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 4, key: 'plugin', value: 'routing-suite', description: '璺敱濂椾欢鎻掍欢', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 11, key: 'plugin', value: 'suite', description: '鍘嗗彶鑷敱鍊硷細璺敱濂椾欢鐨勬棫鍐欐硶', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 5, key: 'skills', value: 'J-space', description: 'J-space 鎶€鑳藉伐浣滃尯', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 16, key: 'skills', value: 'j-space', description: '鍘嗗彶鑷敱鍊硷細J-space 鐨勬棫鍐欐硶', parent_id: null, demo_count: 1, child_count: 0 },
-  { id: 6, key: 'preset', value: 'router-standard', description: '鏍囧噯璺敱棰勮', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 12, key: 'preset', value: 'spec', description: '鍘嗗彶鑷敱鍊硷細瑙勬牸棰勮', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 7, key: 'type', value: 'effect', description: '瑙嗚鐗规晥绫?, parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 8, key: 'type', value: 'widget', description: '灏忕粍浠剁被', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 9, key: 'type', value: 'game', description: '灏忔父鎴忕被', parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 22, key: 'type', value: 'demo', description: '缁煎悎婕旂ず绫?, parent_id: null, demo_count: 8, child_count: 0 },
-  { id: 23, key: 'category', value: '鍥惧舰瀛?, description: '鍥惧舰瀛︾被', parent_id: null, demo_count: 4, child_count: 0 },
-  { id: 25, key: 'category', value: '3D寤烘ā', description: '3D 寤烘ā绫?, parent_id: null, demo_count: 1, child_count: 0 },
-  { id: 26, key: 'category', value: '浠跨湡', description: '浠跨湡绫?, parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 27, key: 'category', value: '鍔ㄧ敾', description: '鍔ㄧ敾绫?, parent_id: null, demo_count: 1, child_count: 0 },
-  { id: 13, key: 'author', value: 'tester', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 14, key: 'author', value: 'alice', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 2, child_count: 0 },
-  { id: 12, key: 'author', value: 'admin', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 19, key: 'author', value: 'DOUBAO', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 3, child_count: 0 },
-  { id: 21, key: 'author', value: 'gemini-3.7-flash', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 8, child_count: 0 },
-  { id: 15, key: 'author', value: 'sixtyseven', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 6, child_count: 0 },
-  { id: 24, key: 'author', value: 'yiheifeikong', description: '绯荤粺浣滆€呮爣绛?, parent_id: null, demo_count: 8, child_count: 0 },
+  { id: 1, key: 'model', value: 'dsv4', description: '模型版本总类', parent_id: null, demo_count: 6, child_count: 2 },
+  { id: 2, key: 'model', value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', parent_id: 1, demo_count: 3, child_count: 0 },
+  { id: 3, key: 'model', value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', parent_id: 1, demo_count: 0, child_count: 0 },
+  { id: 10, key: 'model', value: 'dsv4flash', description: '历史自由值：dsv4-flash 的旧写法', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 18, key: 'model', value: 'ds-unknown', description: '网传灰测版', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 4, key: 'plugin', value: 'routing-suite', description: '路由套件插件', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 11, key: 'plugin', value: 'suite', description: '历史自由值：路由套件的旧写法', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 5, key: 'skills', value: 'J-space', description: 'J-space 技能工作区', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 16, key: 'skills', value: 'j-space', description: '历史自由值：J-space 的旧写法', parent_id: null, demo_count: 1, child_count: 0 },
+  { id: 6, key: 'preset', value: 'router-standard', description: '标准路由预设', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 12, key: 'preset', value: 'spec', description: '历史自由值：规格预设', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 7, key: 'type', value: 'effect', description: '视觉特效类', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 8, key: 'type', value: 'widget', description: '小组件类', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 9, key: 'type', value: 'game', description: '小游戏类', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 22, key: 'type', value: 'demo', description: '综合演示类', parent_id: null, demo_count: 8, child_count: 0 },
+  { id: 23, key: 'category', value: '图形学', description: '图形学类', parent_id: null, demo_count: 4, child_count: 0 },
+  { id: 25, key: 'category', value: '3D建模', description: '3D 建模类', parent_id: null, demo_count: 1, child_count: 0 },
+  { id: 26, key: 'category', value: '仿真', description: '仿真类', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 27, key: 'category', value: '动画', description: '动画类', parent_id: null, demo_count: 1, child_count: 0 },
+  { id: 13, key: 'author', value: 'tester', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 14, key: 'author', value: 'alice', description: '系统作者标签', parent_id: null, demo_count: 2, child_count: 0 },
+  { id: 12, key: 'author', value: 'admin', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 19, key: 'author', value: 'DOUBAO', description: '系统作者标签', parent_id: null, demo_count: 3, child_count: 0 },
+  { id: 21, key: 'author', value: 'gemini-3.7-flash', description: '系统作者标签', parent_id: null, demo_count: 8, child_count: 0 },
+  { id: 15, key: 'author', value: 'sixtyseven', description: '系统作者标签', parent_id: null, demo_count: 6, child_count: 0 },
+  { id: 24, key: 'author', value: 'yiheifeikong', description: '系统作者标签', parent_id: null, demo_count: 8, child_count: 0 },
 ]
 
 const tagKeys: TagKeyInfo[] = [
-  { key: 'model', mode: 'fixed', label: '妯″瀷', description: 'AI 妯″瀷鐗堟湰锛堝浐瀹氬€硷級', sort: 1, values: [
-    { value: 'dsv4', description: '妯″瀷鐗堟湰鎬荤被', demo_count: 6 },
-    { value: 'dsv4-flash', description: 'DeepSeek V4 Flash 鈥斺€?蹇€熸帹鐞?, demo_count: 3 },
-    { value: 'dsv4-pro', description: 'DeepSeek V4 Pro 鈥斺€?寮烘帹鐞?, demo_count: 0 },
-    { value: 'dsv4flash', description: '鍘嗗彶鑷敱鍊?, demo_count: 3 },
-    { value: 'ds-unknown', description: '缃戜紶鐏版祴鐗?, demo_count: 3 },
+  { key: 'model', mode: 'fixed', label: '模型', description: 'AI 模型版本（固定值）', sort: 1, values: [
+    { value: 'dsv4', description: '模型版本总类', demo_count: 6 },
+    { value: 'dsv4-flash', description: 'DeepSeek V4 Flash —— 快速推理', demo_count: 3 },
+    { value: 'dsv4-pro', description: 'DeepSeek V4 Pro —— 强推理', demo_count: 0 },
+    { value: 'dsv4flash', description: '历史自由值', demo_count: 3 },
+    { value: 'ds-unknown', description: '网传灰测版', demo_count: 3 },
   ], demo_count: 6 },
-  { key: 'plugin', mode: 'fixed', label: '鎻掍欢', description: '浣跨敤鐨勬彃浠讹紙鍥哄畾鍊硷級', sort: 2, values: [
-    { value: 'routing-suite', description: '璺敱濂椾欢鎻掍欢', demo_count: 2 },
-    { value: 'suite', description: '鍘嗗彶鑷敱鍊?, demo_count: 2 },
+  { key: 'plugin', mode: 'fixed', label: '插件', description: '使用的插件（固定值）', sort: 2, values: [
+    { value: 'routing-suite', description: '路由套件插件', demo_count: 2 },
+    { value: 'suite', description: '历史自由值', demo_count: 2 },
   ], demo_count: 2 },
-  { key: 'type', mode: 'fixed', label: '绫诲瀷', description: 'Demo 绫诲瀷锛堝浐瀹氬€硷級', sort: 3, values: [
-    { value: 'effect', description: '瑙嗚鐗规晥绫?, demo_count: 2 },
-    { value: 'widget', description: '灏忕粍浠剁被', demo_count: 2 },
-    { value: 'game', description: '灏忔父鎴忕被', demo_count: 2 },
-    { value: 'demo', description: '缁煎悎婕旂ず绫?, demo_count: 8 },
+  { key: 'type', mode: 'fixed', label: '类型', description: 'Demo 类型（固定值）', sort: 3, values: [
+    { value: 'effect', description: '视觉特效类', demo_count: 2 },
+    { value: 'widget', description: '小组件类', demo_count: 2 },
+    { value: 'game', description: '小游戏类', demo_count: 2 },
+    { value: 'demo', description: '综合演示类', demo_count: 8 },
   ], demo_count: 2 },
-  { key: 'skills', mode: 'fixed', label: '鎶€鑳?, description: '鎶€鑳藉伐浣滃尯锛堝浐瀹氬€硷級', sort: 4, values: [
-    { value: 'J-space', description: 'J-space 鎶€鑳藉伐浣滃尯', demo_count: 2 },
-    { value: 'j-space', description: '鍘嗗彶鑷敱鍊?, demo_count: 1 },
+  { key: 'skills', mode: 'fixed', label: '技能', description: '技能工作区（固定值）', sort: 4, values: [
+    { value: 'J-space', description: 'J-space 技能工作区', demo_count: 2 },
+    { value: 'j-space', description: '历史自由值', demo_count: 1 },
   ], demo_count: 2 },
-  { key: 'preset', mode: 'fixed', label: '棰勮', description: '棰勮閰嶇疆锛堝浐瀹氬€硷級', sort: 5, values: [
-    { value: 'router-standard', description: '鏍囧噯璺敱棰勮', demo_count: 2 },
-    { value: 'spec', description: '鍘嗗彶鑷敱鍊?, demo_count: 2 },
+  { key: 'preset', mode: 'fixed', label: '预设', description: '预设配置（固定值）', sort: 5, values: [
+    { value: 'router-standard', description: '标准路由预设', demo_count: 2 },
+    { value: 'spec', description: '历史自由值', demo_count: 2 },
   ], demo_count: 2 },
-  { key: 'category', mode: 'fixed', label: '鍒嗙被', description: '浣滃搧鍒嗙被锛堝浐瀹氬€硷級', sort: 6, values: [
-    { value: '鍥惧舰瀛?, description: '鍥惧舰瀛︾被', demo_count: 4 },
-    { value: '3D寤烘ā', description: '3D 寤烘ā绫?, demo_count: 1 },
-    { value: '浠跨湡', description: '浠跨湡绫?, demo_count: 3 },
-    { value: '鍔ㄧ敾', description: '鍔ㄧ敾绫?, demo_count: 1 },
+  { key: 'category', mode: 'fixed', label: '分类', description: '作品分类（固定值）', sort: 6, values: [
+    { value: '图形学', description: '图形学类', demo_count: 4 },
+    { value: '3D建模', description: '3D 建模类', demo_count: 1 },
+    { value: '仿真', description: '仿真类', demo_count: 3 },
+    { value: '动画', description: '动画类', demo_count: 1 },
   ], demo_count: 4 },
-  { key: 'game', mode: 'open', label: '娓告垙', description: '娓告垙鍚嶇О锛堣嚜瀹氫箟鍊硷紝濡?mc / pvz锛?, sort: 7, values: [
-    { value: 'pvz', description: '妞嶇墿澶ф垬鍍靛案', demo_count: 2 },
-    { value: 'mc', description: '鎴戠殑涓栫晫', demo_count: 1 },
+  { key: 'game', mode: 'open', label: '游戏', description: '游戏名称（自定义值，如 mc / pvz）', sort: 7, values: [
+    { value: 'pvz', description: '植物大战僵尸', demo_count: 2 },
+    { value: 'mc', description: '我的世界', demo_count: 1 },
   ], demo_count: 2 },
-  { key: 'rounds', mode: 'int', label: '杞暟', description: '鐢熸垚杞暟锛堝繀椤讳负鏁存暟锛?, sort: 8, values: [
+  { key: 'rounds', mode: 'int', label: '轮数', description: '生成轮数（必须为整数）', sort: 8, values: [
     { value: '3', description: '', demo_count: 1 },
   ], demo_count: 1 },
 ]
 
 const demos: DemoDetail[] = [
   {
-    slug: 'demo_绮掑瓙鏄熺┖',
-    title: '绮掑瓙鏄熺┖',
-    description: 'Canvas 绮掑瓙鏄熺┖锛岄紶鏍囩Щ鍔ㄤ骇鐢熷紩鍔涙壈鍔紝閫傚悎浣滀负鑳屾櫙鐗规晥銆?,
-    cover_url: svgCover('#4ecdc4', '鉁?, 'particle starfield'),
+    slug: 'demo_粒子星空',
+    title: '粒子星空',
+    description: 'Canvas 粒子星空，鼠标移动产生引力扰动，适合作为背景特效。',
+    cover_url: svgCover('#4ecdc4', '✦', 'particle starfield'),
     author: 'tester',
     author_id: 2,
     tags: [
@@ -168,9 +169,9 @@ function tick(){x.fillStyle='rgba(0,0,0,.18)';x.fillRect(0,0,W,H);for(const p of
 </script></body></html>`,
   },
   {
-    slug: 'demo_闇撹櫣鏃堕挓',
-    title: '闇撹櫣鏃堕挓',
-    description: '闇撹櫣鏁板瓧鏃堕挓锛屼竷娈垫暟鐮佺椋庢牸锛屾繁鑹插簳涓婂彂鍏夈€?,
+    slug: 'demo_霓虹时钟',
+    title: '霓虹时钟',
+    description: '霓虹数字时钟，七段数码管风格，深色底上发光。',
     cover_url: svgCover('#ff6b6b', '21:47', 'neon clock'),
     author: 'tester',
     author_id: 2,
@@ -192,9 +193,9 @@ function p(n){return String(n).padStart(2,'0')}function u(){const d=new Date();t
 </script></body></html>`,
   },
   {
-    slug: 'demo_璐悆铔?,
-    title: '璐悆铔?,
-    description: '缁忓吀璐悆铔囷紝閿洏鏂瑰悜閿帶鍒讹紝鏀寔璁″垎涓庨噸鏂板紑濮嬨€?,
+    slug: 'demo_贪吃蛇',
+    title: '贪吃蛇',
+    description: '经典贪吃蛇，键盘方向键控制，支持计分与重新开始。',
     cover_url: svgCover('#95e1d3', 'SNAKE', 'keyboard game'),
     author: 'alice',
     author_id: 3,
@@ -218,9 +219,9 @@ function loop(){if(dead)return;t++;if(t%7)return requestAnimationFrame(loop);con
 </script></body></html>`,
   },
   {
-    slug: 'demo_鎵撳瓧鏈烘晥鏋?,
-    title: '鎵撳瓧鏈烘帓鐗?,
-    description: '鎵撳瓧鏈洪€愬瓧杈撳嚭鎺掔増锛岄€傚悎 Story 鍨嬮〉闈€?,
+    slug: 'demo_打字机效果',
+    title: '打字机排版',
+    description: '打字机逐字输出排版，适合 Story 型页面。',
     cover_url: svgCover('#f38181', 'TYPE', 'typewriter'),
     author: 'tester',
     author_id: 2,
@@ -238,13 +239,13 @@ function loop(){if(dead)return;t++;if(t%7)return requestAnimationFrame(loop);con
     session_log_count: 1,
     is_author: false,
     previewHtml: `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;font-family:monospace;padding:40px}pre{font-size:22px;line-height:1.8;border:6px solid #000;padding:32px;background:#ffe66d;box-shadow:8px 8px 0 #000;white-space:pre-wrap;max-width:720px;min-height:180px}</style></head><body><pre id="out"></pre><script>
-const txt='浣犲ソ锛岃繖閲屾槸 AI 鐢熸垚鐨勭綉椤?Demo銆俓n姣忎竴琛岄兘鐢辨ā鍨嬮€愭鍐欏嚭銆俓n鈥斺€?AI 鍏ㄦ皯鍒朵綔浜?;let i=0;const out=document.getElementById('out');setInterval(()=>{if(i<=txt.length){out.textContent=txt.slice(0,i)+'鈻?;i++}else{i=0}},90);
+const txt='你好，这里是 AI 生成的网页 Demo。\n每一行都由模型逐步写出。\n—— AI 全民制作人';let i=0;const out=document.getElementById('out');setInterval(()=>{if(i<=txt.length){out.textContent=txt.slice(0,i)+'▍';i++}else{i=0}},90);
 </script></body></html>`,
   },
   {
-    slug: 'demo_闊抽鍙鍖?,
-    title: '闊抽鍙鍖?,
-    description: 'Canvas 棰戣氨鏉″姩鐢伙紝妯℃嫙闊抽鍙鍖栫殑瑙嗚鏁堟灉銆?,
+    slug: 'demo_音频可视化',
+    title: '音频可视化',
+    description: 'Canvas 频谱条动画，模拟音频可视化的视觉效果。',
     cover_url: svgCover('#4ecdc4', 'WAVE', 'audio visualizer'),
     author: 'alice',
     author_id: 3,
@@ -267,9 +268,9 @@ function tick(){x.fillStyle='#000';x.fillRect(0,0,600,240);for(let i=0;i<bars.le
 </script></body></html>`,
   },
   {
-    slug: 'demo_璁板繂缈荤墝',
-    title: '璁板繂缈荤墝娓告垙',
-    description: '璁板繂缈荤墝閰嶅灏忔父鎴忥紝鐐瑰嚮缈荤墝锛岄厤瀵规秷闄ゃ€?,
+    slug: 'demo_记忆翻牌',
+    title: '记忆翻牌游戏',
+    description: '记忆翻牌配对小游戏，点击翻牌，配对消除。',
     cover_url: svgCover('#ffe66d', 'MEMO', 'match game'),
     author: 'admin',
     author_id: 1,
@@ -294,165 +295,165 @@ cards.forEach((v,i)=>{const d=document.createElement('div');d.className='cell';d
 ]
 
 const comments: Record<string, Comment[]> = {
-  demo_绮掑瓙鏄熺┖: [
-    { id: 1, demo_id: 1, user_id: 2, username: 'tester', parent_id: null, content: '鑳屾櫙鐗规晥寰堟紓浜紝閫傚悎鍋氶椤靛簳绾广€?, created_at: '2025-03-01T10:00:00Z', children: [
-      { id: 2, demo_id: 1, user_id: 3, username: 'alice', parent_id: 1, content: '鏄殑锛岄紶鏍囨壈鍔ㄦ晥鏋滃緢缁嗚吇銆?, created_at: '2025-03-01T11:00:00Z' },
+  demo_粒子星空: [
+    { id: 1, demo_id: 1, user_id: 2, username: 'tester', parent_id: null, content: '背景特效很漂亮，适合做首页底纹。', created_at: '2025-03-01T10:00:00Z', children: [
+      { id: 2, demo_id: 1, user_id: 3, username: 'alice', parent_id: 1, content: '是的，鼠标扰动效果很细腻。', created_at: '2025-03-01T11:00:00Z' },
     ] },
-    { id: 3, demo_id: 1, user_id: 3, username: 'alice', parent_id: null, content: '鎯崇湅鐢熸垚浼氳瘽鏃ュ織锛屽涔犱竴涓嬪疄鐜版€濊矾銆?, created_at: '2025-03-02T09:00:00Z' },
+    { id: 3, demo_id: 1, user_id: 3, username: 'alice', parent_id: null, content: '想看生成会话日志，学习一下实现思路。', created_at: '2025-03-02T09:00:00Z' },
   ],
-  demo_闇撹櫣鏃堕挓: [
-    { id: 4, demo_id: 2, user_id: 2, username: 'tester', parent_id: null, content: '闇撹櫣鎰熷緢寮猴紝瀛椾綋濡傛灉鍐嶇矖涓€鐐规洿甯︽劅銆?, created_at: '2025-03-02T13:00:00Z' },
+  demo_霓虹时钟: [
+    { id: 4, demo_id: 2, user_id: 2, username: 'tester', parent_id: null, content: '霓虹感很强，字体如果再粗一点更带感。', created_at: '2025-03-02T13:00:00Z' },
   ],
-  demo_璐悆铔? [
-    { id: 5, demo_id: 3, user_id: 2, username: 'tester', parent_id: null, content: '鎵嬫劅涓嶉敊锛屽氨鏄€熷害鏈夌偣蹇€?, created_at: '2025-03-03T16:00:00Z', children: [
-      { id: 6, demo_id: 3, user_id: 3, username: 'alice', parent_id: 5, content: '鎸?R 鍙互閲嶅紑锛岄€熷害鏄晠鎰忕殑 :)', created_at: '2025-03-03T17:00:00Z' },
+  demo_贪吃蛇: [
+    { id: 5, demo_id: 3, user_id: 2, username: 'tester', parent_id: null, content: '手感不错，就是速度有点快。', created_at: '2025-03-03T16:00:00Z', children: [
+      { id: 6, demo_id: 3, user_id: 3, username: 'alice', parent_id: 5, content: '按 R 可以重开，速度是故意的 :)', created_at: '2025-03-03T17:00:00Z' },
     ] },
-    { id: 7, demo_id: 3, user_id: 1, username: 'admin', parent_id: null, content: '宸叉敹褰曞埌棣栭〉鎺ㄨ崘銆?, created_at: '2025-03-04T08:00:00Z' },
+    { id: 7, demo_id: 3, user_id: 1, username: 'admin', parent_id: null, content: '已收录到首页推荐。', created_at: '2025-03-04T08:00:00Z' },
   ],
-  demo_鎵撳瓧鏈烘晥鏋? [
-    { id: 8, demo_id: 4, user_id: 1, username: 'admin', parent_id: null, content: '鎺掔増寰堝共鍑€銆?, created_at: '2025-03-04T19:00:00Z' },
+  demo_打字机效果: [
+    { id: 8, demo_id: 4, user_id: 1, username: 'admin', parent_id: null, content: '排版很干净。', created_at: '2025-03-04T19:00:00Z' },
   ],
-  demo_闊抽鍙鍖? [
-    { id: 9, demo_id: 5, user_id: 2, username: 'tester', parent_id: null, content: '棰滆壊鍧楀緢娲绘臣銆?, created_at: '2025-03-05T09:00:00Z' },
+  demo_音频可视化: [
+    { id: 9, demo_id: 5, user_id: 2, username: 'tester', parent_id: null, content: '颜色块很活泼。', created_at: '2025-03-05T09:00:00Z' },
   ],
-  demo_璁板繂缈荤墝: [
-    { id: 10, demo_id: 6, user_id: 3, username: 'alice', parent_id: null, content: '閰嶅閫昏緫娌￠棶棰橈紝甯屾湜鍔犺鏃躲€?, created_at: '2025-03-06T12:00:00Z', children: [
-      { id: 11, demo_id: 6, user_id: 1, username: 'admin', parent_id: 10, content: '宸茶鍏?TODO銆?, created_at: '2025-03-06T13:00:00Z' },
+  demo_记忆翻牌: [
+    { id: 10, demo_id: 6, user_id: 3, username: 'alice', parent_id: null, content: '配对逻辑没问题，希望加计时。', created_at: '2025-03-06T12:00:00Z', children: [
+      { id: 11, demo_id: 6, user_id: 1, username: 'admin', parent_id: 10, content: '已记入 TODO。', created_at: '2025-03-06T13:00:00Z' },
     ] },
   ],
 }
 
 const sessionLogs: Record<string, SessionLog[]> = {
-  demo_绮掑瓙鏄熺┖: [{ id: 1, filename: '鐢熸垚浼氳瘽.md', file_size: 1840, created_at: '2025-03-01T09:00:00Z' }],
-  demo_闇撹櫣鏃堕挓: [{ id: 2, filename: '鐢熸垚浼氳瘽.md', file_size: 1210, created_at: '2025-03-02T12:00:00Z' }],
-  demo_璐悆铔? [{ id: 3, filename: '鐢熸垚浼氳瘽.md', file_size: 2360, created_at: '2025-03-03T15:30:00Z' }],
-  demo_鎵撳瓧鏈烘晥鏋? [{ id: 4, filename: '鐢熸垚浼氳瘽.md', file_size: 980, created_at: '2025-03-04T18:00:00Z' }],
-  demo_闊抽鍙鍖? [{ id: 5, filename: '鐢熸垚浼氳瘽.md', file_size: 1530, created_at: '2025-03-05T08:20:00Z' }],
-  demo_璁板繂缈荤墝: [{ id: 6, filename: '鐢熸垚浼氳瘽.md', file_size: 2070, created_at: '2025-03-06T11:00:00Z' }],
+  demo_粒子星空: [{ id: 1, filename: '生成会话.md', file_size: 1840, created_at: '2025-03-01T09:00:00Z' }],
+  demo_霓虹时钟: [{ id: 2, filename: '生成会话.md', file_size: 1210, created_at: '2025-03-02T12:00:00Z' }],
+  demo_贪吃蛇: [{ id: 3, filename: '生成会话.md', file_size: 2360, created_at: '2025-03-03T15:30:00Z' }],
+  demo_打字机效果: [{ id: 4, filename: '生成会话.md', file_size: 980, created_at: '2025-03-04T18:00:00Z' }],
+  demo_音频可视化: [{ id: 5, filename: '生成会话.md', file_size: 1530, created_at: '2025-03-05T08:20:00Z' }],
+  demo_记忆翻牌: [{ id: 6, filename: '生成会话.md', file_size: 2070, created_at: '2025-03-06T11:00:00Z' }],
 }
 
 const sessionTexts: Record<string, string> = {
-  'demo_绮掑瓙鏄熸槦/鐢熸垚浼氳瘽.md': `# 鐢熸垚浼氳瘽锛氱矑瀛愭槦绌?
+  'demo_粒子星星/生成会话.md': `# 生成会话：粒子星空
 
-## 妯″瀷
+## 模型
 - model:dsv4-flash
 - plugin:routing-suite
 
-## Prompt 鎽樿
-鈥滃仛涓€涓?canvas 绮掑瓙鏄熺┖鑳屾櫙锛岄紶鏍囩Щ鍔ㄤ骇鐢熷紩鍔涙壈鍔ㄣ€傗€?
+## Prompt 摘要
+“做一个 canvas 粒子星空背景，鼠标移动产生引力扰动。”
 
-## 鐢熸垚姝ラ
-1. 鍒濆鍖?canvas 涓庣矑瀛愭暟缁?
-2. 瀹炵幇绮掑瓙杩愬姩涓庤竟鐣屽弽寮?
-3. 鍔犲叆榧犳爣鎵板姩
-4. 娣诲姞鑳屾櫙娣″嚭鎷栧熬鏁堟灉
-5. 閫傞厤绐楀彛 resize
+## 生成步骤
+1. 初始化 canvas 与粒子数组
+2. 实现粒子运动与边界反弹
+3. 加入鼠标扰动
+4. 添加背景淡出拖尾效果
+5. 适配窗口 resize
 
-## 杩唬璁板綍
-- commit 1: 楠ㄦ灦涓庣矑瀛愯繍鍔?
-- commit 2: 榧犳爣鎵板姩
-- commit 3: 鎷栧熬涓庤瑙夋墦纾╜,
-  'demo_闇撹櫣鏃堕挓/鐢熸垚浼氳瘽.md': `# 鐢熸垚浼氳瘽锛氶湏铏规椂閽?
+## 迭代记录
+- commit 1: 骨架与粒子运动
+- commit 2: 鼠标扰动
+- commit 3: 拖尾与视觉打磨`,
+  'demo_霓虹时钟/生成会话.md': `# 生成会话：霓虹时钟
 
-## 妯″瀷
+## 模型
 - model:dsv4-pro
 - preset:router-standard
 
-## Prompt 鎽樿
-鈥滃仛涓€涓湏铏规暟瀛楁椂閽燂紝涓冩鏁扮爜绠″彂鍏夐鏍笺€傗€?
+## Prompt 摘要
+“做一个霓虹数字时钟，七段数码管发光风格。”
 
-## 鐢熸垚姝ラ
-1. 甯冨眬涓庡瓧浣?
-2. 鏃堕棿閫昏緫
-3. 闇撹櫣鍏夋檿鏍峰紡
+## 生成步骤
+1. 布局与字体
+2. 时间逻辑
+3. 霓虹光晕样式
 
-## 杩唬璁板綍
-- commit 1: 鍩虹鏃堕挓
-- commit 2: 闇撹櫣鏍峰紡
-- commit 3: 鍝嶅簲寮忓瓧鍙穈,
-  'demo_璐悆铔?鐢熸垚浼氳瘽.md': `# 鐢熸垚浼氳瘽锛氳椽鍚冭泧
+## 迭代记录
+- commit 1: 基础时钟
+- commit 2: 霓虹样式
+- commit 3: 响应式字号`,
+  'demo_贪吃蛇/生成会话.md': `# 生成会话：贪吃蛇
 
-## 妯″瀷
+## 模型
 - model:dsv4-flash
 - plugin:routing-suite
 
-## Prompt 鎽樿
-鈥滅粡鍏歌椽鍚冭泧锛屾柟鍚戦敭鎺у埗锛岃鍒嗕笌閲嶅紑銆傗€?
+## Prompt 摘要
+“经典贪吃蛇，方向键控制，计分与重开。”
 
-## 鐢熸垚姝ラ
-1. 铔囦笌椋熺墿鏁版嵁缁撴瀯
-2. 绉诲姩涓庣鎾?
-3. 璁″垎涓庨噸寮€
-4. 瑙嗚涓庢墜鎰熸墦纾?
+## 生成步骤
+1. 蛇与食物数据结构
+2. 移动与碰撞
+3. 计分与重开
+4. 视觉与手感打磨
 
-## 杩唬璁板綍
-- commit 1: 铔囪韩绉诲姩
-- commit 2: 椋熺墿涓庤鍒?
-- commit 3: 纰版挒妫€娴?
-- commit 4: 瑙嗚鎵撶（`,
-  'demo_鎵撳瓧鏈烘晥鏋?鐢熸垚浼氳瘽.md': `# 鐢熸垚浼氳瘽锛氭墦瀛楁満鎺掔増
+## 迭代记录
+- commit 1: 蛇身移动
+- commit 2: 食物与计分
+- commit 3: 碰撞检测
+- commit 4: 视觉打磨`,
+  'demo_打字机效果/生成会话.md': `# 生成会话：打字机排版
 
-## 妯″瀷
+## 模型
 - model:dsv4-pro
 - skills:J-space
 
-## Prompt 鎽樿
-鈥滄墦瀛楁満閫愬瓧杈撳嚭鏁堟灉锛岄€傚悎 Story 椤甸潰銆傗€?
+## Prompt 摘要
+“打字机逐字输出效果，适合 Story 页面。”
 
-## 鐢熸垚姝ラ
-1. 鏂囨湰涓庡厜鏍?
-2. 瀹氭椂杈撳嚭
-3. 寰幆鎾斁
+## 生成步骤
+1. 文本与光标
+2. 定时输出
+3. 循环播放
 
-## 杩唬璁板綍
-- commit 1: 鎵撳瓧鏈洪€昏緫
-- commit 2: 瑙嗚涓庡惊鐜痐,
-  'demo_闊抽鍙鍖?鐢熸垚浼氳瘽.md': `# 鐢熸垚浼氳瘽锛氶煶棰戝彲瑙嗗寲
+## 迭代记录
+- commit 1: 打字机逻辑
+- commit 2: 视觉与循环`,
+  'demo_音频可视化/生成会话.md': `# 生成会话：音频可视化
 
-## 妯″瀷
+## 模型
 - model:dsv4-flash
 - preset:router-standard
 
-## Prompt 鎽樿
-鈥渃anvas 棰戣氨鏉″姩鐢伙紝妯℃嫙闊抽鍙鍖栥€傗€?
+## Prompt 摘要
+“canvas 频谱条动画，模拟音频可视化。”
 
-## 鐢熸垚姝ラ
-1. 棰戣氨鏉″竷灞€
-2. 鍔ㄧ敾闅忔満娉㈠姩
-3. 閰嶈壊涓庢弿杈?
+## 生成步骤
+1. 频谱条布局
+2. 动画随机波动
+3. 配色与描边
 
-## 杩唬璁板綍
-- commit 1: 棰戣氨鏉＄粯鍒?
-- commit 2: 娉㈠姩鍔ㄧ敾
-- commit 3: 閰嶈壊鎵撶（`,
-  'demo_璁板繂缈荤墝/鐢熸垚浼氳瘽.md': `# 鐢熸垚浼氳瘽锛氳蹇嗙炕鐗?
+## 迭代记录
+- commit 1: 频谱条绘制
+- commit 2: 波动动画
+- commit 3: 配色打磨`,
+  'demo_记忆翻牌/生成会话.md': `# 生成会话：记忆翻牌
 
-## 妯″瀷
+## 模型
 - model:dsv4-pro
 - plugin:routing-suite
 
-## Prompt 鎽樿
-鈥滆蹇嗙炕鐗岄厤瀵规父鎴忥紝鐐瑰嚮缈荤墝锛岄厤瀵规秷闄ゃ€傗€?
+## Prompt 摘要
+“记忆翻牌配对游戏，点击翻牌，配对消除。”
 
-## 鐢熸垚姝ラ
-1. 鍗＄墖甯冨眬
-2. 缈荤墝閫昏緫
-3. 閰嶅鍒ゅ畾
-4. 瀹屾垚鐘舵€佷笌瑙嗚
+## 生成步骤
+1. 卡片布局
+2. 翻牌逻辑
+3. 配对判定
+4. 完成状态与视觉
 
-## 杩唬璁板綍
-- commit 1: 鍗＄墖鐢熸垚
-- commit 2: 缈荤墝涓庨厤瀵?
-- commit 3: 寤惰繜鍥炵炕
-- commit 4: 瀹屾垚鎬佽瑙塦,
+## 迭代记录
+- commit 1: 卡片生成
+- commit 2: 翻牌与配对
+- commit 3: 延迟回翻
+- commit 4: 完成态视觉`,
 }
 
 
 const pendingDemos: DemoDetail[] = [
   {
-    slug: 'demo_寰呭绀轰緥',
-    title: '寰呭绀轰緥',
-    description: '杩欐槸涓€涓瓑寰呯鐞嗗憳瀹℃牳鐨勭ず渚?Demo銆?,
+    slug: 'demo_待审示例',
+    title: '待审示例',
+    description: '这是一个等待管理员审核的示例 Demo。',
     cover_url: svgCover('#ff6b6b', 'PEND', 'pending review'),
     author: 'tester',
     author_id: 2,
@@ -468,7 +469,7 @@ const pendingDemos: DemoDetail[] = [
     status: 'pending',
     session_log_count: 0,
     is_author: false,
-    previewHtml: '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#ffe66d"><h1>寰呭鏍?/h1></body></html>',
+    previewHtml: '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#ffe66d"><h1>待审核</h1></body></html>',
   },
 ]
 
@@ -524,15 +525,15 @@ function ratingDistribution(d: DemoDetail) {
 }
 
 export const mockApi = {
-  // ---------- 璁よ瘉 ----------
+  // ---------- 认证 ----------
   async login(username: string, password: string): Promise<AuthResponse> {
     await delay(300)
     const user = users.find((u) => u.username === username)
     if (!user || passwordOf[username] !== password) {
-      throw new Error('鐢ㄦ埛鍚嶆垨瀵嗙爜閿欒')
+      throw new Error('用户名或密码错误')
     }
     if (user.status !== 'active') {
-      throw new Error('璐﹀彿涓嶅彲鐢?)
+      throw new Error('账号不可用')
     }
     currentUser = clone(user)
     return { access_token: 'mock-token', user: clone(user) }
@@ -541,13 +542,13 @@ export const mockApi = {
   async register(username: string, password: string): Promise<AuthResponse> {
     await delay(300)
     if (!/^[a-zA-Z0-9_]{3,32}$/.test(username)) {
-      throw new Error('鐢ㄦ埛鍚嶉渶涓?3-32 浣嶅瓧姣嶆暟瀛椾笅鍒掔嚎')
+      throw new Error('用户名需为 3-32 位字母数字下划线')
     }
     if (password.length < 8) {
-      throw new Error('瀵嗙爜鑷冲皯 8 浣?)
+      throw new Error('密码至少 8 位')
     }
     if (users.some((u) => u.username === username)) {
-      throw new Error('鐢ㄦ埛鍚嶅凡瀛樺湪')
+      throw new Error('用户名已存在')
     }
     const user: User = { id: users.length + 1, username, role: 'user', status: 'active', bio: '', created_at: new Date().toISOString() }
     users.push(user)
@@ -563,29 +564,29 @@ export const mockApi = {
 
   async me(): Promise<User> {
     await delay(100)
-    if (!currentUser) throw new Error('鏈櫥褰?)
+    if (!currentUser) throw new Error('未登录')
     return clone(currentUser)
   },
 
   async getUser(username: string): Promise<User & { demo_count: number }> {
     await delay()
     const u = users.find((x) => x.username === username)
-    if (!u) throw new Error('鐢ㄦ埛涓嶅瓨鍦?)
+    if (!u) throw new Error('用户不存在')
     return { ...clone(u), demo_count: demos.filter((d) => d.author === username).length }
   },
 
   async changePassword(old_password: string, new_password: string): Promise<void> {
     await delay(200)
-    if (!currentUser) throw new Error('鏈櫥褰?)
-    if (passwordOf[currentUser.username] !== old_password) throw new Error('鍘熷瘑鐮侀敊璇?)
+    if (!currentUser) throw new Error('未登录')
+    if (passwordOf[currentUser.username] !== old_password) throw new Error('原密码错误')
     passwordOf[currentUser.username] = new_password
   },
 
-  // ---------- 鏍囩 ----------
+  // ---------- 标签 ----------
   async getTag(key: string, value: string): Promise<Tag> {
     await delay()
     const t = tags.find((x) => x.key === key && x.value === value)
-    if (!t) throw new Error('鏍囩涓嶅瓨鍦?)
+    if (!t) throw new Error('标签不存在')
     const result = clone(t)
     result.children = tags.filter((x) => x.parent_id === t.id).map((x) => clone(x))
     result.parent = t.parent_id ? tags.find((x) => x.id === t.parent_id) ?? null : null
@@ -594,8 +595,8 @@ export const mockApi = {
 
   async createTag(key: string, value: string, description?: string, parent_id?: number | null): Promise<Tag> {
     await delay(200)
-    if (key === 'author') throw new Error('author 涓轰繚鐣?key')
-    if (tags.some((t) => t.key === key && t.value === value)) throw new Error('鏍囩宸插瓨鍦?)
+    if (key === 'author') throw new Error('author 为保留 key')
+    if (tags.some((t) => t.key === key && t.value === value)) throw new Error('标签已存在')
     const tag: Tag = {
       id: Math.max(...tags.map((t) => t.id)) + 1,
       key,
@@ -645,7 +646,7 @@ export const mockApi = {
   },
   async createTagKey(payload: { key: string; mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
     await delay(200)
-    if (tagKeys.some((k) => k.key === payload.key)) throw new Error('鏍囩閿凡瀛樺湪')
+    if (tagKeys.some((k) => k.key === payload.key)) throw new Error('标签键已存在')
     const info: TagKeyInfo = {
       key: payload.key,
       mode: payload.mode,
@@ -661,7 +662,7 @@ export const mockApi = {
   async updateTagKey(key: string, payload: { mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
     await delay(200)
     const k = tagKeys.find((x) => x.key === key)
-    if (!k) throw new Error('鏍囩閿笉瀛樺湪')
+    if (!k) throw new Error('标签键不存在')
     k.mode = payload.mode
     k.label = payload.label
     if (payload.description !== undefined) k.description = payload.description
@@ -671,9 +672,9 @@ export const mockApi = {
   async deleteTagKey(key: string): Promise<void> {
     await delay(200)
     const idx = tagKeys.findIndex((x) => x.key === key)
-    if (idx < 0) throw new Error('鏍囩閿笉瀛樺湪')
-    if (key === 'author' || key === 'version-of') throw new Error('淇濈暀 key 绂佹鍒犻櫎')
-    if (tagKeys[idx].demo_count > 0) throw new Error('璇ラ敭涓嬫湁鏍囩姝ｈ demo 寮曠敤锛岀姝㈠垹闄?)
+    if (idx < 0) throw new Error('标签键不存在')
+    if (key === 'author' || key === 'version-of') throw new Error('保留 key 禁止删除')
+    if (tagKeys[idx].demo_count > 0) throw new Error('该键下有标签正被 demo 引用，禁止删除')
     tagKeys.splice(idx, 1)
     const toRemove = tags.filter((t) => t.key === key)
     for (const t of toRemove) {
@@ -683,10 +684,10 @@ export const mockApi = {
   },
   async deleteTagValue(key: string, value: string): Promise<void> {
     await delay(200)
-    if (key === 'author' || key === 'version-of') throw new Error('淇濈暀 key 绂佹鍒犻櫎')
+    if (key === 'author' || key === 'version-of') throw new Error('保留 key 禁止删除')
     const t = tags.find((x) => x.key === key && x.value === value)
-    if (!t) throw new Error('鏍囩鍊间笉瀛樺湪')
-    if (t.demo_count > 0) throw new Error('璇ユ爣绛炬琚?demo 寮曠敤锛岀姝㈠垹闄?)
+    if (!t) throw new Error('标签值不存在')
+    if (t.demo_count > 0) throw new Error('该标签正被 demo 引用，禁止删除')
     const idx = tags.indexOf(t)
     tags.splice(idx, 1)
   },
@@ -708,17 +709,17 @@ export const mockApi = {
           d.tags.some((t) => tagOf(t).toLowerCase().includes(lower)),
       )
     }
-    // 绋冲畾鎺掑簭锛氫富閿?+ 娆＄骇閿紙鍚屾椂闂?鍚岀儹搴︽椂鎸?slug 鍏滃簳锛夛紝淇濊瘉鍒锋柊鍚庨『搴忓彲澶嶇幇
+    // 稳定排序：主键 + 次级键（同时间/同热度时按 slug 兜底），保证刷新后顺序可复现
     const bySlug = (a: DemoDetail, b: DemoDetail) => a.slug.localeCompare(b.slug)
     if (sort === 'random') {
-      // 闅忔満鎺ㄨ崘锛堥椤电簿閫夈€屾崲涓€鎵广€嶏紝Fisher-Yates 娲楃墝锛?
+      // 随机推荐（首页精选「换一批」，Fisher-Yates 洗牌）
       items = [...items]
       for (let i = items.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
         ;[items[i], items[j]] = [items[j], items[i]]
       }
     } else if (sort === 'prompt') {
-      // 鎻愮ず璇嶆ā寮忥細濉簡鎻愮ず璇嶇殑 demo 浼樺厛锛屽悓缁勬寜鏈€鏂?
+      // 提示词模式：填了提示词的 demo 优先，同组按最新
       items = [...items].sort(
         (a, b) =>
           Number(Boolean(b.prompt)) - Number(Boolean(a.prompt)) ||
@@ -741,21 +742,21 @@ export const mockApi = {
   async getDemo(slug: string): Promise<DemoDetail> {
     await delay()
     const d = findDemo(slug)
-    if (!d) throw new Error('Demo 涓嶅瓨鍦?)
+    if (!d) throw new Error('Demo 不存在')
     d.view_count += 1
     const out = clone(d)
     out.timeline = [
       {
         id: 1,
         version_label: 'v2',
-        message: '浼樺寲鎬ц兘涓庤瑙夌粏鑺?,
+        message: '优化性能与视觉细节',
         old_slug: `${slug}-v1`,
         created_at: '2025-03-02T15:30:00Z',
       },
       {
         id: 2,
         version_label: 'v1',
-        message: '鍒涘缓',
+        message: '创建',
         old_slug: null,
         created_at: '2025-03-01T09:00:00Z',
       },
@@ -766,8 +767,8 @@ export const mockApi = {
   async getRelated(slug: string): Promise<DemoSummary[]> {
     await delay(200)
     const cur = findDemo(slug)
-    if (!cur) throw new Error('Demo 涓嶅瓨鍦?)
-    // 鎸夋爣绛鹃噸鍚堢矖鐣ユ帹鑽愶紙mock 绠€鍗曞疄鐜帮級
+    if (!cur) throw new Error('Demo 不存在')
+    // 按标签重合粗略推荐（mock 简单实现）
     const curKeys = new Set(cur.tags.filter((t) => t.key !== 'author').map((t) => t.key + ':' + t.value))
     const others = [...demos.filter((d) => d.slug !== slug)]
       .map((d) => {
@@ -784,7 +785,7 @@ export const mockApi = {
   async getRating(slug: string, deviceId?: string): Promise<RatingStats> {
     await delay(100)
     const d = findDemo(slug)
-    if (!d) throw new Error('Demo 涓嶅瓨鍦?)
+    if (!d) throw new Error('Demo 不存在')
     const st = ratingStore(d)
     const my = deviceId ? readMyScore(slug, deviceId) : null
     return { my_score: my, avg: st.avg, count: st.count, god: st.god, ghost: st.ghost, distribution: ratingDistribution(d) }
@@ -792,18 +793,18 @@ export const mockApi = {
   async rateDemo(slug: string, score: number, deviceId?: string): Promise<RatingStats> {
     await delay(150)
     const d = findDemo(slug)
-    if (!d) throw new Error('Demo 涓嶅瓨鍦?)
+    if (!d) throw new Error('Demo 不存在')
     if (deviceId) {
       const prev = readMyScore(slug, deviceId)
       localStorage.setItem(mockRatingKey(slug, deviceId), String(score))
       if (prev) {
-        // 鏀瑰垎锛氫汉鏁颁笉鍙橈紝绁?楝肩エ鍥為€€鏃у€煎啀绱鏂板€?
+        // 改分：人数不变，神/鬼票回退旧值再累计新值
         if (prev === 5) d.rating_god = Math.max(0, (d.rating_god || 0) - 1)
         if (prev === 1) d.rating_ghost = Math.max(0, (d.rating_ghost || 0) - 1)
       } else {
         d.rating_count = (d.rating_count ?? 12) + 1
       }
-      d.rating_avg = score // mock 绠€鍖栵細涓嶇簿纭淮鎶ゅ巻鍙插潎鍊?
+      d.rating_avg = score // mock 简化：不精确维护历史均值
       if (score === 5) d.rating_god = (d.rating_god || 0) + 1
       if (score === 1) d.rating_ghost = (d.rating_ghost || 0) + 1
     }
@@ -812,7 +813,7 @@ export const mockApi = {
   async unrateDemo(slug: string, deviceId?: string): Promise<RatingStats> {
     await delay(100)
     const d = findDemo(slug)
-    if (!d) throw new Error('Demo 涓嶅瓨鍦?)
+    if (!d) throw new Error('Demo 不存在')
     if (deviceId) {
       const prev = readMyScore(slug, deviceId)
       localStorage.removeItem(mockRatingKey(slug, deviceId))
@@ -875,13 +876,13 @@ export const mockApi = {
   async getSponsors(): Promise<SponsorBoard> {
     await delay()
     return {
-      total_amount: '楼 1280',
+      total_amount: '¥ 1280',
       updated_at: '2026-08-19',
       sponsors: [
-        { name: 'Alice', amount: '楼 500', message: '鏀寔 AI 鍏ㄦ皯鍒朵綔浜猴紒' },
-        { name: 'Bob', amount: '楼 300', message: '浣滃搧寰堟锛岀户缁姞娌? },
-        { name: 'Charlie', amount: '楼 200' },
-        { name: 'Dave', amount: '楼 100' },
+        { name: 'Alice', amount: '¥ 500', message: '支持 AI 全民制作人！' },
+        { name: 'Bob', amount: '¥ 300', message: '作品很棒，继续加油' },
+        { name: 'Charlie', amount: '¥ 200' },
+        { name: 'Dave', amount: '¥ 100' },
       ],
     }
   },
@@ -915,7 +916,7 @@ export const mockApi = {
   async updateRecognition(id: number, payload: RecognitionInput): Promise<{ id: number }> {
     await delay()
     const r = recognition.find((x) => x.id === id)
-    if (!r) throw new Error('璁板綍涓嶅瓨鍦?)
+    if (!r) throw new Error('记录不存在')
     r.kind = payload.kind
     r.name = payload.name
     r.amount = payload.kind === 'sponsor' ? payload.amount ?? 0 : null
@@ -931,13 +932,13 @@ export const mockApi = {
     if (i >= 0) recognition.splice(i, 1)
   },
 
-  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {
+  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
     await delay(500)
     onProgress?.(50)
     await delay(500)
     onProgress?.(100)
-    if (!currentUser) throw new Error('璇峰厛鐧诲綍')
-    if (payload.demo_type !== 'link' && !payload.file) throw new Error('璇蜂笂浼?zip 鏂囦欢')
+    if (!currentUser) throw new Error('请先登录')
+    if (payload.demo_type !== 'link' && !payload.file) throw new Error('请上传 zip 文件')
     const slug = 'demo_' + Math.random().toString(16).slice(2, 10)
     const demo: DemoDetail = {
       slug,
@@ -957,14 +958,14 @@ export const mockApi = {
       created_at: new Date().toISOString(),
       status: settings.auto_approve ? 'approved' : 'pending',
       session_log_count: 0,
-      is_author: true,
-      previewHtml: payload.demo_type === 'web' ? '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#4ecdc4"><h1>宸蹭笂浼?Demo</h1></body></html>' : undefined,
+        is_author: true,
+      previewHtml: payload.demo_type === 'web' ? '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#4ecdc4"><h1>已上传 Demo</h1></body></html>' : undefined,
     }
     ;(settings.auto_approve ? demos : pendingDemos).push(demo)
     return { slug: demo.slug, status: demo.status as string }
   },
 
-  async createDemoFromUrl(payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
+  async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
     await delay(400)
     const slug = 'url-' + Math.random().toString(16).slice(2, 10)
     return { slug, status: 'pending', created: true }
@@ -973,7 +974,7 @@ export const mockApi = {
     await delay(400)
     onProgress?.(100)
     const d = findDemo(slug)
-    if (!d) throw new Error('Demo 涓嶅瓨鍦?)
+    if (!d) throw new Error('Demo 不存在')
     if (payload.title) d.title = payload.title
     if (payload.description !== undefined) d.description = payload.description
     if (payload.demo_type) d.demo_type = payload.demo_type
@@ -995,7 +996,7 @@ export const mockApi = {
     if (d) d.download_count += 1
   },
 
-  // ---------- 璇勮 ----------
+  // ---------- 评论 ----------
   async listComments(slug: string): Promise<Comment[]> {
     await delay()
     return clone(comments[slug] || [])
@@ -1003,7 +1004,7 @@ export const mockApi = {
 
   async postComment(slug: string, content: string, parent_id?: number | null): Promise<Comment> {
     await delay(200)
-    if (!currentUser) throw new Error('璇峰厛鐧诲綍')
+    if (!currentUser) throw new Error('请先登录')
     const list = comments[slug] || (comments[slug] = [])
     const comment: Comment = {
       id: Math.max(0, ...Object.values(comments).flat().map((c) => c.id)) + 1,
@@ -1017,7 +1018,7 @@ export const mockApi = {
     }
     if (parent_id) {
       const parent = findComment(list, parent_id)
-      if (!parent) throw new Error('鐖惰瘎璁轰笉瀛樺湪')
+      if (!parent) throw new Error('父评论不存在')
       parent.children = parent.children || []
       parent.children.push(comment)
     } else {
@@ -1035,7 +1036,7 @@ export const mockApi = {
   async getSessionLog(slug: string, filename: string): Promise<string> {
     await delay()
     const key = `${slug}/${filename}`
-    return sessionTexts[key] || `# ${filename}\n\n锛堟殏鏃犲唴瀹癸級`
+    return sessionTexts[key] || `# ${filename}\n\n（暂无内容）`
   },
 
   // ---------- Admin ----------
@@ -1057,7 +1058,7 @@ export const mockApi = {
   async adminApprove(idOrSlug: string | number, action: 'approve' | 'reject'): Promise<void> {
     await delay(200)
     const d = pendingDemos.find((x) => x.slug === idOrSlug)
-    if (!d) throw new Error('寰呭 Demo 涓嶅瓨鍦?)
+    if (!d) throw new Error('待审 Demo 不存在')
     if (action === 'approve') {
       d.status = 'approved'
       demos.push(d)
@@ -1092,12 +1093,12 @@ export const mockApi = {
   async updateUser(id: number, patch: Partial<Pick<User, 'role' | 'status'>>): Promise<User> {
     await delay(200)
     const u = users.find((x) => x.id === id)
-    if (!u) throw new Error('鐢ㄦ埛涓嶅瓨鍦?)
+    if (!u) throw new Error('用户不存在')
     Object.assign(u, patch)
     return clone(u)
   },
 
-  // ---------- 鍏憡 ----------
+  // ---------- 公告 ----------
   async listAnnouncements(): Promise<Announcement[]> {
     await delay()
     return clone(announcements)
@@ -1119,7 +1120,7 @@ export const mockApi = {
   async updateAnnouncement(id: number, payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
     await delay(200)
     const a = announcements.find((x) => x.id === id)
-    if (!a) throw new Error('鍏憡涓嶅瓨鍦?)
+    if (!a) throw new Error('公告不存在')
     a.title = payload.title
     if (payload.content !== undefined) a.content = payload.content
     if (payload.demo_slug !== undefined) a.demo_slug = payload.demo_slug

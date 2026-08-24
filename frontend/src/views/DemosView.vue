@@ -12,7 +12,7 @@ const tagKeys = ref<TagKeyInfo[]>([])
 const selectedTags = ref<string[]>([])
 const q = ref('')
 const submittedQ = ref('')
-const sort = ref<'newest' | 'popular'>('newest')
+const sort = ref<'newest' | 'popular' | 'random'>('newest')
 const cardMode = ref<'normal' | 'prompt'>(localStorage.getItem('ds_card_mode') === 'prompt' ? 'prompt' : 'normal')
 const stripsOpen = ref(false)
 
@@ -285,6 +285,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <div v-if="cardMode === 'normal'" class="tabs" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
+        <button class="tab" :class="{ active: sort === 'random' }" type="button" @click="sort = 'random'; applySort()">随机</button>
       </div>
     </div>
 

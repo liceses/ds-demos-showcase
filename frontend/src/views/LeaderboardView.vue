@@ -14,14 +14,7 @@ const sorts = [
   { key: 'heat', label: '综合热度' },
 ] as const
 
-const ranges = [
-  { key: 'all', label: '全部' },
-  { key: 'week', label: '本周' },
-  { key: 'month', label: '本月' },
-] as const
-
 const sort = ref<'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat'>('avg')
-const range = ref<'all' | 'week' | 'month'>('all')
 const items = ref<DemoSummary[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -33,7 +26,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.getLeaderboard(sort.value, page.value, pageSize, range.value)
+    const res = await api.getLeaderboard(sort.value, page.value, pageSize)
     items.value = res.items
     total.value = res.total
   } catch (e) {
@@ -46,13 +39,6 @@ async function load() {
 function changeSort(s: typeof sort.value) {
   if (sort.value === s) return
   sort.value = s
-  page.value = 1
-  load()
-}
-
-function changeRange(r: typeof range.value) {
-  if (range.value === r) return
-  range.value = r
   page.value = 1
   load()
 }
@@ -73,13 +59,6 @@ onMounted(load)
         {{ s.label }}
       </button>
     </div>
-    <div class="filter-row" style="margin-bottom: 16px">
-      <span class="filter-label">范围</span>
-      <button v-for="r in ranges" :key="r.key" class="tag-chip" :class="{ active: range === r.key }" type="button" @click="changeRange(r.key)">
-        {{ r.label }}
-      </button>
-    </div>
-
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <div v-if="loading && !items.length" class="loading-row"><span class="spinner"></span> 加载榜单…</div>
     <div v-else-if="!items.length" class="empty-box">暂无上榜作品</div>

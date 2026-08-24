@@ -172,12 +172,7 @@ onMounted(load)
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
         <div class="btn-group">
-          <template v-if="demo.demo_type === 'link'">
-            <a class="btn btn-sm btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 →</a>
-          </template>
-          <template v-else>
-            <button class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? '下载文件' : '下载 ZIP' }}</button>
-          </template>
+          <button v-if="demo.demo_type !== 'link'" class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? '下载文件' : '下载 ZIP' }}</button>
           <template v-if="canEdit">
             <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
             <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>

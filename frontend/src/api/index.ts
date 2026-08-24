@@ -7,6 +7,7 @@ import type {
   Announcement,
   AuthResponse,
   Comment,
+  CreateDemoFromUrlPayload,
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,

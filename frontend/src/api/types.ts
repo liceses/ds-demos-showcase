@@ -192,6 +192,12 @@ export interface CreateDemoPayload {
   video_url?: string
   cover?: File | null
   file?: File | null
+  /** 幂等键：重试同 key 不重复创建 */
+  idempotency_key?: string
+  /** 信任通道密钥（未登录免审核） */
+  upload_code?: string
+  /** 管理员强制上传（跳过 zip 去重 409） */
+  force?: boolean
 }
 
 export interface CreateDemoFromUrlPayload {

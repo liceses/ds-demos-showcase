@@ -368,6 +368,10 @@ async function submit() {
     return
   }
   const tags = collectTags()
+  if (!tags.length) {
+    error.value = '请至少选择一个标签（标签是作品分类的关键）'
+    return
+  }
 
   // 编辑模式：没有任何改动时阻止提交，避免生成空公告
   if (editSlug && !hasChanges.value) {
@@ -546,11 +550,16 @@ async function submit() {
           </div>
         </div>
         <div v-if="success" class="notice notice-success">
-          <p style="margin-bottom: 10px">{{ editSlug ? '更新成功，已生成更新公告。' : '上传成功。' }}</p>
+          <p style="margin-bottom: 10px">
+            {{ editSlug ? '更新成功，已生成更新公告。' : success.status === 'pending' ? '已提交，等待管理员审核。' : '上传成功。' }}
+          </p>
           <div class="filter-row" style="margin: 0">
-            <RouterLink class="btn btn-sm btn-primary" :to="`/demo/${success.status === 'updated' ? editSlug : success.slug}`">
-              查看 Demo
-            </RouterLink>
+            <template v-if="success.status !== 'pending'">
+              <RouterLink class="btn btn-sm btn-primary" :to="`/demo/${success.status === 'updated' ? editSlug : success.slug}`">
+                查看 Demo
+              </RouterLink>
+            </template>
+            <span v-else class="hint">审核通过后即可展示</span>
             <RouterLink class="btn btn-sm btn-outline" to="/">返回主页</RouterLink>
           </div>
         </div>

@@ -182,7 +182,8 @@ def _ensure_tag_columns() -> None:
     cols = {c["name"] for c in insp.get_columns("tags")}
     if "group" not in cols:
         with engine.begin() as conn:
-            conn.exec_driver_sql("ALTER TABLE tags ADD COLUMN group TEXT")
+            # group 是 SQLite 保留字，必须加双引号
+            conn.exec_driver_sql('ALTER TABLE tags ADD COLUMN "group" TEXT')
 
 
 def init_db() -> None:

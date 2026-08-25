@@ -230,6 +230,13 @@ export interface UpdateDemoPayload {
   keep_old_version?: boolean
 }
 
+export interface ForumTopicCard {
+  id: number
+  title: string
+  author: string
+  reply_count: number
+}
+
 export interface Announcement {
   id: number
   type: 'manual' | 'auto' | 'update' | 'demo_update'

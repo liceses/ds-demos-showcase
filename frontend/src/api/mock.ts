@@ -12,6 +12,7 @@ import type {
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
+  ForumTopicCard,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -967,6 +968,11 @@ export const mockApi = {
     return { slug: demo.slug, status: demo.status as string }
   },
 
+  async getForumTopic(id: number): Promise<ForumTopicCard | null> {
+    await delay(150)
+    if (id > 0) return { id, title: `讨论主题 #${id}`, author: 'tester', reply_count: 3 }
+    return null
+  },
   async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
     await delay(400)
     const slug = 'url-' + Math.random().toString(16).slice(2, 10)

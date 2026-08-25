@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { api } from '../api'
 
-const props = withDefaults(defineProps<{ content: string; compact?: boolean }>(), { compact: false })
+const props = withDefaults(defineProps<{ content: string; compact?: boolean; resolveLinks?: boolean }>(), {
+  compact: false,
+  resolveLinks: true,
+})
+
+const root = ref<HTMLElement | null>(null)
 
 // ---------- 轻量代码高亮（不引 highlight.js，控制体积） ----------
 function escapeHtml(s: string) {
@@ -54,6 +60,92 @@ const html = computed(() => {
   })
 })
 
+// ---------- 内部链接富卡片 ----------
+type DemoInfo = { slug: string; title: string; author: string; cover_url: string }
+type TopicInfo = { id: number; title: string; author: string; reply_count: number }
+
+const demoCache = new Map<string, Promise<DemoInfo | null>>()
+const topicCache = new Map<string, Promise<TopicInfo | null>>()
+
+function attr(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+}
+
+function demoCardHtml(d: DemoInfo) {
+  return `<a class="md-link-card md-link-demo" data-link-card="1" href="/demo/${attr(d.slug)}">
+    <img class="md-link-cover" src="${attr(d.cover_url)}" alt="" loading="lazy" />
+    <span class="md-link-main">
+      <span class="md-link-title">${attr(d.title)}</span>
+      <span class="md-link-meta">${attr(d.author)} · 查看作品 →</span>
+    </span>
+  </a>`
+}
+
+function topicCardHtml(t: TopicInfo) {
+  return `<a class="md-link-card md-link-topic" data-link-card="1" href="/forum/topic/${t.id}">
+    <span class="md-link-main">
+      <span class="md-link-title">${attr(t.title)}</span>
+      <span class="md-link-meta">${attr(t.author)} · 回复 ${t.reply_count} · 查看讨论 →</span>
+    </span>
+  </a>`
+}
+
+function placeholderHtml() {
+  return `<span class="md-link-card md-link-loading" data-link-card="1">解析链接…</span>`
+}
+
+function scanLinks() {
+  if (!props.resolveLinks || !root.value) return
+  const anchors = root.value.querySelectorAll<HTMLAnchorElement>('a[href]')
+  for (const a of anchors) {
+    if (a.hasAttribute('data-link-card')) continue
+    const href = a.getAttribute('href') || ''
+    const demoM = href.match(/\/demo\/([^/?#]+)/)
+    const topicM = href.match(/\/forum\/topic\/(\d+)/)
+    if (!demoM && !topicM) continue
+    const original = a.outerHTML
+    const holder = document.createElement('span')
+    holder.innerHTML = placeholderHtml()
+    a.replaceWith(holder)
+    if (demoM) {
+      const slug = decodeURIComponent(demoM[1])
+      if (!demoCache.has(slug)) {
+        demoCache.set(
+          slug,
+          api.getDemo(slug).then((d) => ({ slug: d.slug, title: d.title, author: d.author, cover_url: d.cover_url })).catch(() => null),
+        )
+      }
+      demoCache.get(slug)!.then((d) => {
+        if (d) holder.outerHTML = demoCardHtml(d)
+        else holder.outerHTML = original
+      })
+    } else if (topicM) {
+      const id = topicM[1]
+      if (!topicCache.has(id)) {
+        topicCache.set(
+          id,
+          api
+            .getForumTopic(Number(id))
+            .then((t) => (t ? { id: t.id, title: t.title, author: t.author, reply_count: t.reply_count } : null))
+            .catch(() => null),
+        )
+      }
+      topicCache.get(id)!.then((t) => {
+        if (t) holder.outerHTML = topicCardHtml(t)
+        else holder.outerHTML = original
+      })
+    }
+  }
+}
+
+watch(
+  () => props.content,
+  () => {
+    if (props.resolveLinks) void nextTick(scanLinks)
+  },
+  { immediate: true },
+)
+
 // ---------- 代码复制（事件委托，单监听） ----------
 function onRootClick(e: MouseEvent) {
   const btn = (e.target as HTMLElement).closest('.md-copy') as HTMLElement | null
@@ -71,5 +163,5 @@ function onRootClick(e: MouseEvent) {
 </script>
 
 <template>
-  <div class="markdown-body" :class="{ compact }" v-html="html" @click="onRootClick"></div>
+  <div ref="root" class="markdown-body" :class="{ compact }" v-html="html" @click="onRootClick"></div>
 </template>

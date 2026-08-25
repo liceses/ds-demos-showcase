@@ -12,6 +12,7 @@ import type {
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
+  ForumTopicCard,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -152,6 +153,14 @@ const realApi = {
   ): Promise<Paginated<DemoSummary>> {
     const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize, range } })
     return data
+  },
+  async getForumTopic(id: number): Promise<ForumTopicCard | null> {
+    try {
+      const { data } = await http.get(`/forum/topics/${id}`)
+      return data
+    } catch {
+      return null
+    }
   },
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {
     const form = new FormData()

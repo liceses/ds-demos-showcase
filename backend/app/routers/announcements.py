@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_admin
-from ..models import Announcement, ForumTopic, User
+from ..models import Announcement, Demo, ForumTopic, User
 from ..schemas import AnnouncementOut, AnnouncementUpsert
 from ..services.site_git import list_site_commits
 
@@ -22,14 +22,25 @@ def _parse_commit_date(value: str) -> datetime:
         return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _to_utc_naive(value: datetime | None) -> datetime | None:
+    """把带时区的 datetime 统一转成 UTC naive；naive 视为已是 UTC。"""
+    if value is None:
+        return None
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
+
+
 def _is_public_visible(a: Announcement) -> bool:
     """公开可见：published 且未过期且已到发布时间。"""
     now = datetime.utcnow()
     if a.status != "published":
         return False
-    if a.published_at is not None and a.published_at > now:
+    published_at = _to_utc_naive(a.published_at)
+    expires_at = _to_utc_naive(a.expires_at)
+    if published_at is not None and published_at > now:
         return False
-    if a.expires_at is not None and a.expires_at < now:
+    if expires_at is not None and expires_at < now:
         return False
     return True
 
@@ -52,6 +63,15 @@ def _validate_topic_ref(db: Session, topic_id: int | None) -> int | None:
     if t is None or t.status != "normal":
         raise HTTPException(status_code=422, detail="关联论坛主题不存在或未上线", )
     return topic_id
+
+
+def _validate_demo_slug(db: Session, demo_slug: str | None) -> str | None:
+    if demo_slug is None:
+        return None
+    demo = db.query(Demo).filter(Demo.slug == demo_slug).first()
+    if demo is None:
+        raise HTTPException(status_code=422, detail="关联 demo 不存在", )
+    return demo_slug
 
 
 @router.get("/announcements", response_model=list[AnnouncementOut])
@@ -147,12 +167,12 @@ def create_announcement(
         type="manual",
         title=body.title,
         content=body.content,
-        demo_slug=body.demo_slug,
+        demo_slug=_validate_demo_slug(db, body.demo_slug),
         pinned=body.pinned,
         status=body.status,
         category=body.category,
-        published_at=body.published_at,
-        expires_at=body.expires_at,
+        published_at=_to_utc_naive(body.published_at),
+        expires_at=_to_utc_naive(body.expires_at),
         topic_id=_validate_topic_ref(db, body.topic_id),
         created_by=admin.id,
     )
@@ -175,12 +195,12 @@ def update_announcement(
     ann.title = body.title
     ann.content = body.content
     # 允许清空：demo_slug 传 null 即置空
-    ann.demo_slug = body.demo_slug
+    ann.demo_slug = _validate_demo_slug(db, body.demo_slug)
     ann.pinned = body.pinned
     ann.status = body.status
     ann.category = body.category
-    ann.published_at = body.published_at
-    ann.expires_at = body.expires_at
+    ann.published_at = _to_utc_naive(body.published_at)
+    ann.expires_at = _to_utc_naive(body.expires_at)
     ann.topic_id = _validate_topic_ref(db, body.topic_id)
     db.commit()
     db.refresh(ann)

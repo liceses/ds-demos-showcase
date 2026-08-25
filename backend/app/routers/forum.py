@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import current_user, require_admin
-from ..models import Demo, ForumReply, ForumReport, ForumTopic, User
+from ..models import Announcement, Demo, ForumReply, ForumReport, ForumTopic, User
 from ..schemas import (
     ForumReplyIn,
     ForumReplyOut,
@@ -47,8 +47,10 @@ def _client_ip(request: Request) -> str:
 def _rate_limit(request: Request, key: str, limit: int, user: User) -> None:
     ip = _client_ip(request)
     now = time.time()
-    for bucket in (f"{key}:{user.id}", f"{key}:{ip}"):
+    buckets = (f"{key}:{user.id}", f"{key}:{ip}")
+    for bucket in buckets:
         _hits[bucket] = [t for t in _hits[bucket] if t > now - 3600]
+    for bucket in buckets:
         if len(_hits[bucket]) >= limit:
             oldest = _hits[bucket][0] if _hits[bucket] else now
             wait = max(1, int(3600 - (now - oldest)))
@@ -57,6 +59,7 @@ def _rate_limit(request: Request, key: str, limit: int, user: User) -> None:
                 detail=f"操作过于频繁（每 IP/用户每小时 {limit} 次），请 {wait} 秒后重试",
                 headers={"Retry-After": str(wait)},
             )
+    for bucket in buckets:
         _hits[bucket].append(now)
 
 
@@ -235,7 +238,8 @@ def create_reply(
     status = "reviewing" if _needs_review(user) else "normal"
     r = ForumReply(topic_id=t.id, author_id=user.id, content=body.content, status=status)
     db.add(r)
-    t.reply_count += 1
+    if status == "normal":
+        t.reply_count += 1
     t.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(r)
@@ -363,14 +367,14 @@ def admin_review_reply(
         raise HTTPException(status_code=404, detail="回复不存在或不在审核中", )
     if body.action == "approve":
         r.status = "normal"
+        topic = db.get(ForumTopic, r.topic_id)
+        if topic:
+            topic.reply_count += 1
         if r.author and (r.author.need_review or r.author.trust_level < 1):
             r.author.trust_level = 1
             r.author.need_review = False
     else:
         r.status = "hidden"
-        topic = db.get(ForumTopic, r.topic_id)
-        if topic and topic.reply_count > 0:
-            topic.reply_count -= 1
     db.commit()
     db.refresh(r)
     return _reply_out(r)
@@ -381,6 +385,7 @@ def admin_delete_topic(tid: int, db: Session = Depends(get_db), _: User = Depend
     t = db.get(ForumTopic, tid)
     if t is None:
         raise HTTPException(status_code=404, detail="主题不存在", )
+    db.query(Announcement).filter(Announcement.topic_id == tid).update({Announcement.topic_id: None})
     db.delete(t)  # replies 级联删除
     db.commit()
     return None
@@ -393,7 +398,7 @@ def admin_delete_reply(rid: int, db: Session = Depends(get_db), _: User = Depend
         raise HTTPException(status_code=404, detail="回复不存在", )
     topic = db.get(ForumTopic, r.topic_id)
     db.delete(r)
-    if topic is not None and topic.reply_count > 0:
+    if r.status == "normal" and topic is not None and topic.reply_count > 0:
         topic.reply_count -= 1
     db.commit()
     return None

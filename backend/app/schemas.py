@@ -359,7 +359,7 @@ class ForumReplyOut(BaseModel):
 
 class ForumTopicIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    content: str = ""
+    content: str = Field(default="", max_length=20000)
     demo_slug: str | None = Field(default=None, max_length=128)
     category: str = Field(default="general", max_length=32)
     tags: str = Field(default="", max_length=200)  # 逗号分隔

@@ -25,12 +25,17 @@ def main() -> None:
         created_replies = 0
         skipped = 0
         orphan_comments = 0
+        skipped_non_approved = 0
 
         for demo_id in demo_ids:
             demo = db.get(Demo, demo_id)
             if demo is None:
                 # 评论指向已不存在的 demo（孤儿评论）
                 orphan_comments += db.query(Comment).filter(Comment.demo_id == demo_id).count()
+                continue
+            if demo.status != "approved":
+                # 未上架 demo 的评论不生成公开主题，避免泄漏未上线内容
+                skipped_non_approved += db.query(Comment).filter(Comment.demo_id == demo_id).count()
                 continue
 
             comments = (
@@ -85,6 +90,8 @@ def main() -> None:
         # 孤儿评论统计（comments 引用的 demo 已不存在）
         orphan_total = orphan_comments
         print(f"完成：新建主题 {created_topics} 个，迁移回复 {created_replies} 条，跳过已迁移 {skipped} 条")
+        if skipped_non_approved:
+            print(f"⏭️ 未上架 demo 的评论：{skipped_non_approved} 条，未生成公开主题")
         if orphan_total:
             print(f"⚠️ 孤儿评论（demo 不存在）：{orphan_total} 条，未迁移")
         else:

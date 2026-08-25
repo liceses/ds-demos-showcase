@@ -235,6 +235,37 @@ def _ensure_user_columns() -> None:
                 conn.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {name} {ddl}")
 
 
+def _ensure_forum_reply_columns() -> None:
+    """SQLite 增量迁移：给已存在的 forum_replies 表补充 status / source_comment_id。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "forum_replies" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("forum_replies")}
+    additions = [
+        ("status", "TEXT NOT NULL DEFAULT 'normal'"),
+        ("source_comment_id", "INTEGER"),
+    ]
+    with engine.begin() as conn:
+        for name, ddl in additions:
+            if name not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE forum_replies ADD COLUMN {name} {ddl}")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_forum_replies_status ON forum_replies (status)")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_forum_replies_source_comment_id ON forum_replies (source_comment_id)")
+        # 统一 reply_count 口径：只统计 normal 回复，顺带修复历史漂移/双重扣减
+        conn.exec_driver_sql(
+            """
+            UPDATE forum_topics
+            SET reply_count = (
+                SELECT COUNT(*) FROM forum_replies
+                WHERE forum_replies.topic_id = forum_topics.id
+                  AND forum_replies.status = 'normal'
+            )
+            """
+        )
+
+
 def _seed_forum_notice() -> None:
     """论坛首帖初始化：幂等创建置顶的「用户须知 & 安全说明」。"""
     db = SessionLocal()
@@ -294,6 +325,7 @@ def init_db() -> None:
     _ensure_tag_columns()
     _ensure_announcement_columns()
     _ensure_user_columns()
+    _ensure_forum_reply_columns()
     _seed_forum_notice()
 
     db = SessionLocal()

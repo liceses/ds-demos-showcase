@@ -230,6 +230,48 @@ export interface UpdateDemoPayload {
   keep_old_version?: boolean
 }
 
+export interface ForumTopic {
+  id: number
+  title: string
+  content: string
+  author: string | null
+  author_id: number | null
+  demo_slug: string | null
+  category: string
+  tags: string[]
+  pinned: boolean
+  sticky: boolean
+  status: string
+  reply_count: number
+  view_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ForumReply {
+  id: number
+  topic_id: number
+  author: string | null
+  author_id: number | null
+  content: string
+  created_at: string
+}
+
+export interface ForumTopicInput {
+  title: string
+  content?: string
+  demo_slug?: string | null
+  category?: string
+  tags?: string[]
+}
+
+export interface ForumTopicAdminUpdate {
+  pinned?: boolean
+  sticky?: boolean
+  category?: string
+  status?: string
+}
+
 export interface ForumTopicCard {
   id: number
   title: string

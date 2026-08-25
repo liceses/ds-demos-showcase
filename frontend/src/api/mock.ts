@@ -12,7 +12,10 @@ import type {
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
-  ForumTopicCard,
+  ForumTopic,
+  ForumReply,
+  ForumTopicInput,
+  ForumTopicAdminUpdate,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -33,6 +36,17 @@ import type {
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
+
+const forumTopics: ForumTopic[] = [
+  { id: 1, title: '欢迎来到讨论区', content: '这里是 **AI 全民制作人** 的讨论区，欢迎交流作品与提示词。\n\n试试贴一个作品：[/demo/demo_粒子星空](/demo/demo_粒子星空)', author: 'tester', author_id: 2, demo_slug: null, category: '交流', tags: ['type:game'], pinned: true, sticky: true, status: 'normal', reply_count: 2, view_count: 88, created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z' },
+  { id: 2, title: '分享：用灰测模型做的贪吃蛇', content: '最近用 **ds-unknown** 生成了一个贪吃蛇，体验还不错。', author: 'alice', author_id: 3, demo_slug: 'demo_贪吃蛇', category: '分享', tags: ['model:ds-unknown'], pinned: false, sticky: true, status: 'normal', reply_count: 1, view_count: 42, created_at: '2026-08-02T09:00:00Z', updated_at: '2026-08-02T09:00:00Z' },
+  { id: 3, title: '求助：iframe 全屏问题', content: '为什么 F 键有时候没反应？', author: 'tester', author_id: 2, demo_slug: null, category: '求助', tags: [], pinned: false, sticky: false, status: 'normal', reply_count: 0, view_count: 12, created_at: '2026-08-03T12:00:00Z', updated_at: '2026-08-03T12:00:00Z' },
+]
+const forumReplies: ForumReply[] = [
+  { id: 1, topic_id: 1, author: 'admin', author_id: 1, content: '欢迎！有问题随时发帖。', created_at: '2026-08-01T10:30:00Z' },
+  { id: 2, topic_id: 1, author: 'alice', author_id: 3, content: '希望论坛越来越好。', created_at: '2026-08-01T11:00:00Z' },
+  { id: 3, topic_id: 2, author: 'tester', author_id: 2, content: '灰测模型效果确实不错。', created_at: '2026-08-02T10:00:00Z' },
+]
 
 const recognition: RecognitionItem[] = [
   { id: 1, kind: 'sponsor', name: 'Alice', amount: 500, message: '支持 AI 全民制作人！', show_amount: true, sort: 0, active: true },
@@ -968,11 +982,83 @@ export const mockApi = {
     return { slug: demo.slug, status: demo.status as string }
   },
 
-  async getForumTopic(id: number): Promise<ForumTopicCard | null> {
+  async getForumTopic(id: number): Promise<ForumTopic | null> {
     await delay(150)
-    if (id > 0) return { id, title: `讨论主题 #${id}`, author: 'tester', reply_count: 3 }
-    return null
+    return forumTopics.find((t) => t.id === id) || null
   },
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular'; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+    await delay()
+    const { q = '', category, tag, demo, sort = 'newest', page = 1, page_size = 20 } = params
+    let items = [...forumTopics].filter((t) => t.status === 'normal')
+    if (q) items = items.filter((t) => t.title.includes(q) || t.content.includes(q))
+    if (category) items = items.filter((t) => t.category === category)
+    if (tag) items = items.filter((t) => t.tags.includes(tag))
+    if (demo) items = items.filter((t) => t.demo_slug === demo)
+    if (sort === 'popular') items.sort((a, b) => b.view_count - a.view_count)
+    else items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.sticky) - Number(a.sticky) || b.created_at.localeCompare(a.created_at))
+    const start = (page - 1) * page_size
+    return { items: clone(items.slice(start, start + page_size)), total: items.length, page, page_size }
+  },
+  async listForumReplies(topicId: number): Promise<ForumReply[]> {
+    await delay()
+    return clone(forumReplies.filter((r) => r.topic_id === topicId).sort((a, b) => a.created_at.localeCompare(b.created_at)))
+  },
+  async createForumTopic(payload: ForumTopicInput): Promise<ForumTopic> {
+    await delay(300)
+    const t: ForumTopic = {
+      id: Math.max(0, ...forumTopics.map((x) => x.id)) + 1,
+      title: payload.title,
+      content: payload.content || '',
+      author: 'tester',
+      author_id: 2,
+      demo_slug: payload.demo_slug ?? null,
+      category: payload.category || 'general',
+      tags: payload.tags || [],
+      pinned: false,
+      sticky: false,
+      status: 'normal',
+      reply_count: 0,
+      view_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    forumTopics.unshift(t)
+    return clone(t)
+  },
+  async createForumReply(topicId: number, content: string): Promise<ForumReply> {
+    await delay(200)
+    const r: ForumReply = { id: Math.max(0, ...forumReplies.map((x) => x.id)) + 1, topic_id: topicId, author: 'tester', author_id: 2, content, created_at: new Date().toISOString() }
+    forumReplies.push(r)
+    const t = forumTopics.find((x) => x.id === topicId)
+    if (t) t.reply_count += 1
+    return clone(r)
+  },
+  async adminListForumTopics(params: { status?: string; category?: string; pinned?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+    await delay()
+    let items = [...forumTopics]
+    if (params.status) items = items.filter((t) => t.status === params.status)
+    if (params.category) items = items.filter((t) => t.category === params.category)
+    if (params.pinned !== undefined) items = items.filter((t) => t.pinned === params.pinned)
+    return { items: clone(items), total: items.length, page: 1, page_size: items.length || 1 }
+  },
+  async adminUpdateForumTopic(id: number, patch: ForumTopicAdminUpdate): Promise<ForumTopic> {
+    await delay()
+    const t = forumTopics.find((x) => x.id === id)
+    if (!t) throw new Error('主题不存在')
+    Object.assign(t, patch)
+    return clone(t)
+  },
+  async adminDeleteForumTopic(id: number): Promise<void> {
+    await delay()
+    const i = forumTopics.findIndex((x) => x.id === id)
+    if (i >= 0) forumTopics.splice(i, 1)
+  },
+  async adminDeleteForumReply(id: number): Promise<void> {
+    await delay()
+    const i = forumReplies.findIndex((x) => x.id === id)
+    if (i >= 0) forumReplies.splice(i, 1)
+  },
+
   async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
     await delay(400)
     const slug = 'url-' + Math.random().toString(16).slice(2, 10)

@@ -12,7 +12,10 @@ import type {
   CreateDemoPayload,
   DemoDetail,
   DemoListParams,
-  ForumTopicCard,
+  ForumTopic,
+  ForumReply,
+  ForumTopicInput,
+  ForumTopicAdminUpdate,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -154,7 +157,7 @@ const realApi = {
     const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize, range } })
     return data
   },
-  async getForumTopic(id: number): Promise<ForumTopicCard | null> {
+  async getForumTopic(id: number): Promise<ForumTopic | null> {
     try {
       const { data } = await http.get(`/forum/topics/${id}`)
       return data
@@ -162,6 +165,43 @@ const realApi = {
       return null
     }
   },
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular'; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+    const { data } = await http.get('/forum/topics', { params })
+    return data
+  },
+  async listForumReplies(topicId: number): Promise<ForumReply[]> {
+    const { data } = await http.get(`/forum/topics/${topicId}/replies`)
+    return data
+  },
+  async createForumTopic(payload: ForumTopicInput): Promise<ForumTopic> {
+    const { data } = await http.post('/forum/topics', {
+      title: payload.title,
+      content: payload.content || '',
+      demo_slug: payload.demo_slug ?? null,
+      category: payload.category || 'general',
+      tags: (payload.tags || []).join(','),
+    })
+    return data
+  },
+  async createForumReply(topicId: number, content: string): Promise<ForumReply> {
+    const { data } = await http.post(`/forum/topics/${topicId}/replies`, { content })
+    return data
+  },
+  async adminListForumTopics(params: { status?: string; category?: string; pinned?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+    const { data } = await http.get('/forum/admin/topics', { params })
+    return data
+  },
+  async adminUpdateForumTopic(id: number, patch: ForumTopicAdminUpdate): Promise<ForumTopic> {
+    const { data } = await http.put(`/forum/admin/topics/${id}`, patch)
+    return data
+  },
+  async adminDeleteForumTopic(id: number): Promise<void> {
+    await http.delete(`/forum/admin/topics/${id}`)
+  },
+  async adminDeleteForumReply(id: number): Promise<void> {
+    await http.delete(`/forum/admin/replies/${id}`)
+  },
+
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {
     const form = new FormData()
     form.append('title', payload.title)

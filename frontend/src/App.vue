@@ -5,12 +5,13 @@ import { useAuthStore } from './stores/auth'
 import { isMock } from './api'
 import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
+import ForumHeader from './components/ForumHeader.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
 const username = computed(() => auth.user?.username ?? '')
 const mobileOpen = ref(false)
-const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView']
+const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView', 'ForumListView', 'ForumTopicView']
 // 保留页按 name 做 key（同页返回复用实例）；其他页按 fullPath（参数变化强制重挂载）
 const pageKey = computed(() => (route.meta.keepAlive ? route.name : route.fullPath))
 
@@ -32,7 +33,8 @@ const menuItems = [
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'forum-shell': route.meta.forum }">
+    <template v-if="!route.meta.forum">
     <header class="topbar container">
       <RouterLink to="/" class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
@@ -106,6 +108,9 @@ const menuItems = [
         </div>
       </div>
     </Transition>
+    </template>
+
+    <ForumHeader v-if="route.meta.forum" />
 
     <div v-if="isMock" class="container">
       <div class="notice notice-warn" style="margin-top: 14px">
@@ -113,7 +118,7 @@ const menuItems = [
       </div>
     </div>
 
-    <main class="container" style="flex: 1">
+    <main class="container" :class="{ 'forum-container': route.meta.forum }" style="flex: 1">
       <RouterView v-slot="{ Component }">
         <KeepAlive :include="keepAlivePages">
           <component :is="Component" :key="pageKey" />
@@ -121,10 +126,12 @@ const menuItems = [
       </RouterView>
     </main>
 
-    <footer class="footer container">
-      <div class="mono">AI 全民制作人 · AI 网页 Demo 作品集</div>
-      <div class="mono">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明</div>
-    </footer>
+    <template v-if="!route.meta.forum">
+      <footer class="footer container">
+        <div class="mono">AI 全民制作人 · AI 网页 Demo 作品集</div>
+        <div class="mono">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明</div>
+      </footer>
+    </template>
 
     <ConfirmHost />
     <ToastHost />

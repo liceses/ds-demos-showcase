@@ -126,7 +126,7 @@ function scanLinks() {
           id,
           api
             .getForumTopic(Number(id))
-            .then((t) => (t ? { id: t.id, title: t.title, author: t.author, reply_count: t.reply_count } : null))
+            .then((t) => (t ? { id: t.id, title: t.title, author: t.author || '匿名', reply_count: t.reply_count } : null))
             .catch(() => null),
         )
       }

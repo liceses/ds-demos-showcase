@@ -35,7 +35,7 @@ const storageModeLabel = computed(() => {
   return '本地存储'
 })
 
-const newAnn = ref({ title: '', content: '' })
+const newAnn = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
 const annError = ref('')
 const annOk = ref('')
 
@@ -43,7 +43,7 @@ const annTypeLabel: Record<string, string> = { manual: '手动公告', auto: '�
 
 const annFilter = ref<'all' | 'manual' | 'auto' | 'demo_update' | 'update'>('all')
 const editingAnn = ref<Announcement | null>(null)
-const editAnnForm = ref({ title: '', content: '' })
+const editAnnForm = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
 const annPreview = ref(false)
 const annPreviewContent = ref('')
 let annPreviewTimer: ReturnType<typeof setTimeout> | null = null
@@ -63,9 +63,24 @@ const filteredAnnouncements = computed(() =>
   annFilter.value === 'all' ? announcements.value : announcements.value.filter((a) => a.type === annFilter.value),
 )
 
+const annStatusFilter = ref<'all' | 'draft' | 'published' | 'offline'>('all')
+const annCategoryFilter = ref('')
+const annPinnedFilter = ref<'all' | 'pinned' | 'unpinned'>('all')
+async function loadAnnouncements() {
+  try {
+    announcements.value = await api.adminListAnnouncements({
+      status: annStatusFilter.value === 'all' ? undefined : annStatusFilter.value,
+      category: annCategoryFilter.value.trim() || undefined,
+      pinned: annPinnedFilter.value === 'all' ? undefined : annPinnedFilter.value === 'pinned',
+    })
+  } catch {
+    announcements.value = []
+  }
+}
+
 function startEditAnn(a: Announcement) {
   editingAnn.value = a
-  editAnnForm.value = { title: a.title, content: a.content }
+  editAnnForm.value = { title: a.title, content: a.content, pinned: !!a.pinned, status: a.status || 'published', category: a.category || 'general', published_at: a.published_at ? a.published_at.slice(0, 16) : '', expires_at: a.expires_at ? a.expires_at.slice(0, 16) : '' }
 }
 
 function cancelEditAnn() {
@@ -82,6 +97,11 @@ async function saveEditAnn() {
     await api.updateAnnouncement(editingAnn.value.id, {
       title: editAnnForm.value.title.trim(),
       content: editAnnForm.value.content.trim(),
+      pinned: editAnnForm.value.pinned,
+      status: editAnnForm.value.status,
+      category: editAnnForm.value.category.trim() || 'general',
+      published_at: editAnnForm.value.published_at ? new Date(editAnnForm.value.published_at).toISOString() : null,
+      expires_at: editAnnForm.value.expires_at ? new Date(editAnnForm.value.expires_at).toISOString() : null,
     })
     ui.toast('公告已更新', 'success')
     editingAnn.value = null
@@ -213,10 +233,18 @@ async function createAnnouncement() {
     return
   }
   try {
-    await api.createAnnouncement({ title: newAnn.value.title.trim(), content: newAnn.value.content.trim() })
+    await api.createAnnouncement({
+      title: newAnn.value.title.trim(),
+      content: newAnn.value.content.trim(),
+      pinned: newAnn.value.pinned,
+      status: newAnn.value.status,
+      category: newAnn.value.category.trim() || 'general',
+      published_at: newAnn.value.published_at ? new Date(newAnn.value.published_at).toISOString() : null,
+      expires_at: newAnn.value.expires_at ? new Date(newAnn.value.expires_at).toISOString() : null,
+    })
     ui.toast('公告已发布', 'success')
-    newAnn.value = { title: '', content: '' }
-    announcements.value = await api.listAnnouncements()
+    newAnn.value = { title: '', content: '', pinned: false, status: 'published', category: 'general', published_at: '', expires_at: '' }
+    await loadAnnouncements()
   } catch (e) {
     annError.value = (e as Error).message
   }
@@ -844,6 +872,22 @@ onMounted(loadAll)
                     <textarea v-if="!annPreview" v-model="editAnnForm.content" class="input textarea" rows="3" placeholder="公告内容（可选）" @input="updateAnnPreview"></textarea>
                     <MarkdownRenderer v-else :content="annPreviewContent" />
                   </label>
+                  <label class="field" style="display: flex; gap: 8px; align-items: center">
+                    <input v-model="editAnnForm.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
+                  </label>
+                  <div class="filter-row" style="margin: 0">
+                    <select v-model="editAnnForm.status" class="input" style="max-width: 120px">
+                      <option value="draft">草稿</option>
+                      <option value="published">发布</option>
+                      <option value="offline">下线</option>
+                    </select>
+                    <input v-model="editAnnForm.category" class="input" style="max-width: 140px" placeholder="分类（如 general/system/demo）" />
+                  </div>
+                  <div class="filter-row" style="margin: 0">
+                    <label class="field" style="margin: 0">发布时间 <input v-model="editAnnForm.published_at" class="input" type="datetime-local" /></label>
+                    <label class="field" style="margin: 0">过期时间 <input v-model="editAnnForm.expires_at" class="input" type="datetime-local" /></label>
+                  </div>
+
                   <div class="filter-row" style="margin-bottom: 0">
                     <button class="btn btn-primary" type="button" @click="saveEditAnn">保存修改</button>
                     <button class="btn btn-sm btn-dark" type="button" @click="cancelEditAnn">取消</button>
@@ -859,6 +903,22 @@ onMounted(loadAll)
                     <textarea v-if="!annPreview" v-model="newAnn.content" class="input textarea" rows="3" placeholder="公告内容（可选）" @input="updateAnnPreview"></textarea>
                     <MarkdownRenderer v-else :content="annPreviewContent" />
                   </label>
+                  <label class="field" style="display: flex; gap: 8px; align-items: center">
+                    <input v-model="newAnn.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
+                  </label>
+                  <div class="filter-row" style="margin: 0">
+                    <select v-model="newAnn.status" class="input" style="max-width: 120px">
+                      <option value="draft">草稿</option>
+                      <option value="published">发布</option>
+                      <option value="offline">下线</option>
+                    </select>
+                    <input v-model="newAnn.category" class="input" style="max-width: 140px" placeholder="分类（如 general/system/demo）" />
+                  </div>
+                  <div class="filter-row" style="margin: 0">
+                    <label class="field" style="margin: 0">发布时间 <input v-model="newAnn.published_at" class="input" type="datetime-local" /></label>
+                    <label class="field" style="margin: 0">过期时间 <input v-model="newAnn.expires_at" class="input" type="datetime-local" /></label>
+                  </div>
+
                   <div class="filter-row" style="margin-bottom: 0">
                     <button class="btn btn-primary" type="button" @click="createAnnouncement">发布公告</button>
                     <span v-if="annError" class="notice notice-error" style="margin: 0">{{ annError }}</span>
@@ -879,19 +939,36 @@ onMounted(loadAll)
               >
                 {{ f === 'all' ? '全部' : annTypeLabel[f] || f }}
               </button>
+            </div>            <div class="filter-row" style="margin-top: 8px">
+              <select v-model="annStatusFilter" class="input" style="max-width: 120px" @change="loadAnnouncements">
+                <option value="all">全部状态</option>
+                <option value="draft">草稿</option>
+                <option value="published">已发布</option>
+                <option value="offline">已下线</option>
+              </select>
+              <input v-model="annCategoryFilter" class="input" style="max-width: 160px" placeholder="分类筛选" @change="loadAnnouncements" />
+              <select v-model="annPinnedFilter" class="input" style="max-width: 120px" @change="loadAnnouncements">
+                <option value="all">全部置顶</option>
+                <option value="pinned">仅置顶</option>
+                <option value="unpinned">非置顶</option>
+              </select>
             </div>
+
 
             <div class="table-wrap">
               <table class="data">
                 <thead>
-                  <tr><th>类型</th><th>标题</th><th>内容</th><th>时间</th><th>操作</th></tr>
+                  <tr><th>类型</th><th>置顶</th><th>状态</th><th>分类</th><th>标题</th><th>内容</th><th>时间</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="a in filteredAnnouncements" :key="a.id">
-                    <td>
+                                        <td>
                       <span class="status-pill">{{ annTypeLabel[a.type] || a.type }}</span>
                       <span v-if="a.type !== 'manual'" class="status-pill status-pending" style="margin-left: 4px">系统</span>
                     </td>
+                    <td>{{ a.pinned ? '置顶' : '-' }}</td>
+                    <td><span class="ann-status" :class="'status-' + (a.status || 'published')">{{ a.status || 'published' }}</span></td>
+                    <td>{{ a.category || '-' }}</td>
                     <td>{{ a.title }}</td>
                     <td style="max-width: 320px; overflow-wrap: anywhere">{{ a.content }}</td>
                     <td>{{ new Date(a.created_at).toLocaleString('zh-CN') }}</td>

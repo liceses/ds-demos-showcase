@@ -79,6 +79,7 @@ onMounted(load)
           <span class="forum-stat">浏览 {{ topic.view_count }}</span>
           <span>{{ new Date(topic.created_at).toLocaleString('zh-CN') }}</span>
           <RouterLink v-if="topic.demo_slug" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
+          <button class="btn btn-sm btn-outline" type="button" @click="ui.toast('举报功能即将上线', 'info')">举报</button>
         </div>
         <MarkdownRenderer :content="topic.content" />
       </div>

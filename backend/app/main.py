@@ -215,6 +215,25 @@ def _ensure_announcement_columns() -> None:
                 conn.exec_driver_sql(f"ALTER TABLE announcements ADD COLUMN {name} {ddl}")
 
 
+def _ensure_user_columns() -> None:
+    """SQLite 增量迁移：给已存在的 users 表补充论坛信任字段。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "users" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("users")}
+    additions = [
+        ("trust_level", "INTEGER NOT NULL DEFAULT 0"),
+        ("need_review", "BOOLEAN NOT NULL DEFAULT 1"),
+        ("github_bound", "BOOLEAN NOT NULL DEFAULT 0"),
+    ]
+    with engine.begin() as conn:
+        for name, ddl in additions:
+            if name not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {name} {ddl}")
+
+
 def init_db() -> None:
     settings.demos_path.mkdir(parents=True, exist_ok=True)
     settings.media_path.mkdir(parents=True, exist_ok=True)
@@ -246,6 +265,7 @@ def init_db() -> None:
     _ensure_demo_columns()
     _ensure_tag_columns()
     _ensure_announcement_columns()
+    _ensure_user_columns()
 
     db = SessionLocal()
     try:

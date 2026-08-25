@@ -673,6 +673,26 @@ GET /api/v1/demos?status=approved&author=public
 | DELETE | `/forum/admin/replies/{id}` | admin | 删回复（同步 reply_count） |
 
 ### 数据
-- `forum_topics`：title/content(Markdown 原文)/author_id/demo_slug/category/tags(逗号分隔)/pinned/sticky/status(normal\|hidden)/reply_count/view_count/created_at/updated_at
-- `forum_replies`：topic_id（级联删）/author_id/content/created_at
+- `forum_topics`：title/content(Markdown 原文)/author_id/demo_slug/category/tags(逗号分隔)/pinned/sticky/status(normal\|hidden\|reviewing)/reply_count/view_count/created_at/updated_at
+- `forum_replies`：topic_id（级联删）/author_id/content/status(normal\|hidden\|reviewing)/created_at
+- `forum_reports`：target_type(topic\|reply)/target_id/reporter_id/reason/status(open\|resolved\|dismissed)
+- `users` 扩展：`trust_level`(0=新用户需审核)/`need_review`/`github_bound`
 - 权限：发帖/回复必须登录；匿名只读；Markdown 只存原文，前端渲染时消毒
+- **审核**：新用户（`need_review` 或 `trust_level<1`）发帖/回复进入 `reviewing`；admin 审核通过后置 `normal` 并提升 trust_level=1
+- **链接安全**：发帖/回复内容里的 http(s) 链接会校验——拒绝内网/回环/保留地址，域名黑名单
+- **限流**：发帖/回复按「用户 + IP」双维度（10/30 次每小时）；举报 20 次每小时
+
+### 安全/审核接口补充
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| POST | `/forum/reports` | 登录 | 举报主题/回复 |
+| GET | `/forum/admin/topics?status=reviewing` | admin | 审核队列 |
+| POST | `/forum/admin/topics/{id}/review` | admin | `{action:approve\|reject}` 审核主题 |
+| POST | `/forum/admin/replies/{id}/review` | admin | `{action:approve\|reject}` 审核回复 |
+| POST | `/forum/admin/users/{uid}/ban` | admin | 封禁用户（status=banned） |
+| GET | `/forum/admin/reports?status=open` | admin | 举报列表 |
+| POST | `/forum/admin/reports/{id}/handle` | admin | `{action:resolve\|dismiss}` 处理举报 |
+
+### 迁移脚本
+`scripts/migrate_comments_to_forum.py`：把历史 comments 按 demo_id 归集为论坛主题+回复（幂等，已有该 demo 主题则跳过）。

@@ -343,6 +343,7 @@ class ForumReplyOut(BaseModel):
     author: str | None = None
     author_id: int | None = None
     content: str
+    status: str = "normal"
     created_at: datetime
 
 
@@ -362,4 +363,28 @@ class ForumTopicAdminUpdate(BaseModel):
     pinned: bool | None = None
     sticky: bool | None = None
     category: str | None = Field(default=None, max_length=32)
-    status: str | None = Field(default=None, pattern="^(normal|hidden)$")
+    status: str | None = Field(default=None, pattern="^(normal|hidden|reviewing)$")
+
+
+class ForumReviewIn(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+
+
+class ForumReportIn(BaseModel):
+    target_type: str = Field(pattern="^(topic|reply)$")
+    target_id: int
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class ForumReportOut(BaseModel):
+    id: int
+    target_type: str
+    target_id: int
+    reporter_id: int | None = None
+    reason: str = ""
+    status: str = "open"
+    created_at: datetime
+
+
+class ForumReportHandleIn(BaseModel):
+    action: str = Field(pattern="^(resolve|dismiss)$")

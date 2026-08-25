@@ -26,8 +26,12 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     role: Mapped[str] = mapped_column(String(16), default="user", nullable=False)  # user | admin
-    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # active | suspended | deleted
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)  # active | suspended | banned | deleted
     bio: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # 论坛信任等级：0=新用户（发帖需审核），>=1=正常发帖
+    trust_level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    need_review: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    github_bound: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     demos: Mapped[list["Demo"]] = relationship(back_populates="author")
@@ -267,7 +271,7 @@ class ForumTopic(Base):
     tags: Mapped[str] = mapped_column(String(200), default="", nullable=False)  # 逗号分隔
     pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sticky: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden
+    status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden | reviewing
     reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
@@ -286,9 +290,24 @@ class ForumReply(Base):
     topic_id: Mapped[int] = mapped_column(ForeignKey("forum_topics.id", ondelete="CASCADE"), nullable=False, index=True)
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown 原文
+    status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden | reviewing
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     topic: Mapped["ForumTopic"] = relationship(back_populates="replies")
     author: Mapped["User | None"] = relationship()
+
+
+class ForumReport(Base):
+    """举报表。"""
+
+    __tablename__ = "forum_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    target_type: Mapped[str] = mapped_column(String(16), nullable=False, index=True)  # topic | reply
+    target_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    reporter_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reason: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="open", nullable=False, index=True)  # open | resolved | dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     creator: Mapped["User | None"] = relationship()

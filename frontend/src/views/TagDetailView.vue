@@ -10,6 +10,7 @@ const props = defineProps<{ k: string; v: string }>()
 const tag = ref<Tag | null>(null)
 const keyDef = ref<TagKeyInfo | null>(null)
 const demos = ref<DemoSummary[]>([])
+const forumCount = ref(0)
 const loading = ref(true)
 const error = ref('')
 
@@ -20,14 +21,16 @@ const sameKeyValues = computed(() => keyDef.value?.values || [])
 
 onMounted(async () => {
   try {
-    const [t, keys, res] = await Promise.all([
+    const [t, keys, res, fr] = await Promise.all([
       api.getTag(props.k, props.v),
       api.listTagKeys().catch(() => [] as TagKeyInfo[]),
       api.listDemos({ status: 'approved', tags: [`${props.k}:${props.v}`], page_size: 50 }),
+      api.listForumTopics({ tag: `${props.k}:${props.v}`, page_size: 1 }).catch(() => ({ total: 0 } as never)),
     ])
     tag.value = t
     keyDef.value = keys.find((x) => x.key === props.k) || null
     demos.value = res.items
+    forumCount.value = (fr as { total?: number }).total || 0
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -67,6 +70,7 @@ onMounted(async () => {
       <div class="filter-row" style="margin-top: 16px">
         <span class="mini-stat"><b>{{ tag.demo_count }}</b> Demo</span>
         <span class="mini-stat"><b>{{ sameKeyValues.length }}</b> 同键值</span>
+        <RouterLink v-if="forumCount > 0" class="mini-stat" :to="`/forum?tag=${tag.key}:${tag.value}`">相关讨论 {{ forumCount }} →</RouterLink>
       </div>
     </section>
 

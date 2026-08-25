@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'HomeView' })
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
@@ -149,6 +150,18 @@ const entries = [
   { to: '/upload', stamp: '投', cls: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
 ]
 
+// 论坛斜角入口
+const router = useRouter()
+const forumEntering = ref(false)
+function enterForum() {
+  if (forumEntering.value) return
+  forumEntering.value = true
+  setTimeout(() => router.push('/forum'), 500)
+}
+onActivated(() => {
+  forumEntering.value = false
+})
+
 onMounted(async () => {
   tickTagline()
   try {
@@ -264,4 +277,12 @@ onBeforeUnmount(() => {
     <AnnouncementBlock v-if="projectAnnouncements.length" title="项目公告" :items="projectAnnouncements" />
     <AnnouncementBlock v-if="systemAnnouncements.length" title="系统公告" :items="systemAnnouncements" />
   </section>
+
+  <!-- 论坛斜角入口 -->
+  <button class="forum-peek" type="button" @click="enterForum">论坛 →</button>
+  <Transition name="forum-takeover">
+    <div v-if="forumEntering" class="forum-takeover">
+      <span class="forum-takeover-brand">讨论区</span>
+    </div>
+  </Transition>
 </template>

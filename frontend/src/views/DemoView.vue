@@ -146,9 +146,10 @@ onMounted(load)
         <span class="mini-stat"><b>{{ new Date(demo.created_at).toLocaleDateString('zh-CN') }}</b> 创建</span>
         <span class="mini-stat"><b>{{ demo.view_count }}</b> 浏览</span>
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
-        <span class="mini-stat"><b>{{ demo.comment_count }}</b> 评论</span>
+        <span class="mini-stat"><b>{{ demo.comment_count }}</b> 讨论</span>
         <div class="btn-group">
           <button v-if="demo.demo_type !== 'link'" class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? '下载文件' : '下载 ZIP' }}</button>
+          <RouterLink class="btn btn-sm btn-outline" :to="`/forum?demo=${demo.slug}`">讨论 →</RouterLink>
           <template v-if="canEdit">
             <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
             <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
@@ -189,7 +190,7 @@ onMounted(load)
         <button class="tab" :class="{ active: activeTab === 'info' }" type="button" @click="activeTab = 'info'">信息</button>
         <button class="tab" :class="{ active: activeTab === 'timeline' }" type="button" @click="activeTab = 'timeline'">时间线</button>
         <button class="tab" :class="{ active: activeTab === 'session' }" type="button" @click="activeTab = 'session'">会话日志</button>
-        <button class="tab" :class="{ active: activeTab === 'comments' }" type="button" @click="activeTab = 'comments'">评论</button>
+        <button class="tab" :class="{ active: activeTab === 'discussion' }" type="button" @click="activeTab = 'discussion'">讨论</button>
       </div>
 
       <Transition name="tab-pane" mode="out-in">
@@ -266,21 +267,8 @@ onMounted(load)
             </div>
           </template>
 
-          <template v-else-if="activeTab === 'comments'">
-            <div v-if="auth.isLoggedIn()" class="card card-coral" style="padding: 18px; margin-bottom: 20px">
-              <textarea v-model="commentText" class="input textarea" rows="3" placeholder="写下你的评论…"></textarea>
-              <div class="filter-row" style="margin-top: 10px">
-                <button class="btn btn-primary" type="button" :disabled="posting || !commentText.trim()" @click="submitComment">
-                  {{ posting ? '提交中…' : '发表评论' }}
-                </button>
-                <span v-if="commentError" class="notice notice-error" style="margin: 0">{{ commentError }}</span>
-              </div>
-            </div>
-            <div v-else class="notice notice-warn">
-              登录后即可发表评论。<RouterLink to="/login">去登录</RouterLink>
-            </div>
-            <CommentTree v-if="comments.length" :slug="slug" :comments="comments" :on-posted="load" />
-            <div v-else class="empty-box">还没有评论，来抢沙发。</div>
+          <template v-else-if="activeTab === 'discussion'">
+            <ForumThread :slug="slug" />
           </template>
         </div>
       </Transition>

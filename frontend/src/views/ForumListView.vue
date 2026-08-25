@@ -14,6 +14,8 @@ const pageSize = 20
 const q = ref('')
 const category = ref('all')
 const sort = ref<'newest' | 'popular'>('newest')
+const demoFilter = ref('')
+const tagFilter = ref('')
 const loading = ref(false)
 const error = ref('')
 
@@ -26,6 +28,8 @@ async function load() {
     const res = await api.listForumTopics({
       q: q.value.trim() || undefined,
       category: category.value === 'all' ? undefined : category.value,
+      demo: demoFilter.value || undefined,
+      tag: tagFilter.value || undefined,
       sort: sort.value,
       page: page.value,
       page_size: pageSize,
@@ -61,6 +65,8 @@ onMounted(() => {
   if (sq === 'popular') sort.value = 'popular'
   const sc = route.query.category
   if (typeof sc === 'string' && categories.includes(sc)) category.value = sc
+  if (typeof route.query.demo === 'string') demoFilter.value = route.query.demo
+  if (typeof route.query.tag === 'string') tagFilter.value = route.query.tag
   load()
 })
 </script>
@@ -87,6 +93,12 @@ onMounted(() => {
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">最新</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">热门</button>
       </div>
+    </div>
+
+    <div v-if="demoFilter || tagFilter" class="filter-row" style="margin-bottom: 8px">
+      <span class="filter-label">筛选</span>
+      <span class="tag-chip active">{{ demoFilter ? `作品：${demoFilter}` : `标签：${tagFilter}` }}</span>
+      <button class="btn btn-sm btn-dark" type="button" @click="demoFilter = ''; tagFilter = ''; apply()">清除</button>
     </div>
 
     <div v-if="error" class="notice notice-error">{{ error }}</div>

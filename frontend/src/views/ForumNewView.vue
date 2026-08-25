@@ -1,15 +1,17 @@
 <script setup lang="ts">
 defineOptions({ name: 'ForumNewView' })
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import TagPicker from '../components/TagPicker.vue'
 
 const router = useRouter()
+const route = useRoute()
 const ui = useUiStore()
 
+const prefillDemo = ref(typeof route.query.demo === 'string' ? route.query.demo : '')
 const title = ref('')
 const category = ref('交流')
 const tagsPicked = ref<{ key: string; value: string; description?: string }[]>([])
@@ -38,6 +40,7 @@ async function submit() {
       content: content.value.trim(),
       category: category.value,
       tags: tagsPicked.value.map((p) => `${p.key}:${p.value}`),
+      demo_slug: prefillDemo.value || undefined,
     })
     if (t.status && t.status !== 'normal') {
       submitted.value = true
@@ -65,6 +68,7 @@ async function submit() {
   <section class="forum-section">
     <div class="card forum-new-card">
       <div class="form-stack">
+        <div v-if="prefillDemo" class="notice notice-info">关联作品：<code>{{ prefillDemo }}</code></div>
         <label class="field">
           标题
           <input v-model="title" class="input" placeholder="主题标题" />

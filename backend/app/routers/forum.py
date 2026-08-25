@@ -162,7 +162,7 @@ def list_topics(
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
-    return Paginated(
+    return ForumTopicPage(
         items=[_topic_out(t) for t in items],
         total=total,
         page=page,
@@ -281,7 +281,7 @@ def admin_list_topics(
         query = query.filter(ForumTopic.status == status)
     total = query.count()
     items = query.order_by(ForumTopic.created_at.desc(), ForumTopic.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    return Paginated(
+    return ForumTopicPage(
         items=[_topic_out(t) for t in items],
         total=total,
         page=page,

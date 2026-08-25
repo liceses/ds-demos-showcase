@@ -74,10 +74,19 @@ def update_settings(body: SettingsOut, db: Session = Depends(get_db), _: User = 
 
 @router.post("/oss-sync")
 def oss_sync(force: bool = Query(False), _: User = Depends(require_admin)):
-    """把本地已有 demo 文件/zip/封面补传到 OSS（幂等，缺失才传）；force=true 强制全量重传。"""
-    from ..services.oss_sync import sync_all
+    """启动后台 OSS 同步（不阻塞请求）；已有任务在跑则返回 started=false。"""
+    from ..services.oss_sync import get_sync_status, start_sync
 
-    return sync_all(force=force)
+    started = start_sync(force=force)
+    return {"started": started, "job": get_sync_status()}
+
+
+@router.get("/oss-sync-status")
+def oss_sync_status(_: User = Depends(require_admin)):
+    """查询后台 OSS 同步进度/结果。"""
+    from ..services.oss_sync import get_sync_status
+
+    return get_sync_status()
 
 
 @router.get("/storage-status")

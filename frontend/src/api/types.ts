@@ -253,6 +253,22 @@ export interface SiteStats {
   last7: VisitStat[]
 }
 
+/** OSS 后台同步任务状态 */
+export interface OssSyncJob {
+  running: boolean
+  force: boolean
+  total: number
+  done: number
+  ok: number
+  fail: number
+  covers_ok: number
+  covers_fail: number
+  current: string
+  last_error: string
+  started_at: number | null
+  finished_at: number | null
+}
+
 /** 赞助榜 */
 export interface Sponsor {
   name: string

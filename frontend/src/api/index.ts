@@ -27,6 +27,7 @@ import type {
   RecognitionItem,
   RatingStats,
   LiveStats,
+  OssSyncJob,
 } from './types'
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
@@ -257,9 +258,13 @@ const realApi = {
     const { data } = await http.put('/admin/settings', next)
     return data
   },
-  async ossSync(force = false): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
-    // 全量同步可能较久，默认 15s 会超时；这里放宽到 5 分钟
-    const { data } = await http.post('/admin/oss-sync', null, { params: force ? { force: true } : {}, timeout: 300000 })
+  async ossSync(force = false): Promise<{ started: boolean; job: OssSyncJob }> {
+    // 后台任务：立即返回，前端轮询 /admin/oss-sync-status 看进度
+    const { data } = await http.post('/admin/oss-sync', null, { params: force ? { force: true } : {} })
+    return data
+  },
+  async getOssSyncStatus(): Promise<OssSyncJob> {
+    const { data } = await http.get('/admin/oss-sync-status')
     return data
   },
   async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {

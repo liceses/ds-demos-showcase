@@ -265,15 +265,34 @@ async function saveSettings() {
 }
 
 const ossSyncing = ref(false)
+const ossSyncProgress = ref('')
 async function runOssSync(force = false) {
+  if (ossSyncing.value) return
   ossSyncing.value = true
+  ossSyncProgress.value = ''
   try {
     const r = await api.ossSync(force)
-    ui.toast(`OSS ${force ? '强制全量' : ''}同步完成：demo ${r.demos_ok} 成功 / ${r.demos_fail} 失败，封面 ${r.covers_ok} 成功 / ${r.covers_fail} 失败`, r.demos_fail || r.covers_fail ? 'error' : 'success')
+    if (!r.started) {
+      ui.toast('已有同步任务在进行中，请稍候', 'info')
+    }
+    // 轮询后台任务直到结束
+    for (;;) {
+      const job = await api.getOssSyncStatus()
+      if (job.total) ossSyncProgress.value = `${job.done}/${job.total}`
+      if (!job.running) {
+        ui.toast(
+          `OSS ${force ? '强制全量' : ''}同步完成：demo ${job.ok} 成功 / ${job.fail} 失败，封面 ${job.covers_ok} 成功 / ${job.covers_fail} 失败${job.last_error ? '，最后错误：' + job.last_error : ''}`,
+          job.fail || job.covers_fail ? 'error' : 'success',
+        )
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
   } catch (e) {
     ui.toast((e as Error).message, 'error')
   } finally {
     ossSyncing.value = false
+    ossSyncProgress.value = ''
   }
 }
 
@@ -883,10 +902,10 @@ onMounted(loadAll)
               <p class="hint" style="margin-bottom: 12px">本地是完整存储（全量文件在服务器），OSS 只是镜像。切换模式：修改服务器 .env 的 <code>OSS_ENABLED</code>（false=本地 / true=OSS）+ <code>docker compose up -d backend</code> 重建生效。</p>
               <div class="filter-row" style="margin-bottom: 0">
                 <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync()">
-                  {{ ossSyncing ? '同步中…' : '同步本地文件到 OSS' }}
+                  {{ ossSyncing ? `同步中… ${ossSyncProgress}` : '同步本地文件到 OSS' }}
                 </button>
                 <button class="btn btn-dark" type="button" :disabled="ossSyncing" @click="runOssSync(true)">
-                  {{ ossSyncing ? '同步中…' : '强制全量同步' }}
+                  {{ ossSyncing ? `同步中… ${ossSyncProgress}` : '强制全量同步' }}
                 </button>
               </div>
             </div>

@@ -27,6 +27,7 @@ import type {
   RecognitionItem,
   RatingStats,
   LiveStats,
+  OssSyncJob,
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
@@ -1080,9 +1081,43 @@ export const mockApi = {
     return clone(settings)
   },
 
-  async ossSync(_force = false): Promise<{ demos_ok: number; demos_fail: number; covers_ok: number; covers_fail: number }> {
-    await delay(500)
-    return { demos_ok: demos.length, demos_fail: 0, covers_ok: 0, covers_fail: 0 }
+  async ossSync(_force = false): Promise<{ started: boolean; job: OssSyncJob }> {
+    await delay(300)
+    return {
+      started: true,
+      job: {
+        running: false,
+        force: _force,
+        total: demos.length,
+        done: demos.length,
+        ok: demos.length,
+        fail: 0,
+        covers_ok: 0,
+        covers_fail: 0,
+        current: '',
+        last_error: '',
+        started_at: Date.now(),
+        finished_at: Date.now(),
+      },
+    }
+  },
+
+  async getOssSyncStatus(): Promise<OssSyncJob> {
+    await delay(100)
+    return {
+      running: false,
+      force: false,
+      total: demos.length,
+      done: demos.length,
+      ok: demos.length,
+      fail: 0,
+      covers_ok: 0,
+      covers_fail: 0,
+      current: '',
+      last_error: '',
+      started_at: Date.now(),
+      finished_at: Date.now(),
+    }
   },
 
   async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {

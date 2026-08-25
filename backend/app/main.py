@@ -293,20 +293,14 @@ def on_startup() -> None:
 
 
 def _auto_sync_oss() -> None:
-    """OSS 可用时，后台线程把本地已有文件补传到 OSS（幂等：只补缺失，不阻塞启动）。"""
+    """OSS 可用时，后台任务把本地已有文件补传到 OSS（幂等：只补缺失，不阻塞启动）。"""
     from .services import oss as _oss
+    from .services.oss_sync import start_sync
 
     if not _oss.enabled():
         return
-    import threading
-
-    def _run() -> None:
-        from .services.oss_sync import sync_all
-
-        try:
-            stats = sync_all()
-            print(f"[oss-sync] 启动自动同步完成: {stats}", flush=True)
-        except Exception as e:  # noqa: BLE001
-            print(f"[oss-sync] 自动同步失败: {e}", flush=True)
-
-    threading.Thread(target=_run, daemon=True).start()
+    try:
+        started = start_sync(force=False)
+        print(f"[oss-sync] 启动自动同步: started={started}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[oss-sync] 自动同步启动失败: {e}", flush=True)

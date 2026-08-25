@@ -179,6 +179,13 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **范围检索**：`GET /demos?tag=rounds:3-10` 对 int 键用 `CAST(Tag.value AS INTEGER)` 范围比较；fixed/open 精确。
 - **分布**：`GET /tags/tag-keys` 的 int 键返回 `min/max`，前端可做滑条/直方图；fixed value 返回 `group` 分组。
 
+### 论坛 + 作品 meta
+
+- **模型**：`forum_topics`（status normal/hidden、pinned/sticky、reply_count/view_count、demo_slug、tags 逗号分隔）+ `forum_replies`（topic 级联删）。
+- **权限**：发帖/回复必须登录（每 IP 限流 10/30 每小时）；匿名只读；Markdown 存原文，前端消毒渲染。
+- **接口**：公开列表/详情/回复；登录发帖/回复；admin 全量/改状态/删主题/删回复。
+- **作品 meta**：`GET /demos/{slug}/meta` 轻量返回 `{slug,title,cover_url,author}`，**不增加 view_count**（富卡片专用）。
+
 ---
 
 ## 5. 部署（后续）

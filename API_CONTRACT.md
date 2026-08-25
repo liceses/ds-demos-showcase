@@ -652,3 +652,27 @@ GET /api/v1/demos?status=approved&author=public
 11. **commits 死代码残留**：`commits.py`、`git_service.py`、`Commit*` schema、`DemoDetailOut.commit_count` 仍在，但功能已移除且未挂载路由。
 12. **CORS 硬编码本地开发源**：`main.py` 仅允许 `localhost:5173` / `127.0.0.1:5173`，生产不可配置。
 13. **`.env.example` 缺配置项**：`RATING_SALT`、`UPLOAD_CODE`、`OSS_ENABLED`、`OSS_SERVE_LOCAL`、`SITE_REPO_DIR`、`MAX_COVER_SIZE` 未列出。
+
+## 10. 论坛 + 作品 meta（富卡片）
+
+### 作品 meta（轻量，不增加浏览数）
+`GET /api/v1/demos/{slug}/meta` → `{slug,title,cover_url,author}`（仅 approved demo）
+
+### 论坛接口
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| GET | `/forum/topics` | 公开 | 分页/搜索(q)/分类/标签(tag)/demo 关联/排序(newest\|popular)，仅 normal |
+| GET | `/forum/topics/{id}` | 公开 | 详情（含富卡片字段），view_count+1 |
+| GET | `/forum/topics/{id}/replies` | 公开 | 回复列表（时间升序） |
+| POST | `/forum/topics` | 登录 | 发帖（每 IP 10 次/小时），可关联 approved demo_slug |
+| POST | `/forum/topics/{id}/replies` | 登录 | 回复（每 IP 30 次/小时），reply_count+1 |
+| GET | `/forum/admin/topics` | admin | 含 hidden，分页/搜索/状态过滤 |
+| PUT | `/forum/admin/topics/{id}` | admin | 改 pinned/sticky/category/status |
+| DELETE | `/forum/admin/topics/{id}` | admin | 删主题（回复级联删） |
+| DELETE | `/forum/admin/replies/{id}` | admin | 删回复（同步 reply_count） |
+
+### 数据
+- `forum_topics`：title/content(Markdown 原文)/author_id/demo_slug/category/tags(逗号分隔)/pinned/sticky/status(normal\|hidden)/reply_count/view_count/created_at/updated_at
+- `forum_replies`：topic_id（级联删）/author_id/content/created_at
+- 权限：发帖/回复必须登录；匿名只读；Markdown 只存原文，前端渲染时消毒

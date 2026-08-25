@@ -28,7 +28,7 @@ from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
 from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
-from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoSummaryOut, Paginated
+from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import oss, storage
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
@@ -338,6 +338,16 @@ def get_demo(slug: str, db: Session = Depends(get_db), user: User | None = Depen
     demo.view_count += 1
     db.commit()
     return serialize_demo(db, demo, user.id if user else None, detail=True)
+
+
+@router.get("/{slug}/meta", response_model=DemoMetaOut)
+def demo_meta(slug: str, db: Session = Depends(get_db)):
+    """轻量作品 meta（富卡片用）：不增加 view_count。"""
+    demo = db.query(Demo).filter(Demo.slug == slug, Demo.status == "approved").first()
+    if demo is None:
+        raise HTTPException(status_code=404, detail="Demo 不存在或未上线", )
+    author = demo.author.username if demo.author else (demo.guest_name or "public")
+    return DemoMetaOut(slug=demo.slug, title=demo.title, cover_url=demo.cover_url, author=author)
 
 
 @router.get("/{slug}/related", response_model=list[DemoSummaryOut])

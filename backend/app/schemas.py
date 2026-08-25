@@ -308,3 +308,58 @@ class AnnouncementUpsert(BaseModel):
     category: str = Field(default="general", max_length=32)
     published_at: datetime | None = None
     expires_at: datetime | None = None
+
+
+# ---------- 作品 meta（富卡片） ----------
+class DemoMetaOut(BaseModel):
+    slug: str
+    title: str
+    cover_url: str
+    author: str
+
+
+# ---------- 论坛 ----------
+class ForumTopicOut(BaseModel):
+    id: int
+    title: str
+    content: str = ""
+    author: str | None = None
+    author_id: int | None = None
+    demo_slug: str | None = None
+    category: str = "general"
+    tags: list[str] = []
+    pinned: bool = False
+    sticky: bool = False
+    status: str = "normal"
+    reply_count: int = 0
+    view_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class ForumReplyOut(BaseModel):
+    id: int
+    topic_id: int
+    author: str | None = None
+    author_id: int | None = None
+    content: str
+    created_at: datetime
+
+
+class ForumTopicIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = ""
+    demo_slug: str | None = Field(default=None, max_length=128)
+    category: str = Field(default="general", max_length=32)
+    tags: str = Field(default="", max_length=200)  # 逗号分隔
+
+
+class ForumReplyIn(BaseModel):
+    content: str = Field(min_length=1, max_length=10000)
+
+
+class ForumTopicAdminUpdate(BaseModel):
+    pinned: bool | None = None
+    sticky: bool | None = None
+    category: str | None = Field(default=None, max_length=32)
+    status: str | None = Field(default=None, pattern="^(normal|hidden)$")

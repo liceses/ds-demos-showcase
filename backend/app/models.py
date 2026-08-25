@@ -252,4 +252,43 @@ class Announcement(Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
+
+class ForumTopic(Base):
+    """论坛主题。"""
+
+    __tablename__ = "forum_topics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)  # Markdown 原文
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    demo_slug: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    category: Mapped[str] = mapped_column(String(32), default="general", nullable=False, index=True)
+    tags: Mapped[str] = mapped_column(String(200), default="", nullable=False)  # 逗号分隔
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sticky: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden
+    reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    author: Mapped["User | None"] = relationship()
+    replies: Mapped[list["ForumReply"]] = relationship(back_populates="topic", cascade="all, delete-orphan")
+
+
+class ForumReply(Base):
+    """论坛回复。"""
+
+    __tablename__ = "forum_replies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    topic_id: Mapped[int] = mapped_column(ForeignKey("forum_topics.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown 原文
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    topic: Mapped["ForumTopic"] = relationship(back_populates="replies")
+    author: Mapped["User | None"] = relationship()
+
     creator: Mapped["User | None"] = relationship()

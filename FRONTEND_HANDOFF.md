@@ -28,6 +28,7 @@
 | 访问统计 | `GET /stats/visits` 读 PV；**前端必须打点**：`router.afterEach` 调 `api.reportVisit()`（`POST /stats/visit`），一次路由切换 = 1 PV。 |
 | 实时访问 | `GET /stats/live`（在线/近1/5分钟/今日）；**前端必须心跳**：模块级每 30s `api.reportHeartbeat()`（`POST /stats/heartbeat`）。About 页每 10s 拉一次 live。 |
 | 评分/榜单 | `GET/POST/DELETE /demos/{slug}/rating`（1~5，5=神/1=鬼，可改可撤）；`GET /leaderboard?sort=avg|god|ghost|net|count|heat`。匿名评分需传 localStorage `device_id`。 |
+| 论坛 | `GET/POST /forum/topics`、`GET/POST /forum/topics/{id}/replies`（发帖/回复需登录）；admin `/forum/admin/topics`。`GET /demos/{slug}/meta` 轻量作品卡（不增浏览数）。 |
 
 ## 3. 匿名（public）上传
 - 未登录上传：作者恒为 `public`（无 nickname），`author_id=null`；不能评论、不能编辑/删除。

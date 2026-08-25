@@ -5,6 +5,7 @@ import type {
   AdminDemo,
   AdminUser,
   Announcement,
+  AnnouncementInput,
   AuthResponse,
   Comment,
   CreateDemoFromUrlPayload,
@@ -323,11 +324,15 @@ const realApi = {
     const { data } = await http.get('/announcements')
     return data
   },
-  async createAnnouncement(payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+  async adminListAnnouncements(params: { status?: string; category?: string; pinned?: boolean } = {}): Promise<Announcement[]> {
+    const { data } = await http.get('/admin/announcements', { params })
+    return data
+  },
+  async createAnnouncement(payload: AnnouncementInput): Promise<Announcement> {
     const { data } = await http.post('/admin/announcements', payload)
     return data
   },
-  async updateAnnouncement(id: number, payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+  async updateAnnouncement(id: number, payload: AnnouncementInput): Promise<Announcement> {
     const { data } = await http.put(`/admin/announcements/${id}`, payload)
     return data
   },

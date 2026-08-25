@@ -238,11 +238,17 @@ class Announcement(Base):
     __tablename__ = "announcements"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    # manual=手动公告 auto=新 demo 自动公告 update=更新公告（内容为 commit 信息）
+    # manual=手动公告 auto=新 demo 自动公告 update=更新公告（内容为 commit 信息） demo_update=作品更新
     type: Mapped[str] = mapped_column(String(16), default="manual", nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, default="", nullable=False)
     demo_slug: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    # 公告扩展：置顶 / 状态 / 分类 / 定时上下线
+    pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="published", nullable=False, index=True)  # draft | published | offline
+    category: Mapped[str] = mapped_column(String(32), default="general", nullable=False, index=True)  # general | system | demo | ...
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 

@@ -38,21 +38,36 @@
 ]
 ```
 
+#### GET `/api/v1/admin/announcements`（仅 admin）
+
+支持 `?status=draft|published|offline&category=xxx&pinned=true` 过滤，返回全部状态（含草稿/下线）。
+
 #### POST `/api/v1/admin/announcements`（仅 admin）
 
 请求体：
 ```json
-{ "title": "公告标题", "content": "公告内容（可选）", "demo_slug": null }
+{
+  "title": "公告标题",
+  "content": "公告内容（支持 Markdown，可选）",
+  "demo_slug": null,
+  "pinned": false,
+  "status": "published",
+  "category": "general",
+  "published_at": null,
+  "expires_at": null
+}
 ```
 返回 201 + 创建的公告对象（`type` 固定为 `manual`）。
 
 #### PUT `/api/v1/admin/announcements/{id}`（仅 admin）
 
-请求体同上，返回更新后的公告对象。
+请求体同上，返回更新后的公告对象；`demo_slug` 传 null 可清空。
 
 #### DELETE `/api/v1/admin/announcements/{id}`（仅 admin）
 
 返回 204。
+
+> **公开可见规则**：`GET /announcements` 只返回 `status=published`、未过期（`expires_at` 为空或未到）、且已到 `published_at`（为空或已到）的公告；置顶公告排前。自动公告（auto/demo_update）生成时直接 `published`，`category=demo`；站点更新 `category=system`。
 
 ### 前端建议
 

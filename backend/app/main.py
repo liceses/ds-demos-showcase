@@ -193,6 +193,27 @@ def _ensure_tag_columns() -> None:
             conn.exec_driver_sql('ALTER TABLE tags ADD COLUMN "group" TEXT')
 
 
+def _ensure_announcement_columns() -> None:
+    """SQLite 增量迁移：给已存在的 announcements 表补充扩展列。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "announcements" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("announcements")}
+    additions = [
+        ("pinned", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("status", "TEXT NOT NULL DEFAULT 'published'"),
+        ("category", "TEXT NOT NULL DEFAULT 'general'"),
+        ("published_at", "DATETIME"),
+        ("expires_at", "DATETIME"),
+    ]
+    with engine.begin() as conn:
+        for name, ddl in additions:
+            if name not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE announcements ADD COLUMN {name} {ddl}")
+
+
 def init_db() -> None:
     settings.demos_path.mkdir(parents=True, exist_ok=True)
     settings.media_path.mkdir(parents=True, exist_ok=True)
@@ -223,6 +244,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_demo_columns()
     _ensure_tag_columns()
+    _ensure_announcement_columns()
 
     db = SessionLocal()
     try:

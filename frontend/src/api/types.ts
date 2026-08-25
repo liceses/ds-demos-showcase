@@ -236,8 +236,24 @@ export interface Announcement {
   title: string
   content: string
   demo_slug: string | null
+  pinned?: boolean
+  status?: 'draft' | 'published' | 'offline'
+  category?: string
+  published_at?: string | null
+  expires_at?: string | null
   created_by: number | null
   created_at: string
+}
+
+export interface AnnouncementInput {
+  title: string
+  content?: string
+  demo_slug?: string | null
+  pinned?: boolean
+  status?: 'draft' | 'published' | 'offline'
+  category?: string
+  published_at?: string | null
+  expires_at?: string | null
 }
 
 /** 站点访问统计（关于本站页） */

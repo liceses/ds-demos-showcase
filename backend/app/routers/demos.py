@@ -611,6 +611,8 @@ async def _create_demo_record(
         title="新 Demo 发布",
         content=demo.title,
         demo_slug=slug,
+        status="published",
+        category="demo",
         created_by=user.id if user else None,
     ))
     _add_timeline(db, demo.id, "v1", "创建", None)
@@ -920,6 +922,8 @@ async def update_demo(
             title=f"Demo 更新：{demo.title}",
             content=message,
             demo_slug=slug,
+            status="published",
+            category="demo",
             created_by=user.id,
         ))
         # 轻量时间线：记录本次更新；若保留了旧版本，可点击跳转到旧版页面

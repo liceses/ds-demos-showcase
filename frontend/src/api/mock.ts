@@ -5,6 +5,7 @@ import type {
   AdminDemo,
   AdminUser,
   Announcement,
+  AnnouncementInput,
   AuthResponse,
   Comment,
   CreateDemoFromUrlPayload,
@@ -1138,7 +1139,15 @@ export const mockApi = {
     await delay()
     return clone(announcements)
   },
-  async createAnnouncement(payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+  async adminListAnnouncements(params: { status?: string; category?: string; pinned?: boolean } = {}): Promise<Announcement[]> {
+    await delay()
+    let items = [...announcements]
+    if (params.status) items = items.filter((a) => (a.status || 'published') === params.status)
+    if (params.category) items = items.filter((a) => (a.category || 'general') === params.category)
+    if (params.pinned !== undefined) items = items.filter((a) => !!a.pinned === params.pinned)
+    return clone(items)
+  },
+  async createAnnouncement(payload: AnnouncementInput): Promise<Announcement> {
     await delay(200)
     const ann: Announcement = {
       id: Math.max(0, ...announcements.map((a) => a.id)) + 1,
@@ -1146,19 +1155,29 @@ export const mockApi = {
       title: payload.title,
       content: payload.content || '',
       demo_slug: payload.demo_slug ?? null,
+      pinned: payload.pinned ?? false,
+      status: payload.status ?? 'published',
+      category: payload.category ?? 'general',
+      published_at: payload.published_at ?? null,
+      expires_at: payload.expires_at ?? null,
       created_by: currentUser?.id ?? null,
       created_at: new Date().toISOString(),
     }
     announcements.unshift(ann)
     return clone(ann)
   },
-  async updateAnnouncement(id: number, payload: { title: string; content?: string; demo_slug?: string | null }): Promise<Announcement> {
+  async updateAnnouncement(id: number, payload: AnnouncementInput): Promise<Announcement> {
     await delay(200)
     const a = announcements.find((x) => x.id === id)
     if (!a) throw new Error('公告不存在')
     a.title = payload.title
     if (payload.content !== undefined) a.content = payload.content
     if (payload.demo_slug !== undefined) a.demo_slug = payload.demo_slug
+    if (payload.pinned !== undefined) a.pinned = payload.pinned
+    if (payload.status !== undefined) a.status = payload.status
+    if (payload.category !== undefined) a.category = payload.category
+    if (payload.published_at !== undefined) a.published_at = payload.published_at
+    if (payload.expires_at !== undefined) a.expires_at = payload.expires_at
     return clone(a)
   },
   async deleteAnnouncement(id: number): Promise<void> {

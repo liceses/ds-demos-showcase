@@ -290,6 +290,11 @@ class AnnouncementOut(ORMModel):
     title: str
     content: str
     demo_slug: str | None = None
+    pinned: bool = False
+    status: str = "published"  # draft | published | offline
+    category: str = "general"  # general | system | demo | ...
+    published_at: datetime | None = None
+    expires_at: datetime | None = None
     created_by: int | None = None
     created_at: datetime
 
@@ -298,3 +303,8 @@ class AnnouncementUpsert(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     content: str = ""
     demo_slug: str | None = None
+    pinned: bool = False
+    status: str = Field(default="published", pattern="^(draft|published|offline)$")
+    category: str = Field(default="general", max_length=32)
+    published_at: datetime | None = None
+    expires_at: datetime | None = None

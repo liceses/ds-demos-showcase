@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -22,17 +22,31 @@ def _parse_commit_date(value: str) -> datetime:
         return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _is_public_visible(a: Announcement) -> bool:
+    """公开可见：published 且未过期且已到发布时间。"""
+    now = datetime.utcnow()
+    if a.status != "published":
+        return False
+    if a.published_at is not None and a.published_at > now:
+        return False
+    if a.expires_at is not None and a.expires_at < now:
+        return False
+    return True
+
+
 @router.get("/announcements", response_model=list[AnnouncementOut])
 def list_announcements(db: Session = Depends(get_db)):
     items: list[AnnouncementOut] = []
 
-    # 1) 数据库公告：manual（手动）/ auto（新 Demo 发布）/ demo_update（作品更新）
+    # 1) 数据库公告：只返回 published 且未过期/已到发布时间的
     for a in (
         db.query(Announcement)
-        .order_by(Announcement.created_at.desc(), Announcement.id.desc())
+        .order_by(Announcement.pinned.desc(), Announcement.created_at.desc(), Announcement.id.desc())
         .limit(50)
         .all()
     ):
+        if not _is_public_visible(a):
+            continue
         out = AnnouncementOut.model_validate(a)
         # 兼容旧数据：之前 type=update 且带 demo_slug 的记录归为作品更新
         if a.type == "update" and a.demo_slug:
@@ -48,13 +62,36 @@ def list_announcements(db: Session = Depends(get_db)):
                 title="站点更新",
                 content=c["message"],
                 demo_slug=None,
+                pinned=False,
+                status="published",
+                category="system",
+                published_at=None,
+                expires_at=None,
                 created_by=None,
                 created_at=_parse_commit_date(c["date"]),
             )
         )
 
-    items.sort(key=lambda x: (x.created_at, x.id), reverse=True)
+    items.sort(key=lambda x: (x.pinned, x.created_at, x.id), reverse=True)
     return items[:50]
+
+
+@router.get("/admin/announcements", response_model=list[AnnouncementOut])
+def admin_list_announcements(
+    status: str | None = Query(default=None, pattern="^(draft|published|offline)$"),
+    category: str | None = None,
+    pinned: bool | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    q = db.query(Announcement)
+    if status:
+        q = q.filter(Announcement.status == status)
+    if category:
+        q = q.filter(Announcement.category == category)
+    if pinned is not None:
+        q = q.filter(Announcement.pinned == pinned)
+    return q.order_by(Announcement.pinned.desc(), Announcement.created_at.desc(), Announcement.id.desc()).all()
 
 
 @router.post("/admin/announcements", status_code=201, response_model=AnnouncementOut)
@@ -68,6 +105,11 @@ def create_announcement(
         title=body.title,
         content=body.content,
         demo_slug=body.demo_slug,
+        pinned=body.pinned,
+        status=body.status,
+        category=body.category,
+        published_at=body.published_at,
+        expires_at=body.expires_at,
         created_by=admin.id,
     )
     db.add(ann)
@@ -90,6 +132,11 @@ def update_announcement(
     ann.content = body.content
     # 允许清空：demo_slug 传 null 即置空
     ann.demo_slug = body.demo_slug
+    ann.pinned = body.pinned
+    ann.status = body.status
+    ann.category = body.category
+    ann.published_at = body.published_at
+    ann.expires_at = body.expires_at
     db.commit()
     db.refresh(ann)
     return ann

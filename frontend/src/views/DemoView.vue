@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
 import type { Comment, DemoDetail, DemoSummary, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
-import MarkdownView from '../components/MarkdownView.vue'
+import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import CommentTree from '../components/CommentTree.vue'
 import DemoCard from '../components/DemoCard.vue'
@@ -286,7 +286,7 @@ onMounted(load)
             <div v-if="selectedLog" class="card card-mint" style="padding: 20px">
               <div v-if="loadingLog" class="loading-row"><span class="spinner"></span> 加载会话…</div>
               <DshTrajectoryView v-else-if="selectedLog.endsWith('.jsonl')" :raw="logContent" />
-              <MarkdownView v-else :content="logContent" />
+              <MarkdownRenderer v-else :content="logContent" />
             </div>
           </template>
 

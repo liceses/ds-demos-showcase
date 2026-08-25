@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Announcement } from '../api/types'
 import { annCls, annLabel, timeAgo } from '../utils/announcement'
+import MarkdownRenderer from './MarkdownRenderer.vue'
 
 const props = defineProps<{ title: string; items: Announcement[] }>()
 
@@ -32,7 +33,7 @@ const visible = computed(() => (expanded.value ? props.items.slice(0, 6) : props
         <span class="ann-stamp">{{ annLabel(a.type) }}</span>
         <div class="ann-main">
           <div class="ann-title">{{ a.title }}</div>
-          <p v-if="a.content" class="ann-content">{{ a.content }}</p>
+          <MarkdownRenderer v-if="a.content" :content="a.content" compact />
         </div>
         <span class="ann-time">{{ timeAgo(a.created_at) }}</span>
       </component>

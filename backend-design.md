@@ -185,7 +185,10 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **权限**：发帖/回复必须登录（用户+IP 双维限流 10/30 每小时）；匿名只读；Markdown 存原文，前端消毒渲染。
 - **审核**：新用户（need_review 或 trust_level<1）发帖/回复进 reviewing；admin 审核 approve 置 normal 并提 trust_level。
 - **链接安全**：内容链接仅 http/https，拒绝内网/回环/保留地址 + 域名黑名单（`_validate_links`）。
-- **接口**：公开列表/详情/回复；登录发帖/回复/举报；admin 全量/审核/隐藏/删除/封禁/举报处理。
+- **接口**：公开列表/详情/回复；登录发帖/回复/举报；admin 全量/审核/隐藏/删除/封禁/举报处理 + 回复管理列表。
+- **首帖**：`init_db` 幂等创建置顶「论坛发帖须知 & 安全说明」（读 `docs/论坛首帖-用户须知与安全说明.md`）。
+- **公告互链**：`Announcement.topic_id`（FK forum_topics SET NULL），响应带 `topic_title`；创建/更新校验 topic 为 normal。
+- **限流提示**：429 带 `Retry-After` 头 + 冷却秒数。
 - **作品 meta**：`GET /demos/{slug}/meta` 轻量返回 `{slug,title,cover_url,author}`，**不增加 view_count**（富卡片专用）。
 - **迁移**：`scripts/migrate_comments_to_forum.py` 把历史 comments 按 demo 归集为论坛主题/回复（创建或复用主题，保留 author/content/created_at，`source_comment_id` 幂等去重，重跑不重复）。
 - **旧评论**：`GET /demos/{slug}/comments` 只读保留；`POST`/`DELETE` 返回 410（迁移到论坛）。

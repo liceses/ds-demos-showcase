@@ -62,10 +62,11 @@
   "status": "published",
   "category": "general",
   "published_at": null,
-  "expires_at": null
+  "expires_at": null,
+  "topic_id": null
 }
 ```
-返回 201 + 创建的公告对象（`type` 固定为 `manual`）。
+返回 201 + 创建的公告对象（`type` 固定为 `manual`）；`topic_id` 关联正常论坛主题，响应带 `topic_title` 供前端显示「去讨论」。
 
 #### PUT `/api/v1/admin/announcements/{id}`（仅 admin）
 
@@ -693,6 +694,10 @@ GET /api/v1/demos?status=approved&author=public
 | POST | `/forum/admin/users/{uid}/ban` | admin | 封禁用户（status=banned） |
 | GET | `/forum/admin/reports?status=open` | admin | 举报列表 |
 | POST | `/forum/admin/reports/{id}/handle` | admin | `{action:resolve\|dismiss}` 处理举报 |
+| GET | `/forum/admin/replies?topic_id=&status=` | admin | 回复管理列表（含 hidden/reviewing） |
+
+- **首帖初始化**：启动时幂等创建置顶「论坛发帖须知 & 安全说明」（category=notice，内容读取 `docs/论坛首帖-用户须知与安全说明.md`）。
+- **限流提示**：429 响应带 `Retry-After` 头 + detail 含剩余冷却秒数。
 
 ### 迁移脚本
 `scripts/migrate_comments_to_forum.py`：把历史 comments 按 demo_id 归集为论坛主题+回复（**创建/复用主题，保留 author/content/created_at，按 `source_comment_id` 幂等**，重复执行不产生重复楼层；最后检查孤儿评论）。

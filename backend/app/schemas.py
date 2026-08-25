@@ -295,6 +295,8 @@ class AnnouncementOut(ORMModel):
     category: str = "general"  # general | system | demo | ...
     published_at: datetime | None = None
     expires_at: datetime | None = None
+    topic_id: int | None = None
+    topic_title: str | None = None
     created_by: int | None = None
     created_at: datetime
 
@@ -308,6 +310,7 @@ class AnnouncementUpsert(BaseModel):
     category: str = Field(default="general", max_length=32)
     published_at: datetime | None = None
     expires_at: datetime | None = None
+    topic_id: int | None = None
 
 
 # ---------- 作品 meta（富卡片） ----------

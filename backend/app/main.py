@@ -7,7 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .models import Setting, Tag, TagKey, User
+from .models import ForumTopic, Setting, Tag, TagKey, User
 from .routers import admin, announcements, auth, comments, demos, forum, meta, ratings, sessions, stats, tags, users
 from .security import hash_password
 from .services import oss
@@ -208,6 +208,7 @@ def _ensure_announcement_columns() -> None:
         ("category", "TEXT NOT NULL DEFAULT 'general'"),
         ("published_at", "DATETIME"),
         ("expires_at", "DATETIME"),
+        ("topic_id", "INTEGER"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:
@@ -232,6 +233,33 @@ def _ensure_user_columns() -> None:
         for name, ddl in additions:
             if name not in cols:
                 conn.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {name} {ddl}")
+
+
+def _seed_forum_notice() -> None:
+    """论坛首帖初始化：幂等创建置顶的「用户须知 & 安全说明」。"""
+    db = SessionLocal()
+    try:
+        if db.query(ForumTopic).filter(ForumTopic.category == "notice", ForumTopic.pinned == True).first():  # noqa: E712
+            return
+        admin = db.query(User).filter(User.role == "admin").first()
+        path = settings.site_repo_path / "docs/论坛首帖-用户须知与安全说明.md"
+        if path.exists():
+            content = path.read_text(encoding="utf-8")
+        else:
+            content = "论坛发帖须知：请遵守法律法规，文明发言，不得发布违规内容。"
+        db.add(ForumTopic(
+            title="论坛发帖须知 & 安全说明",
+            content=content,
+            author_id=admin.id if admin else None,
+            category="notice",
+            tags="须知,安全",
+            pinned=True,
+            sticky=True,
+            status="normal",
+        ))
+        db.commit()
+    finally:
+        db.close()
 
 
 def init_db() -> None:
@@ -266,6 +294,7 @@ def init_db() -> None:
     _ensure_tag_columns()
     _ensure_announcement_columns()
     _ensure_user_columns()
+    _seed_forum_notice()
 
     db = SessionLocal()
     try:

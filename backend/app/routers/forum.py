@@ -50,7 +50,13 @@ def _rate_limit(request: Request, key: str, limit: int, user: User) -> None:
     for bucket in (f"{key}:{user.id}", f"{key}:{ip}"):
         _hits[bucket] = [t for t in _hits[bucket] if t > now - 3600]
         if len(_hits[bucket]) >= limit:
-            raise HTTPException(status_code=429, detail=f"操作过于频繁（每 IP/用户每小时 {limit} 次）", )
+            oldest = _hits[bucket][0] if _hits[bucket] else now
+            wait = max(1, int(3600 - (now - oldest)))
+            raise HTTPException(
+                status_code=429,
+                detail=f"操作过于频繁（每 IP/用户每小时 {limit} 次），请 {wait} 秒后重试",
+                headers={"Retry-After": str(wait)},
+            )
         _hits[bucket].append(now)
 
 
@@ -281,6 +287,23 @@ def admin_list_topics(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get("/admin/replies", response_model=list[ForumReplyOut])
+def admin_list_replies(
+    topic_id: int | None = None,
+    status: str | None = Query(default=None, pattern="^(normal|hidden|reviewing)$"),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """管理端回复列表：可按主题/状态过滤（含 hidden/reviewing）。"""
+    q = db.query(ForumReply)
+    if topic_id is not None:
+        q = q.filter(ForumReply.topic_id == topic_id)
+    if status:
+        q = q.filter(ForumReply.status == status)
+    rows = q.order_by(ForumReply.created_at.desc(), ForumReply.id.desc()).all()
+    return [_reply_out(r) for r in rows]
 
 
 @router.put("/admin/topics/{tid}", response_model=ForumTopicOut)

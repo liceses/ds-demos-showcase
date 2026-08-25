@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_admin
-from ..models import Announcement, User
+from ..models import Announcement, ForumTopic, User
 from ..schemas import AnnouncementOut, AnnouncementUpsert
 from ..services.site_git import list_site_commits
 
@@ -34,6 +34,26 @@ def _is_public_visible(a: Announcement) -> bool:
     return True
 
 
+def _ann_out(db: Session, a: Announcement) -> AnnouncementOut:
+    out = AnnouncementOut.model_validate(a)
+    if a.type == "update" and a.demo_slug:
+        out.type = "demo_update"
+    if a.topic_id:
+        t = db.get(ForumTopic, a.topic_id)
+        out.topic_id = a.topic_id
+        out.topic_title = t.title if t else None
+    return out
+
+
+def _validate_topic_ref(db: Session, topic_id: int | None) -> int | None:
+    if topic_id is None:
+        return None
+    t = db.get(ForumTopic, topic_id)
+    if t is None or t.status != "normal":
+        raise HTTPException(status_code=422, detail="关联论坛主题不存在或未上线", )
+    return topic_id
+
+
 @router.get("/announcements", response_model=list[AnnouncementOut])
 def list_announcements(db: Session = Depends(get_db)):
     items: list[AnnouncementOut] = []
@@ -47,11 +67,7 @@ def list_announcements(db: Session = Depends(get_db)):
     ):
         if not _is_public_visible(a):
             continue
-        out = AnnouncementOut.model_validate(a)
-        # 兼容旧数据：之前 type=update 且带 demo_slug 的记录归为作品更新
-        if a.type == "update" and a.demo_slug:
-            out.type = "demo_update"
-        items.append(out)
+        items.append(_ann_out(db, a))
 
     # 2) 实时「更新公告」：网站自身 git 仓库的 commit 信息
     for i, c in enumerate(list_site_commits(30)):
@@ -84,10 +100,7 @@ def get_announcement(ann_id: int, db: Session = Depends(get_db)):
     a = db.get(Announcement, ann_id)
     if a is None or not _is_public_visible(a):
         raise HTTPException(status_code=404, detail="公告不存在或未发布", )
-    out = AnnouncementOut.model_validate(a)
-    if a.type == "update" and a.demo_slug:
-        out.type = "demo_update"
-    return out
+    return _ann_out(db, a)
 
 
 @router.get("/admin/announcements/{ann_id}", response_model=AnnouncementOut)
@@ -102,7 +115,7 @@ def admin_get_announcement(
     a = db.get(Announcement, ann_id)
     if a is None:
         raise HTTPException(status_code=404, detail="公告不存在", )
-    return a
+    return _ann_out(db, a)
 
 
 @router.get("/admin/announcements", response_model=list[AnnouncementOut])
@@ -120,7 +133,8 @@ def admin_list_announcements(
         q = q.filter(Announcement.category == category)
     if pinned is not None:
         q = q.filter(Announcement.pinned == pinned)
-    return q.order_by(Announcement.pinned.desc(), Announcement.created_at.desc(), Announcement.id.desc()).all()
+    rows = q.order_by(Announcement.pinned.desc(), Announcement.created_at.desc(), Announcement.id.desc()).all()
+    return [_ann_out(db, a) for a in rows]
 
 
 @router.post("/admin/announcements", status_code=201, response_model=AnnouncementOut)
@@ -139,12 +153,13 @@ def create_announcement(
         category=body.category,
         published_at=body.published_at,
         expires_at=body.expires_at,
+        topic_id=_validate_topic_ref(db, body.topic_id),
         created_by=admin.id,
     )
     db.add(ann)
     db.commit()
     db.refresh(ann)
-    return ann
+    return _ann_out(db, ann)
 
 
 @router.put("/admin/announcements/{ann_id}", response_model=AnnouncementOut)
@@ -166,9 +181,10 @@ def update_announcement(
     ann.category = body.category
     ann.published_at = body.published_at
     ann.expires_at = body.expires_at
+    ann.topic_id = _validate_topic_ref(db, body.topic_id)
     db.commit()
     db.refresh(ann)
-    return ann
+    return _ann_out(db, ann)
 
 
 @router.delete("/admin/announcements/{ann_id}", status_code=204)

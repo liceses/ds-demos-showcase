@@ -253,6 +253,8 @@ class Announcement(Base):
     category: Mapped[str] = mapped_column(String(32), default="general", nullable=False, index=True)  # general | system | demo | ...
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # 关联论坛主题（公告 ↔ 讨论互链）
+    topic_id: Mapped[int | None] = mapped_column(ForeignKey("forum_topics.id", ondelete="SET NULL"), nullable=True, index=True)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 

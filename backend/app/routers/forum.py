@@ -24,7 +24,7 @@ from ..schemas import (
     ForumTopicAdminUpdate,
     ForumTopicIn,
     ForumTopicOut,
-    Paginated,
+    ForumTopicPage,
 )
 
 router = APIRouter(prefix="/forum", tags=["forum"])
@@ -131,7 +131,7 @@ def _find_visible_topic(db: Session, tid: int) -> ForumTopic:
 
 
 # ---------- 公开 ----------
-@router.get("/topics", response_model=Paginated)
+@router.get("/topics", response_model=ForumTopicPage)
 def list_topics(
     q: str | None = None,
     category: str | None = None,
@@ -264,7 +264,7 @@ def create_report(
 
 
 # ---------- 管理 ----------
-@router.get("/admin/topics", response_model=Paginated)
+@router.get("/admin/topics", response_model=ForumTopicPage)
 def admin_list_topics(
     q: str | None = None,
     status: str | None = Query(default=None, pattern="^(normal|hidden|reviewing)$"),

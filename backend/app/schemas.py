@@ -221,6 +221,13 @@ class Paginated(BaseModel):
     page_size: int
 
 
+class ForumTopicPage(BaseModel):
+    items: list[ForumTopicOut]
+    total: int
+    page: int
+    page_size: int
+
+
 class DemoCreateResult(BaseModel):
     slug: str
     status: str

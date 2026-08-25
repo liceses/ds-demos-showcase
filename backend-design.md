@@ -187,7 +187,8 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **链接安全**：内容链接仅 http/https，拒绝内网/回环/保留地址 + 域名黑名单（`_validate_links`）。
 - **接口**：公开列表/详情/回复；登录发帖/回复/举报；admin 全量/审核/隐藏/删除/封禁/举报处理。
 - **作品 meta**：`GET /demos/{slug}/meta` 轻量返回 `{slug,title,cover_url,author}`，**不增加 view_count**（富卡片专用）。
-- **迁移**：`scripts/migrate_comments_to_forum.py` 把历史 comments 按 demo 归集为论坛主题/回复（幂等）。
+- **迁移**：`scripts/migrate_comments_to_forum.py` 把历史 comments 按 demo 归集为论坛主题/回复（创建或复用主题，保留 author/content/created_at，`source_comment_id` 幂等去重，重跑不重复）。
+- **旧评论**：`GET /demos/{slug}/comments` 只读保留；`POST`/`DELETE` 返回 410（迁移到论坛）。
 
 ---
 

@@ -623,7 +623,7 @@ GET /api/v1/demos?status=approved&author=public
 
 ### Demo / 评论 / 会话日志
 - `GET /api/v1/demos/{slug}/download`：下载原始文件（zip 或单文件）
-- `GET /api/v1/demos/{slug}/comments`、`POST /api/v1/demos/{slug}/comments`、`DELETE /api/v1/comments/{comment_id}`：评论树
+- `GET /api/v1/demos/{slug}/comments`：旧评论树，**只读保留**；`POST /demos/{slug}/comments` 与 `DELETE /comments/{id}` 已下线（410），请用论坛 `/forum/topics`
 - `GET /api/v1/demos/{slug}/session-logs`：会话日志列表
 - `GET /api/v1/demos/{slug}/session-logs/{filename}`：会话日志内容（每 IP 60 次/小时限流）
 
@@ -695,4 +695,4 @@ GET /api/v1/demos?status=approved&author=public
 | POST | `/forum/admin/reports/{id}/handle` | admin | `{action:resolve\|dismiss}` 处理举报 |
 
 ### 迁移脚本
-`scripts/migrate_comments_to_forum.py`：把历史 comments 按 demo_id 归集为论坛主题+回复（幂等，已有该 demo 主题则跳过）。
+`scripts/migrate_comments_to_forum.py`：把历史 comments 按 demo_id 归集为论坛主题+回复（**创建/复用主题，保留 author/content/created_at，按 `source_comment_id` 幂等**，重复执行不产生重复楼层；最后检查孤儿评论）。

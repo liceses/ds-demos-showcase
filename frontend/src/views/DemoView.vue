@@ -4,13 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { Comment, DemoDetail, DemoSummary, SessionLog } from '../api/types'
+import type { DemoDetail, DemoSummary, SessionLog } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
-import CommentTree from '../components/CommentTree.vue'
 import DemoCard from '../components/DemoCard.vue'
 import RatingWidget from '../components/RatingWidget.vue'
+import ForumThread from '../components/ForumThread.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,16 +21,12 @@ const slug = String(route.params.slug)
 const demo = ref<DemoDetail | null>(null)
 const loading = ref(true)
 const error = ref('')
-const activeTab = ref<'info' | 'timeline' | 'session' | 'comments'>('info')
+const activeTab = ref<'info' | 'timeline' | 'session' | 'discussion'>('info')
 
 const sessionLogs = ref<SessionLog[]>([])
-const comments = ref<Comment[]>([])
 const selectedLog = ref<string | null>(null)
 const logContent = ref('')
 const loadingLog = ref(false)
-const commentText = ref('')
-const posting = ref(false)
-const commentError = ref('')
 
 // 相关推荐：候选池 + 本地换一批（不重复）
 const RELATED_BATCH = 6
@@ -74,12 +70,7 @@ async function load() {
   error.value = ''
   try {
     demo.value = await api.getDemo(slug)
-    const [s, cm] = await Promise.all([
-      api.listSessionLogs(slug).catch(() => []),
-      api.listComments(slug).catch(() => []),
-    ])
-    sessionLogs.value = s
-    comments.value = cm
+    sessionLogs.value = await api.listSessionLogs(slug).catch(() => [])
     await loadRelated()
     drawRelated()
     if (!relatedShown.value.length && relatedPool.value.length) drawRelated()
@@ -99,21 +90,6 @@ async function openLog(filename: string) {
     logContent.value = `加载失败：${(e as Error).message}`
   } finally {
     loadingLog.value = false
-  }
-}
-
-async function submitComment() {
-  if (!commentText.value.trim()) return
-  posting.value = true
-  commentError.value = ''
-  try {
-    await api.postComment(slug, commentText.value.trim())
-    commentText.value = ''
-    comments.value = await api.listComments(slug)
-  } catch (e) {
-    commentError.value = (e as Error).message
-  } finally {
-    posting.value = false
   }
 }
 

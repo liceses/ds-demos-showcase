@@ -291,6 +291,8 @@ class ForumReply(Base):
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown 原文
     status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden | reviewing
+    # 历史评论迁移标记：指向来源 comment.id（幂等去重用）
+    source_comment_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     topic: Mapped["ForumTopic"] = relationship(back_populates="replies")

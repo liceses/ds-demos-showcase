@@ -1,9 +1,11 @@
-"""一次性脚本：把历史 comments 归集为论坛回复（按 demo_id 建主题）。
+"""一次性脚本：把历史 comments 归集为论坛回复（按 demo_id 建/复用主题）。
 
 用法（web/ 目录下）：
     python scripts/migrate_comments_to_forum.py
+容器内：
+    docker compose exec backend python /site-repo/scripts/migrate_comments_to_forum.py
 
-幂等：已存在同 demo_slug 的论坛主题则跳过该 demo。
+幂等：以 forum_replies.source_comment_id 去重；重复执行不会产生重复楼层。
 """
 
 import sys
@@ -21,41 +23,72 @@ def main() -> None:
         demo_ids = [cid for (cid,) in db.query(Comment.demo_id).distinct().all()]
         created_topics = 0
         created_replies = 0
+        skipped = 0
+        orphan_comments = 0
+
         for demo_id in demo_ids:
             demo = db.get(Demo, demo_id)
             if demo is None:
+                # 评论指向已不存在的 demo（孤儿评论）
+                orphan_comments += db.query(Comment).filter(Comment.demo_id == demo_id).count()
                 continue
-            # 幂等：已有该 demo 的主题则跳过
-            if db.query(ForumTopic).filter(ForumTopic.demo_slug == demo.slug).first():
-                continue
-            topic = ForumTopic(
-                title=f"{demo.title} 的讨论",
-                content="历史评论迁移",
-                author_id=demo.author_id,
-                demo_slug=demo.slug,
-                category="demo",
-                status="normal",
-            )
-            db.add(topic)
-            db.flush()
+
             comments = (
                 db.query(Comment)
                 .filter(Comment.demo_id == demo_id)
                 .order_by(Comment.created_at, Comment.id)
                 .all()
             )
+            if not comments:
+                continue
+
+            # 创建/复用主题
+            topic = db.query(ForumTopic).filter(ForumTopic.demo_slug == demo.slug).first()
+            if topic is None:
+                topic = ForumTopic(
+                    title=f"{demo.title} 的讨论",
+                    content="历史评论迁移",
+                    author_id=demo.author_id,
+                    demo_slug=demo.slug,
+                    category="demo",
+                    status="normal",
+                    created_at=comments[0].created_at,
+                    updated_at=comments[-1].created_at,
+                )
+                db.add(topic)
+                db.flush()
+                created_topics += 1
+
+            # 迁移评论（source_comment_id 去重）
             for c in comments:
+                if db.query(ForumReply).filter(ForumReply.source_comment_id == c.id).first():
+                    skipped += 1
+                    continue
                 db.add(ForumReply(
                     topic_id=topic.id,
                     author_id=c.user_id,
                     content=c.content,
                     status="normal",
+                    source_comment_id=c.id,
+                    created_at=c.created_at,
                 ))
-                topic.reply_count += 1
                 created_replies += 1
-            created_topics += 1
+
+            # 重算 reply_count（幂等后也准确）
+            topic.reply_count = (
+                db.query(ForumReply).filter(ForumReply.topic_id == topic.id).count()
+            )
+            topic.updated_at = comments[-1].created_at
+
         db.commit()
-        print(f"完成：迁移 {created_topics} 个主题，{created_replies} 条回复")
+
+        # 孤儿评论统计（comments 引用的 demo 已不存在）
+        orphan_total = orphan_comments
+        print(f"完成：新建主题 {created_topics} 个，迁移回复 {created_replies} 条，跳过已迁移 {skipped} 条")
+        if orphan_total:
+            print(f"⚠️ 孤儿评论（demo 不存在）：{orphan_total} 条，未迁移")
+        else:
+            print("✅ 无孤儿评论")
     finally:
         db.close()
 

@@ -64,48 +64,13 @@ def list_comments(slug: str, db: Session = Depends(get_db)):
     return _build_tree(comments)
 
 
-@router.post("/demos/{slug}/comments", status_code=201, response_model=CommentOut)
-def create_comment(
-    slug: str,
-    body: CommentCreate,
-    db: Session = Depends(get_db),
-    user: User = Depends(current_user),
-):
-    demo = _find_demo(db, slug)
-    if body.parent_id is not None:
-        parent = db.get(Comment, body.parent_id)
-        if parent is None or parent.demo_id != demo.id:
-            raise HTTPException(status_code=404, detail="父评论不存在", )
-        if _depth_of(db, parent.id) >= MAX_DEPTH:
-            raise HTTPException(status_code=400, detail="回复深度已达上限", )
-    comment = Comment(
-        demo_id=demo.id,
-        user_id=user.id,
-        parent_id=body.parent_id,
-        content=body.content,
-    )
-    db.add(comment)
-    db.commit()
-    db.refresh(comment)
-    return CommentOut(
-        id=comment.id,
-        demo_id=comment.demo_id,
-        user_id=comment.user_id,
-        username=user.username,
-        parent_id=comment.parent_id,
-        content=comment.content,
-        created_at=comment.created_at,
-        children=[],
-    )
+@router.post("/demos/{slug}/comments", status_code=410)
+def create_comment(slug: str, body: CommentCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """评论已迁移到论坛：写操作下线，返回 410。"""
+    raise HTTPException(status_code=410, detail="评论已迁移到论坛讨论，请使用 /forum/topics", )
 
 
-@router.delete("/comments/{comment_id}", status_code=204)
+@router.delete("/comments/{comment_id}", status_code=410)
 def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    comment = db.get(Comment, comment_id)
-    if comment is None:
-        raise HTTPException(status_code=404, detail="评论不存在", )
-    if comment.user_id != user.id and user.role != "admin":
-        raise HTTPException(status_code=403, detail="无权删除该评论", )
-    db.delete(comment)
-    db.commit()
-    return Response(status_code=204)
+    """评论已迁移到论坛：写操作下线，返回 410。"""
+    raise HTTPException(status_code=410, detail="评论已迁移到论坛讨论，请在论坛管理处理", )

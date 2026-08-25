@@ -38,6 +38,14 @@
 ]
 ```
 
+#### GET `/api/v1/announcements/{id}`（公开）
+
+返回单条公告详情（仅可见公告，否则 404）；站点更新（负 id）无详情返回 404。
+
+#### GET `/api/v1/admin/announcements/{id}`（仅 admin）
+
+返回任意状态公告详情（含草稿/下线）。
+
 #### GET `/api/v1/admin/announcements`（仅 admin）
 
 支持 `?status=draft|published|offline&category=xxx&pinned=true` 过滤，返回全部状态（含草稿/下线）。

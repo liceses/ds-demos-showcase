@@ -76,6 +76,35 @@ def list_announcements(db: Session = Depends(get_db)):
     return items[:50]
 
 
+@router.get("/announcements/{ann_id}", response_model=AnnouncementOut)
+def get_announcement(ann_id: int, db: Session = Depends(get_db)):
+    """公开详情：只返回可见公告（published 未过期），否则 404。站点更新（负 id）无详情。"""
+    if ann_id < 0:
+        raise HTTPException(status_code=404, detail="站点更新无详情", )
+    a = db.get(Announcement, ann_id)
+    if a is None or not _is_public_visible(a):
+        raise HTTPException(status_code=404, detail="公告不存在或未发布", )
+    out = AnnouncementOut.model_validate(a)
+    if a.type == "update" and a.demo_slug:
+        out.type = "demo_update"
+    return out
+
+
+@router.get("/admin/announcements/{ann_id}", response_model=AnnouncementOut)
+def admin_get_announcement(
+    ann_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """管理端详情：任意状态可见。"""
+    if ann_id < 0:
+        raise HTTPException(status_code=404, detail="站点更新无详情", )
+    a = db.get(Announcement, ann_id)
+    if a is None:
+        raise HTTPException(status_code=404, detail="公告不存在", )
+    return a
+
+
 @router.get("/admin/announcements", response_model=list[AnnouncementOut])
 def admin_list_announcements(
     status: str | None = Query(default=None, pattern="^(draft|published|offline)$"),

@@ -22,7 +22,10 @@ const emit = defineEmits<{ close: [] }>()
           <button class="btn btn-sm btn-dark" type="button" @click="emit('close')">关闭</button>
         </div>
         <MarkdownRenderer :content="ann.content" />
-        <p class="muted" style="font-size: 12px; margin-top: 14px">{{ new Date(ann.created_at).toLocaleString('zh-CN') }}</p>
+        <div class="filter-row" style="margin-top: 14px">
+          <RouterLink v-if="ann.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${ann.topic_id}`">去讨论 →</RouterLink>
+          <span class="muted" style="font-size: 12px">{{ new Date(ann.created_at).toLocaleString('zh-CN') }}</span>
+        </div>
       </div>
     </div>
   </Teleport>

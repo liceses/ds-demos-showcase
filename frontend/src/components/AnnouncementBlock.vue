@@ -41,6 +41,7 @@ const statusLabel: Record<string, string> = { draft: '草稿', published: '已�
           <div class="ann-title">
             <span v-if="a.pinned" class="ann-pin">置顶</span>
             <span v-if="a.category" class="ann-cat">{{ a.category }}</span>
+            <RouterLink v-if="a.topic_id && !a.demo_slug" class="ann-cat" :to="`/forum/topic/${a.topic_id}`">讨论</RouterLink>
             <span v-if="showStatus && a.status" class="ann-status" :class="'status-' + a.status">{{ statusLabel[a.status] }}</span>
             {{ a.title }}
           </div>

@@ -46,7 +46,9 @@ async function submitReply() {
     replyPreview.value = false
     await load()
   } catch (e) {
-    ui.toast((e as Error).message, 'error')
+    const err = e as Error & { cause?: unknown }
+    if (err.cause === 429) ui.toast('操作过于频繁，请稍后再试', 'error')
+    else ui.toast(err.message, 'error')
   } finally {
     posting.value = false
   }

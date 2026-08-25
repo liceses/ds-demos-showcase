@@ -36,6 +36,20 @@ async function load() {
   }
 }
 
+async function reportTopic() {
+  if (!topic.value) return
+  const reason = window.prompt('举报理由（必填）')
+  if (!reason || !reason.trim()) return
+  try {
+    await api.createForumReport({ target_type: 'topic', target_id: topic.value.id, reason: reason.trim() })
+    ui.toast('举报已提交，感谢反馈', 'success')
+  } catch (e) {
+    const err = e as Error & { cause?: unknown }
+    if (err.cause === 429) ui.toast('操作过于频繁，请稍后再试', 'error')
+    else ui.toast(err.message, 'error')
+  }
+}
+
 async function submitReply() {
   if (!replyText.value.trim()) return
   posting.value = true
@@ -45,7 +59,9 @@ async function submitReply() {
     replyPreview.value = false
     await load()
   } catch (e) {
-    ui.toast((e as Error).message, 'error')
+    const err = e as Error & { cause?: unknown }
+    if (err.cause === 429) ui.toast('操作过于频繁，请稍后再试', 'error')
+    else ui.toast(err.message, 'error')
   } finally {
     posting.value = false
   }
@@ -79,7 +95,7 @@ onMounted(load)
           <span class="forum-stat">浏览 {{ topic.view_count }}</span>
           <span>{{ new Date(topic.created_at).toLocaleString('zh-CN') }}</span>
           <RouterLink v-if="topic.demo_slug" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
-          <button class="btn btn-sm btn-outline" type="button" @click="ui.toast('举报功能即将上线', 'info')">举报</button>
+          <button class="btn btn-sm btn-outline" type="button" @click="reportTopic">举报</button>
         </div>
         <MarkdownRenderer :content="topic.content" />
       </div>

@@ -16,6 +16,8 @@ import type {
   ForumReply,
   ForumTopicInput,
   ForumTopicAdminUpdate,
+  ForumReport,
+  ForumReportInput,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -201,6 +203,30 @@ const realApi = {
   async adminDeleteForumReply(id: number): Promise<void> {
     await http.delete(`/forum/admin/replies/${id}`)
   },
+  async adminReviewForumTopic(id: number, action: 'approve' | 'reject'): Promise<ForumTopic> {
+    const { data } = await http.post(`/forum/admin/topics/${id}/review`, { action })
+    return data
+  },
+  async adminReviewForumReply(id: number, action: 'approve' | 'reject'): Promise<ForumReply> {
+    const { data } = await http.post(`/forum/admin/replies/${id}/review`, { action })
+    return data
+  },
+  async listForumReports(): Promise<ForumReport[]> {
+    const { data } = await http.get('/forum/admin/reports')
+    return data
+  },
+  async handleForumReport(id: number, action: 'handle' | 'ignore'): Promise<ForumReport> {
+    const { data } = await http.post(`/forum/admin/reports/${id}/handle`, { action })
+    return data
+  },
+  async createForumReport(payload: ForumReportInput): Promise<ForumReport> {
+    const { data } = await http.post('/forum/reports', payload)
+    return data
+  },
+  async adminBanUser(id: number): Promise<void> {
+    await http.post(`/forum/admin/users/${id}/ban`)
+  },
+
 
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {
     const form = new FormData()

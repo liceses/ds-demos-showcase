@@ -272,6 +272,22 @@ export interface ForumTopicAdminUpdate {
   status?: string
 }
 
+export interface ForumReport {
+  id: number
+  target_type: 'topic' | 'reply'
+  target_id: number
+  reason: string
+  status: 'pending' | 'handled' | 'ignored'
+  reporter_id: number
+  created_at: string
+}
+
+export interface ForumReportInput {
+  target_type: 'topic' | 'reply'
+  target_id: number
+  reason: string
+}
+
 export interface ForumTopicCard {
   id: number
   title: string
@@ -285,6 +301,7 @@ export interface Announcement {
   title: string
   content: string
   demo_slug: string | null
+  topic_id?: number | null
   pinned?: boolean
   status?: 'draft' | 'published' | 'offline'
   category?: string
@@ -298,6 +315,7 @@ export interface AnnouncementInput {
   title: string
   content?: string
   demo_slug?: string | null
+  topic_id?: number | null
   pinned?: boolean
   status?: 'draft' | 'published' | 'offline'
   category?: string

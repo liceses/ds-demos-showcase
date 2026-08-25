@@ -50,7 +50,8 @@ async function submit() {
       router.push(`/forum/topic/${t.id}`)
     }
   } catch (e) {
-    error.value = (e as Error).message
+    const err = e as Error & { cause?: unknown }
+    error.value = err.cause === 429 ? '操作过于频繁，请稍后再试' : err.message
   } finally {
     submitting.value = false
   }

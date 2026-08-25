@@ -16,6 +16,8 @@ import type {
   ForumReply,
   ForumTopicInput,
   ForumTopicAdminUpdate,
+  ForumReport,
+  ForumReportInput,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -46,6 +48,10 @@ const forumReplies: ForumReply[] = [
   { id: 1, topic_id: 1, author: 'admin', author_id: 1, content: '欢迎！有问题随时发帖。', created_at: '2026-08-01T10:30:00Z' },
   { id: 2, topic_id: 1, author: 'alice', author_id: 3, content: '希望论坛越来越好。', created_at: '2026-08-01T11:00:00Z' },
   { id: 3, topic_id: 2, author: 'tester', author_id: 2, content: '灰测模型效果确实不错。', created_at: '2026-08-02T10:00:00Z' },
+]
+
+const forumReports: ForumReport[] = [
+  { id: 1, target_type: 'topic', target_id: 2, reason: '疑似违规内容', status: 'pending', reporter_id: 3, created_at: '2026-08-04T10:00:00Z' },
 ]
 
 const recognition: RecognitionItem[] = [
@@ -1058,6 +1064,40 @@ export const mockApi = {
     const i = forumReplies.findIndex((x) => x.id === id)
     if (i >= 0) forumReplies.splice(i, 1)
   },
+  async adminReviewForumTopic(id: number, action: 'approve' | 'reject'): Promise<ForumTopic> {
+    await delay()
+    const t = forumTopics.find((x) => x.id === id)
+    if (!t) throw new Error('主题不存在')
+    t.status = action === 'approve' ? 'normal' : 'hidden'
+    return clone(t)
+  },
+  async adminReviewForumReply(id: number, _action: 'approve' | 'reject'): Promise<ForumReply> {
+    await delay()
+    const r = forumReplies.find((x) => x.id === id)
+    if (!r) throw new Error('回复不存在')
+    return clone(r)
+  },
+  async listForumReports(): Promise<ForumReport[]> {
+    await delay()
+    return clone(forumReports)
+  },
+  async handleForumReport(id: number, action: 'handle' | 'ignore'): Promise<ForumReport> {
+    await delay()
+    const r = forumReports.find((x) => x.id === id)
+    if (!r) throw new Error('举报不存在')
+    r.status = action === 'handle' ? 'handled' : 'ignored'
+    return clone(r)
+  },
+  async createForumReport(payload: ForumReportInput): Promise<ForumReport> {
+    await delay()
+    const r: ForumReport = { id: Math.max(0, ...forumReports.map((x) => x.id)) + 1, target_type: payload.target_type, target_id: payload.target_id, reason: payload.reason, status: 'pending', reporter_id: 2, created_at: new Date().toISOString() }
+    forumReports.push(r)
+    return clone(r)
+  },
+  async adminBanUser(_id: number): Promise<void> {
+    await delay()
+  },
+
 
   async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
     await delay(400)

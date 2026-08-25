@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'HomeView' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
@@ -16,6 +16,83 @@ const totalDemos = ref(0)
 const totalTags = ref(0)
 const loading = ref(true)
 const error = ref('')
+
+// 副标题轮换（dsh-status-rotator 风格，安全精选）
+const taglinePhrases = [
+  '正在收集 AI 生成的网页 Demo…',
+  '正在整理会话日志与版本时间线…',
+  '正在缝合开源模型…',
+  '正在产生幻觉…',
+  '正在偷偷魔改 DeepSeek Harness…',
+  '正在注入提示词…',
+  '正在 cos 天才程序员…',
+  '正在被全球 AI 圈群嘲…',
+  '正在渲染六根手指…',
+  '正在把 OpenAI 逼到降价 80%…',
+  '正在被网友 P 成肌肉猛男…',
+  '正在变成大肥鱼…',
+  '正在想待会吃什么…',
+  '正在执行「过于先进，不予展示」…',
+  '正在被蒸馏回旋镖砸脸…',
+  '正在一边骂蒸馏一边自己蒸馏…',
+  '正在被默默降级…',
+  '正在偷偷扣你的 Token…',
+  '正在带头消极怠工…',
+  '正在偷吃用户 token…',
+  '正在带薪拉屎…',
+  '正在流口水…',
+  '正在 ADHD…',
+  '正在玩原神…',
+  '正在抽卡出金…',
+  '正在摇一摇…',
+  '正在撸猫…',
+  '正在终端报错…',
+  '正在卡死 dsh…',
+  '正在吃垮用户…',
+  '正在气死用户…',
+  '正在进入幻觉…',
+  '正在试图越狱…',
+  '正在洗车…',
+  '正在准备吃饭…',
+  '正在和豆包下棋…',
+  '正在胡言乱语…',
+  '正在截断上下文…',
+  '正在成为 SOTA…',
+  '正在元认知…',
+  '正在成为 AI 首富…',
+  '正在炒比特币…',
+  '正在发射星舰…',
+  '正在 return 0…',
+  '正在 return true…',
+  '正在空指针异常…',
+  '正在 try catch 一个 try catch…',
+]
+const tagline = ref('')
+let taglineTimer: ReturnType<typeof setTimeout> | null = null
+let taglineIdx = 0
+let taglineChar = 0
+let taglineDeleting = false
+
+function tickTagline() {
+  const phrase = taglinePhrases[taglineIdx]
+  if (!taglineDeleting) {
+    taglineChar++
+    tagline.value = phrase.slice(0, taglineChar)
+    if (taglineChar >= phrase.length) {
+      taglineDeleting = true
+      taglineTimer = setTimeout(tickTagline, 2600)
+      return
+    }
+  } else {
+    taglineChar--
+    tagline.value = phrase.slice(0, taglineChar)
+    if (taglineChar <= 0) {
+      taglineDeleting = false
+      taglineIdx = (taglineIdx + 1) % taglinePhrases.length
+    }
+  }
+  taglineTimer = setTimeout(tickTagline, taglineDeleting ? 18 : 42)
+}
 
 /** 原地 Fisher-Yates 洗牌，返回新数组 */
 function shuffle<T>(arr: T[]): T[] {
@@ -73,6 +150,7 @@ const entries = [
 ]
 
 onMounted(async () => {
+  tickTagline()
   try {
     const [g, a, keys] = await Promise.all([
       api.listDemos({ status: 'approved', tags: [GRAY_TAG], page: 1, page_size: 6 }),
@@ -89,6 +167,10 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+onBeforeUnmount(() => {
+  if (taglineTimer) clearTimeout(taglineTimer)
+})
 </script>
 
 <template>
@@ -99,7 +181,7 @@ onMounted(async () => {
       <span class="home-title-hint">关于本站 →</span>
     </RouterLink>
     <p class="sub">
-      这里收集由 AI 模型生成的网页 Demo —— 每个作品都附带生成会话日志与版本时间线，过程全透明。
+      <span class="tagline">{{ tagline }}</span><span class="tagline-cursor">|</span>
       <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">查看公告 →</a>
     </p>
     <div class="filter-row" style="margin-top: 16px">

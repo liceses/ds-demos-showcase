@@ -3239,3 +3239,19 @@ table.data tr.inconsistent td {
 .vendor-strip .filter-row {
   padding: 8px;
 }
+
+/* 首页副标题打字机 */
+.tagline {
+  font-family: var(--font-mono);
+}
+.tagline-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--red);
+  font-weight: 900;
+  animation: tagline-blink 0.9s steps(1) infinite;
+}
+@keyframes tagline-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

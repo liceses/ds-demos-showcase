@@ -9,7 +9,7 @@ import TagMergeModal from './TagMergeModal.vue'
 
 const ui = useUiStore()
 
-const tagSub = ref<'keys' | 'groups' | 'review'>('keys')
+const tagSub = ref<'keys' | 'review'>('keys')
 const tagsStore = useTagsStore()
 const tagKeys = computed(() => tagsStore.keys)
 const demos = ref<AdminDemo[]>([])
@@ -19,7 +19,7 @@ const adminActiveTagKey = computed(() => tagKeys.value.find((k) => k.key === adm
 function selectAdminKey(k: TagKeyInfo) {
   adminActiveKey.value = k.key
   startEditKey(k)
-  if (tagSub.value === 'groups') loadGroups()
+  if (k.mode === 'fixed') loadGroups()
 }
 
 const newKey = ref({ key: '', mode: 'fixed' as 'fixed' | 'open' | 'int', label: '', description: '', sort: 0 })
@@ -45,6 +45,7 @@ async function loadTags() {
     await tagsStore.load()
     demos.value = d
     if (!adminActiveKey.value && tagKeys.value.length) adminActiveKey.value = tagKeys.value[0].key
+    if (adminActiveTagKey.value?.mode === 'fixed') loadGroups()
   } catch {
     demos.value = []
   }
@@ -313,8 +314,7 @@ onMounted(() => {
 <template>
   <div>
     <div class="filter-row" style="margin-bottom: 14px">
-      <button class="tab" :class="{ active: tagSub === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
-      <button class="tab" :class="{ active: tagSub === 'groups' }" type="button" @click="tagSub = 'groups'; loadGroups()">分组 / 合并</button>
+      <button class="tab" :class="{ active: tagSub === 'keys' }" type="button" @click="tagSub = 'keys'; loadGroups()">键管理</button>
       <button class="tab" :class="{ active: tagSub === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
     </div>
 
@@ -390,6 +390,60 @@ onMounted(() => {
               <span v-if="!adminActiveTagKey.values.length" class="muted">无</span>
             </div>
 
+            <div v-if="adminActiveTagKey.mode === 'fixed'" class="group-workbench-inline">
+              <div class="filter-row" style="margin: 16px 0 10px; justify-content: space-between; align-items: center; flex-wrap: wrap">
+                <h3 style="margin: 0">分组管理</h3>
+                <div class="filter-row" style="margin: 0">
+                  <input v-model="groupSearch" class="input" style="max-width: 180px" placeholder="搜索值…" />
+                  <button class="btn btn-sm btn-secondary" type="button" @click="mergeOpen = true">合并标签</button>
+                </div>
+              </div>
+              <div v-if="groupLoading" class="loading-row"><span class="spinner"></span> 加载分组…</div>
+              <div v-else-if="groupError" class="notice notice-error">{{ groupError }}</div>
+              <template v-else-if="groupInfo">
+                <div class="group-card-grid">
+                  <div v-for="g in groupInfo.groups" :key="g.group" class="group-card">
+                    <div class="group-card-head">
+                      <b>{{ g.group }}</b><span class="count">{{ g.count }}</span>
+                      <div class="filter-row" style="margin: 0; margin-left: auto">
+                        <button class="btn btn-sm btn-outline" type="button" @click="renameGroupDialog(g.group)">重命名</button>
+                        <button class="btn btn-sm btn-dark" type="button" @click="clearGroup(g.group)">删除组</button>
+                      </div>
+                    </div>
+                    <div class="group-card-values">
+                      <span v-for="v in groupValues(g.group)" :key="v.value" class="tag-chip mode-fixed">{{ v.value }}<span class="count">{{ v.demo_count }}</span></span>
+                      <span v-if="!groupValues(g.group).length" class="muted">空</span>
+                    </div>
+                  </div>
+
+                  <div class="group-card group-card-ungrouped">
+                    <div class="group-card-head">
+                      <b>未分组</b><span class="count">{{ groupInfo.ungrouped }}</span>
+                      <div class="filter-row" style="margin: 0; margin-left: auto; gap: 6px">
+                        <select v-model="bulkGroup" class="input" style="max-width: 120px; padding: 2px 6px">
+                          <option value="">批量归入…</option>
+                          <option v-for="g in groupInfo.groups" :key="g.group" :value="g.group">{{ g.group }}</option>
+                        </select>
+                        <button class="btn btn-sm btn-secondary" type="button" :disabled="!bulkSelected.length || !bulkGroup" @click="bulkAssign">批量</button>
+                      </div>
+                    </div>
+                    <div class="group-card-values">
+                      <template v-for="v in ungroupedValues()" :key="v.value">
+                        <span class="tag-chip mode-fixed" :class="{ active: bulkSelected.includes(v.value) }" role="button" @click="toggleBulk(v.value)">
+                          {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+                          <select class="group-assign" :value="v.group || ''" @change="assignValue(v, ($event.target as HTMLSelectElement).value || null)" @click.stop>
+                            <option value="">未分组</option>
+                            <option v-for="g in groupInfo.groups" :key="g.group" :value="g.group">{{ g.group }}</option>
+                          </select>
+                        </span>
+                      </template>
+                      <span v-if="!ungroupedValues().length" class="muted">全部已归类</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
             <div class="filter-row" style="margin-top: 14px">
               <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(adminActiveTagKey.key)">删除键</button>
             </div>
@@ -397,67 +451,7 @@ onMounted(() => {
           <div v-else class="muted">请选择左侧标签键</div>
         </div>
       </div>
-    </template>
 
-    <template v-else-if="tagSub === 'groups'">
-      <div class="group-workbench">
-        <div class="filter-row" style="margin-bottom: 14px; justify-content: space-between; align-items: center; flex-wrap: wrap">
-          <h2 style="margin: 0">{{ adminActiveTagKey ? (adminActiveTagKey.label || adminActiveTagKey.key) + ' 分组' : '分组 / 合并' }}</h2>
-          <div class="filter-row" style="margin: 0">
-            <input v-model="groupSearch" class="input" style="max-width: 200px" placeholder="搜索值…" />
-            <button class="btn btn-secondary" type="button" @click="mergeOpen = true">合并标签</button>
-          </div>
-        </div>
-
-        <div v-if="!adminActiveTagKey" class="empty-box">请先在左侧选择固定键</div>
-
-        <template v-else>
-          <div v-if="groupLoading" class="loading-row"><span class="spinner"></span> 加载分组…</div>
-          <div v-else-if="groupError" class="notice notice-error">{{ groupError }}</div>
-          <template v-else-if="groupInfo">
-            <div class="group-card-grid">
-              <div v-for="g in groupInfo.groups" :key="g.group" class="group-card">
-                <div class="group-card-head">
-                  <b>{{ g.group }}</b><span class="count">{{ g.count }}</span>
-                  <div class="filter-row" style="margin: 0; margin-left: auto">
-                    <button class="btn btn-sm btn-outline" type="button" @click="renameGroupDialog(g.group)">重命名</button>
-                    <button class="btn btn-sm btn-dark" type="button" @click="clearGroup(g.group)">删除组</button>
-                  </div>
-                </div>
-                <div class="group-card-values">
-                  <span v-for="v in groupValues(g.group)" :key="v.value" class="tag-chip mode-fixed">{{ v.value }}<span class="count">{{ v.demo_count }}</span></span>
-                  <span v-if="!groupValues(g.group).length" class="muted">空</span>
-                </div>
-              </div>
-
-              <div class="group-card group-card-ungrouped">
-                <div class="group-card-head">
-                  <b>未分组</b><span class="count">{{ groupInfo.ungrouped }}</span>
-                  <div class="filter-row" style="margin: 0; margin-left: auto; gap: 6px">
-                    <select v-model="bulkGroup" class="input" style="max-width: 120px; padding: 2px 6px">
-                      <option value="">批量归入…</option>
-                      <option v-for="g in groupInfo.groups" :key="g.group" :value="g.group">{{ g.group }}</option>
-                    </select>
-                    <button class="btn btn-sm btn-secondary" type="button" :disabled="!bulkSelected.length || !bulkGroup" @click="bulkAssign">批量</button>
-                  </div>
-                </div>
-                <div class="group-card-values">
-                  <template v-for="v in ungroupedValues()" :key="v.value">
-                    <span class="tag-chip mode-fixed" :class="{ active: bulkSelected.includes(v.value) }" role="button" @click="toggleBulk(v.value)">
-                      {{ v.value }}<span class="count">{{ v.demo_count }}</span>
-                      <select class="group-assign" :value="v.group || ''" @change="assignValue(v, ($event.target as HTMLSelectElement).value || null)" @click.stop>
-                        <option value="">未分组</option>
-                        <option v-for="g in groupInfo.groups" :key="g.group" :value="g.group">{{ g.group }}</option>
-                      </select>
-                    </span>
-                  </template>
-                  <span v-if="!ungroupedValues().length" class="muted">全部已归类</span>
-                </div>
-              </div>
-            </div>
-          </template>
-        </template>
-      </div>
       <TagMergeModal
         v-if="mergeOpen && adminActiveTagKey"
         :active-key="adminActiveTagKey.key"
@@ -467,6 +461,7 @@ onMounted(() => {
         @merged="onMergeDone"
       />
     </template>
+
     <template v-else>
       <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 720px">
         <h2 style="margin-bottom: 12px">AI 整理标签</h2>

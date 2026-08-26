@@ -72,6 +72,7 @@ class TagCreate(BaseModel):
 
 
 class TagKeyValueOut(BaseModel):
+    id: int
     value: str
     description: str = ""
     demo_count: int = 0

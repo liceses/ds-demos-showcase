@@ -194,7 +194,7 @@ def _tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
         .all()
     )
     values = [
-        TagKeyValueOut(value=t.value, description=t.description, demo_count=count, group=t.group)
+        TagKeyValueOut(id=t.id, value=t.value, description=t.description, demo_count=count, group=t.group)
         for t, count in rows
     ]
     min_v = max_v = None

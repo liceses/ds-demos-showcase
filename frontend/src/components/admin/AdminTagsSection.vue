@@ -3,12 +3,14 @@ defineOptions({ name: 'AdminTagsSection' })
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
+import { useTagsStore } from '../../stores/tags'
 import type { AdminDemo, TagKeyInfo, TagSuggestion } from '../../api/types'
 
 const ui = useUiStore()
 
 const tagSub = ref<'keys' | 'review'>('keys')
-const tagKeys = ref<TagKeyInfo[]>([])
+const tagsStore = useTagsStore()
+const tagKeys = computed(() => tagsStore.keys)
 const demos = ref<AdminDemo[]>([])
 const adminActiveKey = ref('')
 const adminActiveTagKey = computed(() => tagKeys.value.find((k) => k.key === adminActiveKey.value) || null)
@@ -37,12 +39,11 @@ function startEditKey(k: TagKeyInfo) {
 
 async function loadTags() {
   try {
-    const [t, d] = await Promise.all([api.listTagKeys(), api.adminDemos()])
-    tagKeys.value = t
+    const d = await api.adminDemos()
+    await tagsStore.load()
     demos.value = d
     if (!adminActiveKey.value && tagKeys.value.length) adminActiveKey.value = tagKeys.value[0].key
   } catch {
-    tagKeys.value = []
     demos.value = []
   }
 }
@@ -64,7 +65,7 @@ async function createTagKey() {
     })
     keyOk.value = '标签键已创建'
     newKey.value = { key: '', mode: 'fixed', label: '', description: '', sort: 0 }
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.refresh()
   } catch (e) {
     keyError.value = (e as Error).message
   }
@@ -76,7 +77,7 @@ async function deleteTagKey(key: string) {
   try {
     await api.deleteTagKey(key)
     ui.toast('标签键已删除', 'success')
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.refresh()
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 
@@ -91,7 +92,7 @@ async function addFixedValue() {
     await api.createTag(newValue.value.key, newValue.value.value.trim(), newValue.value.description.trim() || undefined)
     valueOk.value = '固定值已添加'
     newValue.value = { key: newValue.value.key, value: '', description: '' }
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.refresh()
   } catch (e) {
     valueError.value = (e as Error).message
   }
@@ -103,7 +104,7 @@ async function deleteTagValue(key: string, value: string) {
   try {
     await api.deleteTagValue(key, value)
     ui.toast('标签值已删除', 'success')
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.refresh()
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 
@@ -122,7 +123,7 @@ async function saveEditKey() {
     })
     ui.toast('标签键已更新', 'success')
     editingKey.value = null
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.refresh()
   } catch (e) {
     keyEditError.value = (e as Error).message
   }
@@ -149,7 +150,7 @@ async function approveSuggestion(s: TagSuggestion) {
     await api.reviewTagSuggestion(s.id, 'approve', s.group || undefined)
     ui.toast('已批准', 'success')
     await loadSuggestions()
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.refresh()
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 

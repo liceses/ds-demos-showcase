@@ -1,10 +1,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'TagListView' })
 import { computed, onMounted, ref, watch } from 'vue'
-import { api } from '../api'
+import { useTagsStore } from '../stores/tags'
 import type { TagKeyInfo } from '../api/types'
 
-const keys = ref<TagKeyInfo[]>([])
+const tagsStore = useTagsStore()
+const keys = computed(() => tagsStore.keys)
 const loading = ref(true)
 const error = ref('')
 const modeFilter = ref<'all' | 'fixed' | 'open' | 'int'>('all')
@@ -47,7 +48,7 @@ function maxCount(k: TagKeyInfo) {
 
 onMounted(async () => {
   try {
-    keys.value = await api.listTagKeys()
+    await tagsStore.load()
     if (keys.value.length) activeKey.value = keys.value[0].key
   } catch (e) {
     error.value = (e as Error).message

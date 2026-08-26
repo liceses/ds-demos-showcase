@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
-import type { DemoDetail, TagKeyInfo } from '../api/types'
+import { useTagsStore } from '../stores/tags'
+import type { DemoDetail } from '../api/types'
 import TagPicker from '../components/TagPicker.vue'
 import type { TagPick } from '../components/TagPicker.vue'
 
@@ -32,7 +33,8 @@ const forceUpload = ref(false)
 const loading = ref(false)
 
 // 标签选择器（公共 TagPicker）
-const tagKeys = ref<TagKeyInfo[]>([])
+const tagsStore = useTagsStore()
+const tagKeys = computed(() => tagsStore.keys)
 const selected = ref<Record<string, { value: string; description: string }[]>>({})
 const initialTagsKey = ref('')
 const tagsOpen = ref(false)
@@ -106,9 +108,9 @@ function prefillTags(tags: { key: string; value: string }[]) {
 onMounted(async () => {
   idempotencyKey.value = (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`) as string
   try {
-    tagKeys.value = await api.listTagKeys()
+    await tagsStore.load()
   } catch {
-    tagKeys.value = []
+    /* 静默 */
   }
   if (editSlug) {
     loading.value = true

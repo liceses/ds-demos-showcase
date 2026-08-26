@@ -9,6 +9,7 @@ import type { DemoDetail, ForumReply, ForumTopic } from '../api/types'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import MarkdownEditor from '../components/MarkdownEditor.vue'
 import { errorMessage } from '../utils/error'
+import { parseDate } from '../utils/time'
 
 const props = defineProps<{ id: string }>()
 const route = useRoute()
@@ -109,7 +110,7 @@ onMounted(load)
           <span>{{ topic.author || '匿名' }}</span>
           <span class="forum-stat">回复 {{ topic.reply_count }}</span>
           <span class="forum-stat">浏览 {{ topic.view_count }}</span>
-          <span>{{ new Date(topic.created_at).toLocaleString('zh-CN') }}</span>
+          <span>{{ parseDate(topic.created_at).toLocaleString('zh-CN') }}</span>
           <RouterLink v-if="topic.demo_slug && !demoCard && !demoCardLoading" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
           <button class="btn btn-sm btn-outline" type="button" @click="reportTopic">举报</button>
         </div>
@@ -129,7 +130,7 @@ onMounted(load)
           <div class="forum-reply-head">
             <span class="forum-reply-author">{{ r.author || '匿名' }}</span>
             <span class="forum-reply-floor">#{{ i + 1 }}</span>
-            <span class="forum-reply-time">{{ new Date(r.created_at).toLocaleString('zh-CN') }}</span>
+            <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</span>
           </div>
           <MarkdownRenderer :content="r.content" />
         </div>

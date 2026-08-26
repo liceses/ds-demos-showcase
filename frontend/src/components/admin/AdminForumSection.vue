@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { ForumReply, ForumReport, ForumTopic } from '../../api/types'
+import { parseDate } from '../../utils/time'
 
 const ui = useUiStore()
 
@@ -132,7 +133,7 @@ onMounted(() => {
               <td>{{ t.pinned ? '置顶' : '-' }}</td>
               <td>{{ t.sticky ? '加精' : '-' }}</td>
               <td>{{ t.reply_count }}</td>
-              <td>{{ new Date(t.created_at).toLocaleDateString('zh-CN') }}</td>
+              <td>{{ parseDate(t.created_at).toLocaleDateString('zh-CN') }}</td>
               <td>
                 <button v-if="t.status === 'reviewing'" class="btn btn-sm btn-primary" type="button" @click="forumReviewTopic(t, 'approve')">通过</button>
                 <button v-if="t.status === 'reviewing'" class="btn btn-sm btn-dark" type="button" @click="forumReviewTopic(t, 'reject')">隐藏</button>
@@ -163,7 +164,7 @@ onMounted(() => {
               <td>{{ r.author || '匿名' }}</td>
               <td style="max-width: 360px; overflow-wrap: anywhere">{{ r.content }}</td>
               <td><span class="ann-status" :class="'status-' + (r.status || 'normal')">{{ r.status || 'normal' }}</span></td>
-              <td>{{ new Date(r.created_at).toLocaleString('zh-CN') }}</td>
+              <td>{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</td>
               <td>
                 <button class="btn btn-sm btn-outline" type="button" @click="forumReviewReply(r, 'approve')">通过</button>
                 <button class="btn btn-sm btn-dark" type="button" @click="forumReviewReply(r, 'reject')">隐藏</button>
@@ -185,7 +186,7 @@ onMounted(() => {
               <td>{{ r.target_type }} #{{ r.target_id }}</td>
               <td style="max-width: 320px; overflow-wrap: anywhere">{{ r.reason }}</td>
               <td><span class="ann-status" :class="'status-' + (r.status === 'pending' ? 'draft' : r.status)">{{ r.status }}</span></td>
-              <td>{{ new Date(r.created_at).toLocaleString('zh-CN') }}</td>
+              <td>{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</td>
               <td>
                 <button v-if="r.status === 'pending'" class="btn btn-sm btn-primary" type="button" @click="forumHandleReport(r, 'handle')">处理</button>
                 <button v-if="r.status === 'pending'" class="btn btn-sm btn-dark" type="button" @click="forumHandleReport(r, 'ignore')">忽略</button>

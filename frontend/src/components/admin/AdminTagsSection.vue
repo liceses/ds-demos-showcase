@@ -5,6 +5,7 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import { useTagsStore } from '../../stores/tags'
 import { groupedTagValues } from '../../utils/tagGroups'
+import { parseDate } from '../../utils/time'
 import type { AdminDemo, TagGroupDistribution, TagKeyInfo, TagKeyValue, TagSuggestion } from '../../api/types'
 import TagMergeModal from './TagMergeModal.vue'
 
@@ -517,7 +518,7 @@ onMounted(() => {
               <td><b>{{ s.value }}</b></td>
               <td style="max-width: 240px; overflow-wrap: anywhere">{{ s.description }}</td>
               <td>{{ s.group || '-' }}</td>
-              <td>{{ new Date(s.created_at).toLocaleString('zh-CN') }}</td>
+              <td>{{ parseDate(s.created_at).toLocaleString('zh-CN') }}</td>
               <td>
                 <button class="btn btn-sm btn-primary" type="button" @click="approveSuggestion(s)">批准</button>
                 <button class="btn btn-sm btn-dark" type="button" @click="rejectSuggestion(s)">拒绝</button>

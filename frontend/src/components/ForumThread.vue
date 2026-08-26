@@ -8,6 +8,7 @@ import type { ForumReply, ForumTopic } from '../api/types'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 import MarkdownEditor from './MarkdownEditor.vue'
 import { errorMessage } from '../utils/error'
+import { parseDate } from '../utils/time'
 
 const props = defineProps<{ slug: string }>()
 const route = useRoute()
@@ -81,7 +82,7 @@ onMounted(load)
             <div class="forum-reply-head">
               <span class="forum-reply-author">{{ r.author || '匿名' }}</span>
               <span class="forum-reply-floor">#{{ i + 1 }}</span>
-              <span class="forum-reply-time">{{ new Date(r.created_at).toLocaleString('zh-CN') }}</span>
+              <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</span>
             </div>
             <MarkdownRenderer :content="r.content" />
           </div>

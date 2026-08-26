@@ -5,6 +5,13 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { Announcement } from '../../api/types'
 import MarkdownEditor from '../MarkdownEditor.vue'
+import { parseDate } from '../../utils/time'
+
+function toLocalInput(iso: string): string {
+  const d = parseDate(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
 
 const ui = useUiStore()
 
@@ -40,7 +47,7 @@ async function loadAnnouncements() {
 
 function startEditAnn(a: Announcement) {
   editingAnn.value = a
-  editAnnForm.value = { title: a.title, content: a.content, pinned: !!a.pinned, status: a.status || 'published', category: a.category || 'general', published_at: a.published_at ? a.published_at.slice(0, 16) : '', expires_at: a.expires_at ? a.expires_at.slice(0, 16) : '' }
+  editAnnForm.value = { title: a.title, content: a.content, pinned: !!a.pinned, status: a.status || 'published', category: a.category || 'general', published_at: a.published_at ? toLocalInput(a.published_at) : '', expires_at: a.expires_at ? toLocalInput(a.expires_at) : '' }
 }
 
 function cancelEditAnn() {
@@ -227,7 +234,7 @@ onMounted(loadAnnouncements)
             <td>{{ a.category || '-' }}</td>
             <td>{{ a.title }}</td>
             <td style="max-width: 320px; overflow-wrap: anywhere">{{ a.content }}</td>
-            <td>{{ new Date(a.created_at).toLocaleString('zh-CN') }}</td>
+            <td>{{ parseDate(a.created_at).toLocaleString('zh-CN') }}</td>
             <td>
               <RouterLink v-if="a.demo_slug" class="btn btn-sm btn-outline" :to="`/demo/${a.demo_slug}`">查看</RouterLink>
               <button v-if="a.type === 'manual'" class="btn btn-sm btn-outline" type="button" @click="startEditAnn(a)">编辑</button>

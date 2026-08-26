@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
+import { parseDate } from '../utils/time'
 import type { DemoSummary, User } from '../api/types'
 import { useAuthStore } from '../stores/auth'
 import DemoCard from '../components/DemoCard.vue'
@@ -40,7 +41,7 @@ onMounted(async () => {
       <div class="filter-row" style="margin-top: 16px">
         <span class="mini-stat"><b>{{ user.demo_count }}</b> Demo</span>
         <span class="mini-stat"><b>{{ user.role }}</b> 角色</span>
-        <span class="mini-stat"><b>{{ new Date(user.created_at).toLocaleDateString('zh-CN') }}</b> 加入</span>
+        <span class="mini-stat"><b>{{ parseDate(user.created_at).toLocaleDateString('zh-CN') }}</b> 加入</span>
         <RouterLink v-if="isSelf" class="btn btn-sm btn-primary" to="/settings">账户设置</RouterLink>
       </div>
     </section>

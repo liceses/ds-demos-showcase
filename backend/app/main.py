@@ -13,7 +13,13 @@ from .security import hash_password
 from .services import oss
 from .services.settings_service import KEY_AUTO_APPROVE
 
-app = FastAPI(title="DS 民间科研成果展示 API", version="0.1.0")
+def _json_dt(dt: datetime) -> str:
+    """naive UTC 统一补 Z，避免前端按本地时间解析提前 8 小时"""
+    if dt.tzinfo is None:
+        return dt.isoformat() + 'Z'
+    return dt.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+
+app = FastAPI(title="DS 民间科研成果展示 API", version="0.1.0", json_encoders={datetime: _json_dt})
 
 settings.media_path.mkdir(parents=True, exist_ok=True)
 

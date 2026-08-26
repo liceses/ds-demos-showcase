@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MarkdownRenderer from './MarkdownRenderer.vue'
+import { parseDate } from '../utils/time'
 import type { Announcement } from '../api/types'
 
 defineProps<{ ann: Announcement | null }>()
@@ -24,7 +25,7 @@ const emit = defineEmits<{ close: [] }>()
         <MarkdownRenderer :content="ann.content" />
         <div class="filter-row" style="margin-top: 14px">
           <RouterLink v-if="ann.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${ann.topic_id}`">去讨论 →</RouterLink>
-          <span class="muted" style="font-size: 12px">{{ new Date(ann.created_at).toLocaleString('zh-CN') }}</span>
+          <span class="muted" style="font-size: 12px">{{ parseDate(ann.created_at).toLocaleString('zh-CN') }}</span>
         </div>
       </div>
     </div>

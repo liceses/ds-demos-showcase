@@ -11,6 +11,7 @@ import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import DemoCard from '../components/DemoCard.vue'
 import RatingWidget from '../components/RatingWidget.vue'
 import ForumThread from '../components/ForumThread.vue'
+import { parseDate } from '../utils/time'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,7 +144,7 @@ onMounted(load)
           </b>
           作者
         </span>
-        <span class="mini-stat"><b>{{ new Date(demo.created_at).toLocaleDateString('zh-CN') }}</b> 创建</span>
+        <span class="mini-stat"><b>{{ parseDate(demo.created_at).toLocaleDateString('zh-CN') }}</b> 创建</span>
         <span class="mini-stat"><b>{{ demo.view_count }}</b> 浏览</span>
         <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
         <span class="mini-stat"><b>{{ demo.comment_count }}</b> 讨论</span>
@@ -241,7 +242,7 @@ onMounted(load)
                     查看旧版 →
                   </RouterLink>
                 </div>
-                <span class="muted" style="white-space: nowrap">{{ new Date(t.created_at).toLocaleString('zh-CN') }}</span>
+                <span class="muted" style="white-space: nowrap">{{ parseDate(t.created_at).toLocaleString('zh-CN') }}</span>
               </div>
             </div>
           </template>

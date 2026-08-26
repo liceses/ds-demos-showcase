@@ -6,6 +6,7 @@ import { api } from '../api'
 import { useUiStore } from '../stores/ui'
 import MarkdownEditor from '../components/MarkdownEditor.vue'
 import TagPicker from '../components/TagPicker.vue'
+import { errorMessage } from '../utils/error'
 
 const router = useRouter()
 const route = useRoute()
@@ -49,8 +50,7 @@ async function submit() {
       router.push(`/forum/topic/${t.id}`)
     }
   } catch (e) {
-    const err = e as Error & { cause?: unknown }
-    error.value = err.cause === 429 ? '操作过于频繁，请稍后再试' : err.message
+    error.value = errorMessage(e)
   } finally {
     submitting.value = false
   }

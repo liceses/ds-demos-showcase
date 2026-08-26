@@ -8,6 +8,7 @@ import { useUiStore } from '../stores/ui'
 import type { DemoDetail, ForumReply, ForumTopic } from '../api/types'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import MarkdownEditor from '../components/MarkdownEditor.vue'
+import { errorMessage } from '../utils/error'
 
 const props = defineProps<{ id: string }>()
 const route = useRoute()
@@ -57,9 +58,7 @@ async function reportTopic() {
     await api.createForumReport({ target_type: 'topic', target_id: topic.value.id, reason: reason.trim() })
     ui.toast('举报已提交，感谢反馈', 'success')
   } catch (e) {
-    const err = e as Error & { cause?: unknown }
-    if (err.cause === 429) ui.toast('操作过于频繁，请稍后再试', 'error')
-    else ui.toast(err.message, 'error')
+    ui.toast(errorMessage(e), 'error')
   }
 }
 
@@ -71,9 +70,7 @@ async function submitReply() {
     replyText.value = ''
     await load()
   } catch (e) {
-    const err = e as Error & { cause?: unknown }
-    if (err.cause === 429) ui.toast('操作过于频繁，请稍后再试', 'error')
-    else ui.toast(err.message, 'error')
+    ui.toast(errorMessage(e), 'error')
   } finally {
     posting.value = false
   }

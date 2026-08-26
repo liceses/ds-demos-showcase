@@ -53,11 +53,18 @@ renderer.link = ({ href, title, tokens }) => {
 
 marked.setOptions({ gfm: true, breaks: true, renderer })
 
+// 渲染缓存：同一 content 重复渲染（公告/回复/帖子）不再重复 parse+sanitize
+const htmlCache = new Map<string, string>()
 const html = computed(() => {
-  const raw = marked.parse(props.content || '') as string
-  return DOMPurify.sanitize(raw, {
+  const raw = props.content || ''
+  const cached = htmlCache.get(raw)
+  if (cached) return cached
+  const out = DOMPurify.sanitize(marked.parse(raw) as string, {
     ADD_ATTR: ['target', 'rel', 'id'],
   })
+  if (htmlCache.size > 500) htmlCache.clear()
+  htmlCache.set(raw, out)
+  return out
 })
 
 // ---------- 内部链接富卡片 ----------

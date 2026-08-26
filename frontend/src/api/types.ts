@@ -272,6 +272,12 @@ export interface ForumTopicAdminUpdate {
   status?: string
 }
 
+export interface AdminStats {
+  demos: { total: number; approved: number; pending: number; rejected: number }
+  users: number
+  storage: { oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }
+}
+
 export interface ForumReport {
   id: number
   target_type: 'topic' | 'reply'

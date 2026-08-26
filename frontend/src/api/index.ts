@@ -3,6 +3,7 @@ import { http } from './http'
 import { mockApi } from './mock'
 import type {
   AdminDemo,
+  AdminStats,
   AdminUser,
   Announcement,
   AnnouncementInput,
@@ -341,6 +342,10 @@ const realApi = {
   },
   async getOssSyncStatus(): Promise<OssSyncJob> {
     const { data } = await http.get('/admin/oss-sync-status')
+    return data
+  },
+  async getAdminStats(): Promise<AdminStats> {
+    const { data } = await http.get('/admin/stats')
     return data
   },
   async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {

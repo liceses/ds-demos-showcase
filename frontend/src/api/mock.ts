@@ -3,6 +3,7 @@
 
 import type {
   AdminDemo,
+  AdminStats,
   AdminUser,
   Announcement,
   AnnouncementInput,
@@ -1253,6 +1254,15 @@ export const mockApi = {
     }
   },
 
+  async getAdminStats(): Promise<AdminStats> {
+    await delay()
+    const demos = forumTopics.length // 随便用现成数据表示
+    return {
+      demos: { total: demos, approved: 10, pending: 2, rejected: 1 },
+      users: users.length,
+      storage: { oss_enabled: false, mode: 'local', local_demos: demos, local_files: 0, local_size_bytes: 0 },
+    }
+  },
   async storageStatus(): Promise<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }> {
     await delay(200)
     return { oss_enabled: false, mode: 'local', local_demos: demos.length, local_files: 0, local_size_bytes: 0 }

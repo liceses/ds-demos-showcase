@@ -2,16 +2,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
-import PaginationBar from '../components/PaginationBar.vue'
 import AdminForumSection from '../components/admin/AdminForumSection.vue'
 import AdminAnnouncementsSection from '../components/admin/AdminAnnouncementsSection.vue'
 import AdminUsersSection from '../components/admin/AdminUsersSection.vue'
 import AdminSettingsSection from '../components/admin/AdminSettingsSection.vue'
-import type { AdminDemo, AdminUser, DemoDetail, TagKeyInfo, TagSuggestion } from '../api/types'
+import AdminReviewSection from '../components/admin/AdminReviewSection.vue'
+import AdminDemosSection from '../components/admin/AdminDemosSection.vue'
+import type { AdminDemo, AdminStats, TagKeyInfo, TagSuggestion } from '../api/types'
 
 const ui = useUiStore()
 
 const tab = ref<'review' | 'demos' | 'tags' | 'forum' | 'users' | 'settings' | 'announcements'>('review')
+const adminStats = ref<AdminStats | null>(null)
+const demos = ref<AdminDemo[]>([])
 const tagSub = ref<'keys' | 'review'>('keys')
 const adminActiveKey = ref('')
 const adminActiveTagKey = computed(() => tagKeys.value.find((k) => k.key === adminActiveKey.value) || null)
@@ -20,8 +23,6 @@ function selectAdminKey(k: TagKeyInfo) {
   startEditKey(k)
 }
 
-const pending = ref<DemoDetail[]>([])
-const demos = ref<AdminDemo[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
 
 // 标签键管理
@@ -38,7 +39,6 @@ const loading = ref(false)
 const error = ref('')
 
 // 概览统计需要的最小数据（管理表格在子组件自行加载）
-const users = ref<AdminUser[]>([])
 const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }>({
   oss_enabled: false,
   mode: 'local',
@@ -56,18 +56,11 @@ async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [p, d, t, u, st] = await Promise.all([
-      api.adminReview(),
-      api.adminDemos(),
-      api.listTagKeys(),
-      api.adminUsers(),
-      api.storageStatus(),
-    ])
-    pending.value = p
-    demos.value = d
-    tagKeys.value = t
-    users.value = u
-    storageInfo.value = st
+    const stats = await api.getAdminStats()
+    adminStats.value = stats
+    storageInfo.value = stats.storage
+    demos.value = await api.adminDemos()
+    tagKeys.value = await api.listTagKeys()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -149,110 +142,14 @@ async function deleteTagValue(key: string, value: string) {
   }
 }
 
-async function review(slug: string, action: 'approve' | 'reject') {
-  const idx = pending.value.findIndex((d) => d.slug === slug)
-  const item = idx >= 0 ? pending.value[idx] : null
-  if (item) pending.value.splice(idx, 1)
-  if (action === 'approve' && item) {
-    const inDemos = demos.value.find((d) => d.slug === slug)
-    if (inDemos) inDemos.status = 'approved'
-    else demos.value.unshift({ ...item, storage_size: 0, inconsistency: false } as AdminDemo)
-  }
-  try {
-    await api.adminApprove(slug, action)
-    ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
-  } catch (e) {
-    if (item) pending.value.splice(idx, 0, item)
-    ui.toast((e as Error).message, 'error')
-  }
-}
-
-
-
-
 // ---------- 概览统计 ----------
-const dashStats = computed(() => {
-  const statuses = demos.value.reduce(
-    (acc, d) => {
-      acc[d.status as 'approved'] = (acc[d.status as 'approved'] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>,
-  )
-  return {
-    total: demos.value.length,
-    approved: statuses.approved || 0,
-    pending: pending.value.length,
-    rejected: statuses.rejected || 0,
-    users: users.value.length,
-    recent: [...demos.value]
-      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
-      .slice(0, 5),
-  }
-})
-
-// ---------- Demo 管理：搜索 / 状态筛选 / 分页 ----------
-const demoQuery = ref('')
-const demoStatus = ref<'all' | 'approved' | 'pending' | 'rejected'>('all')
-const demoPage = ref(1)
-const demoPageSize = 8
-
-const demoFiltered = computed(() =>
-  demos.value.filter((d) => {
-    if (demoStatus.value !== 'all' && d.status !== demoStatus.value) return false
-    const q = demoQuery.value.trim().toLowerCase()
-    if (!q) return true
-    return (
-      d.title.toLowerCase().includes(q) ||
-      d.author.toLowerCase().includes(q) ||
-      d.slug.toLowerCase().includes(q) ||
-      d.tags.some((t) => `${t.key}:${t.value}`.toLowerCase().includes(q))
-    )
-  }),
-)
-const demoTotal = computed(() => demoFiltered.value.length)
-const demoPages = computed(() => Math.max(1, Math.ceil(demoTotal.value / demoPageSize)))
-const demoPaged = computed(() => demoFiltered.value.slice((demoPage.value - 1) * demoPageSize, demoPage.value * demoPageSize))
-function setDemoPage(p: number) {
-  demoPage.value = Math.min(Math.max(1, p), demoPages.value)
-}
-
-async function setDemoStatus(slug: string, action: 'approve' | 'reject') {
-  const d = demos.value.find((x) => x.slug === slug)
-  const old = d?.status
-  if (d) d.status = action === 'approve' ? 'approved' : 'rejected'
-  try {
-    await api.adminApprove(slug, action)
-    ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
-  } catch (e) {
-    if (d && old) d.status = old
-    ui.toast((e as Error).message, 'error')
-  }
-}
-
-async function deleteDemoRow(d: AdminDemo) {
-  const ok = await ui.confirm({
-    title: '删除 Demo',
-    message: `确定删除「${d.title}」？本地文件与 OSS 对象都会被清理，不可恢复。`,
-    confirmText: '删除',
-    danger: true,
-  })
-  if (!ok) return
-  const idx = demos.value.findIndex((x) => x.slug === d.slug)
-  const removed = idx >= 0 ? demos.value[idx] : null
-  if (idx >= 0) demos.value.splice(idx, 1)
-  const pIdx = pending.value.findIndex((x) => x.slug === d.slug)
-  const pRemoved = pIdx >= 0 ? pending.value[pIdx] : null
-  if (pIdx >= 0) pending.value.splice(pIdx, 1)
-  try {
-    await api.deleteDemo(d.slug)
-    ui.toast('Demo 已删除', 'success')
-  } catch (e) {
-    if (removed) demos.value.splice(idx, 0, removed)
-    if (pRemoved) pending.value.splice(pIdx, 0, pRemoved)
-    ui.toast((e as Error).message, 'error')
-  }
-}
+const dashStats = computed(() => ({
+  total: adminStats.value?.demos.total ?? 0,
+  approved: adminStats.value?.demos.approved ?? 0,
+  pending: adminStats.value?.demos.pending ?? 0,
+  rejected: adminStats.value?.demos.rejected ?? 0,
+  users: adminStats.value?.users ?? 0,
+}))
 
 // ---------- 标签键编辑 ----------
 const editingKey = ref<TagKeyInfo | null>(null)
@@ -390,7 +287,7 @@ onMounted(loadAll)
     <div class="tabs">
       <button class="tab" :class="{ active: tab === 'review' }" type="button" @click="tab = 'review'">
         审核队列
-        <span v-if="pending.length" class="badge">{{ pending.length }}</span>
+        <span v-if="dashStats.pending" class="badge">{{ dashStats.pending }}</span>
       </button>
       <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
       <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
@@ -417,86 +314,9 @@ onMounted(loadAll)
 
       <Transition name="tab-pane" mode="out-in">
         <div :key="tab" class="tab-pane">
-          <!-- 审核队列 -->
-          <template v-if="tab === 'review'">
-            <div v-if="!pending.length" class="empty-box">没有待审核的 Demo</div>
-            <div v-for="d in pending" :key="d.slug" class="card card-sunny" style="padding: 18px; margin-bottom: 18px">
-              <div class="section-head" style="margin-bottom: 8px">
-                <h2>{{ d.title }}</h2>
-                <span class="status-pill status-pending">pending</span>
-              </div>
-              <p class="muted" style="margin-bottom: 12px">{{ d.description }}</p>
-              <div class="filter-row" style="margin-bottom: 12px">
-                <span v-for="t in d.tags" :key="t.key + ':' + t.value" class="tag-chip">{{ t.key }}:{{ t.value }}</span>
-              </div>
-              <div class="filter-row" style="margin-bottom: 0">
-                <button class="btn btn-sm btn-primary" type="button" @click="review(d.slug, 'approve')">通过</button>
-                <button class="btn btn-sm btn-dark" type="button" @click="review(d.slug, 'reject')">拒绝</button>
-                <RouterLink class="btn btn-sm btn-outline" :to="`/demo/${d.slug}`">预览</RouterLink>
-              </div>
-            </div>
-          </template>
+          <AdminReviewSection />
 
-          <!-- Demo 管理 -->
-          <template v-else-if="tab === 'demos'">
-            <div class="filter-row" style="margin-bottom: 14px">
-              <div class="search-box" style="flex: 1">
-                <input
-                  v-model="demoQuery"
-                  class="input"
-                  type="search"
-                  placeholder="搜索标题 / 作者 / slug / 标签…"
-                  @input="demoPage = 1"
-                />
-                <span class="search-icon">Q</span>
-              </div>
-              <div class="tabs" style="margin: 0">
-                <button class="tab" :class="{ active: demoStatus === 'all' }" type="button" @click="demoStatus = 'all'; demoPage = 1">全部</button>
-                <button class="tab" :class="{ active: demoStatus === 'approved' }" type="button" @click="demoStatus = 'approved'; demoPage = 1">已上线</button>
-                <button class="tab" :class="{ active: demoStatus === 'pending' }" type="button" @click="demoStatus = 'pending'; demoPage = 1">待审</button>
-                <button class="tab" :class="{ active: demoStatus === 'rejected' }" type="button" @click="demoStatus = 'rejected'; demoPage = 1">已拒</button>
-              </div>
-            </div>
-
-            <div class="table-wrap">
-              <table class="data">
-                <thead>
-                  <tr><th>标题</th><th>作者</th><th>状态</th><th>浏览</th><th>存储</th><th>一致性</th><th>操作</th></tr>
-                </thead>
-                <tbody>
-                  <tr v-for="d in demoPaged" :key="d.slug" :class="{ inconsistent: d.inconsistency }">
-                    <td><RouterLink :to="`/demo/${d.slug}`">{{ d.title }}</RouterLink></td>
-                    <td>{{ d.author }}</td>
-                    <td><span class="status-pill" :class="`status-${d.status}`">{{ d.status }}</span></td>
-                    <td>{{ d.view_count }}</td>
-                    <td>{{ d.storage_size ? Math.round(d.storage_size / 1024) + ' KB' : '-' }}</td>
-                    <td>{{ d.inconsistency ? '不一致' : '正常' }}</td>
-                    <td>
-                      <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${d.slug}`">编辑</RouterLink>
-                      <button
-                        v-if="d.status !== 'approved'"
-                        class="btn btn-sm btn-primary"
-                        type="button"
-                        @click="setDemoStatus(d.slug, 'approve')"
-                      >通过</button>
-                      <button
-                        v-if="d.status !== 'rejected'"
-                        class="btn btn-sm btn-dark"
-                        type="button"
-                        @click="setDemoStatus(d.slug, 'reject')"
-                      >拒绝</button>
-                      <button class="btn btn-sm btn-danger" type="button" @click="deleteDemoRow(d)">删除</button>
-                    </td>
-                  </tr>
-                  <tr v-if="!demoPaged.length">
-                    <td colspan="7" style="text-align: center">没有匹配的 Demo</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-                        <PaginationBar v-if="demoPages > 1" :page="demoPage" :total="demoTotal" :page-size="demoPageSize" @change="setDemoPage" />
-          </template>
+          <AdminDemosSection />
 
           <!-- 标签管理 -->
           <template v-else-if="tab === 'tags' && tagSub === 'keys'">

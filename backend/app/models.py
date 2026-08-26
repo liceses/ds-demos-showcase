@@ -335,5 +335,3 @@ class Notification(Base):
 
     user: Mapped["User"] = relationship(foreign_keys="Notification.user_id")
     actor: Mapped["User | None"] = relationship(foreign_keys="Notification.actor_id")
-
-    creator: Mapped["User | None"] = relationship()

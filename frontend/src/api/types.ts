@@ -264,6 +264,8 @@ export interface ForumTopic {
   tags: string[]
   pinned: boolean
   sticky: boolean
+  locked: boolean
+  solved: boolean
   status: string
   reply_count: number
   view_count: number
@@ -278,6 +280,7 @@ export interface ForumReply {
   author_id: number | null
   content: string
   status?: string
+  parent_id?: number | null
   created_at: string
 }
 
@@ -292,6 +295,8 @@ export interface ForumTopicInput {
 export interface ForumTopicAdminUpdate {
   pinned?: boolean
   sticky?: boolean
+  locked?: boolean
+  solved?: boolean
   category?: string
   status?: string
 }

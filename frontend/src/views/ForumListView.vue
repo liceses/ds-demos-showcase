@@ -15,9 +15,11 @@ const router = useRouter()
 
 const q = ref('')
 const category = ref('all')
-const sort = ref<'newest' | 'popular'>('newest')
+const sort = ref<'newest' | 'popular' | 'replies' | 'hot'>('newest')
 const demoFilter = ref('')
 const tagFilter = ref('')
+const stickyFilter = ref(false)
+const participatedFilter = ref(false)
 const demoCards = ref<Record<string, DemoDetail | null>>({})
 
 const categories = ['all', '交流', '分享', '求助', 'demo', '公告']
@@ -68,6 +70,8 @@ onMounted(() => {
   if (typeof sc === 'string' && categories.includes(sc)) category.value = sc
   if (typeof route.query.demo === 'string') demoFilter.value = route.query.demo
   if (typeof route.query.tag === 'string') tagFilter.value = route.query.tag
+  if (route.query.sticky === '1') stickyFilter.value = true
+  if (route.query.participated === '1') participatedFilter.value = true
   load()
 })
 </script>
@@ -93,7 +97,14 @@ onMounted(() => {
       <div class="tabs" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">最新</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">热门</button>
+        <button class="tab" :class="{ active: sort === 'replies' }" type="button" @click="sort = 'replies'; apply()">回复</button>
+        <button class="tab" :class="{ active: sort === 'hot' }" type="button" @click="sort = 'hot'; apply()">热度</button>
       </div>
+    </div>
+
+    <div class="filter-row" style="margin-bottom: 8px">
+      <button class="tag-chip" :class="{ active: stickyFilter }" type="button" @click="stickyFilter = !stickyFilter; apply()">只看精华</button>
+      <button class="tag-chip" :class="{ active: participatedFilter }" type="button" @click="participatedFilter = !participatedFilter; apply()">我参与的</button>
     </div>
 
     <div v-if="demoFilter || tagFilter" class="filter-row" style="margin-bottom: 8px">

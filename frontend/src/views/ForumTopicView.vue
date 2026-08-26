@@ -25,15 +25,21 @@ const error = ref('')
 const replyText = ref('')
 const posting = ref(false)
 const pendingNotice = ref(false)
+const replyPage = ref(1)
+const replyTotal = ref(0)
+const replyParentId = ref<number | null>(null)
+const loadingMore = ref(false)
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
     const tid = Number(props.id)
-    const [t, r] = await Promise.all([api.getForumTopic(tid), api.listForumReplies(tid)])
+    const [t, r] = await Promise.all([api.getForumTopic(tid), api.listForumRepliesPage(tid, 1, 50)])
     topic.value = t
-    replies.value = r
+    replies.value = r.items
+    replyTotal.value = r.total
+    replyPage.value = 1
     demoCard.value = null
     if (t?.demo_slug) {
       demoCardLoading.value = true
@@ -64,12 +70,34 @@ async function reportTopic() {
   }
 }
 
+async function loadMore() {
+  if (!topic.value || loadingMore.value) return
+  loadingMore.value = true
+  try {
+    const r = await api.listForumRepliesPage(Number(props.id), replyPage.value + 1, 50)
+    replies.value = [...replies.value, ...r.items]
+    replyTotal.value = r.total
+    replyPage.value += 1
+  } catch (e) {
+    ui.toast(errorMessage(e), 'error')
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+function quoteReply(r: ForumReply) {
+  replyParentId.value = r.id
+  const first = r.content.split('\n')[0].slice(0, 80)
+  replyText.value = `> ${first}\n\n`
+}
+
 async function submitReply() {
   if (!replyText.value.trim()) return
   posting.value = true
   try {
-    const r = await api.createForumReply(Number(props.id), replyText.value.trim())
+    const r = await api.createForumReply(Number(props.id), replyText.value.trim(), replyParentId.value ?? undefined)
     replyText.value = ''
+    replyParentId.value = null
     if (r.status === 'reviewing') {
       pendingNotice.value = true
       ui.toast('已提交，等待审核', 'success')
@@ -103,6 +131,8 @@ onMounted(load)
         <div class="forum-topic-title">
           <span v-if="topic.pinned" class="forum-badge forum-badge-pin">置顶</span>
           <span v-if="topic.sticky" class="forum-badge forum-badge-sticky">加精</span>
+          <span v-if="topic.solved" class="forum-badge" style="background: var(--mint)">已解决</span>
+          <span v-if="topic.locked" class="forum-badge" style="background: var(--ink); color: var(--paper)">已关闭</span>
           <span class="forum-cat">{{ topic.category }}</span>
           {{ topic.title }}
         </div>
@@ -126,24 +156,38 @@ onMounted(load)
       </div>
 
       <div class="forum-replies">
-        <div v-for="(r, i) in replies" :key="r.id" class="card forum-reply">
+        <div v-for="(r, i) in replies" :key="r.id" class="card forum-reply" :class="{ nested: r.parent_id }">
           <div class="forum-reply-head">
             <span class="forum-reply-author">{{ r.author || '匿名' }}</span>
             <span class="forum-reply-floor">#{{ i + 1 }}</span>
+            <span v-if="r.parent_id" class="forum-reply-parent">↳ 回复 #{{ replies.findIndex((x) => x.id === r.parent_id) + 1 }}</span>
             <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</span>
+            <button class="btn btn-sm btn-outline" type="button" @click="quoteReply(r)">引用</button>
           </div>
           <MarkdownRenderer :content="r.content" />
         </div>
         <div v-if="!replies.length" class="empty-box">还没有回复</div>
+        <button
+          v-if="replies.length < replyTotal"
+          class="btn btn-outline btn-block"
+          type="button"
+          :disabled="loadingMore"
+          @click="loadMore"
+        >{{ loadingMore ? '加载中…' : '加载更多回复' }}</button>
       </div>
 
       <div class="card forum-reply-box">
         <h3 style="margin-bottom: 10px">回复</h3>
-        <template v-if="auth.isLoggedIn()">
+        <div v-if="topic.locked" class="notice notice-warn" style="margin-bottom: 8px">该主题已关闭讨论。</div>
+        <template v-else-if="auth.isLoggedIn()">
           <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: 8px">已提交，等待审核，通过后可见。</div>
+          <div v-if="replyParentId" class="filter-row" style="margin-bottom: 6px">
+            <span class="tag-chip active">正在回复 #{{ replies.findIndex((x) => x.id === replyParentId) + 1 }}</span>
+            <button class="btn btn-sm btn-dark" type="button" @click="replyParentId = null; replyText = ''">取消</button>
+          </div>
           <MarkdownEditor v-model="replyText" :rows="4" placeholder="支持 Markdown…" />
           <div class="filter-row" style="margin-top: 10px">
-            <button class="btn btn-primary" type="button" :disabled="posting" @click="submitReply">{{ posting ? '提交中…' : '发表回复' }}</button>
+            <button class="btn btn-primary" type="button" :disabled="posting || !replyText.trim()" @click="submitReply">{{ posting ? '提交中…' : '发表回复' }}</button>
           </div>
         </template>
         <template v-else>

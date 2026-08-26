@@ -194,7 +194,7 @@ const realApi = {
       return null
     }
   },
-  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular'; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     const { data } = await http.get('/forum/topics', { params })
     return data
   },
@@ -202,6 +202,10 @@ const realApi = {
     const { data } = await http.get(`/forum/topics/${topicId}/replies`)
     // 后端已改成分页对象 { items, total, page, page_size }；兼容旧版数组返回
     return Array.isArray(data) ? data : (data.items ?? [])
+  },
+  async listForumRepliesPage(topicId: number, page = 1, pageSize = 50): Promise<Paginated<ForumReply>> {
+    const { data } = await http.get(`/forum/topics/${topicId}/replies`, { params: { page, page_size: pageSize } })
+    return data
   },
   async createForumTopic(payload: ForumTopicInput): Promise<ForumTopic> {
     const { data } = await http.post('/forum/topics', {
@@ -213,8 +217,8 @@ const realApi = {
     })
     return data
   },
-  async createForumReply(topicId: number, content: string): Promise<ForumReply> {
-    const { data } = await http.post(`/forum/topics/${topicId}/replies`, { content })
+  async createForumReply(topicId: number, content: string, parentId?: number): Promise<ForumReply> {
+    const { data } = await http.post(`/forum/topics/${topicId}/replies`, { content, parent_id: parentId ?? null })
     return data
   },
   async adminListForumTopics(params: { status?: string; category?: string; pinned?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {

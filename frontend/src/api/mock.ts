@@ -46,9 +46,9 @@ import type {
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
 
 const forumTopics: ForumTopic[] = [
-  { id: 1, title: '欢迎来到讨论区', content: '这里是 **AI 全民制作人** 的讨论区，欢迎交流作品与提示词。\n\n试试贴一个作品：[/demo/demo_粒子星空](/demo/demo_粒子星空)', author: 'tester', author_id: 2, demo_slug: null, category: '交流', tags: ['type:game'], pinned: true, sticky: true, status: 'normal', reply_count: 2, view_count: 88, created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z' },
-  { id: 2, title: '分享：用灰测模型做的贪吃蛇', content: '最近用 **ds-unknown** 生成了一个贪吃蛇，体验还不错。', author: 'alice', author_id: 3, demo_slug: 'demo_贪吃蛇', category: '分享', tags: ['model:ds-unknown'], pinned: false, sticky: true, status: 'normal', reply_count: 1, view_count: 42, created_at: '2026-08-02T09:00:00Z', updated_at: '2026-08-02T09:00:00Z' },
-  { id: 3, title: '求助：iframe 全屏问题', content: '为什么 F 键有时候没反应？', author: 'tester', author_id: 2, demo_slug: null, category: '求助', tags: [], pinned: false, sticky: false, status: 'normal', reply_count: 0, view_count: 12, created_at: '2026-08-03T12:00:00Z', updated_at: '2026-08-03T12:00:00Z' },
+  { id: 1, title: '欢迎来到讨论区', content: '这里是 **AI 全民制作人** 的讨论区，欢迎交流作品与提示词。\n\n试试贴一个作品：[/demo/demo_粒子星空](/demo/demo_粒子星空)', author: 'tester', author_id: 2, demo_slug: null, category: '交流', tags: ['type:game'], pinned: true, sticky: true, locked: false, solved: false, status: 'normal', reply_count: 2, view_count: 88, created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z' },
+  { id: 2, title: '分享：用灰测模型做的贪吃蛇', content: '最近用 **ds-unknown** 生成了一个贪吃蛇，体验还不错。', author: 'alice', author_id: 3, demo_slug: 'demo_贪吃蛇', category: '分享', tags: ['model:ds-unknown'], pinned: false, sticky: true, locked: false, solved: false, status: 'normal', reply_count: 1, view_count: 42, created_at: '2026-08-02T09:00:00Z', updated_at: '2026-08-02T09:00:00Z' },
+  { id: 3, title: '求助：iframe 全屏问题', content: '为什么 F 键有时候没反应？', author: 'tester', author_id: 2, demo_slug: null, category: '求助', tags: [], pinned: false, sticky: false, locked: false, solved: false, status: 'normal', reply_count: 0, view_count: 12, created_at: '2026-08-03T12:00:00Z', updated_at: '2026-08-03T12:00:00Z' },
 ]
 const forumReplies: ForumReply[] = [
   { id: 1, topic_id: 1, author: 'admin', author_id: 1, content: '欢迎！有问题随时发帖。', created_at: '2026-08-01T10:30:00Z' },
@@ -1048,7 +1048,7 @@ export const mockApi = {
     await delay(150)
     return forumTopics.find((t) => t.id === id) || null
   },
-  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular'; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     await delay()
     const { q = '', category, tag, demo, sort = 'newest', page = 1, page_size = 20 } = params
     let items = [...forumTopics].filter((t) => t.status === 'normal')
@@ -1065,6 +1065,12 @@ export const mockApi = {
     await delay()
     return clone(forumReplies.filter((r) => r.topic_id === topicId).sort((a, b) => a.created_at.localeCompare(b.created_at)))
   },
+  async listForumRepliesPage(topicId: number, page = 1, pageSize = 50): Promise<Paginated<ForumReply>> {
+    await delay()
+    const items = clone(forumReplies.filter((r) => r.topic_id === topicId).sort((a, b) => a.created_at.localeCompare(b.created_at)))
+    const start = (page - 1) * pageSize
+    return { items: items.slice(start, start + pageSize), total: items.length, page, page_size: pageSize }
+  },
   async createForumTopic(payload: ForumTopicInput): Promise<ForumTopic> {
     await delay(300)
     const t: ForumTopic = {
@@ -1078,6 +1084,8 @@ export const mockApi = {
       tags: payload.tags || [],
       pinned: false,
       sticky: false,
+      locked: false,
+      solved: false,
       status: 'normal',
       reply_count: 0,
       view_count: 0,
@@ -1087,9 +1095,9 @@ export const mockApi = {
     forumTopics.unshift(t)
     return clone(t)
   },
-  async createForumReply(topicId: number, content: string): Promise<ForumReply> {
+  async createForumReply(topicId: number, content: string, parentId?: number): Promise<ForumReply> {
     await delay(200)
-    const r: ForumReply = { id: Math.max(0, ...forumReplies.map((x) => x.id)) + 1, topic_id: topicId, author: 'tester', author_id: 2, content, created_at: new Date().toISOString() }
+    const r: ForumReply = { id: Math.max(0, ...forumReplies.map((x) => x.id)) + 1, topic_id: topicId, author: 'tester', author_id: 2, content, parent_id: parentId ?? null, status: 'normal', created_at: new Date().toISOString() }
     forumReplies.push(r)
     const t = forumTopics.find((x) => x.id === topicId)
     if (t) t.reply_count += 1

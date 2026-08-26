@@ -44,7 +44,7 @@ async function forumReviewTopic(t: ForumTopic, action: 'approve' | 'reject') {
     await loadForum()
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
-async function forumPatchTopic(t: ForumTopic, patch: { pinned?: boolean; sticky?: boolean; status?: string }) {
+async function forumPatchTopic(t: ForumTopic, patch: { pinned?: boolean; sticky?: boolean; locked?: boolean; solved?: boolean; status?: string }) {
   try {
     await api.adminUpdateForumTopic(t.id, patch)
     ui.toast('已更新', 'success')
@@ -140,6 +140,8 @@ onMounted(() => {
                 <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { pinned: !t.pinned })">{{ t.pinned ? '取消置顶' : '置顶' }}</button>
                 <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { sticky: !t.sticky })">{{ t.sticky ? '取消加精' : '加精' }}</button>
                 <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-dark" type="button" @click="forumPatchTopic(t, { status: t.status === 'hidden' ? 'normal' : 'hidden' })">{{ t.status === 'hidden' ? '恢复' : '隐藏' }}</button>
+                <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { locked: !t.locked })">{{ t.locked ? '解锁' : '锁定' }}</button>
+                <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { solved: !t.solved })">{{ t.solved ? '取消解决' : '已解决' }}</button>
                 <button class="btn btn-sm btn-danger" type="button" @click="forumDeleteTopic(t)">删除</button>
               </td>
             </tr>

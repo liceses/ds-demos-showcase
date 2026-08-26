@@ -4035,3 +4035,12 @@ table.data tr.inconsistent td {
   font-size: 12px;
   color: var(--text-forum, #666);
 }
+
+/* 论坛嵌套回复 */
+.forum-reply.nested {
+  margin-left: 24px;
+}
+.forum-reply-parent {
+  color: var(--text-forum);
+  font-size: 12px;
+}

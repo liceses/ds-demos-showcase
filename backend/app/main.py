@@ -374,6 +374,7 @@ def init_db() -> None:
     _ensure_tag_columns()
     _ensure_announcement_columns()
     _ensure_user_columns()
+    _ensure_forum_columns()
     _ensure_forum_reply_columns()
     _seed_forum_notice()
 

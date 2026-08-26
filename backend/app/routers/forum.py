@@ -8,11 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import current_user, require_admin
+from ..deps import current_user, optional_user, require_admin
 from ..models import Announcement, Demo, ForumReply, ForumReport, ForumTopic, User
 from ..schemas import (
     ForumReplyIn,
     ForumReplyOut,
+    ForumReplyPage,
     ForumReportHandleIn,
     ForumReportIn,
     ForumReportOut,
@@ -63,10 +64,13 @@ def list_topics(
     category: str | None = None,
     tag: str | None = None,
     demo: str | None = None,
-    sort: str = Query(default="newest", pattern="^(newest|popular)$"),
+    sort: str = Query(default="newest", pattern="^(newest|popular|replies|hot)$"),
+    sticky: bool = Query(False),
+    participated: bool = Query(False),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
+    user: User | None = Depends(optional_user),
 ):
     query = db.query(ForumTopic).filter(ForumTopic.status == "normal")
     if q:
@@ -78,9 +82,25 @@ def list_topics(
         query = query.filter(ForumTopic.tags.ilike(f"%{tag}%"))
     if demo:
         query = query.filter(ForumTopic.demo_slug == demo)
+    if sticky:
+        query = query.filter(ForumTopic.sticky == True)  # noqa: E712
+    if participated:
+        if user is None:
+            return ForumTopicPage(items=[], total=0, page=page, page_size=page_size)
+        my_topic_ids = db.query(ForumReply.topic_id).filter(ForumReply.author_id == user.id).distinct()
+        query = query.filter(ForumTopic.id.in_(my_topic_ids))
 
     if sort == "popular":
         query = query.order_by(ForumTopic.view_count.desc(), ForumTopic.created_at.desc(), ForumTopic.id.desc())
+    elif sort == "replies":
+        query = query.order_by(ForumTopic.reply_count.desc(), ForumTopic.created_at.desc(), ForumTopic.id.desc())
+    elif sort == "hot":
+        # 热度 = 回复数 + 浏览/50 + 时间衰减（时间衰减用 created_at 兜底）
+        query = query.order_by(
+            (ForumTopic.reply_count + ForumTopic.view_count / 50.0).desc(),
+            ForumTopic.created_at.desc(),
+            ForumTopic.id.desc(),
+        )
     else:
         query = query.order_by(
             ForumTopic.pinned.desc(), ForumTopic.sticky.desc(), ForumTopic.created_at.desc(), ForumTopic.id.desc()
@@ -105,16 +125,28 @@ def get_topic(tid: int, db: Session = Depends(get_db)):
     return forum_service.topic_out(t)
 
 
-@router.get("/topics/{tid}/replies", response_model=list[ForumReplyOut])
-def list_replies(tid: int, db: Session = Depends(get_db)):
+@router.get("/topics/{tid}/replies", response_model=ForumReplyPage)
+def list_replies(
+    tid: int,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
     forum_service.find_visible_topic(db, tid)
+    q = db.query(ForumReply).filter(ForumReply.topic_id == tid, ForumReply.status == "normal")
+    total = q.count()
     rows = (
-        db.query(ForumReply)
-        .filter(ForumReply.topic_id == tid, ForumReply.status == "normal")
-        .order_by(ForumReply.created_at, ForumReply.id)
+        q.order_by(ForumReply.created_at, ForumReply.id)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-    return [forum_service.reply_out(r) for r in rows]
+    return ForumReplyPage(
+        items=[forum_service.reply_out(r) for r in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # ---------- 登录 ----------
@@ -156,10 +188,18 @@ def create_reply(
     user: User = Depends(current_user),
 ):
     t = forum_service.find_visible_topic(db, tid)
+    if t.locked:
+        raise HTTPException(status_code=403, detail="该主题已关闭讨论", )
     _rate_limit(request, "reply", _REPLY_RATE, user)
     forum_service.validate_links(body.content)
+    parent_id = None
+    if body.parent_id is not None:
+        parent = db.get(ForumReply, body.parent_id)
+        if parent is None or parent.topic_id != t.id or parent.status != "normal":
+            raise HTTPException(status_code=422, detail="父回复不存在或不属于该主题", )
+        parent_id = parent.id
     status = "reviewing" if forum_service.needs_review(user) else "normal"
-    r = ForumReply(topic_id=t.id, author_id=user.id, content=body.content, status=status)
+    r = ForumReply(topic_id=t.id, author_id=user.id, content=body.content, status=status, parent_id=parent_id)
     db.add(r)
     if status == "normal":
         t.reply_count += 1
@@ -258,6 +298,10 @@ def admin_update_topic(
         t.pinned = body.pinned
     if body.sticky is not None:
         t.sticky = body.sticky
+    if body.locked is not None:
+        t.locked = body.locked
+    if body.solved is not None:
+        t.solved = body.solved
     if body.category is not None:
         t.category = body.category
     if body.status is not None:

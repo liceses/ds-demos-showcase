@@ -689,13 +689,13 @@ GET /api/v1/demos?status=approved&author=public
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/forum/topics` | 公开 | 分页/搜索(q)/分类/标签(tag)/demo 关联/排序(newest\|popular)，仅 normal |
+| GET | `/forum/topics` | 公开 | 分页/搜索(q)/分类/标签(tag)/demo 关联/排序(newest\|popular\|replies\|hot)/`sticky=1` 精华/`participated=1` 我参与的，仅 normal |
 | GET | `/forum/topics/{id}` | 公开 | 详情（含富卡片字段），view_count+1 |
-| GET | `/forum/topics/{id}/replies` | 公开 | 回复列表（时间升序） |
+| GET | `/forum/topics/{id}/replies?page=&page_size=` | 公开 | 回复分页（含 `parent_id` 嵌套） |
 | POST | `/forum/topics` | 登录 | 发帖（每 IP 10 次/小时），可关联 approved demo_slug |
-| POST | `/forum/topics/{id}/replies` | 登录 | 回复（每 IP 30 次/小时），reply_count+1 |
+| POST | `/forum/topics/{id}/replies` | 登录 | 回复（每 IP 30 次/小时），reply_count+1；支持 `parent_id` 嵌套；locked 主题 403 |
 | GET | `/forum/admin/topics` | admin | 含 hidden，分页/搜索/状态过滤 |
-| PUT | `/forum/admin/topics/{id}` | admin | 改 pinned/sticky/category/status |
+| PUT | `/forum/admin/topics/{id}` | admin | 改 pinned/sticky/locked/solved/category/status |
 | DELETE | `/forum/admin/topics/{id}` | admin | 删主题（回复级联删） |
 | DELETE | `/forum/admin/replies/{id}` | admin | 删回复（同步 reply_count） |
 

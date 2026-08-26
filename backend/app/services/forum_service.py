@@ -30,6 +30,8 @@ def topic_out(t: ForumTopic) -> ForumTopicOut:
         tags=tags,
         pinned=t.pinned,
         sticky=t.sticky,
+        locked=t.locked,
+        solved=t.solved,
         status=t.status,
         reply_count=t.reply_count,
         view_count=t.view_count,
@@ -46,6 +48,7 @@ def reply_out(r: ForumReply) -> ForumReplyOut:
         author_id=r.author_id,
         content=r.content,
         status=r.status,
+        parent_id=r.parent_id,
         created_at=r.created_at,
     )
 

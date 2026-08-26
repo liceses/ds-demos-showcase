@@ -273,6 +273,8 @@ class ForumTopic(Base):
     tags: Mapped[str] = mapped_column(String(200), default="", nullable=False)  # 逗号分隔
     pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sticky: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    solved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden | reviewing
     reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -293,6 +295,7 @@ class ForumReply(Base):
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown 原文
     status: Mapped[str] = mapped_column(String(16), default="normal", nullable=False, index=True)  # normal | hidden | reviewing
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("forum_replies.id", ondelete="CASCADE"), nullable=True, index=True)
     # 历史评论迁移标记：指向来源 comment.id（幂等去重用）
     source_comment_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

@@ -269,6 +269,20 @@ def _ensure_user_columns() -> None:
                 conn.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {name} {ddl}")
 
 
+def _ensure_forum_columns() -> None:
+    """SQLite 增量迁移：给已存在的 forum_topics 表补充互动列（locked/solved）。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "forum_topics" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("forum_topics")}
+    with engine.begin() as conn:
+        for name, ddl in [("locked", "BOOLEAN NOT NULL DEFAULT 0"), ("solved", "BOOLEAN NOT NULL DEFAULT 0")]:
+            if name not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE forum_topics ADD COLUMN {name} {ddl}")
+
+
 def _ensure_forum_reply_columns() -> None:
     """SQLite 增量迁移：给已存在的 forum_replies 表补充 status / source_comment_id。"""
     from sqlalchemy import inspect as sa_inspect
@@ -280,6 +294,7 @@ def _ensure_forum_reply_columns() -> None:
     additions = [
         ("status", "TEXT NOT NULL DEFAULT 'normal'"),
         ("source_comment_id", "INTEGER"),
+        ("parent_id", "INTEGER"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:

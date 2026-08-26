@@ -379,6 +379,8 @@ class ForumTopicOut(BaseModel):
     tags: list[str] = []
     pinned: bool = False
     sticky: bool = False
+    locked: bool = False
+    solved: bool = False
     status: str = "normal"
     reply_count: int = 0
     view_count: int = 0
@@ -393,6 +395,13 @@ class ForumTopicPage(BaseModel):
     page_size: int
 
 
+class ForumReplyPage(BaseModel):
+    items: list[ForumReplyOut]
+    total: int
+    page: int
+    page_size: int
+
+
 class ForumReplyOut(BaseModel):
     id: int
     topic_id: int
@@ -400,6 +409,7 @@ class ForumReplyOut(BaseModel):
     author_id: int | None = None
     content: str
     status: str = "normal"
+    parent_id: int | None = None
     created_at: datetime
 
 
@@ -413,11 +423,14 @@ class ForumTopicIn(BaseModel):
 
 class ForumReplyIn(BaseModel):
     content: str = Field(min_length=1, max_length=10000)
+    parent_id: int | None = None
 
 
 class ForumTopicAdminUpdate(BaseModel):
     pinned: bool | None = None
     sticky: bool | None = None
+    locked: bool | None = None
+    solved: bool | None = None
     category: str | None = Field(default=None, max_length=32)
     status: str | None = Field(default=None, pattern="^(normal|hidden|reviewing)$")
 

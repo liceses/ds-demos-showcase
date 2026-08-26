@@ -189,6 +189,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **审核**：新用户（need_review 或 trust_level<1）发帖/回复进 reviewing；admin 审核 approve 置 normal 并提 trust_level。
 - **链接安全**：内容链接仅 http/https，拒绝内网/回环/保留地址 + 域名黑名单（`_validate_links`）。
 - **接口**：公开列表/详情/回复；登录发帖/回复/举报；admin 全量/审核/隐藏/删除/封禁/举报处理 + 回复管理列表。
+- **互动**：回复支持 `parent_id` 嵌套 + 分页；列表排序 `newest/popular/replies/hot`（热度=回复+浏览/50+时间衰减）；`sticky` 精华过滤、`participated` 我参与的；主题 `locked`（关闭讨论，回复 403）与 `solved`（已解决）。
 - **首帖**：`init_db` 幂等创建置顶「论坛发帖须知 & 安全说明」（读 `docs/论坛首帖-用户须知与安全说明.md`）。
 - **公告互链**：`Announcement.topic_id`（FK forum_topics SET NULL），响应带 `topic_title`；创建/更新校验 topic 为 normal。
 - **限流提示**：429 带 `Retry-After` 头 + 冷却秒数。

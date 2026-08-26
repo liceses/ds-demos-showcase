@@ -3754,3 +3754,52 @@ table.data tr.inconsistent td {
     transform: rotate(-3deg) translateY(-2px);
   }
 }
+
+/* 论坛主题关联作品卡 */
+.forum-demo-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.forum-demo-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+}
+.forum-demo-cover {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  background: var(--mint);
+  flex-shrink: 0;
+}
+.forum-demo-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.forum-demo-title {
+  font-size: 17px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.forum-demo-meta {
+  font-size: 13px;
+  color: var(--text-forum);
+}
+.forum-demo-loading {
+  justify-content: center;
+  color: var(--text-forum);
+  border-style: dashed;
+}

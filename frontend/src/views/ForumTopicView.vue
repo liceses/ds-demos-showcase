@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { ForumReply, ForumTopic } from '../api/types'
+import type { DemoDetail, ForumReply, ForumTopic } from '../api/types'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 
 const props = defineProps<{ id: string }>()
@@ -15,6 +15,8 @@ const ui = useUiStore()
 
 const topic = ref<ForumTopic | null>(null)
 const replies = ref<ForumReply[]>([])
+const demoCard = ref<DemoDetail | null>(null)
+const demoCardLoading = ref(false)
 const loading = ref(true)
 const error = ref('')
 const replyText = ref('')
@@ -29,6 +31,17 @@ async function load() {
     const [t, r] = await Promise.all([api.getForumTopic(tid), api.listForumReplies(tid)])
     topic.value = t
     replies.value = r
+    demoCard.value = null
+    if (t?.demo_slug) {
+      demoCardLoading.value = true
+      try {
+        demoCard.value = await api.getDemo(t.demo_slug)
+      } catch {
+        demoCard.value = null
+      } finally {
+        demoCardLoading.value = false
+      }
+    }
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -94,9 +107,17 @@ onMounted(load)
           <span class="forum-stat">回复 {{ topic.reply_count }}</span>
           <span class="forum-stat">浏览 {{ topic.view_count }}</span>
           <span>{{ new Date(topic.created_at).toLocaleString('zh-CN') }}</span>
-          <RouterLink v-if="topic.demo_slug" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
+          <RouterLink v-if="topic.demo_slug && !demoCard && !demoCardLoading" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
           <button class="btn btn-sm btn-outline" type="button" @click="reportTopic">举报</button>
         </div>
+        <div v-if="topic.demo_slug && demoCardLoading" class="forum-demo-card forum-demo-loading">加载关联作品…</div>
+        <RouterLink v-else-if="topic.demo_slug && demoCard" :to="`/demo/${topic.demo_slug}`" class="forum-demo-card">
+          <img class="forum-demo-cover" :src="demoCard.cover_url" :alt="demoCard.title" loading="lazy" />
+          <span class="forum-demo-main">
+            <span class="forum-demo-title">{{ demoCard.title }}</span>
+            <span class="forum-demo-meta">{{ demoCard.author }} · {{ demoCard.tags.length }} 标签 · 查看作品 →</span>
+          </span>
+        </RouterLink>
         <MarkdownRenderer :content="topic.content" />
       </div>
 

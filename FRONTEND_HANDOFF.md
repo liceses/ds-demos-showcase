@@ -94,14 +94,22 @@
 `POST /tags/admin/sync-models`：拉 models.dev 模型字典，新模型写 pending 建议、已有模型更新 group。管理后台可加「从 models.dev 同步」按钮 + 显示 pending 建议数。
 
 ### 论坛（完整）
-公开：`GET /forum/topics?demo=slug`、`GET /forum/topics/{id}`、`GET /forum/topics/{id}/replies`
-登录：`POST /forum/topics`、`POST /forum/topics/{id}/replies`、`POST /forum/reports`
+公开：`GET /forum/topics?demo=slug`、`GET /forum/topics/{id}`、`GET /forum/topics/{id}/replies`、`GET /forum/reactions/summary`
+登录：`POST /forum/topics`、`POST /forum/topics/{id}/replies`、`POST /forum/reports`、`POST /forum/reactions`（赞/感谢切换）
 管理：`GET/PUT/POST/DELETE /forum/admin/topics*`、`GET/POST /forum/admin/replies*`、`POST /forum/admin/users/{uid}/ban`、`GET/POST /forum/admin/reports*`
 - 新用户发帖/回复返回 `status=reviewing` → 前端提示「已提交，等待审核」
 - 429 带 `Retry-After` 头，可提示「X 秒后重试」
 - 首帖「用户须知 & 安全说明」启动时自动创建（category=notice、置顶），论坛列表第一条展示
 - 富卡片：`GET /demos/{slug}/meta` 返回 `{slug,title,cover_url,author}`（不增浏览数）
 - 旧评论 `POST/DELETE` 已 410 下线；`GET /demos/{slug}/comments` 只读保留
+- 主题/回复输出含 `like_count` / `thanks_count` / `my_reactions`，可直接展示赞/感谢按钮状态
+- `GET /forum/topics?followed=1`：只看我关注的用户的主题（需登录）
+
+### 社区互动 / 用户主页
+- `GET /users/{username}/profile`：声望/作品/主题/回复/粉丝/关注统计
+- `POST /users/{user_id}/follow`：关注/取关切换
+- `GET /users/{username}/followers`、`GET /users/{username}/following`：粉丝/关注列表
+- 前端建议：用户卡片/主页显示声望与关注按钮；论坛列表可加「关注」过滤 Tab
 
 ### 公告 ↔ 论坛互链
 - 公告创建/更新可传 `topic_id`
@@ -110,5 +118,5 @@
 
 ### 站内通知
 - 接口：`GET /notifications`、`GET /notifications/unread-count`、`POST /notifications/read`、`POST /notifications/read-all`
-- 类型：`forum_reply`（回复/@提及）、`demo_review`（待审）、`review_result`（审核结果）、`report_handled`（举报处理）
+- 类型：`forum_reply`（回复/@提及）、`forum_reaction`（赞/感谢）、`demo_review`（待审）、`review_result`（审核结果）、`report_handled`（举报处理）
 - 前端：顶栏铃铛 + 未读红点（轮询 unread-count），`/notifications` 页分组展示

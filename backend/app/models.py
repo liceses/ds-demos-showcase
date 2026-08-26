@@ -32,6 +32,8 @@ class User(Base):
     trust_level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     need_review: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     github_bound: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # 社区声望：收到赞 +1、感谢 +2；取消后扣回
+    reputation: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     demos: Mapped[list["Demo"]] = relationship(back_populates="author")
@@ -304,6 +306,41 @@ class ForumReply(Base):
     author: Mapped["User | None"] = relationship()
 
 
+class ForumReaction(Base):
+    """论坛互动：主题/回复的赞与感谢。同一用户对同一目标同一类型只能有一条。"""
+
+    __tablename__ = "forum_reactions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "target_type", "target_id", "reaction_type", name="uq_forum_reaction"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_type: Mapped[str] = mapped_column(String(16), nullable=False, index=True)  # topic | reply
+    target_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    reaction_type: Mapped[str] = mapped_column(String(16), nullable=False, index=True)  # like | thanks
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    user: Mapped["User"] = relationship()
+
+
+class UserFollow(Base):
+    """用户关注关系。"""
+
+    __tablename__ = "user_follows"
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_user_follow"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    follower_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    following_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    follower: Mapped["User"] = relationship(foreign_keys=[follower_id])
+    following: Mapped["User"] = relationship(foreign_keys=[following_id])
+
+
 class ForumReport(Base):
     """举报表。"""
 
@@ -325,7 +362,7 @@ class Notification(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # forum_reply | demo_review | review_result | report_handled | system
+    type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # forum_reply | forum_reaction | demo_review | review_result | report_handled | system
     actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     demo_slug: Mapped[str | None] = mapped_column(String(128), nullable=True)
     topic_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

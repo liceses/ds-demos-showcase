@@ -10,15 +10,24 @@ from sqlalchemy.orm import Session
 
 from ..models import ForumReply, ForumTopic, User
 from ..schemas import ForumReplyOut, ForumTopicOut
+from . import community_service
 
 # 链接域名黑名单
 BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "example.com", "test"}
 _URL_RE = re.compile(r"https?://[^\s<>\"'()]+")
 
 
-def topic_out(t: ForumTopic) -> ForumTopicOut:
+def topic_out(t: ForumTopic, db: Session | None = None, user_id: int | None = None) -> ForumTopicOut:
     author = t.author.username if t.author else None
     tags = [x.strip() for x in t.tags.split(",") if x.strip()]
+    like_count = 0
+    thanks_count = 0
+    my_reactions: list[str] = []
+    if db is not None:
+        summary = community_service.reaction_summary(db, "topic", t.id, user_id)
+        like_count = summary.like_count
+        thanks_count = summary.thanks_count
+        my_reactions = summary.my_reactions
     return ForumTopicOut(
         id=t.id,
         title=t.title,
@@ -35,12 +44,23 @@ def topic_out(t: ForumTopic) -> ForumTopicOut:
         status=t.status,
         reply_count=t.reply_count,
         view_count=t.view_count,
+        like_count=like_count,
+        thanks_count=thanks_count,
+        my_reactions=my_reactions,
         created_at=t.created_at,
         updated_at=t.updated_at,
     )
 
 
-def reply_out(r: ForumReply) -> ForumReplyOut:
+def reply_out(r: ForumReply, db: Session | None = None, user_id: int | None = None) -> ForumReplyOut:
+    like_count = 0
+    thanks_count = 0
+    my_reactions: list[str] = []
+    if db is not None:
+        summary = community_service.reaction_summary(db, "reply", r.id, user_id)
+        like_count = summary.like_count
+        thanks_count = summary.thanks_count
+        my_reactions = summary.my_reactions
     return ForumReplyOut(
         id=r.id,
         topic_id=r.topic_id,
@@ -49,6 +69,9 @@ def reply_out(r: ForumReply) -> ForumReplyOut:
         content=r.content,
         status=r.status,
         parent_id=r.parent_id,
+        like_count=like_count,
+        thanks_count=thanks_count,
+        my_reactions=my_reactions,
         created_at=r.created_at,
     )
 

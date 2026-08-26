@@ -384,6 +384,9 @@ class ForumTopicOut(BaseModel):
     status: str = "normal"
     reply_count: int = 0
     view_count: int = 0
+    like_count: int = 0
+    thanks_count: int = 0
+    my_reactions: list[str] = []
     created_at: datetime
     updated_at: datetime
 
@@ -404,6 +407,9 @@ class ForumReplyOut(BaseModel):
     content: str
     status: str = "normal"
     parent_id: int | None = None
+    like_count: int = 0
+    thanks_count: int = 0
+    my_reactions: list[str] = []
     created_at: datetime
 
 
@@ -458,6 +464,48 @@ class ForumReportOut(BaseModel):
 
 class ForumReportHandleIn(BaseModel):
     action: str = Field(pattern="^(resolve|dismiss)$")
+
+
+# ---------- 社区互动 ----------
+class ReactionToggleIn(BaseModel):
+    target_type: str = Field(pattern="^(topic|reply)$")
+    target_id: int
+    reaction_type: str = Field(pattern="^(like|thanks)$")
+
+
+class ReactionSummary(BaseModel):
+    target_type: str
+    target_id: int
+    like_count: int = 0
+    thanks_count: int = 0
+    my_reactions: list[str] = []
+
+
+class ReactionToggleOut(ReactionSummary):
+    active: bool = False
+
+
+class FollowOut(BaseModel):
+    following: bool
+    followers_count: int = 0
+    following_count: int = 0
+
+
+class UserProfileOut(BaseModel):
+    id: int
+    username: str
+    role: str
+    status: str
+    bio: str
+    created_at: datetime
+    reputation: int = 0
+    demo_count: int = 0
+    topic_count: int = 0
+    reply_count: int = 0
+    follower_count: int = 0
+    following_count: int = 0
+    is_following: bool = False
+    is_self: bool = False
 
 
 # ---------- 通知 ----------

@@ -636,6 +636,10 @@ GET /api/v1/demos?status=approved&author=public
 - `POST /api/v1/auth/logout`（204）：清除登录态
 - `GET /api/v1/auth/me`：返回当前登录用户
 - `GET /api/v1/users/{username}`：公开用户信息（含 `demo_count`）
+- `GET /api/v1/users/{username}/profile`：用户主页聚合（声望/作品/主题/回复/粉丝/关注/is_following）
+- `POST /api/v1/users/{user_id}/follow`：关注/取关切换，返回 `{following, followers_count, following_count}`
+- `GET /api/v1/users/{username}/followers`：粉丝列表
+- `GET /api/v1/users/{username}/following`：关注列表
 - `PATCH /api/v1/users/{user_id}`（仅 admin）：`{role?, status?}`
 
 ### 管理后台
@@ -689,9 +693,11 @@ GET /api/v1/demos?status=approved&author=public
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/forum/topics` | 公开 | 分页/搜索(q)/分类/标签(tag)/demo 关联/排序(newest\|popular\|replies\|hot)/`sticky=1` 精华/`participated=1` 我参与的，仅 normal |
-| GET | `/forum/topics/{id}` | 公开 | 详情（含富卡片字段），view_count+1 |
-| GET | `/forum/topics/{id}/replies?page=&page_size=` | 公开 | 回复分页（含 `parent_id` 嵌套） |
+| GET | `/forum/topics` | 公开 | 分页/搜索(q)/分类/标签(tag)/demo 关联/排序(newest\|popular\|replies\|hot)/`sticky=1` 精华/`participated=1` 我参与的/`followed=1` 只看关注，仅 normal |
+| GET | `/forum/topics/{id}` | 公开 | 详情（含富卡片字段、赞/感谢计数与我的互动），view_count+1 |
+| GET | `/forum/topics/{id}/replies?page=&page_size=` | 公开 | 回复分页（含 `parent_id` 嵌套、赞/感谢计数与我的互动） |
+| GET | `/forum/reactions/summary?target_type=topic\|reply&target_id=` | 公开 | 互动汇总 `{like_count, thanks_count, my_reactions}` |
+| POST | `/forum/reactions` | 登录 | `{target_type, target_id, reaction_type: like\|thanks}` 切换赞/感谢；返回 `active` + 汇总 |
 | POST | `/forum/topics` | 登录 | 发帖（每 IP 10 次/小时），可关联 approved demo_slug |
 | POST | `/forum/topics/{id}/replies` | 登录 | 回复（每 IP 30 次/小时），reply_count+1；支持 `parent_id` 嵌套；locked 主题 403 |
 | GET | `/forum/admin/topics` | admin | 含 hidden，分页/搜索/状态过滤 |
@@ -700,14 +706,16 @@ GET /api/v1/demos?status=approved&author=public
 | DELETE | `/forum/admin/replies/{id}` | admin | 删回复（同步 reply_count） |
 
 ### 数据
-- `forum_topics`：title/content(Markdown 原文)/author_id/demo_slug/category/tags(逗号分隔)/pinned/sticky/status(normal\|hidden\|reviewing)/reply_count/view_count/created_at/updated_at
-- `forum_replies`：topic_id（级联删）/author_id/content/status(normal\|hidden\|reviewing)/created_at
+- `forum_topics`：title/content(Markdown 原文)/author_id/demo_slug/category/tags(逗号分隔)/pinned/sticky/locked/solved/status(normal\|hidden\|reviewing)/reply_count/view_count/created_at/updated_at；输出额外含 `like_count`/`thanks_count`/`my_reactions`
+- `forum_replies`：topic_id（级联删）/author_id/content/status(normal\|hidden\|reviewing)/parent_id/created_at；输出额外含 `like_count`/`thanks_count`/`my_reactions`
 - `forum_reports`：target_type(topic\|reply)/target_id/reporter_id/reason/status(open\|resolved\|dismissed)
-- `users` 扩展：`trust_level`(0=新用户需审核)/`need_review`/`github_bound`
+- `forum_reactions`：user_id/target_type(topic\|reply)/target_id/reaction_type(like\|thanks)/created_at；`UNIQUE(user_id,target_type,target_id,reaction_type)`
+- `user_follows`：follower_id/following_id/created_at；`UNIQUE(follower_id,following_id)`，级联删
+- `users` 扩展：`trust_level`(0=新用户需审核)/`need_review`/`github_bound`/`reputation`(赞+1、感谢+2，取消扣回)
 - 权限：发帖/回复必须登录；匿名只读；Markdown 只存原文，前端渲染时消毒
 - **审核**：新用户（`need_review` 或 `trust_level<1`）发帖/回复进入 `reviewing`；admin 审核通过后置 `normal` 并提升 trust_level=1
 - **链接安全**：发帖/回复内容里的 http(s) 链接会校验——拒绝内网/回环/保留地址，域名黑名单
-- **限流**：发帖/回复按「用户 + IP」双维度（10/30 次每小时）；举报 20 次每小时
+- **限流**：发帖/回复按「用户 + IP」双维度（10/30 次每小时）；举报 20 次每小时；互动/关注暂不额外限流（登录态）
 
 ### 安全/审核接口补充
 
@@ -742,6 +750,7 @@ GET /api/v1/demos?status=approved&author=public
 | type | 触发 | 通知谁 |
 |---|---|---|
 | `forum_reply` | 有人回复你的主题/回复，或 `@用户名` 提及 | 主题作者 + 被 @ 用户 |
+| `forum_reaction` | 有人赞/感谢你的主题或回复 | 内容作者 |
 | `demo_review` | 新 Demo 待审核 | 所有管理员 |
 | `review_result` | 你的 Demo 通过/拒绝 | 作者 |
 | `report_handled` | 举报被处理/忽略 | 举报人 |

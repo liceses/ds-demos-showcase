@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import current_user, optional_user, require_admin
-from ..models import Announcement, Demo, ForumReply, ForumReport, ForumTopic, User
+from ..models import Announcement, Demo, ForumReply, ForumReport, ForumTopic, User, UserFollow
 from ..schemas import (
     ForumReplyIn,
     ForumReplyOut,
@@ -22,8 +22,11 @@ from ..schemas import (
     ForumTopicIn,
     ForumTopicOut,
     ForumTopicPage,
+    ReactionSummary,
+    ReactionToggleIn,
+    ReactionToggleOut,
 )
-from ..services import forum_service, notification_service
+from ..services import community_service, forum_service, notification_service
 
 router = APIRouter(prefix="/forum", tags=["forum"])
 
@@ -67,6 +70,7 @@ def list_topics(
     sort: str = Query(default="newest", pattern="^(newest|popular|replies|hot)$"),
     sticky: bool = Query(False),
     participated: bool = Query(False),
+    followed: bool = Query(False),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -89,6 +93,11 @@ def list_topics(
             return ForumTopicPage(items=[], total=0, page=page, page_size=page_size)
         my_topic_ids = db.query(ForumReply.topic_id).filter(ForumReply.author_id == user.id).distinct()
         query = query.filter(ForumTopic.id.in_(my_topic_ids))
+    if followed:
+        if user is None:
+            return ForumTopicPage(items=[], total=0, page=page, page_size=page_size)
+        followed_ids = db.query(UserFollow.following_id).filter(UserFollow.follower_id == user.id)
+        query = query.filter(ForumTopic.author_id.in_(followed_ids))
 
     if sort == "popular":
         query = query.order_by(ForumTopic.view_count.desc(), ForumTopic.created_at.desc(), ForumTopic.id.desc())
@@ -108,8 +117,9 @@ def list_topics(
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
+    viewer_id = user.id if user else None
     return ForumTopicPage(
-        items=[forum_service.topic_out(t) for t in items],
+        items=[forum_service.topic_out(t, db, viewer_id) for t in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -117,12 +127,16 @@ def list_topics(
 
 
 @router.get("/topics/{tid}", response_model=ForumTopicOut)
-def get_topic(tid: int, db: Session = Depends(get_db)):
+def get_topic(
+    tid: int,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(optional_user),
+):
     t = forum_service.find_visible_topic(db, tid)
     t.view_count += 1
     db.commit()
     db.refresh(t)
-    return forum_service.topic_out(t)
+    return forum_service.topic_out(t, db, user.id if user else None)
 
 
 @router.get("/topics/{tid}/replies", response_model=ForumReplyPage)
@@ -131,6 +145,7 @@ def list_replies(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
+    user: User | None = Depends(optional_user),
 ):
     forum_service.find_visible_topic(db, tid)
     q = db.query(ForumReply).filter(ForumReply.topic_id == tid, ForumReply.status == "normal")
@@ -141,12 +156,33 @@ def list_replies(
         .limit(page_size)
         .all()
     )
+    viewer_id = user.id if user else None
     return ForumReplyPage(
-        items=[forum_service.reply_out(r) for r in rows],
+        items=[forum_service.reply_out(r, db, viewer_id) for r in rows],
         total=total,
         page=page,
         page_size=page_size,
     )
+
+
+# ---------- 互动（赞/感谢） ----------
+@router.get("/reactions/summary", response_model=ReactionSummary)
+def get_reaction_summary(
+    target_type: str = Query(pattern="^(topic|reply)$"),
+    target_id: int = Query(ge=1),
+    db: Session = Depends(get_db),
+    user: User | None = Depends(optional_user),
+):
+    return community_service.visible_reaction_summary(db, target_type, target_id, user.id if user else None)
+
+
+@router.post("/reactions", response_model=ReactionToggleOut)
+def toggle_reaction(
+    body: ReactionToggleIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    return community_service.toggle_reaction(db, user, body.target_type, body.target_id, body.reaction_type)
 
 
 # ---------- 登录 ----------
@@ -176,7 +212,7 @@ def create_topic(
     db.add(t)
     db.commit()
     db.refresh(t)
-    return forum_service.topic_out(t)
+    return forum_service.topic_out(t, db, user.id)
 
 
 @router.post("/topics/{tid}/replies", status_code=201, response_model=ForumReplyOut)
@@ -217,7 +253,7 @@ def create_reply(
         )
     exclude = {user.id, t.author_id or -1}
     notification_service.notify_mentions(body.content, user.id, t.id, r.id, exclude)
-    return forum_service.reply_out(r)
+    return forum_service.reply_out(r, db, user.id)
 
 
 # ---------- 举报 ----------
@@ -260,7 +296,7 @@ def admin_list_topics(
     total = query.count()
     items = query.order_by(ForumTopic.created_at.desc(), ForumTopic.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
     return ForumTopicPage(
-        items=[forum_service.topic_out(t) for t in items],
+        items=[forum_service.topic_out(t, db) for t in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -281,7 +317,7 @@ def admin_list_replies(
     if status:
         q = q.filter(ForumReply.status == status)
     rows = q.order_by(ForumReply.created_at.desc(), ForumReply.id.desc()).all()
-    return [forum_service.reply_out(r) for r in rows]
+    return [forum_service.reply_out(r, db) for r in rows]
 
 
 @router.put("/admin/topics/{tid}", response_model=ForumTopicOut)
@@ -308,23 +344,7 @@ def admin_update_topic(
         t.status = body.status
     db.commit()
     db.refresh(t)
-    return forum_service.topic_out(t)
-
-
-@router.get("/admin/replies", response_model=list[ForumReplyOut])
-def admin_list_replies(
-    topic_id: int | None = None,
-    status: str | None = Query(default=None, pattern="^(normal|hidden|reviewing)$"),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
-):
-    query = db.query(ForumReply)
-    if topic_id is not None:
-        query = query.filter(ForumReply.topic_id == topic_id)
-    if status:
-        query = query.filter(ForumReply.status == status)
-    rows = query.order_by(ForumReply.created_at, ForumReply.id).all()
-    return [forum_service.reply_out(r) for r in rows]
+    return forum_service.topic_out(t, db)
 
 
 @router.post("/admin/topics/{tid}/review", response_model=ForumTopicOut)
@@ -346,7 +366,7 @@ def admin_review_topic(
         t.status = "hidden"
     db.commit()
     db.refresh(t)
-    return forum_service.topic_out(t)
+    return forum_service.topic_out(t, db)
 
 
 @router.post("/admin/replies/{rid}/review", response_model=ForumReplyOut)
@@ -371,7 +391,7 @@ def admin_review_reply(
         r.status = "hidden"
     db.commit()
     db.refresh(r)
-    return forum_service.reply_out(r)
+    return forum_service.reply_out(r, db)
 
 
 @router.delete("/admin/topics/{tid}", status_code=204)
@@ -380,6 +400,7 @@ def admin_delete_topic(tid: int, db: Session = Depends(get_db), _: User = Depend
     if t is None:
         raise HTTPException(status_code=404, detail="主题不存在", )
     db.query(Announcement).filter(Announcement.topic_id == tid).update({Announcement.topic_id: None})
+    community_service.delete_reactions_for_topic(db, tid)
     db.delete(t)  # replies 级联删除
     db.commit()
     return None
@@ -391,6 +412,7 @@ def admin_delete_reply(rid: int, db: Session = Depends(get_db), _: User = Depend
     if r is None:
         raise HTTPException(status_code=404, detail="回复不存在", )
     topic = db.get(ForumTopic, r.topic_id)
+    community_service.delete_reactions_for_reply_tree(db, rid)
     db.delete(r)
     if r.status == "normal" and topic is not None and topic.reply_count > 0:
         topic.reply_count -= 1

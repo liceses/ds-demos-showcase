@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
 import type { DemoDetail, ForumReply, ForumTopic } from '../api/types'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import MarkdownEditor from '../components/MarkdownEditor.vue'
 
 const props = defineProps<{ id: string }>()
 const route = useRoute()
@@ -20,7 +21,6 @@ const demoCardLoading = ref(false)
 const loading = ref(true)
 const error = ref('')
 const replyText = ref('')
-const replyPreview = ref(false)
 const posting = ref(false)
 
 async function load() {
@@ -69,7 +69,6 @@ async function submitReply() {
   try {
     await api.createForumReply(Number(props.id), replyText.value.trim())
     replyText.value = ''
-    replyPreview.value = false
     await load()
   } catch (e) {
     const err = e as Error & { cause?: unknown }
@@ -136,11 +135,7 @@ onMounted(load)
       <div class="card forum-reply-box">
         <h3 style="margin-bottom: 10px">回复</h3>
         <template v-if="auth.isLoggedIn()">
-          <div class="filter-row" style="margin-bottom: 8px">
-            <button class="btn btn-sm btn-outline" type="button" @click="replyPreview = !replyPreview">{{ replyPreview ? '编辑' : '预览' }}</button>
-          </div>
-          <textarea v-if="!replyPreview" v-model="replyText" class="input textarea" rows="4" placeholder="支持 Markdown…"></textarea>
-          <MarkdownRenderer v-else :content="replyText" />
+          <MarkdownEditor v-model="replyText" :rows="4" placeholder="支持 Markdown…" />
           <div class="filter-row" style="margin-top: 10px">
             <button class="btn btn-primary" type="button" :disabled="posting" @click="submitReply">{{ posting ? '提交中…' : '发表回复' }}</button>
           </div>

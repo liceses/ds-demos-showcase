@@ -5,6 +5,7 @@ import { api } from '../api'
 import type { DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import PaginationBar from '../components/PaginationBar.vue'
 
 const sorts = [
   { key: 'avg', label: '平均分' },
@@ -70,10 +71,6 @@ onMounted(load)
       </template>
     </MasonryGrid>
 
-    <div v-if="items.length" class="filter-row" style="justify-content: center; margin-top: 16px">
-      <button class="btn btn-sm btn-outline" type="button" :disabled="page <= 1" @click="page--; load()">上一页</button>
-      <span class="muted">第 {{ page }} 页 / {{ total }}</span>
-      <button class="btn btn-sm btn-outline" type="button" :disabled="page * pageSize >= total" @click="page++; load()">下一页</button>
-    </div>
+    <PaginationBar v-if="items.length" :page="page" :total="total" :page-size="pageSize" @change="(p) => { page = p; load() }" />
   </section>
 </template>

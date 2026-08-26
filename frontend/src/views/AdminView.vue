@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
-import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import MarkdownEditor from '../components/MarkdownEditor.vue'
+import PaginationBar from '../components/PaginationBar.vue'
 import type { AdminDemo, AdminUser, Announcement, DemoDetail, ForumReply, ForumReport, ForumTopic, Settings, TagKeyInfo, TagSuggestion } from '../api/types'
 
 const ui = useUiStore()
@@ -44,20 +45,6 @@ const annTypeLabel: Record<string, string> = { manual: '手动公告', auto: '�
 const annFilter = ref<'all' | 'manual' | 'auto' | 'demo_update' | 'update'>('all')
 const editingAnn = ref<Announcement | null>(null)
 const editAnnForm = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
-const annPreview = ref(false)
-const annPreviewContent = ref('')
-let annPreviewTimer: ReturnType<typeof setTimeout> | null = null
-function updateAnnPreview() {
-  const c = editingAnn.value ? editAnnForm.value.content : newAnn.value.content
-  if (annPreviewTimer) clearTimeout(annPreviewTimer)
-  annPreviewTimer = setTimeout(() => {
-    annPreviewContent.value = c
-  }, 300)
-}
-function toggleAnnPreview() {
-  annPreview.value = !annPreview.value
-  if (annPreview.value) updateAnnPreview()
-}
 
 const filteredAnnouncements = computed(() =>
   annFilter.value === 'all' ? announcements.value : announcements.value.filter((a) => a.type === annFilter.value),
@@ -757,11 +744,7 @@ onMounted(loadAll)
               </table>
             </div>
 
-            <div v-if="demoPages > 1" class="pager">
-              <button class="btn btn-sm btn-outline" type="button" :disabled="demoPage <= 1" @click="setDemoPage(demoPage - 1)">上一页</button>
-              <span class="tag-stat"><b>{{ demoPage }}</b> / {{ demoPages }}（共 {{ demoTotal }} 条）</span>
-              <button class="btn btn-sm btn-outline" type="button" :disabled="demoPage >= demoPages" @click="setDemoPage(demoPage + 1)">下一页</button>
-            </div>
+                        <PaginationBar v-if="demoPages > 1" :page="demoPage" :total="demoTotal" :page-size="demoPageSize" @change="setDemoPage" />
           </template>
 
           <!-- 标签管理 -->
@@ -1045,10 +1028,7 @@ onMounted(loadAll)
           <!-- 公告管理 -->
           <template v-else-if="tab === 'announcements'">
             <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
-              <div class="filter-row" style="justify-content: space-between; margin-bottom: 12px">
-                <h2 style="margin: 0">{{ editingAnn ? '编辑公告' : '发布手动公告' }}</h2>
-                <button class="btn btn-sm btn-outline" type="button" @click="toggleAnnPreview">{{ annPreview ? '编辑' : '预览' }}</button>
-              </div>
+                            <h2 style="margin-bottom: 12px">{{ editingAnn ? '编辑公告' : '发布手动公告' }}</h2>
               <div class="form-stack">
                 <template v-if="editingAnn">
                   <label class="field">
@@ -1057,8 +1037,7 @@ onMounted(loadAll)
                   </label>
                   <label class="field">
                     内容
-                    <textarea v-if="!annPreview" v-model="editAnnForm.content" class="input textarea" rows="3" placeholder="公告内容（可选）" @input="updateAnnPreview"></textarea>
-                    <MarkdownRenderer v-else :content="annPreviewContent" />
+                    <MarkdownEditor v-model="editAnnForm.content" :rows="3" placeholder="公告内容（可选）" />
                   </label>
                   <label class="field" style="display: flex; gap: 8px; align-items: center">
                     <input v-model="editAnnForm.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
@@ -1088,8 +1067,7 @@ onMounted(loadAll)
                   </label>
                   <label class="field">
                     内容
-                    <textarea v-if="!annPreview" v-model="newAnn.content" class="input textarea" rows="3" placeholder="公告内容（可选）" @input="updateAnnPreview"></textarea>
-                    <MarkdownRenderer v-else :content="annPreviewContent" />
+                    <MarkdownEditor v-model="newAnn.content" :rows="3" placeholder="公告内容（可选）" />
                   </label>
                   <label class="field" style="display: flex; gap: 8px; align-items: center">
                     <input v-model="newAnn.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶

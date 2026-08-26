@@ -4,6 +4,8 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import type { ForumTopic } from '../api/types'
+import PaginationBar from '../components/PaginationBar.vue'
+import { timeAgo } from '../utils/time'
 
 const route = useRoute()
 
@@ -46,18 +48,6 @@ async function load() {
 function apply() {
   page.value = 1
   load()
-}
-
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return '刚刚'
-  if (min < 60) return `${min} 分钟前`
-  const h = Math.floor(min / 60)
-  if (h < 24) return `${h} 小时前`
-  const d = Math.floor(h / 24)
-  if (d < 30) return `${d} 天前`
-  return new Date(iso).toLocaleDateString('zh-CN')
 }
 
 onMounted(() => {
@@ -122,10 +112,6 @@ onMounted(() => {
       </RouterLink>
     </div>
 
-    <div v-if="topics.length" class="pager" style="justify-content: center">
-      <button class="btn btn-sm btn-outline" type="button" :disabled="page <= 1" @click="page--; load()">上一页</button>
-      <span class="tag-stat"><b>{{ page }}</b> / {{ Math.max(1, Math.ceil(total / pageSize)) }}</span>
-      <button class="btn btn-sm btn-outline" type="button" :disabled="page * pageSize >= total" @click="page++; load()">下一页</button>
-    </div>
+    <PaginationBar v-if="topics.length" :page="page" :total="total" :page-size="pageSize" @change="(p) => { page = p; load() }" />
   </section>
 </template>

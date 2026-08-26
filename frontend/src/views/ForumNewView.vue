@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
-import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import MarkdownEditor from '../components/MarkdownEditor.vue'
 import TagPicker from '../components/TagPicker.vue'
 
 const router = useRouter()
@@ -16,7 +16,6 @@ const title = ref('')
 const category = ref('交流')
 const tagsPicked = ref<{ key: string; value: string; description?: string }[]>([])
 const content = ref('')
-const preview = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const submitted = ref(false)
@@ -86,11 +85,7 @@ async function submit() {
         </div>
         <label class="field">
           正文
-          <div class="filter-row" style="margin-bottom: 8px">
-            <button class="btn btn-sm btn-outline" type="button" @click="preview = !preview">{{ preview ? '编辑' : '预览' }}</button>
-          </div>
-          <textarea v-if="!preview" v-model="content" class="input textarea" rows="8" placeholder="支持 Markdown，贴 /demo/xxx 会自动变成作品卡…"></textarea>
-          <MarkdownRenderer v-else :content="content" />
+          <MarkdownEditor v-model="content" :rows="8" placeholder="支持 Markdown，贴 /demo/xxx 会自动变成作品卡…" />
         </label>
         <div v-if="error" class="notice notice-error">{{ error }}</div>
         <div v-if="submitted" class="notice notice-success">

@@ -15,6 +15,7 @@ const ui = useUiStore()
 const prefillDemo = ref(typeof route.query.demo === 'string' ? route.query.demo : '')
 const title = ref('')
 const category = ref('交流')
+if (prefillDemo.value) category.value = 'demo'
 const tagsPicked = ref<{ key: string; value: string; description?: string }[]>([])
 const content = ref('')
 const submitting = ref(false)

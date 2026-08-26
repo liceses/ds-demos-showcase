@@ -4206,3 +4206,43 @@ table.data tr.inconsistent td {
     width: 220px;
   }
 }
+
+/* Demo 页轻量评论 */
+.quick-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.quick-comment-input {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 12px;
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.quick-comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.quick-comment {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: 10px 12px;
+}
+.quick-comment-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.quick-comment-author {
+  font-weight: 800;
+}
+.quick-comment-floor {
+  color: var(--text-forum, #666);
+}
+.quick-comment-time {
+  margin-left: auto;
+  color: var(--text-forum, #666);
+}

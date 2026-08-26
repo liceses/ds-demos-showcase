@@ -10,7 +10,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import DemoCard from '../components/DemoCard.vue'
 import RatingWidget from '../components/RatingWidget.vue'
-import ForumThread from '../components/ForumThread.vue'
+import QuickComments from '../components/QuickComments.vue'
 import { parseDate } from '../utils/time'
 
 const route = useRoute()
@@ -269,7 +269,7 @@ onMounted(load)
           </template>
 
           <template v-else-if="activeTab === 'discussion'">
-            <ForumThread :slug="slug" />
+            <QuickComments :slug="slug" />
           </template>
         </div>
       </Transition>

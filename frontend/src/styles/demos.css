@@ -1,0 +1,67 @@
+  align-self: center;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tag-selected-row {
+  gap: 8px;
+}
+.tag-groups {
+  margin-top: 16px;
+}
+.tag-group {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  margin-bottom: 12px;
+}
+.tag-group.mode-fixed { border-left: 8px solid var(--ink); }
+.tag-group.mode-open { border-left: 8px solid var(--yellow); }
+.tag-group.mode-int { border-left: 8px solid var(--mint); }
+.tag-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  flex-wrap: wrap;
+  user-select: none;
+}
+.tag-group-head:hover {
+  background: var(--yellow);
+}
+.tag-group-title {
+  font-weight: 800;
+}
+.tag-group-title code {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 0 4px;
+  font-size: 11px;
+}
+.tag-group-toggle {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 3px solid var(--ink);
+  flex-shrink: 0;
+}
+.tag-group-chips {
+  padding: 0 12px 12px;
+  margin: 0;
+  gap: 8px;
+}
+.tag-group-collapsed {
+  padding: 0 12px 12px;
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+/* ---------- 管理后台增强 ---------- */
+.dash-stats {

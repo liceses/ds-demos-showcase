@@ -1,0 +1,140 @@
+  margin-top: 10px;
+}
+.tag-strip-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 5px 4px;
+  border-top: 2px solid var(--ink);
+}
+.tag-strip-row:last-child {
+  border-bottom: 2px solid var(--ink);
+}
+.tag-strip-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 13px;
+}
+.tag-strip-title code {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 0 4px;
+  font-size: 11px;
+}
+.mode-dot {
+  align-self: center;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+}
+.mode-dot-fixed { background: var(--paper); }
+.mode-dot-open { background: var(--yellow); }
+.mode-dot-int { background: var(--mint); }
+.tag-strip-chips {
+  margin: 0;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.tag-strip-toggle {
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+}
+.tag-strip-toggle:hover {
+  background: var(--teal);
+  color: var(--ink);
+}
+
+/* 上传页 open/int 已有值建议行 */
+.tag-suggest-row {
+  margin: 6px 0 0;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tag-suggest-label {
+  align-self: center;
+}
+
+/* ---------- 首页标题「关于本站」入口 ---------- */
+.home-title-link {
+  position: relative;
+  display: block;
+  width: max-content;
+  text-decoration: none;
+  color: inherit;
+  margin: 0 auto 0 0;
+}
+.home-title-link h1 {
+  transition: transform 150ms ease, text-decoration-color 150ms ease;
+}
+.home-title-link:hover h1 {
+  transform: translateY(-3px);
+  text-decoration: underline;
+  text-decoration-color: var(--yellow);
+  text-decoration-thickness: 6px;
+  text-underline-offset: 8px;
+}
+.home-title-hint {
+  display: none;
+  position: absolute;
+  right: -92px;
+  bottom: 8px;
+  padding: 3px 10px;
+  border: 3px solid var(--ink);
+  background: var(--yellow);
+  font-size: 12px;
+  font-weight: 800;
+  transform: rotate(-3deg);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.home-title-link:hover .home-title-hint {
+  display: inline-block;
+}
+
+/* ---------- 关于本站：近 7 天趋势（纯 CSS 柱状图） ---------- */
+.trend-card {
+  padding: 22px 18px 14px;
+  max-width: 640px;
+}
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  border-bottom: 3px solid var(--ink);
+  padding-bottom: 8px;
+}
+.trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.trend-val {
+  font-size: 11px;
+  font-weight: 700;
+}
+.trend-bar {
+  width: 100%;
+  max-width: 42px;
+  background: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.25);
+}
+.trend-col.active .trend-bar {
+  background: var(--yellow);
+  border-color: var(--ink);
+}
+.trend-date {
+  font-size: 11px;
+  color: #555;
+}
+
+/* ---------- 赞助榜 ---------- */
+.sponsor-list {

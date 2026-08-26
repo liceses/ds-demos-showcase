@@ -3898,3 +3898,49 @@ table.data tr.inconsistent td {
   background: var(--mint);
   padding: 10px 12px;
 }
+
+/* 标签分组工作台 */
+.group-workbench {
+  min-width: 0;
+}
+.group-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.group-card {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  padding: 10px 12px;
+}
+.group-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  font-size: 14px;
+}
+.group-card-head b {
+  font-size: 15px;
+}
+.group-card-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.group-card-ungrouped {
+  border-style: dashed;
+  background: var(--paper-forum);
+}
+.group-assign {
+  margin-left: 4px;
+  padding: 0 2px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-size: 11px;
+  max-width: 90px;
+}

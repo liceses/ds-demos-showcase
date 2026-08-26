@@ -219,8 +219,10 @@ const groupInfo = ref<TagGroupDistribution | null>(null)
 const groupLoading = ref(false)
 const groupError = ref('')
 const groupDraft = ref<Record<string, string>>({})
-const valueGroupDraft = ref<Record<string, string>>({})
-const mergeValue = ref<string | null>(null)
+const mergeOpen = ref(false)
+const groupSearch = ref('')
+const bulkSelected = ref<string[]>([])
+const bulkGroup = ref('')
 
 async function loadGroups() {
   if (!adminActiveKey.value || adminActiveTagKey.value?.mode !== 'fixed') {
@@ -240,8 +242,8 @@ async function loadGroups() {
   }
 }
 
-async function renameGroup(group: string) {
-  const next = groupDraft.value[group]?.trim()
+async function renameGroup(group: string, explicit?: string) {
+  const next = explicit || groupDraft.value[group]?.trim()
   if (!next || next === group) return
   try {
     await api.renameTagGroup(adminActiveKey.value, group, next)
@@ -260,19 +262,46 @@ async function clearGroup(group: string) {
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 
-async function saveValueGroup(v: TagKeyValue) {
-  const d = valueGroupDraft.value[v.value]?.trim() || null
-  if (d === (v.group || null)) return
-  try {
-    await api.setTagGroup(v.id!, d)
-    ui.toast('分组已更新', 'success')
-    valueGroupDraft.value[v.value] = ''
-    await Promise.all([loadGroups(), tagsStore.refresh()])
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
 
 async function onMergeDone() {
   await Promise.all([loadGroups(), tagsStore.refresh()])
+}
+
+function toggleBulk(v: string) {
+  const i = bulkSelected.value.indexOf(v)
+  if (i >= 0) bulkSelected.value.splice(i, 1)
+  else bulkSelected.value.push(v)
+}
+async function assignValue(v: TagKeyValue, group: string | null) {
+  try {
+    await api.setTagGroup(v.id!, group)
+    ui.toast(group ? `已归入「${group}」` : '已移出分组', 'success')
+    await Promise.all([loadGroups(), tagsStore.refresh()])
+  } catch (e) { ui.toast((e as Error).message, 'error') }
+}
+async function bulkAssign() {
+  const group = bulkGroup.value
+  if (!group) return
+  const vals = adminActiveTagKey.value?.values.filter((v) => bulkSelected.value.includes(v.value)) || []
+  if (!vals.length) return
+  try {
+    await Promise.all(vals.map((v) => api.setTagGroup(v.id!, group)))
+    ui.toast(`已归入 ${vals.length} 个值到「${group}」`, 'success')
+    bulkSelected.value = []
+    await Promise.all([loadGroups(), tagsStore.refresh()])
+  } catch (e) { ui.toast((e as Error).message, 'error') }
+}
+function renameGroupDialog(group: string) {
+  const next = window.prompt('新的分组名', group)
+  if (next && next.trim() && next.trim() !== group) renameGroup(group, next.trim())
+}
+function groupValues(group: string) {
+  const q = groupSearch.value.trim().toLowerCase()
+  return adminActiveTagKey.value?.values.filter((v) => v.group === group && (!q || v.value.toLowerCase().includes(q))) || []
+}
+function ungroupedValues() {
+  const q = groupSearch.value.trim().toLowerCase()
+  return adminActiveTagKey.value?.values.filter((v) => !v.group && (!q || v.value.toLowerCase().includes(q))) || []
 }
 
 onMounted(() => {
@@ -371,59 +400,70 @@ onMounted(() => {
     </template>
 
     <template v-else-if="tagSub === 'groups'">
-      <div class="tag-pane tag-pane-tall">
-        <div class="tag-pane-keys">
-          <div class="tag-pane-group-label">固定值</div>
-          <button v-for="k in tagKeys.filter((k) => k.mode === 'fixed')" :key="k.key" class="tag-pane-key" :class="{ active: adminActiveKey === k.key }" type="button" @click="selectAdminKey(k)">
-            <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
-            <span class="tag-pane-key-count">{{ k.demo_count }}</span>
-          </button>
+      <div class="group-workbench">
+        <div class="filter-row" style="margin-bottom: 14px; justify-content: space-between; align-items: center; flex-wrap: wrap">
+          <h2 style="margin: 0">{{ adminActiveTagKey ? (adminActiveTagKey.label || adminActiveTagKey.key) + ' 分组' : '分组 / 合并' }}</h2>
+          <div class="filter-row" style="margin: 0">
+            <input v-model="groupSearch" class="input" style="max-width: 200px" placeholder="搜索值…" />
+            <button class="btn btn-secondary" type="button" @click="mergeOpen = true">合并标签</button>
+          </div>
         </div>
-        <div class="tag-pane-values">
-          <template v-if="adminActiveTagKey">
-            <div class="tag-key-head">
-              <b>{{ adminActiveTagKey.label || adminActiveTagKey.key }} <code>{{ adminActiveTagKey.key }}</code></b>
-              <span class="mode-badge mode-badge-fixed">固定值</span>
-            </div>
-            <div v-if="groupLoading" class="loading-row"><span class="spinner"></span> 加载分组…</div>
-            <div v-else-if="groupError" class="notice notice-error">{{ groupError }}</div>
-            <template v-else-if="groupInfo">
-              <div class="form-stack" style="margin-bottom: 12px">
-                <h3 style="margin-bottom: 8px">分组分布</h3>
-                <div class="filter-row" style="margin: 0; flex-wrap: wrap">
-                  <span v-for="g in groupInfo.groups" :key="g.group" class="vendor-group" style="display: flex; align-items: center; gap: 6px; padding: 4px 8px">
-                    <b>{{ g.group }}</b><span class="count">{{ g.count }}</span>
-                    <input v-model="groupDraft[g.group]" class="input" style="max-width: 90px; padding: 2px 6px" placeholder="新名" @keyup.enter="renameGroup(g.group)" />
-                    <button class="btn btn-sm btn-outline" type="button" @click="renameGroup(g.group)">重命名</button>
-                    <button class="btn btn-sm btn-dark" type="button" @click="clearGroup(g.group)">清除</button>
-                  </span>
-                  <span v-if="groupInfo.ungrouped" class="tag-chip">未分组 {{ groupInfo.ungrouped }}</span>
+
+        <div v-if="!adminActiveTagKey" class="empty-box">请先在左侧选择固定键</div>
+
+        <template v-else>
+          <div v-if="groupLoading" class="loading-row"><span class="spinner"></span> 加载分组…</div>
+          <div v-else-if="groupError" class="notice notice-error">{{ groupError }}</div>
+          <template v-else-if="groupInfo">
+            <div class="group-card-grid">
+              <div v-for="g in groupInfo.groups" :key="g.group" class="group-card">
+                <div class="group-card-head">
+                  <b>{{ g.group }}</b><span class="count">{{ g.count }}</span>
+                  <div class="filter-row" style="margin: 0; margin-left: auto">
+                    <button class="btn btn-sm btn-outline" type="button" @click="renameGroupDialog(g.group)">重命名</button>
+                    <button class="btn btn-sm btn-dark" type="button" @click="clearGroup(g.group)">删除组</button>
+                  </div>
+                </div>
+                <div class="group-card-values">
+                  <span v-for="v in groupValues(g.group)" :key="v.value" class="tag-chip mode-fixed">{{ v.value }}<span class="count">{{ v.demo_count }}</span></span>
+                  <span v-if="!groupValues(g.group).length" class="muted">空</span>
                 </div>
               </div>
-              <div class="form-stack">
-                <h3 style="margin-bottom: 8px">固定值归类 / 合并</h3>
-                <div class="filter-row" style="margin: 0; flex-wrap: wrap">
-                  <template v-for="v in adminActiveTagKey.values" :key="v.value">
-                    <span class="tag-chip mode-fixed" style="display: inline-flex; gap: 6px; align-items: center">
+
+              <div class="group-card group-card-ungrouped">
+                <div class="group-card-head">
+                  <b>未分组</b><span class="count">{{ groupInfo.ungrouped }}</span>
+                  <div class="filter-row" style="margin: 0; margin-left: auto; gap: 6px">
+                    <select v-model="bulkGroup" class="input" style="max-width: 120px; padding: 2px 6px">
+                      <option value="">批量归入…</option>
+                      <option v-for="g in groupInfo.groups" :key="g.group" :value="g.group">{{ g.group }}</option>
+                    </select>
+                    <button class="btn btn-sm btn-secondary" type="button" :disabled="!bulkSelected.length || !bulkGroup" @click="bulkAssign">批量</button>
+                  </div>
+                </div>
+                <div class="group-card-values">
+                  <template v-for="v in ungroupedValues()" :key="v.value">
+                    <span class="tag-chip mode-fixed" :class="{ active: bulkSelected.includes(v.value) }" role="button" @click="toggleBulk(v.value)">
                       {{ v.value }}<span class="count">{{ v.demo_count }}</span>
-                      <input v-model="valueGroupDraft[v.value]" class="input" style="max-width: 80px; padding: 2px 6px" :placeholder="v.group || '未分组'" @keyup.enter="saveValueGroup(v)" />
-                      <button class="btn btn-sm btn-outline" type="button" @click="saveValueGroup(v)">存</button>
-                      <button class="btn btn-sm btn-dark" type="button" @click="mergeValue = v.value">合并</button>
+                      <select class="group-assign" :value="v.group || ''" @change="assignValue(v, ($event.target as HTMLSelectElement).value || null)" @click.stop>
+                        <option value="">未分组</option>
+                        <option v-for="g in groupInfo.groups" :key="g.group" :value="g.group">{{ g.group }}</option>
+                      </select>
                     </span>
                   </template>
+                  <span v-if="!ungroupedValues().length" class="muted">全部已归类</span>
                 </div>
               </div>
-            </template>
+            </div>
           </template>
-          <div v-else class="muted">请选择左侧固定键</div>
-        </div>
+        </template>
       </div>
       <TagMergeModal
-        v-if="mergeValue && adminActiveTagKey"
+        v-if="mergeOpen && adminActiveTagKey"
         :active-key="adminActiveTagKey.key"
-        :from-value="mergeValue"
+        :from-value="''"
         :values="adminActiveTagKey.values"
-        @close="mergeValue = null"
+        @close="mergeOpen = false"
         @merged="onMergeDone"
       />
     </template>

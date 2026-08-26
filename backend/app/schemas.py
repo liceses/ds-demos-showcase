@@ -283,6 +283,27 @@ class UserPatch(BaseModel):
     status: str | None = Field(default=None, pattern="^(active|suspended|deleted)$")
 
 
+class DemoCounts(BaseModel):
+    total: int
+    approved: int
+    pending: int
+    rejected: int
+
+
+class StorageStatusOut(BaseModel):
+    oss_enabled: bool
+    mode: str  # oss | oss_backup | local
+    local_demos: int
+    local_files: int
+    local_size_bytes: int
+
+
+class AdminStatsOut(BaseModel):
+    demos: DemoCounts
+    users: int
+    storage: StorageStatusOut
+
+
 # ---------- Announcements ----------
 class AnnouncementOut(ORMModel):
     id: int

@@ -2,13 +2,23 @@ import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
 from ..deps import require_admin
 from ..models import Demo, User
-from ..schemas import AdminDemoOut, AdminUserOut, ReviewAction, SettingsOut, UserOut
+from ..schemas import (
+    AdminDemoOut,
+    AdminStatsOut,
+    AdminUserOut,
+    DemoCounts,
+    ReviewAction,
+    SettingsOut,
+    StorageStatusOut,
+    UserOut,
+)
 from ..serializers import serialize_demo
 from ..services import oss, settings_service
 
@@ -89,9 +99,8 @@ def oss_sync_status(_: User = Depends(require_admin)):
     return get_sync_status()
 
 
-@router.get("/storage-status")
-def storage_status(_: User = Depends(require_admin)):
-    """本地存储规模 + 当前生效模式（oss / local）。"""
+def _storage_status() -> dict:
+    """本地存储规模 + 当前生效模式（oss / local），供 storage-status 与 admin/stats 复用。"""
     demos_root = settings.demos_path
     demo_dirs = 0
     files = 0
@@ -113,3 +122,29 @@ def storage_status(_: User = Depends(require_admin)):
         "local_files": files,
         "local_size_bytes": size,
     }
+
+
+@router.get("/storage-status")
+def storage_status(_: User = Depends(require_admin)):
+    """本地存储规模 + 当前生效模式（oss / local）。"""
+    return _storage_status()
+
+
+@router.get("/stats", response_model=AdminStatsOut)
+def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """管理后台顶部概览统计：作品状态计数 / 用户数 / 存储模式（轻量，不序列化完整列表）。"""
+    rows = db.query(Demo.status, func.count(Demo.id)).group_by(Demo.status).all()
+    counts = {status: count for status, count in rows}
+    total = sum(counts.values())
+    demos = DemoCounts(
+        total=total,
+        approved=counts.get("approved", 0),
+        pending=counts.get("pending", 0),
+        rejected=counts.get("rejected", 0),
+    )
+    users = db.query(func.count(User.id)).scalar() or 0
+    return AdminStatsOut(
+        demos=demos,
+        users=users,
+        storage=StorageStatusOut(**_storage_status()),
+    )

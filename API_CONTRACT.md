@@ -621,6 +621,7 @@ GET /api/v1/demos?status=approved&author=public
 - `GET /api/v1/admin/settings` / `PUT /api/v1/admin/settings`：`{auto_approve, auto_approve_public}`
 - `POST /api/v1/admin/oss-sync`：强制全量 OSS 同步
 - `GET /api/v1/admin/storage-status`：存储/OSS 状态
+- `GET /api/v1/admin/stats`：管理后台概览统计（`{demos:{total,approved,pending,rejected}, users, storage}`）
 
 ### Demo / 评论 / 会话日志
 - `GET /api/v1/demos/{slug}/download`：下载原始文件（zip 或单文件）

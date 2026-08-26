@@ -1126,6 +1126,14 @@ export const mockApi = {
     if (!r) throw new Error('回复不存在')
     return clone(r)
   },
+  async adminListForumReplies(params: { topic_id?: number; status?: string } = {}): Promise<ForumReply[]> {
+    await delay()
+    let items = [...forumReplies]
+    if (params.topic_id != null) items = items.filter((r) => r.topic_id === params.topic_id)
+    if (params.status) items = items.filter((r) => r.status === params.status)
+    return clone(items)
+  },
+
   async listForumReports(): Promise<ForumReport[]> {
     await delay()
     return clone(forumReports)

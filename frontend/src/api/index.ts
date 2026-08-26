@@ -237,6 +237,11 @@ const realApi = {
     const { data } = await http.post(`/forum/admin/replies/${id}/review`, { action })
     return data
   },
+  async adminListForumReplies(params: { topic_id?: number; status?: string } = {}): Promise<ForumReply[]> {
+    const { data } = await http.get('/forum/admin/replies', { params })
+    return data
+  },
+
   async listForumReports(): Promise<ForumReport[]> {
     const { data } = await http.get('/forum/admin/reports')
     return data

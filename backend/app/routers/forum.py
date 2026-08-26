@@ -333,6 +333,22 @@ def admin_update_topic(
     return _topic_out(t)
 
 
+@router.get("/admin/replies", response_model=list[ForumReplyOut])
+def admin_list_replies(
+    topic_id: int | None = None,
+    status: str | None = Query(default=None, pattern="^(normal|hidden|reviewing)$"),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    query = db.query(ForumReply)
+    if topic_id is not None:
+        query = query.filter(ForumReply.topic_id == topic_id)
+    if status:
+        query = query.filter(ForumReply.status == status)
+    rows = query.order_by(ForumReply.created_at, ForumReply.id).all()
+    return [_reply_out(r) for r in rows]
+
+
 @router.post("/admin/topics/{tid}/review", response_model=ForumTopicOut)
 def admin_review_topic(
     tid: int,

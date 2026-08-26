@@ -277,6 +277,7 @@ export interface ForumReply {
   author: string | null
   author_id: number | null
   content: string
+  status?: string
   created_at: string
 }
 

@@ -73,7 +73,7 @@ const forumReplyTopicId = ref<number | null>(null)
 const forumRepliesShown = ref<ForumReply[]>([])
 async function forumSelectReplies() {
   if (forumReplyTopicId.value == null) { forumRepliesShown.value = []; return }
-  try { forumRepliesShown.value = await api.listForumReplies(forumReplyTopicId.value) } catch { forumRepliesShown.value = [] }
+  try { forumRepliesShown.value = await api.adminListForumReplies({ topic_id: forumReplyTopicId.value }) } catch { forumRepliesShown.value = [] }
 }
 async function forumReviewReply(r: ForumReply, action: 'approve' | 'reject') {
   try {
@@ -157,11 +157,12 @@ onMounted(() => {
       </div>
       <div class="table-wrap">
         <table class="data">
-          <thead><tr><th>作者</th><th>内容</th><th>时间</th><th>操作</th></tr></thead>
+          <thead><tr><th>作者</th><th>内容</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
           <tbody>
             <tr v-for="r in forumRepliesShown" :key="r.id">
               <td>{{ r.author || '匿名' }}</td>
               <td style="max-width: 360px; overflow-wrap: anywhere">{{ r.content }}</td>
+              <td><span class="ann-status" :class="'status-' + (r.status || 'normal')">{{ r.status || 'normal' }}</span></td>
               <td>{{ new Date(r.created_at).toLocaleString('zh-CN') }}</td>
               <td>
                 <button class="btn btn-sm btn-outline" type="button" @click="forumReviewReply(r, 'approve')">通过</button>
@@ -169,7 +170,7 @@ onMounted(() => {
                 <button class="btn btn-sm btn-danger" type="button" @click="forumDeleteReply(r)">删除</button>
               </td>
             </tr>
-            <tr v-if="!forumRepliesShown.length"><td colspan="4" style="text-align:center">选择主题查看回复</td></tr>
+            <tr v-if="!forumRepliesShown.length"><td colspan="5" style="text-align:center">选择主题查看回复</td></tr>
           </tbody>
         </table>
       </div>

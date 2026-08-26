@@ -19,6 +19,7 @@ const replies = ref<ForumReply[]>([])
 const loading = ref(true)
 const replyText = ref('')
 const posting = ref(false)
+const pendingNotice = ref(false)
 
 async function load() {
   loading.value = true
@@ -42,9 +43,15 @@ async function submitReply() {
   if (!topic.value || !replyText.value.trim()) return
   posting.value = true
   try {
-    await api.createForumReply(topic.value.id, replyText.value.trim())
+    const r = await api.createForumReply(topic.value.id, replyText.value.trim())
     replyText.value = ''
-    await load()
+    if (r.status === 'reviewing') {
+      pendingNotice.value = true
+      ui.toast('已提交，等待审核', 'success')
+    } else {
+      pendingNotice.value = false
+      await load()
+    }
   } catch (e) {
     ui.toast(errorMessage(e), 'error')
   } finally {
@@ -83,6 +90,7 @@ onMounted(load)
 
         <div class="card forum-reply-box" style="margin-top: 12px">
           <template v-if="auth.isLoggedIn()">
+            <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: 8px">已提交，等待审核，通过后可见。</div>
             <MarkdownEditor v-model="replyText" :rows="3" placeholder="支持 Markdown…" />
             <div class="filter-row" style="margin-top: 8px">
               <button class="btn btn-primary" type="button" :disabled="posting" @click="submitReply">{{ posting ? '提交中…' : '发表回复' }}</button>

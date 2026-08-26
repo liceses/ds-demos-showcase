@@ -6,6 +6,7 @@ import { isMock } from './api'
 import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
 import ForumHeader from './components/ForumHeader.vue'
+import NotificationBell from './components/NotificationBell.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -52,6 +53,7 @@ const menuItems = [
 
       <div class="topnav topnav-desktop">
         <template v-if="auth.isLoggedIn()">
+          <NotificationBell />
           <RouterLink class="nav-link" :to="`/user/${username}`">{{ username }}</RouterLink>
           <button class="btn btn-sm btn-dark" type="button" @click="auth.logout()">退出</button>
         </template>

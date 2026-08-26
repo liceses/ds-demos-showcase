@@ -19,6 +19,7 @@ import type {
   ForumTopicAdminUpdate,
   ForumReport,
   ForumReportInput,
+  Notification,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -57,6 +58,12 @@ const forumReplies: ForumReply[] = [
 
 const forumReports: ForumReport[] = [
   { id: 1, target_type: 'topic', target_id: 2, reason: '疑似违规内容', status: 'pending', reporter_id: 3, created_at: '2026-08-04T10:00:00Z' },
+]
+
+const notifications: Notification[] = [
+  { id: 1, type: 'forum_reply', actor: 'alice', actor_id: 3, demo_slug: null, topic_id: 1, reply_id: 2, read: false, created_at: '2026-08-04T10:00:00Z' },
+  { id: 2, type: 'demo_review', actor: null, actor_id: null, demo_slug: 'demo_粒子星空', topic_id: null, reply_id: null, read: false, created_at: '2026-08-04T09:00:00Z' },
+  { id: 3, type: 'review_result', actor: null, actor_id: null, demo_slug: 'demo_贪吃蛇', topic_id: null, reply_id: null, read: true, created_at: '2026-08-03T12:00:00Z' },
 ]
 
 const recognition: RecognitionItem[] = [
@@ -1154,6 +1161,29 @@ export const mockApi = {
   async adminBanUser(_id: number): Promise<void> {
     await delay()
   },
+  async listNotifications(params: { unread_only?: boolean; page?: number; page_size?: number } = {}): Promise<Notification[]> {
+    await delay()
+    let items = [...notifications]
+    if (params.unread_only) items = items.filter((n) => !n.read)
+    const start = ((params.page || 1) - 1) * (params.page_size || 20)
+    return clone(items.slice(start, start + (params.page_size || 20)))
+  },
+  async getUnreadCount(): Promise<{ count: number }> {
+    await delay(50)
+    return { count: notifications.filter((n) => !n.read).length }
+  },
+  async markNotificationRead(id: number): Promise<Notification> {
+    await delay()
+    const n = notifications.find((x) => x.id === id)
+    if (!n) throw new Error('通知不存在')
+    n.read = true
+    return clone(n)
+  },
+  async markAllNotificationsRead(): Promise<void> {
+    await delay()
+    for (const n of notifications) n.read = true
+  },
+
 
 
   async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {

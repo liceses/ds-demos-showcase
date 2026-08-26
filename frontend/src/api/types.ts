@@ -302,6 +302,18 @@ export interface AdminStats {
   storage: { oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }
 }
 
+export interface Notification {
+  id: number
+  type: string
+  actor: string | null
+  actor_id: number | null
+  demo_slug: string | null
+  topic_id: number | null
+  reply_id: number | null
+  read: boolean
+  created_at: string
+}
+
 export interface ForumReport {
   id: number
   target_type: 'topic' | 'reply'

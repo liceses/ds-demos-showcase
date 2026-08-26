@@ -19,6 +19,7 @@ import type {
   ForumTopicAdminUpdate,
   ForumReport,
   ForumReportInput,
+  Notification,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -257,6 +258,22 @@ const realApi = {
   async adminBanUser(id: number): Promise<void> {
     await http.post(`/forum/admin/users/${id}/ban`)
   },
+  async listNotifications(params: { unread_only?: boolean; page?: number; page_size?: number } = {}): Promise<Notification[]> {
+    const { data } = await http.get('/notifications', { params })
+    return data
+  },
+  async getUnreadCount(): Promise<{ count: number }> {
+    const { data } = await http.get('/notifications/unread-count')
+    return data
+  },
+  async markNotificationRead(id: number): Promise<Notification> {
+    const { data } = await http.post('/notifications/read', { id })
+    return data
+  },
+  async markAllNotificationsRead(): Promise<void> {
+    await http.post('/notifications/read-all')
+  },
+
 
 
   async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {

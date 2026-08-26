@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import NotificationBell from './NotificationBell.vue'
+
+const auth = useAuthStore()
 
 const route = useRoute()
 </script>
@@ -13,6 +17,7 @@ const route = useRoute()
         <RouterLink class="forum-nav-link" :class="{ active: route.path === '/forum' && route.query.sort === 'popular' }" to="/forum?sort=popular">热门</RouterLink>
         <RouterLink class="forum-nav-link" :class="{ active: route.path === '/forum/new' }" to="/forum/new">发帖</RouterLink>
       </nav>
+      <NotificationBell v-if="auth.isLoggedIn()" />
       <RouterLink class="forum-back" to="/">← 回作品站</RouterLink>
     </div>
   </header>

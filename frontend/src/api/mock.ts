@@ -1051,7 +1051,7 @@ export const mockApi = {
     await delay(150)
     return forumTopics.find((t) => t.id === id) || null
   },
-  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; followed?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; followed?: boolean; kind?: 'general' | 'demo'; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     await delay()
     const { q = '', category, tag, demo, sort = 'newest', page = 1, page_size = 20 } = params
     let items = [...forumTopics].filter((t) => t.status === 'normal')
@@ -1059,6 +1059,8 @@ export const mockApi = {
     if (category) items = items.filter((t) => t.category === category)
     if (tag) items = items.filter((t) => t.tags.includes(tag))
     if (demo) items = items.filter((t) => t.demo_slug === demo)
+    if (params.kind === 'demo') items = items.filter((t) => !!t.demo_slug)
+    if (params.kind === 'general') items = items.filter((t) => !t.demo_slug)
     if (sort === 'popular') items.sort((a, b) => b.view_count - a.view_count)
     else items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.sticky) - Number(a.sticky) || b.created_at.localeCompare(a.created_at))
     const start = (page - 1) * page_size

@@ -221,7 +221,7 @@ const realApi = {
     const { data } = await http.get(`/users/${encodeURIComponent(username)}/following`)
     return data
   },
-  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; followed?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; followed?: boolean; kind?: 'general' | 'demo'; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     const { data } = await http.get('/forum/topics', { params })
     return data
   },

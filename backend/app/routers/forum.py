@@ -70,6 +70,7 @@ def list_topics(
     sort: str = Query(default="newest", pattern="^(newest|popular|replies|hot)$"),
     sticky: bool = Query(False),
     participated: bool = Query(False),
+    kind: str | None = Query(default=None, pattern="^(general|demo)$"),
     followed: bool = Query(False),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -86,6 +87,10 @@ def list_topics(
         query = query.filter(ForumTopic.tags.ilike(f"%{tag}%"))
     if demo:
         query = query.filter(ForumTopic.demo_slug == demo)
+    if kind == "demo":
+        query = query.filter(ForumTopic.demo_slug.isnot(None))
+    elif kind == "general":
+        query = query.filter(ForumTopic.demo_slug.is_(None))
     if sticky:
         query = query.filter(ForumTopic.sticky == True)  # noqa: E712
     if participated:
@@ -200,12 +205,13 @@ def create_topic(
         if demo is None:
             raise HTTPException(status_code=422, detail="关联 demo 不存在或未上线", )
     status = "reviewing" if forum_service.needs_review(user) else "normal"
+    category = "demo" if body.demo_slug else (body.category or "general")
     t = ForumTopic(
         title=body.title,
         content=body.content,
         author_id=user.id,
         demo_slug=body.demo_slug,
-        category=body.category,
+        category=category,
         tags=body.tags,
         status=status,
     )

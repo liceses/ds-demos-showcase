@@ -15,7 +15,7 @@ const router = useRouter()
 
 const q = ref('')
 const category = ref('all')
-const scope = ref<'all' | 'demo'>('all')
+const scope = ref<'general' | 'demo'>('general')
 const sort = ref<'newest' | 'popular' | 'replies' | 'hot'>('newest')
 const demoFilter = ref('')
 const tagFilter = ref('')
@@ -32,7 +32,8 @@ const { items: topics, total, page, pageSize, loading, error, load: baseLoad } =
   async ({ page, page_size }) => {
     const res = await api.listForumTopics({
       q: q.value.trim() || undefined,
-      category: scope.value === 'demo' ? 'demo' : (category.value === 'all' ? undefined : category.value),
+      category: scope.value === 'demo' ? undefined : (category.value === 'all' ? undefined : category.value),
+      kind: scope.value,
       demo: demoFilter.value || undefined,
       tag: tagFilter.value || undefined,
       sort: sort.value,
@@ -97,6 +98,7 @@ onMounted(() => {
   if (route.query.participated === '1') participatedFilter.value = true
   if (route.query.followed === '1') followedFilter.value = true
   if (route.query.scope === 'demo') scope.value = 'demo'
+  if (route.query.scope === 'general') scope.value = 'general'
   load()
   api.listForumTopics({ sort: 'hot', page_size: 5 }).then((r) => (hotTopics.value = r.items)).catch(() => (hotTopics.value = []))
 })
@@ -118,7 +120,7 @@ onMounted(() => {
         <button class="btn btn-secondary search-submit" type="button" @click="apply">搜索</button>
       </div>
       <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: scope === 'all' }" type="button" @click="scope = 'all'; apply()">全部</button>
+        <button class="tab" :class="{ active: scope === 'general' }" type="button" @click="scope = 'general'; apply()">综合</button>
         <button class="tab" :class="{ active: scope === 'demo' }" type="button" @click="scope = 'demo'; apply()">作品讨论</button>
       </div>
       <div class="tabs" style="margin: 0">

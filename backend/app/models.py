@@ -333,7 +333,7 @@ class Notification(Base):
     read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
-    user: Mapped["User"] = relationship(foreign_keys=[user_id])
-    actor: Mapped["User | None"] = relationship(foreign_keys=[actor_id])
+    user: Mapped["User"] = relationship(foreign_keys="Notification.user_id")
+    actor: Mapped["User | None"] = relationship(foreign_keys="Notification.actor_id")
 
     creator: Mapped["User | None"] = relationship()

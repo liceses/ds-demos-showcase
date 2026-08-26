@@ -5,7 +5,9 @@ import { useUiStore } from '../stores/ui'
 import PaginationBar from '../components/PaginationBar.vue'
 import AdminForumSection from '../components/admin/AdminForumSection.vue'
 import AdminAnnouncementsSection from '../components/admin/AdminAnnouncementsSection.vue'
-import type { AdminDemo, AdminUser, DemoDetail, Settings, TagKeyInfo, TagSuggestion } from '../api/types'
+import AdminUsersSection from '../components/admin/AdminUsersSection.vue'
+import AdminSettingsSection from '../components/admin/AdminSettingsSection.vue'
+import type { AdminDemo, AdminUser, DemoDetail, TagKeyInfo, TagSuggestion } from '../api/types'
 
 const ui = useUiStore()
 
@@ -21,20 +23,6 @@ function selectAdminKey(k: TagKeyInfo) {
 const pending = ref<DemoDetail[]>([])
 const demos = ref<AdminDemo[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
-const users = ref<AdminUser[]>([])
-const settings = ref<Settings>({ auto_approve: true, auto_approve_public: false })
-const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }>({
-  oss_enabled: false,
-  mode: 'local',
-  local_demos: 0,
-  local_files: 0,
-  local_size_bytes: 0,
-})
-const storageModeLabel = computed(() => {
-  if (storageInfo.value.mode === 'oss') return 'OSS 直连'
-  if (storageInfo.value.mode === 'oss_backup') return '本地存储（OSS 备份）'
-  return '本地存储'
-})
 
 // 标签键管理
 const newKey = ref({ key: '', mode: 'fixed' as 'fixed' | 'open' | 'int', label: '', description: '', sort: 0 })
@@ -49,23 +37,36 @@ const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义
 const loading = ref(false)
 const error = ref('')
 
+// 概览统计需要的最小数据（管理表格在子组件自行加载）
+const users = ref<AdminUser[]>([])
+const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }>({
+  oss_enabled: false,
+  mode: 'local',
+  local_demos: 0,
+  local_files: 0,
+  local_size_bytes: 0,
+})
+const storageModeLabel = computed(() => {
+  if (storageInfo.value.mode === 'oss') return 'OSS 直连'
+  if (storageInfo.value.mode === 'oss_backup') return '本地存储（OSS 备份）'
+  return '本地存储'
+})
+
 async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [p, d, t, u, s, st] = await Promise.all([
+    const [p, d, t, u, st] = await Promise.all([
       api.adminReview(),
       api.adminDemos(),
       api.listTagKeys(),
       api.adminUsers(),
-      api.getSettings(),
       api.storageStatus(),
     ])
     pending.value = p
     demos.value = d
     tagKeys.value = t
     users.value = u
-    settings.value = s
     storageInfo.value = st
   } catch (e) {
     error.value = (e as Error).message
@@ -166,66 +167,8 @@ async function review(slug: string, action: 'approve' | 'reject') {
   }
 }
 
-async function toggleUser(u: AdminUser, field: 'role' | 'status') {
-  try {
-    if (field === 'role') {
-      await api.updateUser(u.id, { role: u.role === 'admin' ? 'user' : 'admin' })
-    } else {
-      await api.updateUser(u.id, { status: u.status === 'active' ? 'suspended' : 'active' })
-    }
-    users.value = await api.adminUsers()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  }
-}
 
-async function saveSettings() {
-  try {
-    settings.value = await api.updateSettings(settings.value)
-    ui.toast('设置已保存', 'success')
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  }
-}
 
-const ossSyncing = ref(false)
-const ossSyncProgress = ref('')
-async function runOssSync(force = false) {
-  if (ossSyncing.value) return
-  ossSyncing.value = true
-  ossSyncProgress.value = ''
-  try {
-    const r = await api.ossSync(force)
-    if (!r.started) {
-      ui.toast('已有同步任务在进行中，请稍候', 'info')
-    }
-    // 轮询后台任务直到结束
-    for (;;) {
-      const job = await api.getOssSyncStatus()
-      if (job.total) ossSyncProgress.value = `${job.done}/${job.total}`
-      if (!job.running) {
-        ui.toast(
-          `OSS ${force ? '强制全量' : ''}同步完成：demo ${job.ok} 成功 / ${job.fail} 失败，封面 ${job.covers_ok} 成功 / ${job.covers_fail} 失败${job.last_error ? '，最后错误：' + job.last_error : ''}`,
-          job.fail || job.covers_fail ? 'error' : 'success',
-        )
-        break
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-    }
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    ossSyncing.value = false
-    ossSyncProgress.value = ''
-  }
-}
-
-function fmtSize(n: number) {
-  if (n >= 1024 * 1024 * 1024) return (n / 1073741824).toFixed(2) + ' GB'
-  if (n >= 1024 * 1024) return (n / 1048576).toFixed(1) + ' MB'
-  if (n >= 1024) return (n / 1024).toFixed(0) + ' KB'
-  return n + ' B'
-}
 
 // ---------- 概览统计 ----------
 const dashStats = computed(() => {
@@ -709,67 +652,22 @@ onMounted(loadAll)
           </template>
 
 
-          <AdminForumSection />
+          <template v-else-if="tab === 'forum'">
+            <AdminForumSection />
+          </template>
 
-          <!-- 用户管理 -->
           <template v-else-if="tab === 'users'">
-            <div class="table-wrap">
-              <table class="data">
-                <thead>
-                  <tr><th>用户名</th><th>角色</th><th>状态</th><th>Demo 数</th><th>操作</th></tr>
-                </thead>
-                <tbody>
-                  <tr v-for="u in users" :key="u.id">
-                    <td>{{ u.username }}</td>
-                    <td>{{ u.role }}</td>
-                    <td><span class="status-pill" :class="`status-${u.status}`">{{ u.status }}</span></td>
-                    <td>{{ u.demo_count }}</td>
-                    <td>
-                      <button class="btn btn-sm btn-outline" type="button" @click="toggleUser(u, 'role')">切换角色</button>
-                      <button class="btn btn-sm btn-dark" type="button" @click="toggleUser(u, 'status')">{{ u.status === 'active' ? '停用' : '启用' }}</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <AdminUsersSection />
           </template>
 
-          <AdminAnnouncementsSection />
+          <template v-else-if="tab === 'announcements'">
+            <AdminAnnouncementsSection />
+          </template>
 
-          <!-- 站点设置 -->
           <template v-else-if="tab === 'settings'">
-            <div class="card card-mint" style="max-width: 520px; padding: 24px; margin-bottom: 20px">
-              <h2 style="margin-bottom: 12px">存储</h2>
-              <div class="filter-row" style="margin-bottom: 10px">
-                <span class="mini-stat"><b>{{ storageModeLabel }}</b> 模式</span>
-                <span class="mini-stat"><b>{{ storageInfo.local_demos }}</b> demo</span>
-                <span class="mini-stat"><b>{{ storageInfo.local_files }}</b> 文件</span>
-                <span class="mini-stat"><b>{{ fmtSize(storageInfo.local_size_bytes) }}</b> 本地占用</span>
-              </div>
-              <p class="hint" style="margin-bottom: 12px">本地是完整存储（全量文件在服务器），OSS 只是镜像。切换模式：修改服务器 .env 的 <code>OSS_ENABLED</code>（false=本地 / true=OSS）+ <code>docker compose up -d backend</code> 重建生效。</p>
-              <div class="filter-row" style="margin-bottom: 0">
-                <button class="btn btn-secondary" type="button" :disabled="ossSyncing" @click="runOssSync()">
-                  {{ ossSyncing ? `同步中… ${ossSyncProgress}` : '同步本地文件到 OSS' }}
-                </button>
-                <button class="btn btn-dark" type="button" :disabled="ossSyncing" @click="runOssSync(true)">
-                  {{ ossSyncing ? `同步中… ${ossSyncProgress}` : '强制全量同步' }}
-                </button>
-              </div>
-            </div>
-
-            <div class="card card-default" style="max-width: 520px; padding: 24px">
-              <label class="field">
-                <input v-model="settings.auto_approve" type="checkbox" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle" />
-                新上传 Demo 自动通过审核（登录用户）
-              </label>
-              <label class="field">
-                <input v-model="settings.auto_approve_public" type="checkbox" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle" />
-                未注册（public）上传自动通过审核
-              </label>
-              <p class="hint" style="margin-bottom: 14px">开启「未注册放行」后，任何人（含 AI agent）不注册即可上传并即时上线，建议配合限流与 UPLOAD_CODE 信任通道使用。</p>
-              <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
-            </div>
+            <AdminSettingsSection />
           </template>
+
         </div>
       </Transition>
     </template>

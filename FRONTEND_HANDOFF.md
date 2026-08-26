@@ -62,10 +62,45 @@
 - **搜索/过滤**：`GET /demos?q=&tag=k:v&author=&sort=&page=`；首屏首页用 `page_size=6~8` 精选即可。
 - **DSH 会话轨迹**：上传 zip 若含 `*.jsonl`（如 dsh 的 `session.jsonl`）会自动进「会话日志」；`selectedLog` 以 `.jsonl` 结尾时用 `DshTrajectoryView` 渲染（不要用 MarkdownView）。
 - **会话日志**：默认本地存储；启用 OSS 备份时只存 OSS、本地不落盘。前端经 `GET /demos/{slug}/session-logs/{filename}` 取（每 IP 限流 60/小时，429 请稍后再试）。渲染能力保留，但不必当热内容设计；429 需静默降级。
-- **存储模式**：zip 下载默认服务器本地下发（OSS 仅备份）；⚠️ 已知问题：预览子资源与 `/media` 封面目前仍可能直连 OSS（待后端修复），前端无感知（`preview_url`/`/preview/`/`/media/` 路径仍可用）。
+- **存储模式**：zip 下载默认服务器本地下发（OSS 仅备份）；预览子资源与 `/media` 封面也已尊重 `OSS_SERVE_LOCAL`（已修复），前端无感知（`preview_url`/`/preview/`/`/media/` 路径均可用）。
 - **访问统计打点**：`router.afterEach` 已调 `api.reportVisit()`（fire-and-forget，失败静默）；**不要移除**，否则 About 页 PV 不涨。打点接口有每 IP 限流，429 静默即可。
 - **单文件上传**：`web` 类型可直接传 `.html/.svg`（按后缀识别）；上传页文件框 accept 已含 `.html,.svg`，提示「单 HTML 必须自包含」。详情页 `demo.single_file` 存在时下载按钮显示「下载文件」。
 
 ## 7. 上云/本地
 - 联调：`frontend/.env` 设 `VITE_USE_MOCK=false`，dev 代理已指 `localhost:8000`。
 - typecheck：`npm run typecheck`（务必通过再提交）。
+
+## 8. 最近后端能力交接（标签 group/合并、论坛、公告互链）
+
+### 标签 group 管理（admin）
+| 接口 | 用途 |
+|---|---|
+| `GET /tags/admin/groups?key=model` | 列出该 key 的 group 分布（含 ungrouped 数） |
+| `PUT /tags/admin/groups/{key}/{group}` | 重命名 group：`{new_group}` |
+| `DELETE /tags/admin/groups/{key}/{group}` | 清除 group |
+| `PUT /tags/admin/values/{tag_id}/group` | 给单个值设/清 group：`{group}` |
+
+公开 `GET /tags/tag-keys` 的 fixed value 已带 `group`，前端按 group 分组展示即可。
+
+### 标签合并（admin）
+`POST /tags/admin/merge`
+```json
+{ "from_key": "model", "from_value": "dsv4flash", "to_key": "model", "to_value": "dsv4-flash", "dry_run": true }
+```
+- 返回 `{merged, removed_dups, affected_demos, deleted_source, dry_run}`
+- 管理 UI 建议：合并弹窗先 `dry_run=true` 预览受影响 demo 数，确认后再执行
+
+### 论坛（完整）
+公开：`GET /forum/topics?demo=slug`、`GET /forum/topics/{id}`、`GET /forum/topics/{id}/replies`
+登录：`POST /forum/topics`、`POST /forum/topics/{id}/replies`、`POST /forum/reports`
+管理：`GET/PUT/POST/DELETE /forum/admin/topics*`、`GET/POST /forum/admin/replies*`、`POST /forum/admin/users/{uid}/ban`、`GET/POST /forum/admin/reports*`
+- 新用户发帖/回复返回 `status=reviewing` → 前端提示「已提交，等待审核」
+- 429 带 `Retry-After` 头，可提示「X 秒后重试」
+- 首帖「用户须知 & 安全说明」启动时自动创建（category=notice、置顶），论坛列表第一条展示
+- 富卡片：`GET /demos/{slug}/meta` 返回 `{slug,title,cover_url,author}`（不增浏览数）
+- 旧评论 `POST/DELETE` 已 410 下线；`GET /demos/{slug}/comments` 只读保留
+
+### 公告 ↔ 论坛互链
+- 公告创建/更新可传 `topic_id`
+- 公告响应带 `topic_id` / `topic_title`，前端显示「去讨论 →」跳 `/forum/topics/{id}`
+- 公告管理表单需补 `topic_id` 输入/选择（后端已支持）

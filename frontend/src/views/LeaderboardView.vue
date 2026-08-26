@@ -6,6 +6,7 @@ import type { DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import PaginationBar from '../components/PaginationBar.vue'
+import { useListPage } from '../composables/useListPage'
 
 const sorts = [
   { key: 'avg', label: '平均分' },
@@ -17,26 +18,14 @@ const sorts = [
 ] as const
 
 const sort = ref<'avg' | 'god' | 'ghost' | 'net' | 'count' | 'heat'>('avg')
-const items = ref<DemoSummary[]>([])
-const total = ref(0)
-const page = ref(1)
-const pageSize = 20
-const loading = ref(false)
-const error = ref('')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const res = await api.getLeaderboard(sort.value, page.value, pageSize)
-    items.value = res.items
-    total.value = res.total
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
+const { items, total, page, pageSize, loading, error, load } = useListPage<DemoSummary>(
+  async ({ page, page_size }) => {
+    const res = await api.getLeaderboard(sort.value, page, page_size)
+    return { items: res.items, total: res.total }
+  },
+  20,
+)
 
 function changeSort(s: typeof sort.value) {
   if (sort.value === s) return

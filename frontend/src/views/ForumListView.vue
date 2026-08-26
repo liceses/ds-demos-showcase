@@ -6,47 +6,35 @@ import { api } from '../api'
 import type { DemoDetail, ForumTopic } from '../api/types'
 import PaginationBar from '../components/PaginationBar.vue'
 import { timeAgo } from '../utils/time'
+import { useListPage } from '../composables/useListPage'
 
 const route = useRoute()
 const router = useRouter()
 
-const topics = ref<ForumTopic[]>([])
-const total = ref(0)
-const page = ref(1)
-const pageSize = 20
 const q = ref('')
 const category = ref('all')
 const sort = ref<'newest' | 'popular'>('newest')
 const demoFilter = ref('')
 const tagFilter = ref('')
 const demoCards = ref<Record<string, DemoDetail | null>>({})
-const loading = ref(false)
-const error = ref('')
 
 const categories = ['all', '交流', '分享', '求助', 'demo', '公告']
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
+const { items: topics, total, page, pageSize, loading, error, load: baseLoad } = useListPage<ForumTopic>(
+  async ({ page, page_size }) => {
     const res = await api.listForumTopics({
       q: q.value.trim() || undefined,
       category: category.value === 'all' ? undefined : category.value,
       demo: demoFilter.value || undefined,
       tag: tagFilter.value || undefined,
       sort: sort.value,
-      page: page.value,
-      page_size: pageSize,
+      page,
+      page_size,
     })
-    topics.value = res.items
-    total.value = res.total
-    await loadDemoChips()
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
+    return { items: res.items, total: res.total }
+  },
+  20,
+)
 
 async function loadDemoChips() {
   const slugs = [...new Set(topics.value.map((t) => t.demo_slug).filter((s): s is string => !!s && !(s in demoCards.value)))]
@@ -59,6 +47,11 @@ async function loadDemoChips() {
       }
     }),
   )
+}
+
+async function load() {
+  await baseLoad()
+  await loadDemoChips()
 }
 
 function apply() {

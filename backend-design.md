@@ -180,6 +180,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **分布**：`GET /tags/tag-keys` 的 int 键返回 `min/max`，前端可做滑条/直方图；fixed value 返回 `group` 分组。
 - **group 管理**：`/tags/admin/groups` 列/重命名/清除 group；`/tags/admin/values/{id}/group` 设置单个值分组（纯字段批量更新）。
 - **标签合并**：`POST /tags/admin/merge`（事务内把源引用迁移到目标，删重复引用，删源值；`dry_run` 预览；同 key、无子标签、非保留 key）。
+- **models.dev 同步**：`POST /tags/admin/sync-models` 拉 `models.dev/api.json`，新模型写 pending 建议、已有模型更新 group；脚本 `scripts/sync_models_from_modelsdev.py` 可手动跑（幂等）。
 
 ### 论坛 + 作品 meta
 

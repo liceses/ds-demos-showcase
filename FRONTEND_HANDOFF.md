@@ -90,6 +90,9 @@
 - 返回 `{merged, removed_dups, affected_demos, deleted_source, dry_run}`
 - 管理 UI 建议：合并弹窗先 `dry_run=true` 预览受影响 demo 数，确认后再执行
 
+### models.dev 同步（admin）
+`POST /tags/admin/sync-models`：拉 models.dev 模型字典，新模型写 pending 建议、已有模型更新 group。管理后台可加「从 models.dev 同步」按钮 + 显示 pending 建议数。
+
 ### 论坛（完整）
 公开：`GET /forum/topics?demo=slug`、`GET /forum/topics/{id}`、`GET /forum/topics/{id}/replies`
 登录：`POST /forum/topics`、`POST /forum/topics/{id}/replies`、`POST /forum/reports`

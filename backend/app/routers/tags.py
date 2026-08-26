@@ -1,4 +1,6 @@
+import json
 import time
+import urllib.request
 from collections import defaultdict
 from datetime import datetime
 
@@ -517,3 +519,78 @@ def merge_tags(body: TagMergeIn, db: Session = Depends(get_db), _: User = Depend
         deleted_source=True,
         dry_run=False,
     )
+
+
+# ---------- 从 models.dev 同步模型标签（admin） ----------
+MODELS_DEV_URL = "https://models.dev/api.json"
+MODELS_DEV_LIMIT = 10 * 1024 * 1024  # 10MB
+
+
+@router.post("/admin/sync-models")
+def sync_models(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """从 models.dev 拉取模型字典，同步 model 固定值（新模型写 pending 建议，已有模型更新 group）。"""
+    try:
+        req = urllib.request.Request(MODELS_DEV_URL, headers={"User-Agent": "ds-demos-showcase/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = resp.read(MODELS_DEV_LIMIT + 1)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"拉取 models.dev 失败: {e}", )
+    if len(data) > MODELS_DEV_LIMIT:
+        raise HTTPException(status_code=502, detail="models.dev 数据超过大小限制", )
+    try:
+        payload = json.loads(data)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="models.dev 返回非 JSON", )
+
+    new_pending = 0
+    updated_group = 0
+    total_models = 0
+    providers = 0
+
+    for provider_id, provider in payload.items():
+        if not isinstance(provider, dict):
+            continue
+        provider_name = str(provider.get("name") or provider_id)
+        models = provider.get("models") or {}
+        if not isinstance(models, dict):
+            continue
+        providers += 1
+        for model_id, meta in models.items():
+            if not isinstance(meta, dict):
+                continue
+            total_models += 1
+            value = str(meta.get("id") or model_id)
+            name = str(meta.get("name") or "")
+            existing = db.query(Tag).filter(Tag.key == "model", Tag.value == value).first()
+            if existing is not None:
+                if existing.group != provider_name:
+                    existing.group = provider_name
+                    updated_group += 1
+                continue
+            pending = db.query(TagValueSuggestion).filter(
+                TagValueSuggestion.key == "model",
+                TagValueSuggestion.value == value,
+                TagValueSuggestion.status == "pending",
+            ).first()
+            if pending is not None:
+                if pending.group != provider_name:
+                    pending.group = provider_name
+                    updated_group += 1
+                continue
+            db.add(TagValueSuggestion(
+                key="model",
+                value=value,
+                description=name,
+                group=provider_name,
+                status="pending",
+            ))
+            new_pending += 1
+
+    db.commit()
+    return {
+        "providers": providers,
+        "total_models": total_models,
+        "new_pending": new_pending,
+        "updated_group": updated_group,
+        "note": "新模型已写入 pending 建议，需人工审核后生效",
+    }

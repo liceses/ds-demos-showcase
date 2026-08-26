@@ -619,6 +619,14 @@ GET /api/v1/demos?status=approved&author=public
 - `dry_run=true` 只预览：返回 `{merged, removed_dups, affected_demos, deleted_source, dry_run}`
 - 规则：同 key 才能合并；保留 key 禁止；源有子标签禁止；目标不存在 422
 
+### 从 models.dev 同步模型标签（admin）
+`POST /tags/admin/sync-models`
+- 拉取 `https://models.dev/api.json`（30s 超时、10MB 上限）
+- 新模型 → 写入 `model` 键 **pending 建议**（人工审核后生效）
+- 已有模型 → 更新 `group`（厂商名）
+- 返回 `{providers, total_models, new_pending, updated_group, note}`
+- 手动脚本：`scripts/sync_models_from_modelsdev.py`（幂等，可重跑）
+
 ## 10. 补充接口（代码已有，文档补录）
 
 > 以下接口在代码中已实现，原文档未列全，现补录。

@@ -314,4 +314,23 @@ class ForumReport(Base):
     status: Mapped[str] = mapped_column(String(16), default="open", nullable=False, index=True)  # open | resolved | dismissed
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
+
+class Notification(Base):
+    """站内通知：作品/论坛/管理动作通知相关用户。"""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # forum_reply | demo_review | review_result | report_handled | system
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    demo_slug: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    topic_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reply_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    actor: Mapped["User | None"] = relationship(foreign_keys=[actor_id])
+
     creator: Mapped["User | None"] = relationship()

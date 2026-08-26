@@ -22,7 +22,7 @@ from ..schemas import (
     ForumTopicOut,
     ForumTopicPage,
 )
-from ..services import forum_service
+from ..services import forum_service, notification_service
 
 router = APIRouter(prefix="/forum", tags=["forum"])
 
@@ -166,6 +166,17 @@ def create_reply(
     t.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(r)
+    # 通知：主题作者（非本人）+ @提及用户
+    if t.author_id and t.author_id != user.id:
+        notification_service.create(
+            user_id=t.author_id,
+            type="forum_reply",
+            actor_id=user.id,
+            topic_id=t.id,
+            reply_id=r.id,
+        )
+    exclude = {user.id, t.author_id or -1}
+    notification_service.notify_mentions(body.content, user.id, t.id, r.id, exclude)
     return forum_service.reply_out(r)
 
 
@@ -372,7 +383,7 @@ def admin_handle_report(
     rid: int,
     body: ForumReportHandleIn,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
     r = db.get(ForumReport, rid)
     if r is None:
@@ -380,4 +391,12 @@ def admin_handle_report(
     r.status = "resolved" if body.action == "resolve" else "dismissed"
     db.commit()
     db.refresh(r)
+    if r.reporter_id:
+        notification_service.create(
+            user_id=r.reporter_id,
+            type="report_handled",
+            actor_id=admin.id,
+            topic_id=r.target_id if r.target_type == "topic" else None,
+            reply_id=r.target_id if r.target_type == "reply" else None,
+        )
     return r

@@ -107,3 +107,8 @@
 - 公告创建/更新可传 `topic_id`
 - 公告响应带 `topic_id` / `topic_title`，前端显示「去讨论 →」跳 `/forum/topics/{id}`
 - 公告管理表单需补 `topic_id` 输入/选择（后端已支持）
+
+### 站内通知
+- 接口：`GET /notifications`、`GET /notifications/unread-count`、`POST /notifications/read`、`POST /notifications/read-all`
+- 类型：`forum_reply`（回复/@提及）、`demo_review`（待审）、`review_result`（审核结果）、`report_handled`（举报处理）
+- 前端：顶栏铃铛 + 未读红点（轮询 unread-count），`/notifications` 页分组展示

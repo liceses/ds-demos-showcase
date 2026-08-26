@@ -31,6 +31,7 @@ from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag,
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated
 from ..serializers import serialize_demo
 from ..services import oss, storage
+from ..services import notification_service
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
 
 router = APIRouter(prefix="/demos", tags=["demos"])
@@ -627,6 +628,16 @@ async def _create_demo_record(
     ))
     _add_timeline(db, demo.id, "v1", "创建", None)
     db.commit()
+    # 待审：通知所有管理员
+    if status == "pending":
+        admins = db.query(User).filter(User.role == "admin").all()
+        for a in admins:
+            notification_service.create(
+                user_id=a.id,
+                type="demo_review",
+                actor_id=user.id if user else None,
+                demo_slug=slug,
+            )
     return demo, status, True
 
 

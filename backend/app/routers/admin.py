@@ -20,6 +20,7 @@ from ..schemas import (
     UserOut,
 )
 from ..serializers import serialize_demo
+from ..services import notification_service
 from ..services import oss, settings_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -32,12 +33,20 @@ def review_list(db: Session = Depends(get_db), _: User = Depends(require_admin))
 
 
 @router.post("/review/{slug}")
-def review_demo(slug: str, body: ReviewAction, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def review_demo(slug: str, body: ReviewAction, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
     demo = db.query(Demo).filter(Demo.slug == slug).first()
     if demo is None:
         raise HTTPException(status_code=404, detail="Demo 不存在", )
     demo.status = "approved" if body.action == "approve" else "rejected"
     db.commit()
+    # 通知作者审核结果
+    if demo.author_id:
+        notification_service.create(
+            user_id=demo.author_id,
+            type="review_result",
+            actor_id=admin.id,
+            demo_slug=slug,
+        )
     return {"status": demo.status}
 
 

@@ -727,3 +727,26 @@ GET /api/v1/demos?status=approved&author=public
 
 ### 迁移脚本
 `scripts/migrate_comments_to_forum.py`：把历史 comments 按 demo_id 归集为论坛主题+回复（**创建/复用主题，保留 author/content/created_at，按 `source_comment_id` 幂等**，重复执行不产生重复楼层；最后检查孤儿评论）。
+
+## 11. 站内通知
+
+### 接口（需登录）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/notifications?unread_only=&page=&page_size=` | 通知列表（分页） |
+| GET | `/notifications/unread-count` | 未读数 `{count}` |
+| POST | `/notifications/read` | `{id}` 单条已读 |
+| POST | `/notifications/read-all` | 全部已读（204） |
+
+### 通知类型与触发
+| type | 触发 | 通知谁 |
+|---|---|---|
+| `forum_reply` | 有人回复你的主题/回复，或 `@用户名` 提及 | 主题作者 + 被 @ 用户 |
+| `demo_review` | 新 Demo 待审核 | 所有管理员 |
+| `review_result` | 你的 Demo 通过/拒绝 | 作者 |
+| `report_handled` | 举报被处理/忽略 | 举报人 |
+| `system` | 预留（公告/封禁等） | 相关用户 |
+
+### 数据
+- `notifications`：`user_id/type/actor_id/demo_slug?/topic_id?/reply_id?/read/created_at`
+- 通知创建走独立事务，**失败静默不阻塞主流程**

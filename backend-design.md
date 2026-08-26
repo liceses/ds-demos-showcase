@@ -192,6 +192,13 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **首帖**：`init_db` 幂等创建置顶「论坛发帖须知 & 安全说明」（读 `docs/论坛首帖-用户须知与安全说明.md`）。
 - **公告互链**：`Announcement.topic_id`（FK forum_topics SET NULL），响应带 `topic_title`；创建/更新校验 topic 为 normal。
 - **限流提示**：429 带 `Retry-After` 头 + 冷却秒数。
+
+### 站内通知
+
+- **模型**：`notifications`（user_id/type/actor_id/demo_slug?/topic_id?/reply_id?/read/created_at）。
+- **service**：`notification_service.create` 独立 Session + 独立事务，**失败静默**；`notify_mentions` 解析 `@用户名`。
+- **埋点**：论坛回复（主题作者 + @提及）、新 Demo 待审（管理员）、审核结果（作者）、举报处理（举报人）。
+- **接口**：`GET /notifications`、`GET /notifications/unread-count`、`POST /notifications/read`、`POST /notifications/read-all`。
 - **作品 meta**：`GET /demos/{slug}/meta` 轻量返回 `{slug,title,cover_url,author}`，**不增加 view_count**（富卡片专用）。
 - **迁移**：`scripts/migrate_comments_to_forum.py` 把历史 comments 按 demo 归集为论坛主题/回复（创建或复用主题，保留 author/content/created_at，`source_comment_id` 幂等去重，重跑不重复）。
 - **旧评论**：`GET /demos/{slug}/comments` 只读保留；`POST`/`DELETE` 返回 410（迁移到论坛）。

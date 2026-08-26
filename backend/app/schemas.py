@@ -444,3 +444,24 @@ class ForumReportOut(BaseModel):
 
 class ForumReportHandleIn(BaseModel):
     action: str = Field(pattern="^(resolve|dismiss)$")
+
+
+# ---------- 通知 ----------
+class NotificationOut(BaseModel):
+    id: int
+    type: str
+    actor: str | None = None
+    actor_id: int | None = None
+    demo_slug: str | None = None
+    topic_id: int | None = None
+    reply_id: int | None = None
+    read: bool = False
+    created_at: datetime
+
+
+class NotificationReadIn(BaseModel):
+    id: int
+
+
+class UnreadCountOut(BaseModel):
+    count: int = 0

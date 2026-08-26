@@ -57,7 +57,7 @@ type FilterGroup = {
 // 分组筛选（A）：按标签键分行，组内 values 按热度排序
 const filterGroups = computed<FilterGroup[]>(() =>
   [...tagKeys.value]
-    .filter((k) => k.values.length > 0)
+    .filter((k) => k.values.some((v) => v.demo_count > 0))
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || a.key.localeCompare(b.key))
     .map((k) => ({
       key: k.key,
@@ -66,7 +66,10 @@ const filterGroups = computed<FilterGroup[]>(() =>
       total: k.values.reduce((n, v) => n + v.demo_count, 0),
       min: k.min,
       max: k.max,
-      values: [...k.values].sort((a, b) => b.demo_count - a.demo_count).map((v) => ({ value: v.value, count: v.demo_count })),
+      values: [...k.values]
+        .filter((v) => v.demo_count > 0)
+        .sort((a, b) => b.demo_count - a.demo_count)
+        .map((v) => ({ value: v.value, count: v.demo_count })),
     })),
 )
 

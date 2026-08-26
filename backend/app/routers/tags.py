@@ -13,12 +13,16 @@ from ..schemas import (
     AiSuggestIn,
     TagCreate,
     TagDetail,
+    TagGroupRename,
     TagKeyOut,
     TagKeyUpdate,
     TagKeyUpsert,
     TagKeyValueOut,
+    TagMergeIn,
+    TagMergeResult,
     TagOut,
     TagSuggestionReview,
+    TagValueGroupSet,
     TagValueSuggestionIn,
     TagValueSuggestionOut,
 )
@@ -380,3 +384,136 @@ def ai_suggest(
         "suggestions": suggestions,
         "note": "规则版占位，仅作参考；接入真实 LLM 后更准。确认后请手动/接口写入标签。",
     }
+
+
+# ---------- 标签 group 管理（admin） ----------
+@router.get("/admin/groups")
+def list_groups(key: str = Query(...), db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """列出某 key 下的 group 分布。"""
+    rows = (
+        db.query(Tag.group, func.count(Tag.id))
+        .filter(Tag.key == key, Tag.group.isnot(None))
+        .group_by(Tag.group)
+        .all()
+    )
+    ungrouped = db.query(func.count(Tag.id)).filter(Tag.key == key, Tag.group.is_(None)).scalar() or 0
+    return {
+        "key": key,
+        "groups": [{"group": g, "count": c} for g, c in rows],
+        "ungrouped": ungrouped,
+    }
+
+
+@router.put("/admin/groups/{key}/{group}")
+def rename_group(
+    key: str,
+    group: str,
+    body: TagGroupRename,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """重命名 group：批量更新该 group 下所有 Tag.group。"""
+    updated = (
+        db.query(Tag)
+        .filter(Tag.key == key, Tag.group == group)
+        .update({Tag.group: body.new_group}, synchronize_session=False)
+    )
+    db.commit()
+    return {"updated": updated, "new_group": body.new_group}
+
+
+@router.delete("/admin/groups/{key}/{group}")
+def clear_group(
+    key: str,
+    group: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """清除 group：该 group 下所有值变为无分组。"""
+    cleared = (
+        db.query(Tag)
+        .filter(Tag.key == key, Tag.group == group)
+        .update({Tag.group: None}, synchronize_session=False)
+    )
+    db.commit()
+    return {"cleared": cleared}
+
+
+@router.put("/admin/values/{tag_id}/group", response_model=TagOut)
+def set_value_group(
+    tag_id: int,
+    body: TagValueGroupSet,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """给单个固定值设置/清除 group。"""
+    tag = db.get(Tag, tag_id)
+    if tag is None:
+        raise HTTPException(status_code=404, detail="标签不存在", )
+    tag.group = body.group or None
+    db.commit()
+    db.refresh(tag)
+    return tag_dict(db, tag)
+
+
+# ---------- 标签合并（admin） ----------
+@router.post("/admin/merge", response_model=TagMergeResult)
+def merge_tags(body: TagMergeIn, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """合并标签：把 from 值的引用迁移到 to 值，删除源值（事务内完成）。"""
+    if body.from_key in RESERVED_TAG_KEYS or body.to_key in RESERVED_TAG_KEYS:
+        raise HTTPException(status_code=409, detail="保留 key 禁止合并", )
+    if body.from_key != body.to_key:
+        raise HTTPException(status_code=422, detail="跨 key 合并暂不支持", )
+
+    src = db.query(Tag).filter(Tag.key == body.from_key, Tag.value == body.from_value).first()
+    if src is None:
+        return TagMergeResult(dry_run=body.dry_run)
+    tgt = db.query(Tag).filter(Tag.key == body.to_key, Tag.value == body.to_value).first()
+    if tgt is None:
+        raise HTTPException(status_code=422, detail="目标标签不存在，请先创建", )
+    if src.id == tgt.id:
+        return TagMergeResult(dry_run=body.dry_run)
+    if db.query(Tag).filter(Tag.parent_id == src.id).count() > 0:
+        raise HTTPException(status_code=422, detail="源标签有子标签，暂不支持合并", )
+
+    assocs = db.query(DemoTag).filter(DemoTag.tag_id == src.id).all()
+    merged = 0
+    removed = 0
+    demo_ids: set[int] = set()
+    for a in assocs:
+        demo_ids.add(a.demo_id)
+        if db.query(DemoTag).filter(DemoTag.demo_id == a.demo_id, DemoTag.tag_id == tgt.id).first():
+            removed += 1
+        else:
+            merged += 1
+
+    if body.dry_run:
+        # 合并后源引用清零，且无子标签 → 源可删
+        return TagMergeResult(
+            merged=merged,
+            removed_dups=removed,
+            affected_demos=len(demo_ids),
+            deleted_source=True,
+            dry_run=True,
+        )
+
+    for a in assocs:
+        if db.query(DemoTag).filter(DemoTag.demo_id == a.demo_id, DemoTag.tag_id == tgt.id).first():
+            db.delete(a)
+        else:
+            a.tag_id = tgt.id
+    # 同值的 pending 建议标记为已拒绝（避免审核出重复）
+    db.query(TagValueSuggestion).filter(
+        TagValueSuggestion.key == body.from_key,
+        TagValueSuggestion.value == body.from_value,
+        TagValueSuggestion.status == "pending",
+    ).update({TagValueSuggestion.status: "rejected"}, synchronize_session=False)
+    db.delete(src)
+    db.commit()
+    return TagMergeResult(
+        merged=merged,
+        removed_dups=removed,
+        affected_demos=len(demo_ids),
+        deleted_source=True,
+        dry_run=False,
+    )

@@ -178,6 +178,8 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **AI 辅助**：`POST /tags/admin/fetch-models` 写内置主流模型（2026-08 列表）为 pending 建议；`POST /tags/admin/ai-suggest` 返回规则启发式建议（占位，不落库）。⚠️ 当前 `fetch-models` 内置列表仍是旧版，与线上 97 个值不一致，待后端同步。
 - **范围检索**：`GET /demos?tag=rounds:3-10` 对 int 键用 `CAST(Tag.value AS INTEGER)` 范围比较；fixed/open 精确。
 - **分布**：`GET /tags/tag-keys` 的 int 键返回 `min/max`，前端可做滑条/直方图；fixed value 返回 `group` 分组。
+- **group 管理**：`/tags/admin/groups` 列/重命名/清除 group；`/tags/admin/values/{id}/group` 设置单个值分组（纯字段批量更新）。
+- **标签合并**：`POST /tags/admin/merge`（事务内把源引用迁移到目标，删重复引用，删源值；`dry_run` 预览；同 key、无子标签、非保留 key）。
 
 ### 论坛 + 作品 meta
 

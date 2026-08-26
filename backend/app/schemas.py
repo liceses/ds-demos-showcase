@@ -119,6 +119,30 @@ class AiSuggestIn(BaseModel):
     text: str = Field(default="", max_length=4000)
 
 
+class TagGroupRename(BaseModel):
+    new_group: str = Field(min_length=1, max_length=64)
+
+
+class TagValueGroupSet(BaseModel):
+    group: str | None = Field(default=None, max_length=64)
+
+
+class TagMergeIn(BaseModel):
+    from_key: str = Field(min_length=1, max_length=64)
+    from_value: str = Field(min_length=1, max_length=128)
+    to_key: str = Field(min_length=1, max_length=64)
+    to_value: str = Field(min_length=1, max_length=128)
+    dry_run: bool = False
+
+
+class TagMergeResult(BaseModel):
+    merged: int = 0          # 已迁移到目标值的引用数
+    removed_dups: int = 0    # 因 demo 已有目标值而删除的重复引用数
+    affected_demos: int = 0  # 受影响 demo 数（去重后的 demo 数）
+    deleted_source: bool = False
+    dry_run: bool = False
+
+
 class TagKeyUpsert(BaseModel):
     key: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
     mode: str = Field(pattern="^(fixed|open|int)$")

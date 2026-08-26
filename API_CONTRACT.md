@@ -602,6 +602,23 @@ GET /api/v1/demos?status=approved&author=public
 - `GET /demos?tag=rounds:3-10`：int 键支持 `key:lo-hi` 范围过滤（SQL CAST 数值比较）
 - fixed/open 仍为 `key:value` 精确匹配
 
+### 标签 group 管理（admin）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/tags/admin/groups?key=model` | 列出该 key 的 group 分布（含 ungrouped 数） |
+| PUT | `/tags/admin/groups/{key}/{group}` | 重命名 group：`{new_group}`，批量更新所有值 |
+| DELETE | `/tags/admin/groups/{key}/{group}` | 清除 group（值变无分组） |
+| PUT | `/tags/admin/values/{tag_id}/group` | 给单个值设置/清除 group：`{group}` |
+
+### 标签合并（admin）
+`POST /tags/admin/merge`
+```json
+{ "from_key": "model", "from_value": "dsv4flash", "to_key": "model", "to_value": "dsv4-flash", "dry_run": true }
+```
+- 把源值引用迁移到目标值；demo 已有目标值时删除重复引用；源值删除
+- `dry_run=true` 只预览：返回 `{merged, removed_dups, affected_demos, deleted_source, dry_run}`
+- 规则：同 key 才能合并；保留 key 禁止；源有子标签禁止；目标不存在 422
+
 ## 10. 补充接口（代码已有，文档补录）
 
 > 以下接口在代码中已实现，原文档未列全，现补录。

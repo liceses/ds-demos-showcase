@@ -5,14 +5,13 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { AdminDemo } from '../../api/types'
 import PaginationBar from '../PaginationBar.vue'
+import { useLocalPagination } from '../../composables/useLocalPagination'
 
 const ui = useUiStore()
 const demos = ref<AdminDemo[]>([])
 const loading = ref(true)
 const demoQuery = ref('')
 const demoStatus = ref<'all' | 'approved' | 'pending' | 'rejected'>('all')
-const demoPage = ref(1)
-const demoPageSize = 8
 
 async function load() {
   loading.value = true
@@ -40,12 +39,14 @@ const demoFiltered = computed(() => {
   }
   return items
 })
-const demoTotal = computed(() => demoFiltered.value.length)
-const demoPages = computed(() => Math.max(1, Math.ceil(demoTotal.value / demoPageSize)))
-const demoPaged = computed(() => demoFiltered.value.slice((demoPage.value - 1) * demoPageSize, demoPage.value * demoPageSize))
-function setDemoPage(p: number) {
-  demoPage.value = Math.min(Math.max(1, p), demoPages.value)
-}
+const {
+  page: demoPage,
+  total: demoTotal,
+  pages: demoPages,
+  paged: demoPaged,
+  pageSize: demoPageSize,
+  setPage: setDemoPage,
+} = useLocalPagination<AdminDemo>(() => demoFiltered.value, 8)
 
 async function setDemoStatus(slug: string, action: 'approve' | 'reject') {
   const d = demos.value.find((x) => x.slug === slug)

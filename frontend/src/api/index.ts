@@ -200,7 +200,8 @@ const realApi = {
   },
   async listForumReplies(topicId: number): Promise<ForumReply[]> {
     const { data } = await http.get(`/forum/topics/${topicId}/replies`)
-    return data
+    // 后端已改成分页对象 { items, total, page, page_size }；兼容旧版数组返回
+    return Array.isArray(data) ? data : (data.items ?? [])
   },
   async createForumTopic(payload: ForumTopicInput): Promise<ForumTopic> {
     const { data } = await http.post('/forum/topics', {

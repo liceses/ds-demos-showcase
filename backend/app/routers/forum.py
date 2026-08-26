@@ -330,6 +330,10 @@ def admin_update_topic(
     t = db.get(ForumTopic, tid)
     if t is None:
         raise HTTPException(status_code=404, detail="主题不存在", )
+    if body.title is not None:
+        t.title = body.title
+    if body.tags is not None:
+        t.tags = body.tags
     if body.pinned is not None:
         t.pinned = body.pinned
     if body.sticky is not None:

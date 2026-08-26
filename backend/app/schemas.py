@@ -434,6 +434,8 @@ class ForumReplyIn(BaseModel):
 
 
 class ForumTopicAdminUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    tags: str | None = Field(default=None, max_length=200)
     pinned: bool | None = None
     sticky: bool | None = None
     locked: bool | None = None

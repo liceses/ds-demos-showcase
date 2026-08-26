@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { ForumReply, ForumReport, ForumTopic } from '../../api/types'
+import ForumTopicEditModal from './ForumTopicEditModal.vue'
 import { parseDate } from '../../utils/time'
 
 const ui = useUiStore()
@@ -15,6 +16,7 @@ const forumReports = ref<ForumReport[]>([])
 const forumStatusFilter = ref<'all' | 'normal' | 'hidden' | 'reviewing'>('all')
 const forumCategoryFilter = ref('')
 const forumPinnedFilter = ref<'all' | 'pinned' | 'unpinned'>('all')
+const editTopic = ref<ForumTopic | null>(null)
 
 async function loadForum() {
   try {
@@ -142,6 +144,7 @@ onMounted(() => {
                 <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-dark" type="button" @click="forumPatchTopic(t, { status: t.status === 'hidden' ? 'normal' : 'hidden' })">{{ t.status === 'hidden' ? '恢复' : '隐藏' }}</button>
                 <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { locked: !t.locked })">{{ t.locked ? '解锁' : '锁定' }}</button>
                 <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { solved: !t.solved })">{{ t.solved ? '取消解决' : '已解决' }}</button>
+                <button class="btn btn-sm btn-outline" type="button" @click="editTopic = t">编辑</button>
                 <button class="btn btn-sm btn-danger" type="button" @click="forumDeleteTopic(t)">删除</button>
               </td>
             </tr>
@@ -200,5 +203,12 @@ onMounted(() => {
         </table>
       </div>
     </template>
+
+    <ForumTopicEditModal
+      v-if="editTopic"
+      :topic="editTopic"
+      @close="editTopic = null"
+      @saved="loadForum"
+    />
   </div>
 </template>

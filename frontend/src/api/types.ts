@@ -299,6 +299,8 @@ export interface ForumTopicInput {
 }
 
 export interface ForumTopicAdminUpdate {
+  title?: string
+  tags?: string
   pinned?: boolean
   sticky?: boolean
   locked?: boolean

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 defineOptions({ name: 'ForumListView' })
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
-import type { ForumTopic } from '../api/types'
+import type { DemoDetail, ForumTopic } from '../api/types'
 import PaginationBar from '../components/PaginationBar.vue'
 import { timeAgo } from '../utils/time'
 
 const route = useRoute()
+const router = useRouter()
 
 const topics = ref<ForumTopic[]>([])
 const total = ref(0)
@@ -18,6 +19,7 @@ const category = ref('all')
 const sort = ref<'newest' | 'popular'>('newest')
 const demoFilter = ref('')
 const tagFilter = ref('')
+const demoCards = ref<Record<string, DemoDetail | null>>({})
 const loading = ref(false)
 const error = ref('')
 
@@ -38,11 +40,25 @@ async function load() {
     })
     topics.value = res.items
     total.value = res.total
+    await loadDemoChips()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
   }
+}
+
+async function loadDemoChips() {
+  const slugs = [...new Set(topics.value.map((t) => t.demo_slug).filter((s): s is string => !!s && !(s in demoCards.value)))]
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        demoCards.value[slug] = await api.getDemo(slug)
+      } catch {
+        demoCards.value[slug] = null
+      }
+    }),
+  )
 }
 
 function apply() {
@@ -102,6 +118,12 @@ onMounted(() => {
           <span v-if="t.sticky" class="forum-badge forum-badge-sticky">加精</span>
           <span class="forum-cat">{{ t.category }}</span>
           {{ t.title }}
+        </div>
+        <div v-if="t.demo_slug" class="forum-topic-demo">
+          <span class="forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t.demo_slug}`)">
+            <img v-if="demoCards[t.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t.demo_slug]?.cover_url" alt="" loading="lazy" />
+            <span>{{ demoCards[t.demo_slug]?.title || t.demo_slug }}</span>
+          </span>
         </div>
         <div class="forum-topic-meta">
           <span>{{ t.author || '匿名' }}</span>

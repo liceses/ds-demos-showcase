@@ -3803,3 +3803,33 @@ table.data tr.inconsistent td {
   color: var(--text-forum);
   border-style: dashed;
 }
+
+/* 论坛主题卡 demo 缩略图 chip */
+.forum-topic-demo {
+  margin: 6px 0 8px;
+}
+.forum-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 3px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.forum-demo-chip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.forum-demo-chip-cover {
+  width: 34px;
+  height: 24px;
+  object-fit: cover;
+  border: 1px solid var(--ink);
+  background: var(--mint);
+}

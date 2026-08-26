@@ -2,9 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
-import MarkdownEditor from '../components/MarkdownEditor.vue'
 import PaginationBar from '../components/PaginationBar.vue'
-import type { AdminDemo, AdminUser, Announcement, DemoDetail, ForumReply, ForumReport, ForumTopic, Settings, TagKeyInfo, TagSuggestion } from '../api/types'
+import AdminForumSection from '../components/admin/AdminForumSection.vue'
+import AdminAnnouncementsSection from '../components/admin/AdminAnnouncementsSection.vue'
+import type { AdminDemo, AdminUser, DemoDetail, Settings, TagKeyInfo, TagSuggestion } from '../api/types'
 
 const ui = useUiStore()
 
@@ -22,7 +23,6 @@ const demos = ref<AdminDemo[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
 const users = ref<AdminUser[]>([])
 const settings = ref<Settings>({ auto_approve: true, auto_approve_public: false })
-const announcements = ref<Announcement[]>([])
 const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }>({
   oss_enabled: false,
   mode: 'local',
@@ -35,68 +35,6 @@ const storageModeLabel = computed(() => {
   if (storageInfo.value.mode === 'oss_backup') return '本地存储（OSS 备份）'
   return '本地存储'
 })
-
-const newAnn = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
-const annError = ref('')
-const annOk = ref('')
-
-const annTypeLabel: Record<string, string> = { manual: '手动公告', auto: '新发布', update: '站点更新', demo_update: '作品更新' }
-
-const annFilter = ref<'all' | 'manual' | 'auto' | 'demo_update' | 'update'>('all')
-const editingAnn = ref<Announcement | null>(null)
-const editAnnForm = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
-
-const filteredAnnouncements = computed(() =>
-  annFilter.value === 'all' ? announcements.value : announcements.value.filter((a) => a.type === annFilter.value),
-)
-
-const annStatusFilter = ref<'all' | 'draft' | 'published' | 'offline'>('all')
-const annCategoryFilter = ref('')
-const annPinnedFilter = ref<'all' | 'pinned' | 'unpinned'>('all')
-async function loadAnnouncements() {
-  try {
-    announcements.value = await api.adminListAnnouncements({
-      status: annStatusFilter.value === 'all' ? undefined : annStatusFilter.value,
-      category: annCategoryFilter.value.trim() || undefined,
-      pinned: annPinnedFilter.value === 'all' ? undefined : annPinnedFilter.value === 'pinned',
-    })
-  } catch {
-    announcements.value = []
-  }
-}
-
-function startEditAnn(a: Announcement) {
-  editingAnn.value = a
-  editAnnForm.value = { title: a.title, content: a.content, pinned: !!a.pinned, status: a.status || 'published', category: a.category || 'general', published_at: a.published_at ? a.published_at.slice(0, 16) : '', expires_at: a.expires_at ? a.expires_at.slice(0, 16) : '' }
-}
-
-function cancelEditAnn() {
-  editingAnn.value = null
-}
-
-async function saveEditAnn() {
-  if (!editingAnn.value) return
-  if (!editAnnForm.value.title.trim()) {
-    ui.toast('公告标题必填', 'error')
-    return
-  }
-  try {
-    await api.updateAnnouncement(editingAnn.value.id, {
-      title: editAnnForm.value.title.trim(),
-      content: editAnnForm.value.content.trim(),
-      pinned: editAnnForm.value.pinned,
-      status: editAnnForm.value.status,
-      category: editAnnForm.value.category.trim() || 'general',
-      published_at: editAnnForm.value.published_at ? new Date(editAnnForm.value.published_at).toISOString() : null,
-      expires_at: editAnnForm.value.expires_at ? new Date(editAnnForm.value.expires_at).toISOString() : null,
-    })
-    ui.toast('公告已更新', 'success')
-    editingAnn.value = null
-    announcements.value = await api.listAnnouncements()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  }
-}
 
 // 标签键管理
 const newKey = ref({ key: '', mode: 'fixed' as 'fixed' | 'open' | 'int', label: '', description: '', sort: 0 })
@@ -111,102 +49,16 @@ const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义
 const loading = ref(false)
 const error = ref('')
 
-// ---------- 论坛管理 ----------
-const forumSub = ref<'topics' | 'replies' | 'reports'>('topics')
-const forumTopics = ref<ForumTopic[]>([])
-const forumRepliesByTopic = ref<Record<number, ForumReply[]>>({})
-const forumReports = ref<ForumReport[]>([])
-const forumStatusFilter = ref<'all' | 'normal' | 'hidden' | 'reviewing'>('all')
-const forumCategoryFilter = ref('')
-const forumPinnedFilter = ref<'all' | 'pinned' | 'unpinned'>('all')
-
-async function loadForum() {
-  try {
-    forumTopics.value = (await api.adminListForumTopics({})).items
-  } catch {
-    forumTopics.value = []
-  }
-}
-async function loadForumReports() {
-  try {
-    forumReports.value = await api.listForumReports()
-  } catch {
-    forumReports.value = []
-  }
-}
-const filteredForumTopics = computed(() => {
-  let items = forumTopics.value
-  if (forumStatusFilter.value !== 'all') items = items.filter((t) => t.status === forumStatusFilter.value)
-  if (forumCategoryFilter.value) items = items.filter((t) => t.category.includes(forumCategoryFilter.value))
-  if (forumPinnedFilter.value !== 'all') items = items.filter((t) => t.pinned === (forumPinnedFilter.value === 'pinned'))
-  return items
-})
-async function forumReviewTopic(t: ForumTopic, action: 'approve' | 'reject') {
-  try {
-    await api.adminReviewForumTopic(t.id, action)
-    ui.toast(action === 'approve' ? '已通过' : '已隐藏', 'success')
-    await loadForum()
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
-async function forumPatchTopic(t: ForumTopic, patch: { pinned?: boolean; sticky?: boolean; status?: string }) {
-  try {
-    await api.adminUpdateForumTopic(t.id, patch)
-    ui.toast('已更新', 'success')
-    await loadForum()
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
-async function forumDeleteTopic(t: ForumTopic) {
-  const ok = await ui.confirm({ title: '删除主题', message: `确定删除「${t.title}」？`, confirmText: '删除', danger: true })
-  if (!ok) return
-  try {
-    await api.adminDeleteForumTopic(t.id)
-    ui.toast('已删除', 'success')
-    await loadForum()
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
-async function forumDeleteReply(r: ForumReply) {
-  const ok = await ui.confirm({ title: '删除回复', message: '确定删除该回复？', confirmText: '删除', danger: true })
-  if (!ok) return
-  try {
-    await api.adminDeleteForumReply(r.id)
-    ui.toast('已删除', 'success')
-    forumRepliesByTopic.value = {}
-    await loadForum()
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
-const forumReplyTopicId = ref<number | null>(null)
-const forumRepliesShown = ref<ForumReply[]>([])
-async function forumSelectReplies() {
-  if (forumReplyTopicId.value == null) { forumRepliesShown.value = []; return }
-  try { forumRepliesShown.value = await api.listForumReplies(forumReplyTopicId.value) } catch { forumRepliesShown.value = [] }
-}
-async function forumReviewReply(r: ForumReply, action: 'approve' | 'reject') {
-  try {
-    await api.adminReviewForumReply(r.id, action)
-    ui.toast(action === 'approve' ? '已通过' : '已隐藏', 'success')
-    await forumSelectReplies()
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
-
-async function forumHandleReport(r: ForumReport, action: 'handle' | 'ignore') {
-  try {
-    await api.handleForumReport(r.id, action)
-    ui.toast(action === 'handle' ? '已处理' : '已忽略', 'success')
-    await loadForumReports()
-  } catch (e) { ui.toast((e as Error).message, 'error') }
-}
-
 async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [p, d, t, u, s, a, st] = await Promise.all([
+    const [p, d, t, u, s, st] = await Promise.all([
       api.adminReview(),
       api.adminDemos(),
       api.listTagKeys(),
       api.adminUsers(),
       api.getSettings(),
-      api.listAnnouncements(),
       api.storageStatus(),
     ])
     pending.value = p
@@ -214,9 +66,7 @@ async function loadAll() {
     tagKeys.value = t
     users.value = u
     settings.value = s
-    announcements.value = a
     storageInfo.value = st
-    await Promise.all([loadForum(), loadForumReports()])
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -293,48 +143,6 @@ async function deleteTagValue(key: string, value: string) {
     await api.deleteTagValue(key, value)
     ui.toast('标签值已删除', 'success')
     tagKeys.value = await api.listTagKeys()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  }
-}
-
-async function createAnnouncement() {
-  annError.value = ''
-  annOk.value = ''
-  if (!newAnn.value.title.trim()) {
-    annError.value = '公告标题必填'
-    return
-  }
-  try {
-    await api.createAnnouncement({
-      title: newAnn.value.title.trim(),
-      content: newAnn.value.content.trim(),
-      pinned: newAnn.value.pinned,
-      status: newAnn.value.status,
-      category: newAnn.value.category.trim() || 'general',
-      published_at: newAnn.value.published_at ? new Date(newAnn.value.published_at).toISOString() : null,
-      expires_at: newAnn.value.expires_at ? new Date(newAnn.value.expires_at).toISOString() : null,
-    })
-    ui.toast('公告已发布', 'success')
-    newAnn.value = { title: '', content: '', pinned: false, status: 'published', category: 'general', published_at: '', expires_at: '' }
-    await loadAnnouncements()
-  } catch (e) {
-    annError.value = (e as Error).message
-  }
-}
-
-async function deleteAnnouncement(id: number) {
-  const ok = await ui.confirm({
-    title: '删除公告',
-    message: '确定删除这条公告？',
-    confirmText: '删除',
-    danger: true,
-  })
-  if (!ok) return
-  try {
-    await api.deleteAnnouncement(id)
-    ui.toast('公告已删除', 'success')
-    announcements.value = await api.listAnnouncements()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
   }
@@ -643,7 +451,7 @@ onMounted(loadAll)
       </button>
       <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
       <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
-      <button class="tab" :class="{ active: tab === 'forum' }" type="button" @click="tab = 'forum'; loadForum()">论坛管理</button>
+      <button class="tab" :class="{ active: tab === 'forum' }" type="button" @click="tab = 'forum'">论坛管理</button>
       <button class="tab" :class="{ active: tab === 'users' }" type="button" @click="tab = 'users'">用户管理</button>
       <button class="tab" :class="{ active: tab === 'announcements' }" type="button" @click="tab = 'announcements'">公告管理</button>
       <button class="tab" :class="{ active: tab === 'settings' }" type="button" @click="tab = 'settings'">站点设置</button>
@@ -901,106 +709,7 @@ onMounted(loadAll)
           </template>
 
 
-          <!-- 论坛管理 -->
-          <template v-else-if="tab === 'forum'">
-            <div class="filter-row" style="margin-bottom: 14px">
-              <button class="tab" :class="{ active: forumSub === 'topics' }" type="button" @click="forumSub = 'topics'">主题</button>
-              <button class="tab" :class="{ active: forumSub === 'replies' }" type="button" @click="forumSub = 'replies'">回复</button>
-              <button class="tab" :class="{ active: forumSub === 'reports' }" type="button" @click="forumSub = 'reports'; loadForumReports()">举报</button>
-            </div>
-
-            <template v-if="forumSub === 'topics'">
-              <div class="filter-row" style="margin-bottom: 12px">
-                <select v-model="forumStatusFilter" class="input" style="max-width: 120px">
-                  <option value="all">全部状态</option>
-                  <option value="normal">正常</option>
-                  <option value="reviewing">审核中</option>
-                  <option value="hidden">隐藏</option>
-                </select>
-                <input v-model="forumCategoryFilter" class="input" style="max-width: 140px" placeholder="分类筛选" @change="loadForum" />
-                <select v-model="forumPinnedFilter" class="input" style="max-width: 120px" @change="loadForum">
-                  <option value="all">全部置顶</option>
-                  <option value="pinned">仅置顶</option>
-                  <option value="unpinned">非置顶</option>
-                </select>
-              </div>
-              <div class="table-wrap">
-                <table class="data">
-                  <thead><tr><th>标题</th><th>作者</th><th>分类</th><th>状态</th><th>置顶</th><th>加精</th><th>回复</th><th>时间</th><th>操作</th></tr></thead>
-                  <tbody>
-                    <tr v-for="t in filteredForumTopics" :key="t.id">
-                      <td>{{ t.title }}</td>
-                      <td>{{ t.author || '匿名' }}</td>
-                      <td>{{ t.category }}</td>
-                      <td><span class="ann-status" :class="'status-' + (t.status === 'reviewing' ? 'draft' : t.status)">{{ t.status }}</span></td>
-                      <td>{{ t.pinned ? '置顶' : '-' }}</td>
-                      <td>{{ t.sticky ? '加精' : '-' }}</td>
-                      <td>{{ t.reply_count }}</td>
-                      <td>{{ new Date(t.created_at).toLocaleDateString('zh-CN') }}</td>
-                      <td>
-                        <button v-if="t.status === 'reviewing'" class="btn btn-sm btn-primary" type="button" @click="forumReviewTopic(t, 'approve')">通过</button>
-                        <button v-if="t.status === 'reviewing'" class="btn btn-sm btn-dark" type="button" @click="forumReviewTopic(t, 'reject')">隐藏</button>
-                        <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { pinned: !t.pinned })">{{ t.pinned ? '取消置顶' : '置顶' }}</button>
-                        <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-outline" type="button" @click="forumPatchTopic(t, { sticky: !t.sticky })">{{ t.sticky ? '取消加精' : '加精' }}</button>
-                        <button v-if="t.status !== 'reviewing'" class="btn btn-sm btn-dark" type="button" @click="forumPatchTopic(t, { status: t.status === 'hidden' ? 'normal' : 'hidden' })">{{ t.status === 'hidden' ? '恢复' : '隐藏' }}</button>
-                        <button class="btn btn-sm btn-danger" type="button" @click="forumDeleteTopic(t)">删除</button>
-                      </td>
-                    </tr>
-                    <tr v-if="!filteredForumTopics.length"><td colspan="9" style="text-align:center">暂无主题</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
-
-            <template v-else-if="forumSub === 'replies'">
-              <div class="filter-row" style="margin-bottom: 12px">
-                <select v-model="forumReplyTopicId" class="input" style="max-width: 320px" @change="forumSelectReplies">
-                  <option :value="null">选择主题…</option>
-                  <option v-for="t in forumTopics" :key="t.id" :value="t.id">{{ t.title }}</option>
-                </select>
-              </div>
-              <div class="table-wrap">
-                <table class="data">
-                  <thead><tr><th>作者</th><th>内容</th><th>时间</th><th>操作</th></tr></thead>
-                  <tbody>
-                    <tr v-for="r in forumRepliesShown" :key="r.id">
-                      <td>{{ r.author || '匿名' }}</td>
-                      <td style="max-width: 360px; overflow-wrap: anywhere">{{ r.content }}</td>
-                      <td>{{ new Date(r.created_at).toLocaleString('zh-CN') }}</td>
-                      <td>
-                        <button class="btn btn-sm btn-outline" type="button" @click="forumReviewReply(r, 'approve')">通过</button>
-                        <button class="btn btn-sm btn-dark" type="button" @click="forumReviewReply(r, 'reject')">隐藏</button>
-                        <button class="btn btn-sm btn-danger" type="button" @click="forumDeleteReply(r)">删除</button>
-                      </td>
-                    </tr>
-                    <tr v-if="!forumRepliesShown.length"><td colspan="4" style="text-align:center">选择主题查看回复</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
-
-            <template v-else>
-              <div class="table-wrap">
-                <table class="data">
-                  <thead><tr><th>对象</th><th>理由</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
-                  <tbody>
-                    <tr v-for="r in forumReports" :key="r.id">
-                      <td>{{ r.target_type }} #{{ r.target_id }}</td>
-                      <td style="max-width: 320px; overflow-wrap: anywhere">{{ r.reason }}</td>
-                      <td><span class="ann-status" :class="'status-' + (r.status === 'pending' ? 'draft' : r.status)">{{ r.status }}</span></td>
-                      <td>{{ new Date(r.created_at).toLocaleString('zh-CN') }}</td>
-                      <td>
-                        <button v-if="r.status === 'pending'" class="btn btn-sm btn-primary" type="button" @click="forumHandleReport(r, 'handle')">处理</button>
-                        <button v-if="r.status === 'pending'" class="btn btn-sm btn-dark" type="button" @click="forumHandleReport(r, 'ignore')">忽略</button>
-                        <span v-else class="muted">已处理</span>
-                      </td>
-                    </tr>
-                    <tr v-if="!forumReports.length"><td colspan="5" style="text-align:center">暂无举报</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
-          </template>
+          <AdminForumSection />
 
           <!-- 用户管理 -->
           <template v-else-if="tab === 'users'">
@@ -1025,132 +734,7 @@ onMounted(loadAll)
             </div>
           </template>
 
-          <!-- 公告管理 -->
-          <template v-else-if="tab === 'announcements'">
-            <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
-                            <h2 style="margin-bottom: 12px">{{ editingAnn ? '编辑公告' : '发布手动公告' }}</h2>
-              <div class="form-stack">
-                <template v-if="editingAnn">
-                  <label class="field">
-                    标题
-                    <input v-model="editAnnForm.title" class="input" placeholder="公告标题" />
-                  </label>
-                  <label class="field">
-                    内容
-                    <MarkdownEditor v-model="editAnnForm.content" :rows="3" placeholder="公告内容（可选）" />
-                  </label>
-                  <label class="field" style="display: flex; gap: 8px; align-items: center">
-                    <input v-model="editAnnForm.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
-                  </label>
-                  <div class="filter-row" style="margin: 0">
-                    <select v-model="editAnnForm.status" class="input" style="max-width: 120px">
-                      <option value="draft">草稿</option>
-                      <option value="published">发布</option>
-                      <option value="offline">下线</option>
-                    </select>
-                    <input v-model="editAnnForm.category" class="input" style="max-width: 140px" placeholder="分类（如 general/system/demo）" />
-                  </div>
-                  <div class="filter-row" style="margin: 0">
-                    <label class="field" style="margin: 0">发布时间 <input v-model="editAnnForm.published_at" class="input" type="datetime-local" /></label>
-                    <label class="field" style="margin: 0">过期时间 <input v-model="editAnnForm.expires_at" class="input" type="datetime-local" /></label>
-                  </div>
-
-                  <div class="filter-row" style="margin-bottom: 0">
-                    <button class="btn btn-primary" type="button" @click="saveEditAnn">保存修改</button>
-                    <button class="btn btn-sm btn-dark" type="button" @click="cancelEditAnn">取消</button>
-                  </div>
-                </template>
-                <template v-else>
-                  <label class="field">
-                    标题
-                    <input v-model="newAnn.title" class="input" placeholder="公告标题" />
-                  </label>
-                  <label class="field">
-                    内容
-                    <MarkdownEditor v-model="newAnn.content" :rows="3" placeholder="公告内容（可选）" />
-                  </label>
-                  <label class="field" style="display: flex; gap: 8px; align-items: center">
-                    <input v-model="newAnn.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
-                  </label>
-                  <div class="filter-row" style="margin: 0">
-                    <select v-model="newAnn.status" class="input" style="max-width: 120px">
-                      <option value="draft">草稿</option>
-                      <option value="published">发布</option>
-                      <option value="offline">下线</option>
-                    </select>
-                    <input v-model="newAnn.category" class="input" style="max-width: 140px" placeholder="分类（如 general/system/demo）" />
-                  </div>
-                  <div class="filter-row" style="margin: 0">
-                    <label class="field" style="margin: 0">发布时间 <input v-model="newAnn.published_at" class="input" type="datetime-local" /></label>
-                    <label class="field" style="margin: 0">过期时间 <input v-model="newAnn.expires_at" class="input" type="datetime-local" /></label>
-                  </div>
-
-                  <div class="filter-row" style="margin-bottom: 0">
-                    <button class="btn btn-primary" type="button" @click="createAnnouncement">发布公告</button>
-                    <span v-if="annError" class="notice notice-error" style="margin: 0">{{ annError }}</span>
-                    <span v-if="annOk" class="notice notice-success" style="margin: 0">{{ annOk }}</span>
-                  </div>
-                </template>
-              </div>
-            </div>
-
-            <div class="filter-row">
-              <button
-                v-for="f in ['all', 'manual', 'auto', 'demo_update', 'update']"
-                :key="f"
-                class="tag-chip"
-                :class="{ active: annFilter === f }"
-                type="button"
-                @click="annFilter = f as typeof annFilter"
-              >
-                {{ f === 'all' ? '全部' : annTypeLabel[f] || f }}
-              </button>
-            </div>            <div class="filter-row" style="margin-top: 8px">
-              <select v-model="annStatusFilter" class="input" style="max-width: 120px" @change="loadAnnouncements">
-                <option value="all">全部状态</option>
-                <option value="draft">草稿</option>
-                <option value="published">已发布</option>
-                <option value="offline">已下线</option>
-              </select>
-              <input v-model="annCategoryFilter" class="input" style="max-width: 160px" placeholder="分类筛选" @change="loadAnnouncements" />
-              <select v-model="annPinnedFilter" class="input" style="max-width: 120px" @change="loadAnnouncements">
-                <option value="all">全部置顶</option>
-                <option value="pinned">仅置顶</option>
-                <option value="unpinned">非置顶</option>
-              </select>
-            </div>
-
-
-            <div class="table-wrap">
-              <table class="data">
-                <thead>
-                  <tr><th>类型</th><th>置顶</th><th>状态</th><th>分类</th><th>标题</th><th>内容</th><th>时间</th><th>操作</th></tr>
-                </thead>
-                <tbody>
-                  <tr v-for="a in filteredAnnouncements" :key="a.id">
-                                        <td>
-                      <span class="status-pill">{{ annTypeLabel[a.type] || a.type }}</span>
-                      <span v-if="a.type !== 'manual'" class="status-pill status-pending" style="margin-left: 4px">系统</span>
-                    </td>
-                    <td>{{ a.pinned ? '置顶' : '-' }}</td>
-                    <td><span class="ann-status" :class="'status-' + (a.status || 'published')">{{ a.status || 'published' }}</span></td>
-                    <td>{{ a.category || '-' }}</td>
-                    <td>{{ a.title }}</td>
-                    <td style="max-width: 320px; overflow-wrap: anywhere">{{ a.content }}</td>
-                    <td>{{ new Date(a.created_at).toLocaleString('zh-CN') }}</td>
-                    <td>
-                      <RouterLink v-if="a.demo_slug" class="btn btn-sm btn-outline" :to="`/demo/${a.demo_slug}`">查看</RouterLink>
-                      <button v-if="a.type === 'manual'" class="btn btn-sm btn-outline" type="button" @click="startEditAnn(a)">编辑</button>
-                      <button class="btn btn-sm btn-danger" type="button" @click="deleteAnnouncement(a.id)">删除</button>
-                    </td>
-                  </tr>
-                  <tr v-if="!filteredAnnouncements.length">
-                    <td colspan="5" style="text-align: center">该类型暂无公告</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </template>
+          <AdminAnnouncementsSection />
 
           <!-- 站点设置 -->
           <template v-else-if="tab === 'settings'">

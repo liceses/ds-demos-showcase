@@ -14,7 +14,6 @@ const route = useRoute()
       <RouterLink to="/forum" class="forum-brand">讨论区</RouterLink>
       <nav class="forum-nav">
         <RouterLink class="forum-nav-link" :class="{ active: route.path === '/forum' }" to="/forum">最新</RouterLink>
-        <RouterLink class="forum-nav-link" :class="{ active: route.path === '/forum' && route.query.sort === 'popular' }" to="/forum?sort=popular">热门</RouterLink>
         <RouterLink class="forum-nav-link" :class="{ active: route.path === '/forum/new' }" to="/forum/new">发帖</RouterLink>
       </nav>
       <NotificationBell v-if="auth.isLoggedIn()" />

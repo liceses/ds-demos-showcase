@@ -391,7 +391,7 @@ onBeforeUnmount(() => observer?.disconnect())
         </template>
         <template v-else>
           <!-- model：厂商分组 + 彩色点，默认收起 -->
-          <template v-if="k.mode === 'fixed' && k.key === 'model'">
+          <template v-if="k.mode === 'fixed'">
             <div v-if="isCollapsed(k)" class="filter-row tag-strip-chips">
               <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">模型 · 展开 +{{ k.values.length }}</button>
             </div>

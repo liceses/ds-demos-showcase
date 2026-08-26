@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import { useTagsStore } from '../../stores/tags'
+import { groupedTagValues } from '../../utils/tagGroups'
 import type { AdminDemo, TagGroupDistribution, TagKeyInfo, TagKeyValue, TagSuggestion } from '../../api/types'
 import TagMergeModal from './TagMergeModal.vue'
 
@@ -382,7 +383,19 @@ onMounted(() => {
               <span v-if="valueOk" class="notice notice-success" style="margin: 0">{{ valueOk }}</span>
             </div>
 
-            <div class="filter-row" style="margin: 0; gap: 6px">
+            <template v-if="adminActiveTagKey.mode === 'fixed'">
+              <template v-for="g in groupedTagValues(adminActiveTagKey.values)" :key="g.group">
+                <div v-if="groupedTagValues(adminActiveTagKey.values).length > 1" class="tag-group-name">{{ g.group }}</div>
+                <div class="filter-row" style="margin: 0; gap: 6px">
+                  <template v-for="v in g.values" :key="v.value">
+                    <RouterLink class="tag-chip" :class="'mode-fixed'" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
+                    <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
+                  </template>
+                </div>
+              </template>
+              <span v-if="!adminActiveTagKey.values.length" class="muted">无</span>
+            </template>
+            <div v-else class="filter-row" style="margin: 0; gap: 6px">
               <template v-for="v in adminActiveTagKey.values" :key="v.value">
                 <RouterLink class="tag-chip" :class="'mode-' + adminActiveTagKey.mode" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
                 <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>

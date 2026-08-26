@@ -2,6 +2,7 @@
 defineOptions({ name: 'TagListView' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTagsStore } from '../stores/tags'
+import GroupedTagValues from '../components/GroupedTagValues.vue'
 import type { TagKeyInfo } from '../api/types'
 
 const tagsStore = useTagsStore()
@@ -129,18 +130,14 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div class="filter-row" style="margin: 0">
-              <RouterLink
-                v-for="v in activeTagKey.values"
-                :key="v.value"
-                class="tag-chip"
-                :class="['mode-' + activeTagKey.mode, { 'search-hit': isValueHit(activeTagKey, v.value) }]"
-                :to="`/tag/${activeTagKey.key}/${v.value}`"
-              >
-                {{ v.value }}<span class="count">{{ v.demo_count }}</span>
-              </RouterLink>
-              <span v-if="!activeTagKey.values.length" class="muted">还没有值</span>
-            </div>
+            <GroupedTagValues
+              v-if="activeTagKey.values.length"
+              :values="activeTagKey.values"
+              :route-key="activeTagKey.key"
+              :mode="activeTagKey.mode"
+              :hit="(val: string) => (activeTagKey ? isValueHit(activeTagKey, val) : false)"
+            />
+            <span v-else class="muted">还没有值</span>
           </template>
           <div v-else class="muted">请选择左侧标签键</div>
         </div>

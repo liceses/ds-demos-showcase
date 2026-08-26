@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { DemoDetail, ForumReply, ForumTopic } from '../api/types'
+import type { DemoDetail, ForumReply, ForumTopic, UserProfile } from '../api/types'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import MarkdownEditor from '../components/MarkdownEditor.vue'
 import { errorMessage } from '../utils/error'
@@ -30,6 +30,8 @@ const replyPage = ref(1)
 const replyTotal = ref(0)
 const replyParentId = ref<number | null>(null)
 const loadingMore = ref(false)
+const hotTopics = ref<ForumTopic[]>([])
+const authorProfile = ref<UserProfile | null>(null)
 
 async function load() {
   loading.value = true
@@ -52,11 +54,20 @@ async function load() {
         demoCardLoading.value = false
       }
     }
+    if (t?.author) {
+      api.getUserProfile(t.author).then((p) => (authorProfile.value = p)).catch(() => (authorProfile.value = null))
+    }
+    api.listForumTopics({ sort: 'hot', page_size: 5 }).then((r) => (hotTopics.value = r.items)).catch(() => (hotTopics.value = []))
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
   }
+}
+
+function avatarClass(name: string) {
+  const n = (name.charCodeAt(0) || 0) % 4
+  return `avatar-${n + 1}`
 }
 
 async function reportTopic() {
@@ -156,77 +167,120 @@ onMounted(load)
         <span>{{ topic.title }}</span>
       </div>
 
-      <div class="card forum-topic-main">
-        <div class="forum-topic-title">
-          <span v-if="topic.pinned" class="forum-badge forum-badge-pin">置顶</span>
-          <span v-if="topic.sticky" class="forum-badge forum-badge-sticky">加精</span>
-          <span v-if="topic.solved" class="forum-badge" style="background: var(--mint)">已解决</span>
-          <span v-if="topic.locked" class="forum-badge" style="background: var(--ink); color: var(--paper)">已关闭</span>
-          <span class="forum-cat">{{ topic.category }}</span>
-          {{ topic.title }}
-        </div>
-        <div class="forum-topic-meta">
-          <span>{{ topic.author || '匿名' }}</span>
-          <span class="forum-stat">回复 {{ topic.reply_count }}</span>
-          <span class="forum-stat">浏览 {{ topic.view_count }}</span>
-          <span>{{ parseDate(topic.created_at).toLocaleString('zh-CN') }}</span>
-          <RouterLink v-if="topic.demo_slug && !demoCard && !demoCardLoading" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
-          <button class="btn btn-sm btn-outline" :class="{ active: topic.my_reactions.includes('like') }" type="button" @click="toggleReaction('topic', topic.id, 'like')">赞 {{ topic.like_count }}</button>
-          <button class="btn btn-sm btn-outline" :class="{ active: topic.my_reactions.includes('thanks') }" type="button" @click="toggleReaction('topic', topic.id, 'thanks')">感谢 {{ topic.thanks_count }}</button>
-          <button class="btn btn-sm btn-outline" type="button" @click="reportTopic">举报</button>
-        </div>
-        <div v-if="topic.demo_slug && demoCardLoading" class="forum-demo-card forum-demo-loading">加载关联作品…</div>
-        <RouterLink v-else-if="topic.demo_slug && demoCard" :to="`/demo/${topic.demo_slug}`" class="forum-demo-card">
-          <img class="forum-demo-cover" :src="demoCard.cover_url" :alt="demoCard.title" loading="lazy" />
-          <span class="forum-demo-main">
-            <span class="forum-demo-title">{{ demoCard.title }}</span>
-            <span class="forum-demo-meta">{{ demoCard.author }} · {{ demoCard.tags.length }} 标签 · 查看作品 →</span>
-          </span>
-        </RouterLink>
-        <MarkdownRenderer :content="topic.content" />
-      </div>
+      <div class="forum-layout">
+        <div class="forum-main">
+          <div class="card forum-topic-main">
+            <div class="forum-topic-head">
+              <span class="forum-avatar" :class="avatarClass(topic.author || '匿名')">{{ (topic.author || '匿')[0] }}</span>
+              <div class="forum-topic-head-main">
+                <div class="forum-topic-title">
+                  <span v-if="topic.pinned" class="forum-badge forum-badge-pin">置顶</span>
+                  <span v-if="topic.sticky" class="forum-badge forum-badge-sticky">加精</span>
+                  <span v-if="topic.solved" class="forum-badge" style="background: var(--mint)">已解决</span>
+                  <span v-if="topic.locked" class="forum-badge" style="background: var(--ink); color: var(--paper)">已关闭</span>
+                  <span class="forum-cat">{{ topic.category }}</span>
+                  {{ topic.title }}
+                </div>
+                <div class="forum-topic-meta">
+                  <span>{{ topic.author || '匿名' }}</span>
+                  <span class="forum-stat">回复 {{ topic.reply_count }}</span>
+                  <span class="forum-stat">浏览 {{ topic.view_count }}</span>
+                  <span>{{ parseDate(topic.created_at).toLocaleString('zh-CN') }}</span>
+                </div>
+              </div>
+            </div>
+            <MarkdownRenderer :content="topic.content" />
+            <div class="forum-topic-actions">
+              <button class="btn btn-sm btn-outline" :class="{ active: topic.my_reactions.includes('like') }" type="button" @click="toggleReaction('topic', topic.id, 'like')">赞 {{ topic.like_count }}</button>
+              <button class="btn btn-sm btn-outline" :class="{ active: topic.my_reactions.includes('thanks') }" type="button" @click="toggleReaction('topic', topic.id, 'thanks')">感谢 {{ topic.thanks_count }}</button>
+              <button class="btn btn-sm btn-outline" type="button" @click="reportTopic">举报</button>
+            </div>
+          </div>
 
-      <div class="forum-replies">
-        <div v-for="(r, i) in replies" :key="r.id" class="card forum-reply" :class="{ nested: r.parent_id }">
-          <div class="forum-reply-head">
-            <span class="forum-reply-author">{{ r.author || '匿名' }}</span>
-            <span class="forum-reply-floor">#{{ i + 1 }}</span>
-            <span v-if="r.parent_id" class="forum-reply-parent">↳ 回复 #{{ replies.findIndex((x) => x.id === r.parent_id) + 1 }}</span>
-            <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</span>
-            <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('like') }" type="button" @click="toggleReaction('reply', r.id, 'like')">赞 {{ r.like_count || 0 }}</button>
-            <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('thanks') }" type="button" @click="toggleReaction('reply', r.id, 'thanks')">感谢 {{ r.thanks_count || 0 }}</button>
-            <button class="btn btn-sm btn-outline" type="button" @click="quoteReply(r)">引用</button>
+          <div class="forum-replies">
+            <div v-for="(r, i) in replies" :key="r.id" class="card forum-reply" :class="{ nested: r.parent_id }">
+              <div class="forum-reply-head">
+                <span class="forum-avatar avatar-sm" :class="avatarClass(r.author || '匿名')">{{ (r.author || '匿')[0] }}</span>
+                <span class="forum-reply-author">{{ r.author || '匿名' }}</span>
+                <span class="forum-reply-floor">#{{ i + 1 }}</span>
+                <span v-if="r.parent_id" class="forum-reply-parent">↳ 回复 #{{ replies.findIndex((x) => x.id === r.parent_id) + 1 }}</span>
+                <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</span>
+              </div>
+              <MarkdownRenderer :content="r.content" />
+              <div class="forum-reply-actions">
+                <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('like') }" type="button" @click="toggleReaction('reply', r.id, 'like')">赞 {{ r.like_count || 0 }}</button>
+                <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('thanks') }" type="button" @click="toggleReaction('reply', r.id, 'thanks')">感谢 {{ r.thanks_count || 0 }}</button>
+                <button class="btn btn-sm btn-outline" type="button" @click="quoteReply(r)">引用</button>
+              </div>
+            </div>
+            <div v-if="!replies.length" class="empty-box">还没有回复</div>
+            <button
+              v-if="replies.length < replyTotal"
+              class="btn btn-outline btn-block"
+              type="button"
+              :disabled="loadingMore"
+              @click="loadMore"
+            >{{ loadingMore ? '加载中…' : '加载更多回复' }}</button>
           </div>
-          <MarkdownRenderer :content="r.content" />
-        </div>
-        <div v-if="!replies.length" class="empty-box">还没有回复</div>
-        <button
-          v-if="replies.length < replyTotal"
-          class="btn btn-outline btn-block"
-          type="button"
-          :disabled="loadingMore"
-          @click="loadMore"
-        >{{ loadingMore ? '加载中…' : '加载更多回复' }}</button>
-      </div>
 
-      <div class="card forum-reply-box">
-        <h3 style="margin-bottom: 10px">回复</h3>
-        <div v-if="topic.locked" class="notice notice-warn" style="margin-bottom: 8px">该主题已关闭讨论。</div>
-        <template v-else-if="auth.isLoggedIn()">
-          <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: 8px">已提交，等待审核，通过后可见。</div>
-          <div v-if="replyParentId" class="filter-row" style="margin-bottom: 6px">
-            <span class="tag-chip active">正在回复 #{{ replies.findIndex((x) => x.id === replyParentId) + 1 }}</span>
-            <button class="btn btn-sm btn-dark" type="button" @click="replyParentId = null; replyText = ''">取消</button>
+          <div class="card forum-reply-box">
+            <h3 style="margin-bottom: 10px">回复</h3>
+            <div v-if="topic.locked" class="notice notice-warn" style="margin-bottom: 8px">该主题已关闭讨论。</div>
+            <template v-else-if="auth.isLoggedIn()">
+              <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: 8px">已提交，等待审核，通过后可见。</div>
+              <div v-if="replyParentId" class="filter-row" style="margin-bottom: 6px">
+                <span class="tag-chip active">正在回复 #{{ replies.findIndex((x) => x.id === replyParentId) + 1 }}</span>
+                <button class="btn btn-sm btn-dark" type="button" @click="replyParentId = null; replyText = ''">取消</button>
+              </div>
+              <MarkdownEditor v-model="replyText" :rows="4" placeholder="支持 Markdown…" />
+              <div class="filter-row" style="margin-top: 10px">
+                <button class="btn btn-primary" type="button" :disabled="posting || !replyText.trim()" @click="submitReply">{{ posting ? '提交中…' : '发表回复' }}</button>
+              </div>
+            </template>
+            <template v-else>
+              <p class="muted">登录后才能回复</p>
+              <RouterLink class="btn btn-outline" :to="`/login?redirect=${route.fullPath}`">去登录</RouterLink>
+            </template>
           </div>
-          <MarkdownEditor v-model="replyText" :rows="4" placeholder="支持 Markdown…" />
-          <div class="filter-row" style="margin-top: 10px">
-            <button class="btn btn-primary" type="button" :disabled="posting || !replyText.trim()" @click="submitReply">{{ posting ? '提交中…' : '发表回复' }}</button>
+        </div>
+
+        <aside class="forum-side">
+          <div class="forum-side-card">
+            <h3 class="forum-side-title">作者</h3>
+            <div class="forum-side-author">
+              <span class="forum-avatar" :class="avatarClass(topic.author || '匿名')">{{ (topic.author || '匿')[0] }}</span>
+              <div>
+                <div class="forum-side-author-name">{{ topic.author || '匿名' }}</div>
+                <div v-if="authorProfile" class="muted" style="font-size: 12px">声望 {{ authorProfile.reputation }} · 粉丝 {{ authorProfile.follower_count }}</div>
+              </div>
+            </div>
+            <RouterLink v-if="topic.author && !authorProfile?.is_self" class="btn btn-sm btn-outline btn-block" :to="`/user/${topic.author}`">个人主页</RouterLink>
           </div>
-        </template>
-        <template v-else>
-          <p class="muted">登录后才能回复</p>
-          <RouterLink class="btn btn-outline" :to="`/login?redirect=${route.fullPath}`">去登录</RouterLink>
-        </template>
+
+          <div v-if="topic.demo_slug" class="forum-side-card">
+            <h3 class="forum-side-title">相关 Demo</h3>
+            <div v-if="demoCardLoading" class="muted">加载中…</div>
+            <RouterLink v-else-if="demoCard" :to="`/demo/${topic.demo_slug}`" class="forum-demo-card">
+              <img class="forum-demo-cover" :src="demoCard.cover_url" :alt="demoCard.title" loading="lazy" />
+              <span class="forum-demo-main">
+                <span class="forum-demo-title">{{ demoCard.title }}</span>
+                <span class="forum-demo-meta">{{ demoCard.author }}</span>
+              </span>
+            </RouterLink>
+            <RouterLink v-else class="btn btn-sm btn-outline btn-block" :to="`/demo/${topic.demo_slug}`">查看作品 →</RouterLink>
+          </div>
+
+          <div class="forum-side-card">
+            <h3 class="forum-side-title">热门话题</h3>
+            <div class="forum-side-list">
+              <RouterLink v-for="t in hotTopics.slice(0, 5)" :key="t.id" class="forum-side-item" :to="`/forum/topic/${t.id}`">
+                <span class="forum-side-item-title">{{ t.title }}</span>
+                <span class="forum-stat">{{ t.reply_count }}</span>
+              </RouterLink>
+              <div v-if="!hotTopics.length" class="muted">暂无</div>
+            </div>
+          </div>
+        </aside>
       </div>
     </template>
   </section>

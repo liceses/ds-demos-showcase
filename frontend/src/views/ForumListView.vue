@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'ForumListView' })
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoDetail, ForumTopic } from '../api/types'
@@ -22,6 +22,7 @@ const stickyFilter = ref(false)
 const participatedFilter = ref(false)
 const followedFilter = ref(false)
 const demoCards = ref<Record<string, DemoDetail | null>>({})
+const hotTopics = ref<ForumTopic[]>([])
 
 const categories = ['all', '交流', '分享', '求助', 'demo', '公告']
 
@@ -33,6 +34,9 @@ const { items: topics, total, page, pageSize, loading, error, load: baseLoad } =
       demo: demoFilter.value || undefined,
       tag: tagFilter.value || undefined,
       sort: sort.value,
+      sticky: stickyFilter.value || undefined,
+      participated: participatedFilter.value || undefined,
+      followed: followedFilter.value || undefined,
       page,
       page_size,
     })
@@ -40,6 +44,20 @@ const { items: topics, total, page, pageSize, loading, error, load: baseLoad } =
   },
   20,
 )
+
+const activeUsers = computed(() => {
+  const map = new Map<string, number>()
+  for (const t of topics.value) {
+    const name = t.author || '匿名'
+    map.set(name, (map.get(name) || 0) + 1)
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name]) => name)
+})
+
+function avatarClass(name: string) {
+  const n = (name.charCodeAt(0) || 0) % 4
+  return `avatar-${n + 1}`
+}
 
 async function loadDemoChips() {
   const slugs = [...new Set(topics.value.map((t) => t.demo_slug).filter((s): s is string => !!s && !(s in demoCards.value)))]
@@ -67,6 +85,8 @@ function apply() {
 onMounted(() => {
   const sq = route.query.sort
   if (sq === 'popular') sort.value = 'popular'
+  if (sq === 'replies') sort.value = 'replies'
+  if (sq === 'hot') sort.value = 'hot'
   const sc = route.query.category
   if (typeof sc === 'string' && categories.includes(sc)) category.value = sc
   if (typeof route.query.demo === 'string') demoFilter.value = route.query.demo
@@ -75,6 +95,7 @@ onMounted(() => {
   if (route.query.participated === '1') participatedFilter.value = true
   if (route.query.followed === '1') followedFilter.value = true
   load()
+  api.listForumTopics({ sort: 'hot', page_size: 5 }).then((r) => (hotTopics.value = r.items)).catch(() => (hotTopics.value = []))
 })
 </script>
 
@@ -93,9 +114,6 @@ onMounted(() => {
         <input v-model="q" class="input" type="search" placeholder="搜索主题…（回车提交）" @keyup.enter="apply" />
         <button class="btn btn-secondary search-submit" type="button" @click="apply">搜索</button>
       </div>
-      <div class="filter-row" style="margin: 0">
-        <button v-for="c in categories" :key="c" class="tag-chip" :class="{ active: category === c }" type="button" @click="category = c; apply()">{{ c === 'all' ? '全部' : c }}</button>
-      </div>
       <div class="tabs" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">最新</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">热门</button>
@@ -104,7 +122,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="filter-row" style="margin-bottom: 8px">
+    <div class="filter-row" style="margin-bottom: 12px">
       <button class="tag-chip" :class="{ active: stickyFilter }" type="button" @click="stickyFilter = !stickyFilter; apply()">只看精华</button>
       <button class="tag-chip" :class="{ active: participatedFilter }" type="button" @click="participatedFilter = !participatedFilter; apply()">我参与的</button>
       <button class="tag-chip" :class="{ active: followedFilter }" type="button" @click="followedFilter = !followedFilter; apply()">我关注的</button>
@@ -116,33 +134,85 @@ onMounted(() => {
       <button class="btn btn-sm btn-dark" type="button" @click="demoFilter = ''; tagFilter = ''; apply()">清除</button>
     </div>
 
-    <div v-if="error" class="notice notice-error">{{ error }}</div>
-    <LoadingRow v-if="loading && !topics.length" text="加载主题…" />
-    <EmptyBox v-else-if="!topics.length" text="暂无主题，来发第一帖吧" />
+    <div class="forum-layout">
+      <div class="forum-main">
+        <div v-if="error" class="notice notice-error">{{ error }}</div>
+        <LoadingRow v-if="loading && !topics.length" text="加载主题…" />
+        <EmptyBox v-else-if="!topics.length" text="暂无主题，来发第一帖吧" />
 
-    <div v-else class="forum-list">
-      <RouterLink v-for="t in topics" :key="t.id" :to="`/forum/topic/${t.id}`" class="forum-topic-card">
-        <div class="forum-topic-title">
-          <span v-if="t.pinned" class="forum-badge forum-badge-pin">置顶</span>
-          <span v-if="t.sticky" class="forum-badge forum-badge-sticky">加精</span>
-          <span class="forum-cat">{{ t.category }}</span>
-          {{ t.title }}
+        <div v-else class="forum-list">
+          <RouterLink v-for="t in topics" :key="t.id" :to="`/forum/topic/${t.id}`" class="forum-topic-card">
+            <span class="forum-avatar" :class="avatarClass(t.author || '匿名')">{{ (t.author || '匿')[0] }}</span>
+            <div class="forum-topic-body">
+              <div class="forum-topic-title">
+                <span v-if="t.pinned" class="forum-badge forum-badge-pin">置顶</span>
+                <span v-if="t.sticky" class="forum-badge forum-badge-sticky">加精</span>
+                <span v-if="t.solved" class="forum-badge" style="background: var(--mint)">已解决</span>
+                <span v-if="t.locked" class="forum-badge" style="background: var(--ink); color: var(--paper)">已关闭</span>
+                <span class="forum-cat">{{ t.category }}</span>
+                {{ t.title }}
+              </div>
+              <div v-if="t.demo_slug" class="forum-topic-demo">
+                <span class="forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t.demo_slug}`)">
+                  <img v-if="demoCards[t.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t.demo_slug]?.cover_url" alt="" loading="lazy" />
+                  <span>{{ demoCards[t.demo_slug]?.title || t.demo_slug }}</span>
+                </span>
+              </div>
+              <div class="forum-topic-meta">
+                <span>{{ t.author || '匿名' }}</span>
+                <span class="forum-stat">回复 {{ t.reply_count }}</span>
+                <span class="forum-stat">浏览 {{ t.view_count }}</span>
+                <span class="forum-stat">赞 {{ t.like_count }}</span>
+                <span>{{ timeAgo(t.created_at) }}</span>
+              </div>
+            </div>
+            <span class="forum-reply-badge">{{ t.reply_count }}</span>
+          </RouterLink>
         </div>
-        <div v-if="t.demo_slug" class="forum-topic-demo">
-          <span class="forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t.demo_slug}`)">
-            <img v-if="demoCards[t.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t.demo_slug]?.cover_url" alt="" loading="lazy" />
-            <span>{{ demoCards[t.demo_slug]?.title || t.demo_slug }}</span>
-          </span>
+
+        <PaginationBar v-if="topics.length" :page="page" :total="total" :page-size="pageSize" @change="(p) => { page = p; load() }" />
+      </div>
+
+      <aside class="forum-side">
+        <div class="forum-side-card">
+          <RouterLink class="btn btn-primary btn-block" to="/forum/new">发帖 →</RouterLink>
         </div>
-        <div class="forum-topic-meta">
-          <span>{{ t.author || '匿名' }}</span>
-          <span class="forum-stat">回复 {{ t.reply_count }}</span>
-          <span class="forum-stat">浏览 {{ t.view_count }}</span>
-          <span>{{ timeAgo(t.created_at) }}</span>
+
+        <div class="forum-side-card">
+          <h3 class="forum-side-title">分类</h3>
+          <div class="forum-side-list">
+            <button
+              v-for="c in categories"
+              :key="c"
+              class="forum-side-item"
+              :class="{ active: category === c }"
+              type="button"
+              @click="category = c; apply()"
+            >{{ c === 'all' ? '全部' : c }}</button>
+          </div>
         </div>
-      </RouterLink>
+
+        <div class="forum-side-card">
+          <h3 class="forum-side-title">热门话题</h3>
+          <div class="forum-side-list">
+            <RouterLink v-for="t in hotTopics.slice(0, 5)" :key="t.id" class="forum-side-item" :to="`/forum/topic/${t.id}`">
+              <span class="forum-side-item-title">{{ t.title }}</span>
+              <span class="forum-stat">{{ t.reply_count }}</span>
+            </RouterLink>
+            <div v-if="!hotTopics.length" class="muted">暂无</div>
+          </div>
+        </div>
+
+        <div class="forum-side-card">
+          <h3 class="forum-side-title">活跃用户</h3>
+          <div class="forum-side-list">
+            <RouterLink v-for="name in activeUsers" :key="name" class="forum-side-item" :to="`/user/${name}`">
+              <span class="forum-avatar avatar-sm" :class="avatarClass(name)">{{ name[0] }}</span>
+              <span>{{ name }}</span>
+            </RouterLink>
+          </div>
+        </div>
+      </aside>
     </div>
-
-    <PaginationBar v-if="topics.length" :page="page" :total="total" :page-size="pageSize" @change="(p) => { page = p; load() }" />
   </section>
 </template>

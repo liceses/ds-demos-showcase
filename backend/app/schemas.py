@@ -395,12 +395,6 @@ class ForumTopicPage(BaseModel):
     page_size: int
 
 
-class ForumReplyPage(BaseModel):
-    items: list[ForumReplyOut]
-    total: int
-    page: int
-    page_size: int
-
 
 class ForumReplyOut(BaseModel):
     id: int
@@ -411,6 +405,13 @@ class ForumReplyOut(BaseModel):
     status: str = "normal"
     parent_id: int | None = None
     created_at: datetime
+
+
+class ForumReplyPage(BaseModel):
+    items: list[ForumReplyOut]
+    total: int
+    page: int
+    page_size: int
 
 
 class ForumTopicIn(BaseModel):

@@ -20,6 +20,9 @@ import type {
   ForumReport,
   ForumReportInput,
   Notification,
+  ReactionSummary,
+  UserProfile,
+  FollowOut,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -46,9 +49,9 @@ import type {
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
 
 const forumTopics: ForumTopic[] = [
-  { id: 1, title: '欢迎来到讨论区', content: '这里是 **AI 全民制作人** 的讨论区，欢迎交流作品与提示词。\n\n试试贴一个作品：[/demo/demo_粒子星空](/demo/demo_粒子星空)', author: 'tester', author_id: 2, demo_slug: null, category: '交流', tags: ['type:game'], pinned: true, sticky: true, locked: false, solved: false, status: 'normal', reply_count: 2, view_count: 88, created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z' },
-  { id: 2, title: '分享：用灰测模型做的贪吃蛇', content: '最近用 **ds-unknown** 生成了一个贪吃蛇，体验还不错。', author: 'alice', author_id: 3, demo_slug: 'demo_贪吃蛇', category: '分享', tags: ['model:ds-unknown'], pinned: false, sticky: true, locked: false, solved: false, status: 'normal', reply_count: 1, view_count: 42, created_at: '2026-08-02T09:00:00Z', updated_at: '2026-08-02T09:00:00Z' },
-  { id: 3, title: '求助：iframe 全屏问题', content: '为什么 F 键有时候没反应？', author: 'tester', author_id: 2, demo_slug: null, category: '求助', tags: [], pinned: false, sticky: false, locked: false, solved: false, status: 'normal', reply_count: 0, view_count: 12, created_at: '2026-08-03T12:00:00Z', updated_at: '2026-08-03T12:00:00Z' },
+  { id: 1, title: '欢迎来到讨论区', content: '这里是 **AI 全民制作人** 的讨论区，欢迎交流作品与提示词。\n\n试试贴一个作品：[/demo/demo_粒子星空](/demo/demo_粒子星空)', author: 'tester', author_id: 2, demo_slug: null, category: '交流', tags: ['type:game'], pinned: true, sticky: true, locked: false, solved: false, status: 'normal', reply_count: 2, view_count: 88, like_count: 0, thanks_count: 0, my_reactions: [], created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-01T10:00:00Z' },
+  { id: 2, title: '分享：用灰测模型做的贪吃蛇', content: '最近用 **ds-unknown** 生成了一个贪吃蛇，体验还不错。', author: 'alice', author_id: 3, demo_slug: 'demo_贪吃蛇', category: '分享', tags: ['model:ds-unknown'], pinned: false, sticky: true, locked: false, solved: false, status: 'normal', reply_count: 1, view_count: 42, like_count: 0, thanks_count: 0, my_reactions: [], created_at: '2026-08-02T09:00:00Z', updated_at: '2026-08-02T09:00:00Z' },
+  { id: 3, title: '求助：iframe 全屏问题', content: '为什么 F 键有时候没反应？', author: 'tester', author_id: 2, demo_slug: null, category: '求助', tags: [], pinned: false, sticky: false, locked: false, solved: false, status: 'normal', reply_count: 0, view_count: 12, like_count: 0, thanks_count: 0, my_reactions: [], created_at: '2026-08-03T12:00:00Z', updated_at: '2026-08-03T12:00:00Z' },
 ]
 const forumReplies: ForumReply[] = [
   { id: 1, topic_id: 1, author: 'admin', author_id: 1, content: '欢迎！有问题随时发帖。', created_at: '2026-08-01T10:30:00Z' },
@@ -1048,7 +1051,7 @@ export const mockApi = {
     await delay(150)
     return forumTopics.find((t) => t.id === id) || null
   },
-  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; followed?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     await delay()
     const { q = '', category, tag, demo, sort = 'newest', page = 1, page_size = 20 } = params
     let items = [...forumTopics].filter((t) => t.status === 'normal')
@@ -1089,6 +1092,9 @@ export const mockApi = {
       status: 'normal',
       reply_count: 0,
       view_count: 0,
+      like_count: 0,
+      thanks_count: 0,
+      my_reactions: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -1128,6 +1134,54 @@ export const mockApi = {
     const i = forumReplies.findIndex((x) => x.id === id)
     if (i >= 0) forumReplies.splice(i, 1)
   },
+  async getReactionSummary(targetType: 'topic' | 'reply', targetId: number): Promise<ReactionSummary> {
+    await delay()
+    const items = targetType === 'topic' ? forumTopics : forumReplies
+    const it = items.find((x) => x.id === targetId) as any
+    return { target_type: targetType, target_id: targetId, like_count: it?.like_count ?? 0, thanks_count: it?.thanks_count ?? 0, my_reactions: it?.my_reactions ?? [] }
+  },
+  async toggleReaction(targetType: 'topic' | 'reply', targetId: number, reactionType: 'like' | 'thanks'): Promise<ReactionSummary & { active: boolean }> {
+    await delay()
+    const items = targetType === 'topic' ? forumTopics : forumReplies
+    const it = items.find((x) => x.id === targetId) as any
+    if (!it) throw new Error('内容不存在')
+    it.like_count = it.like_count ?? 0
+    it.thanks_count = it.thanks_count ?? 0
+    it.my_reactions = it.my_reactions ?? []
+    const idx = it.my_reactions.indexOf(reactionType)
+    let active: boolean
+    if (idx >= 0) {
+      it.my_reactions.splice(idx, 1)
+      active = false
+      if (reactionType === 'like') it.like_count = Math.max(0, it.like_count - 1)
+      else it.thanks_count = Math.max(0, it.thanks_count - 1)
+    } else {
+      it.my_reactions.push(reactionType)
+      active = true
+      if (reactionType === 'like') it.like_count += 1
+      else it.thanks_count += 1
+    }
+    return { target_type: targetType, target_id: targetId, like_count: it.like_count, thanks_count: it.thanks_count, my_reactions: [...it.my_reactions], active }
+  },
+  async getUserProfile(username: string): Promise<UserProfile> {
+    await delay()
+    const u = users.find((x) => x.username === username)
+    if (!u) throw new Error('用户不存在')
+    return { id: u.id, username: u.username, role: u.role, status: u.status, bio: u.bio || '', created_at: u.created_at, reputation: 42, demo_count: u.demo_count ?? 0, topic_count: 2, reply_count: 5, follower_count: 3, following_count: 1, is_following: false, is_self: username === currentUser?.username }
+  },
+  async toggleFollow(_userId: number): Promise<FollowOut> {
+    await delay()
+    return { following: true, followers_count: 3, following_count: 1 }
+  },
+  async listFollowers(_username: string): Promise<Array<{ id: number; username: string }>> {
+    await delay()
+    return [{ id: 1, username: 'admin' }, { id: 3, username: 'alice' }]
+  },
+  async listFollowing(_username: string): Promise<Array<{ id: number; username: string }>> {
+    await delay()
+    return [{ id: 1, username: 'admin' }]
+  },
+
   async adminReviewForumTopic(id: number, action: 'approve' | 'reject'): Promise<ForumTopic> {
     await delay()
     const t = forumTopics.find((x) => x.id === id)

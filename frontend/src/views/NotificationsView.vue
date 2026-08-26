@@ -16,6 +16,7 @@ const typeLabel: Record<string, string> = {
   demo_review: '待审核',
   review_result: '审核结果',
   report_handled: '举报处理',
+  forum_reaction: '赞/感谢',
 }
 
 const visible = computed(() => (filter.value === 'unread' ? store.list.filter((n) => !n.read) : store.list))
@@ -69,6 +70,7 @@ onMounted(load)
           <template v-else-if="n.type === 'demo_review'">有新的 Demo 待审核</template>
           <template v-else-if="n.type === 'review_result'">你的 Demo 审核结果已更新</template>
           <template v-else-if="n.type === 'report_handled'">你的举报已处理</template>
+          <template v-else-if="n.type === 'forum_reaction'">{{ n.actor || '有人' }} 赞/感谢了你的内容</template>
           <template v-else>新通知</template>
         </span>
         <span class="notif-time">{{ parseDate(n.created_at).toLocaleString('zh-CN') }}</span>

@@ -20,6 +20,7 @@ const demoFilter = ref('')
 const tagFilter = ref('')
 const stickyFilter = ref(false)
 const participatedFilter = ref(false)
+const followedFilter = ref(false)
 const demoCards = ref<Record<string, DemoDetail | null>>({})
 
 const categories = ['all', '交流', '分享', '求助', 'demo', '公告']
@@ -72,6 +73,7 @@ onMounted(() => {
   if (typeof route.query.tag === 'string') tagFilter.value = route.query.tag
   if (route.query.sticky === '1') stickyFilter.value = true
   if (route.query.participated === '1') participatedFilter.value = true
+  if (route.query.followed === '1') followedFilter.value = true
   load()
 })
 </script>
@@ -105,6 +107,7 @@ onMounted(() => {
     <div class="filter-row" style="margin-bottom: 8px">
       <button class="tag-chip" :class="{ active: stickyFilter }" type="button" @click="stickyFilter = !stickyFilter; apply()">只看精华</button>
       <button class="tag-chip" :class="{ active: participatedFilter }" type="button" @click="participatedFilter = !participatedFilter; apply()">我参与的</button>
+      <button class="tag-chip" :class="{ active: followedFilter }" type="button" @click="followedFilter = !followedFilter; apply()">我关注的</button>
     </div>
 
     <div v-if="demoFilter || tagFilter" class="filter-row" style="margin-bottom: 8px">

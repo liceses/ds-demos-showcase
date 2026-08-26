@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { parseDate } from '../utils/time'
-import type { DemoSummary, User } from '../api/types'
+import type { DemoSummary, User, UserProfile } from '../api/types'
 import { useAuthStore } from '../stores/auth'
 import DemoCard from '../components/DemoCard.vue'
 
@@ -10,15 +10,33 @@ const props = defineProps<{ username: string }>()
 const auth = useAuthStore()
 
 const user = ref<(User & { demo_count: number }) | null>(null)
+const profile = ref<UserProfile | null>(null)
 const demos = ref<DemoSummary[]>([])
 const loading = ref(true)
 const error = ref('')
 
 const isSelf = computed(() => !!auth.user && auth.user.username === props.username)
 
+async function toggleFollow() {
+  if (!profile.value) return
+  try {
+    const r = await api.toggleFollow(profile.value.id)
+    profile.value.is_following = r.following
+    profile.value.follower_count = r.followers_count
+    profile.value.following_count = r.following_count
+  } catch (e) {
+    // 静默
+  }
+}
+
 onMounted(async () => {
   try {
-    user.value = await api.getUser(props.username)
+    const [u, p] = await Promise.all([
+      api.getUser(props.username),
+      api.getUserProfile(props.username).catch(() => null),
+    ])
+    user.value = u
+    profile.value = p
     const res = await api.listDemos({ status: 'approved', tags: [`author:${props.username}`], page_size: 50 })
     demos.value = res.items
   } catch (e) {
@@ -40,9 +58,20 @@ onMounted(async () => {
       <p class="sub">{{ user.bio || '这个人很懒，还没有写简介。' }}</p>
       <div class="filter-row" style="margin-top: 16px">
         <span class="mini-stat"><b>{{ user.demo_count }}</b> Demo</span>
+        <span class="mini-stat"><b>{{ profile?.reputation ?? 0 }}</b> 声望</span>
+        <span class="mini-stat"><b>{{ profile?.topic_count ?? 0 }}</b> 主题</span>
+        <span class="mini-stat"><b>{{ profile?.reply_count ?? 0 }}</b> 回复</span>
+        <span class="mini-stat"><b>{{ profile?.follower_count ?? 0 }}</b> 粉丝</span>
+        <span class="mini-stat"><b>{{ profile?.following_count ?? 0 }}</b> 关注</span>
         <span class="mini-stat"><b>{{ user.role }}</b> 角色</span>
         <span class="mini-stat"><b>{{ parseDate(user.created_at).toLocaleDateString('zh-CN') }}</b> 加入</span>
         <RouterLink v-if="isSelf" class="btn btn-sm btn-primary" to="/settings">账户设置</RouterLink>
+        <button
+          v-else-if="auth.isLoggedIn() && profile"
+          class="btn btn-sm btn-secondary"
+          type="button"
+          @click="toggleFollow"
+        >{{ profile.is_following ? '已关注' : '关注' }}</button>
       </div>
     </section>
 

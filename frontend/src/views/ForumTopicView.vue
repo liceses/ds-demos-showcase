@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'ForumTopicView' })
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
@@ -13,6 +13,7 @@ import { parseDate } from '../utils/time'
 
 const props = defineProps<{ id: string }>()
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const ui = useUiStore()
 
@@ -91,6 +92,34 @@ function quoteReply(r: ForumReply) {
   replyText.value = `> ${first}\n\n`
 }
 
+async function toggleReaction(targetType: 'topic' | 'reply', targetId: number, reactionType: 'like' | 'thanks') {
+  if (!auth.isLoggedIn()) {
+    router.push(`/login?redirect=${route.fullPath}`)
+    return
+  }
+  const obj = targetType === 'topic' ? topic.value : replies.value.find((r) => r.id === targetId)
+  if (!obj) return
+  const anyObj = obj as unknown as { like_count?: number; thanks_count?: number; my_reactions?: string[] }
+  const before = { like: anyObj.like_count || 0, thanks: anyObj.thanks_count || 0, reactions: [...(anyObj.my_reactions || [])] }
+  if (anyObj.my_reactions?.includes(reactionType)) {
+    anyObj.my_reactions = anyObj.my_reactions.filter((x) => x !== reactionType)
+    if (reactionType === 'like') anyObj.like_count = Math.max(0, (anyObj.like_count || 0) - 1)
+    else anyObj.thanks_count = Math.max(0, (anyObj.thanks_count || 0) - 1)
+  } else {
+    anyObj.my_reactions = [...(anyObj.my_reactions || []), reactionType]
+    if (reactionType === 'like') anyObj.like_count = (anyObj.like_count || 0) + 1
+    else anyObj.thanks_count = (anyObj.thanks_count || 0) + 1
+  }
+  try {
+    await api.toggleReaction(targetType, targetId, reactionType)
+  } catch (e) {
+    anyObj.like_count = before.like
+    anyObj.thanks_count = before.thanks
+    anyObj.my_reactions = before.reactions
+    ui.toast(errorMessage(e), 'error')
+  }
+}
+
 async function submitReply() {
   if (!replyText.value.trim()) return
   posting.value = true
@@ -142,6 +171,8 @@ onMounted(load)
           <span class="forum-stat">浏览 {{ topic.view_count }}</span>
           <span>{{ parseDate(topic.created_at).toLocaleString('zh-CN') }}</span>
           <RouterLink v-if="topic.demo_slug && !demoCard && !demoCardLoading" class="forum-stat" :to="`/demo/${topic.demo_slug}`">相关作品 →</RouterLink>
+          <button class="btn btn-sm btn-outline" :class="{ active: topic.my_reactions.includes('like') }" type="button" @click="toggleReaction('topic', topic.id, 'like')">赞 {{ topic.like_count }}</button>
+          <button class="btn btn-sm btn-outline" :class="{ active: topic.my_reactions.includes('thanks') }" type="button" @click="toggleReaction('topic', topic.id, 'thanks')">感谢 {{ topic.thanks_count }}</button>
           <button class="btn btn-sm btn-outline" type="button" @click="reportTopic">举报</button>
         </div>
         <div v-if="topic.demo_slug && demoCardLoading" class="forum-demo-card forum-demo-loading">加载关联作品…</div>
@@ -162,6 +193,8 @@ onMounted(load)
             <span class="forum-reply-floor">#{{ i + 1 }}</span>
             <span v-if="r.parent_id" class="forum-reply-parent">↳ 回复 #{{ replies.findIndex((x) => x.id === r.parent_id) + 1 }}</span>
             <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</span>
+            <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('like') }" type="button" @click="toggleReaction('reply', r.id, 'like')">赞 {{ r.like_count || 0 }}</button>
+            <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('thanks') }" type="button" @click="toggleReaction('reply', r.id, 'thanks')">感谢 {{ r.thanks_count || 0 }}</button>
             <button class="btn btn-sm btn-outline" type="button" @click="quoteReply(r)">引用</button>
           </div>
           <MarkdownRenderer :content="r.content" />

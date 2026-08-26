@@ -269,6 +269,9 @@ export interface ForumTopic {
   status: string
   reply_count: number
   view_count: number
+  like_count: number
+  thanks_count: number
+  my_reactions: string[]
   created_at: string
   updated_at: string
 }
@@ -281,6 +284,9 @@ export interface ForumReply {
   content: string
   status?: string
   parent_id?: number | null
+  like_count?: number
+  thanks_count?: number
+  my_reactions?: string[]
   created_at: string
 }
 
@@ -333,6 +339,37 @@ export interface ForumReportInput {
   target_type: 'topic' | 'reply'
   target_id: number
   reason: string
+}
+
+export interface ReactionSummary {
+  target_type: string
+  target_id: number
+  like_count: number
+  thanks_count: number
+  my_reactions: string[]
+}
+
+export interface UserProfile {
+  id: number
+  username: string
+  role: string
+  status: string
+  bio: string
+  created_at: string
+  reputation: number
+  demo_count: number
+  topic_count: number
+  reply_count: number
+  follower_count: number
+  following_count: number
+  is_following: boolean
+  is_self: boolean
+}
+
+export interface FollowOut {
+  following: boolean
+  followers_count: number
+  following_count: number
 }
 
 export interface ForumTopicCard {

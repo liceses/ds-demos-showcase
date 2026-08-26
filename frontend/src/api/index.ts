@@ -20,6 +20,9 @@ import type {
   ForumReport,
   ForumReportInput,
   Notification,
+  ReactionSummary,
+  UserProfile,
+  FollowOut,
   DemoSummary,
   Paginated,
   SessionLog,
@@ -194,7 +197,31 @@ const realApi = {
       return null
     }
   },
-  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async getReactionSummary(targetType: 'topic' | 'reply', targetId: number): Promise<ReactionSummary> {
+    const { data } = await http.get('/forum/reactions/summary', { params: { target_type: targetType, target_id: targetId } })
+    return data
+  },
+  async toggleReaction(targetType: 'topic' | 'reply', targetId: number, reactionType: 'like' | 'thanks'): Promise<ReactionSummary & { active: boolean }> {
+    const { data } = await http.post('/forum/reactions', { target_type: targetType, target_id: targetId, reaction_type: reactionType })
+    return data
+  },
+  async getUserProfile(username: string): Promise<UserProfile> {
+    const { data } = await http.get(`/users/${encodeURIComponent(username)}/profile`)
+    return data
+  },
+  async toggleFollow(userId: number): Promise<FollowOut> {
+    const { data } = await http.post(`/users/${userId}/follow`)
+    return data
+  },
+  async listFollowers(username: string): Promise<Array<{ id: number; username: string }>> {
+    const { data } = await http.get(`/users/${encodeURIComponent(username)}/followers`)
+    return data
+  },
+  async listFollowing(username: string): Promise<Array<{ id: number; username: string }>> {
+    const { data } = await http.get(`/users/${encodeURIComponent(username)}/following`)
+    return data
+  },
+  async listForumTopics(params: { q?: string; category?: string; tag?: string; demo?: string; sort?: 'newest' | 'popular' | 'replies' | 'hot'; sticky?: boolean; participated?: boolean; followed?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     const { data } = await http.get('/forum/topics', { params })
     return data
   },

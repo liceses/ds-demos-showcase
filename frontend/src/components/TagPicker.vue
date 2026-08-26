@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
+import { useTagsStore } from '../stores/tags'
 import type { TagKeyInfo, TagKeyValue } from '../api/types'
 
 export interface TagPick {
@@ -12,8 +13,8 @@ export interface TagPick {
 const props = withDefaults(defineProps<{ modelValue: TagPick[]; allowApply?: boolean }>(), { allowApply: true })
 const emit = defineEmits<{ 'update:modelValue': [TagPick[]] }>()
 
-
-const tagKeys = ref<TagKeyInfo[]>([])
+const tagsStore = useTagsStore()
+const tagKeys = computed(() => tagsStore.keys)
 const activeKey = ref('')
 const tagSearch = ref('')
 const onlySelected = ref(false)
@@ -184,11 +185,7 @@ async function submitSuggestion() {
 }
 
 onMounted(async () => {
-  try {
-    tagKeys.value = await api.listTagKeys()
-  } catch {
-    tagKeys.value = []
-  }
+  await tagsStore.load()
   if (!activeKey.value && tagKeys.value.length) activeKey.value = tagKeys.value[0].key
   for (const k of tagKeys.value) {
     if (k.mode !== 'fixed') inputs.value[k.key] = { value: '', description: '' }

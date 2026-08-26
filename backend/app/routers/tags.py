@@ -29,6 +29,7 @@ from ..schemas import (
     TagValueSuggestionOut,
 )
 from ..serializers import tag_dict
+from ..services import tag_service
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 
@@ -187,39 +188,7 @@ def delete_tag_value(
 
 
 def _tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
-    rows = (
-        db.query(Tag, func.count(DemoTag.demo_id))
-        .outerjoin(DemoTag, DemoTag.tag_id == Tag.id)
-        .filter(Tag.key == k.key)
-        .group_by(Tag.id)
-        .order_by(Tag.value)
-        .all()
-    )
-    values = [
-        TagKeyValueOut(id=t.id, value=t.value, description=t.description, demo_count=count, group=t.group)
-        for t, count in rows
-    ]
-    min_v = max_v = None
-    if k.mode == "int":
-        nums = []
-        for v in values:
-            try:
-                nums.append(int(v.value))
-            except ValueError:
-                continue
-        if nums:
-            min_v, max_v = min(nums), max(nums)
-    return TagKeyOut(
-        key=k.key,
-        mode=k.mode,
-        label=k.label,
-        description=k.description,
-        sort=k.sort,
-        values=values,
-        demo_count=sum(v.demo_count for v in values),
-        min=min_v,
-        max=max_v,
-    )
+    return tag_service.tag_key_out(db, k)
 
 
 # ---------- 固定值申请（用户） ----------

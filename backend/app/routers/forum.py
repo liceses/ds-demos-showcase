@@ -1,10 +1,6 @@
 """论坛：主题 + 回复。发帖/回复需登录；匿名可读；新用户进审核；管理端可管 hidden/reviewing/封禁/举报。"""
 
-import ipaddress
-import re
-import socket
 import time
-import urllib.parse
 from collections import defaultdict
 from datetime import datetime
 
@@ -26,6 +22,7 @@ from ..schemas import (
     ForumTopicOut,
     ForumTopicPage,
 )
+from ..services import forum_service
 
 router = APIRouter(prefix="/forum", tags=["forum"])
 
@@ -33,10 +30,6 @@ router = APIRouter(prefix="/forum", tags=["forum"])
 _hits: dict[str, list[float]] = defaultdict(list)
 _TOPIC_RATE = 10
 _REPLY_RATE = 30
-
-# 链接域名黑名单
-BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "example.com", "test"}
-_URL_RE = re.compile(r"https?://[^\s<>\"'()]+")
 
 
 def _client_ip(request: Request) -> str:
@@ -61,76 +54,6 @@ def _rate_limit(request: Request, key: str, limit: int, user: User) -> None:
             )
     for bucket in buckets:
         _hits[bucket].append(now)
-
-
-def _validate_links(text: str) -> None:
-    """链接安全：只允许 http/https，拒绝内网/回环/保留地址，域名黑名单。"""
-    for m in _URL_RE.finditer(text or ""):
-        url = m.group(0).rstrip(".,;:!?)]}")
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            raise HTTPException(status_code=422, detail="只允许 http/https 链接", )
-        host = parsed.hostname
-        if not host:
-            raise HTTPException(status_code=422, detail="无效链接", )
-        if host.lower() in BLOCKED_DOMAINS:
-            raise HTTPException(status_code=422, detail=f"域名 {host} 被列入黑名单", )
-        try:
-            infos = socket.getaddrinfo(host, None)
-        except socket.gaierror:
-            raise HTTPException(status_code=422, detail=f"无法解析链接域名 {host}", )
-        for info in infos:
-            try:
-                ip = ipaddress.ip_address(info[4][0])
-            except ValueError:
-                continue
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                raise HTTPException(status_code=422, detail="链接指向内网/回环/保留地址，禁止", )
-
-
-def _needs_review(user: User) -> bool:
-    return user.need_review or user.trust_level < 1
-
-
-def _topic_out(t: ForumTopic) -> ForumTopicOut:
-    author = t.author.username if t.author else None
-    tags = [x.strip() for x in t.tags.split(",") if x.strip()]
-    return ForumTopicOut(
-        id=t.id,
-        title=t.title,
-        content=t.content,
-        author=author,
-        author_id=t.author_id,
-        demo_slug=t.demo_slug,
-        category=t.category,
-        tags=tags,
-        pinned=t.pinned,
-        sticky=t.sticky,
-        status=t.status,
-        reply_count=t.reply_count,
-        view_count=t.view_count,
-        created_at=t.created_at,
-        updated_at=t.updated_at,
-    )
-
-
-def _reply_out(r: ForumReply) -> ForumReplyOut:
-    return ForumReplyOut(
-        id=r.id,
-        topic_id=r.topic_id,
-        author=r.author.username if r.author else None,
-        author_id=r.author_id,
-        content=r.content,
-        status=r.status,
-        created_at=r.created_at,
-    )
-
-
-def _find_visible_topic(db: Session, tid: int) -> ForumTopic:
-    t = db.get(ForumTopic, tid)
-    if t is None or t.status != "normal":
-        raise HTTPException(status_code=404, detail="主题不存在或未上线", )
-    return t
 
 
 # ---------- 公开 ----------
@@ -166,7 +89,7 @@ def list_topics(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     return ForumTopicPage(
-        items=[_topic_out(t) for t in items],
+        items=[forum_service.topic_out(t) for t in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -175,23 +98,23 @@ def list_topics(
 
 @router.get("/topics/{tid}", response_model=ForumTopicOut)
 def get_topic(tid: int, db: Session = Depends(get_db)):
-    t = _find_visible_topic(db, tid)
+    t = forum_service.find_visible_topic(db, tid)
     t.view_count += 1
     db.commit()
     db.refresh(t)
-    return _topic_out(t)
+    return forum_service.topic_out(t)
 
 
 @router.get("/topics/{tid}/replies", response_model=list[ForumReplyOut])
 def list_replies(tid: int, db: Session = Depends(get_db)):
-    _find_visible_topic(db, tid)
+    forum_service.find_visible_topic(db, tid)
     rows = (
         db.query(ForumReply)
         .filter(ForumReply.topic_id == tid, ForumReply.status == "normal")
         .order_by(ForumReply.created_at, ForumReply.id)
         .all()
     )
-    return [_reply_out(r) for r in rows]
+    return [forum_service.reply_out(r) for r in rows]
 
 
 # ---------- 登录 ----------
@@ -203,12 +126,12 @@ def create_topic(
     user: User = Depends(current_user),
 ):
     _rate_limit(request, "topic", _TOPIC_RATE, user)
-    _validate_links(body.content)
+    forum_service.validate_links(body.content)
     if body.demo_slug:
         demo = db.query(Demo).filter(Demo.slug == body.demo_slug, Demo.status == "approved").first()
         if demo is None:
             raise HTTPException(status_code=422, detail="关联 demo 不存在或未上线", )
-    status = "reviewing" if _needs_review(user) else "normal"
+    status = "reviewing" if forum_service.needs_review(user) else "normal"
     t = ForumTopic(
         title=body.title,
         content=body.content,
@@ -221,7 +144,7 @@ def create_topic(
     db.add(t)
     db.commit()
     db.refresh(t)
-    return _topic_out(t)
+    return forum_service.topic_out(t)
 
 
 @router.post("/topics/{tid}/replies", status_code=201, response_model=ForumReplyOut)
@@ -232,10 +155,10 @@ def create_reply(
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
-    t = _find_visible_topic(db, tid)
+    t = forum_service.find_visible_topic(db, tid)
     _rate_limit(request, "reply", _REPLY_RATE, user)
-    _validate_links(body.content)
-    status = "reviewing" if _needs_review(user) else "normal"
+    forum_service.validate_links(body.content)
+    status = "reviewing" if forum_service.needs_review(user) else "normal"
     r = ForumReply(topic_id=t.id, author_id=user.id, content=body.content, status=status)
     db.add(r)
     if status == "normal":
@@ -243,7 +166,7 @@ def create_reply(
     t.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(r)
-    return _reply_out(r)
+    return forum_service.reply_out(r)
 
 
 # ---------- 举报 ----------
@@ -286,7 +209,7 @@ def admin_list_topics(
     total = query.count()
     items = query.order_by(ForumTopic.created_at.desc(), ForumTopic.id.desc()).offset((page - 1) * page_size).limit(page_size).all()
     return ForumTopicPage(
-        items=[_topic_out(t) for t in items],
+        items=[forum_service.topic_out(t) for t in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -307,7 +230,7 @@ def admin_list_replies(
     if status:
         q = q.filter(ForumReply.status == status)
     rows = q.order_by(ForumReply.created_at.desc(), ForumReply.id.desc()).all()
-    return [_reply_out(r) for r in rows]
+    return [forum_service.reply_out(r) for r in rows]
 
 
 @router.put("/admin/topics/{tid}", response_model=ForumTopicOut)
@@ -330,7 +253,7 @@ def admin_update_topic(
         t.status = body.status
     db.commit()
     db.refresh(t)
-    return _topic_out(t)
+    return forum_service.topic_out(t)
 
 
 @router.get("/admin/replies", response_model=list[ForumReplyOut])
@@ -346,7 +269,7 @@ def admin_list_replies(
     if status:
         query = query.filter(ForumReply.status == status)
     rows = query.order_by(ForumReply.created_at, ForumReply.id).all()
-    return [_reply_out(r) for r in rows]
+    return [forum_service.reply_out(r) for r in rows]
 
 
 @router.post("/admin/topics/{tid}/review", response_model=ForumTopicOut)
@@ -368,7 +291,7 @@ def admin_review_topic(
         t.status = "hidden"
     db.commit()
     db.refresh(t)
-    return _topic_out(t)
+    return forum_service.topic_out(t)
 
 
 @router.post("/admin/replies/{rid}/review", response_model=ForumReplyOut)
@@ -393,7 +316,7 @@ def admin_review_reply(
         r.status = "hidden"
     db.commit()
     db.refresh(r)
-    return _reply_out(r)
+    return forum_service.reply_out(r)
 
 
 @router.delete("/admin/topics/{tid}", status_code=204)

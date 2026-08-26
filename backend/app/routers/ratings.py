@@ -6,7 +6,6 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -15,6 +14,7 @@ from ..deps import optional_user
 from ..models import Demo, DemoRating, User
 from ..schemas import Paginated, RatingIn, RatingOut
 from ..serializers import serialize_demo
+from ..services import rating_service
 
 router = APIRouter(tags=["ratings"])
 
@@ -67,49 +67,6 @@ def _find_approved_demo(db: Session, slug: str) -> Demo:
     return demo
 
 
-def _apply_rating_delta(demo: Demo, old_score: int | None, new_score: int | None) -> None:
-    """增量更新 demos 冗余评分列：old_score→new_score（None 表示新增/删除）。"""
-    if old_score is not None:
-        demo.rating_count -= 1
-        demo.rating_sum -= old_score
-        if old_score == 5:
-            demo.rating_god -= 1
-        elif old_score == 1:
-            demo.rating_ghost -= 1
-    if new_score is not None:
-        demo.rating_count += 1
-        demo.rating_sum += new_score
-        if new_score == 5:
-            demo.rating_god += 1
-        elif new_score == 1:
-            demo.rating_ghost += 1
-    demo.rating_avg = round(demo.rating_sum / demo.rating_count, 2) if demo.rating_count else 0.0
-
-
-def _rating_out(db: Session, demo: Demo, rater_key: str | None) -> RatingOut:
-    my = None
-    if rater_key:
-        row = db.query(DemoRating).filter(DemoRating.demo_id == demo.id, DemoRating.rater_key == rater_key).first()
-        my = row.score if row else None
-    # 评分分布：1~5 各档票数（升序）
-    dist_rows = (
-        db.query(DemoRating.score, func.count(DemoRating.id))
-        .filter(DemoRating.demo_id == demo.id)
-        .group_by(DemoRating.score)
-        .all()
-    )
-    dist_map = {score: count for score, count in dist_rows}
-    distribution = [{"score": s, "count": dist_map.get(s, 0)} for s in range(1, 6)]
-    return RatingOut(
-        my_score=my,
-        avg=demo.rating_avg,
-        count=demo.rating_count,
-        god=demo.rating_god,
-        ghost=demo.rating_ghost,
-        distribution=distribution,
-    )
-
-
 @router.post("/demos/{slug}/rating", response_model=RatingOut)
 def rate_demo(
     slug: str,
@@ -134,9 +91,9 @@ def rate_demo(
         row.score = body.score
         row.updated_at = datetime.utcnow()
         db.flush()   # 更新也 flush，确保聚合读到新分数
-    _apply_rating_delta(demo, old_score, body.score)
+    rating_service.apply_rating_delta(demo, old_score, body.score)
     db.commit()
-    return _rating_out(db, demo, rater_key)
+    return rating_service.rating_out(db, demo, rater_key)
 
 
 @router.delete("/demos/{slug}/rating", response_model=RatingOut)
@@ -155,9 +112,9 @@ def unrate_demo(
         old_score = row.score
         db.delete(row)
         db.flush()   # 让删除立即生效，聚合才能剔除
-        _apply_rating_delta(demo, old_score, None)
+        rating_service.apply_rating_delta(demo, old_score, None)
         db.commit()
-    return _rating_out(db, demo, rater_key)
+    return rating_service.rating_out(db, demo, rater_key)
 
 
 @router.get("/demos/{slug}/rating", response_model=RatingOut)
@@ -171,7 +128,7 @@ def get_rating(
     ip = _client_ip(request)
     device_id = request.query_params.get("device_id", "")
     rater_key = _rater_key(user, device_id, ip) if (user is not None or device_id) else None
-    return _rating_out(db, demo, rater_key)
+    return rating_service.rating_out(db, demo, rater_key)
 
 
 @router.get("/leaderboard", response_model=Paginated)

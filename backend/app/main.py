@@ -1,5 +1,10 @@
 from pathlib import Path
 
+import asyncio
+import logging
+import time
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -7,11 +12,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
 from .database import Base, SessionLocal, engine
+from .errors import AppError
 from .models import ForumTopic, Setting, Tag, TagKey, User
 from .routers import admin, announcements, auth, comments, demos, forum, meta, ratings, sessions, stats, tags, users
 from .security import hash_password
 from .services import oss
 from .services.settings_service import KEY_AUTO_APPROVE
+
+logger = logging.getLogger("app")
+logging.basicConfig(level=logging.INFO)
 
 def _json_dt(dt: datetime) -> str:
     """naive UTC 统一补 Z，避免前端按本地时间解析提前 8 小时"""
@@ -22,6 +31,14 @@ def _json_dt(dt: datetime) -> str:
 app = FastAPI(title="DS 民间科研成果展示 API", version="0.1.0", json_encoders={datetime: _json_dt})
 
 settings.media_path.mkdir(parents=True, exist_ok=True)
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "code": exc.code},
+    )
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -38,6 +55,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """请求日志：方法/路径/状态/耗时。"""
+    start = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start) * 1000
+    logger.info("%s %s -> %s %.0fms", request.method, request.url.path, response.status_code, duration_ms)
+    return response
 
 API_PREFIX = "/api/v1"
 app.include_router(auth.router, prefix=API_PREFIX)

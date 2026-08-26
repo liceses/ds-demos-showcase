@@ -3,6 +3,8 @@ defineOptions({ name: 'AdminReviewSection' })
 import { onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
+import LoadingRow from '../LoadingRow.vue'
+import EmptyBox from '../EmptyBox.vue'
 import type { DemoDetail } from '../../api/types'
 
 const ui = useUiStore()
@@ -38,8 +40,8 @@ onMounted(load)
 
 <template>
   <div>
-    <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载待审…</div>
-    <div v-else-if="!pending.length" class="empty-box">没有待审核的 Demo</div>
+    <LoadingRow v-if="loading" text="加载待审…" />
+    <EmptyBox v-else-if="!pending.length" text="没有待审核的 Demo" />
     <div v-for="d in pending" :key="d.slug" class="card card-sunny" style="padding: 18px; margin-bottom: 18px">
       <div class="section-head" style="margin-bottom: 8px">
         <h2>{{ d.title }}</h2>

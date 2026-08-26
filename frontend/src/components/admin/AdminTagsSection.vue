@@ -4,11 +4,12 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import { useTagsStore } from '../../stores/tags'
-import type { AdminDemo, TagKeyInfo, TagSuggestion } from '../../api/types'
+import type { AdminDemo, TagGroupDistribution, TagKeyInfo, TagKeyValue, TagSuggestion } from '../../api/types'
+import TagMergeModal from './TagMergeModal.vue'
 
 const ui = useUiStore()
 
-const tagSub = ref<'keys' | 'review'>('keys')
+const tagSub = ref<'keys' | 'groups' | 'review'>('keys')
 const tagsStore = useTagsStore()
 const tagKeys = computed(() => tagsStore.keys)
 const demos = ref<AdminDemo[]>([])
@@ -18,6 +19,7 @@ const adminActiveTagKey = computed(() => tagKeys.value.find((k) => k.key === adm
 function selectAdminKey(k: TagKeyInfo) {
   adminActiveKey.value = k.key
   startEditKey(k)
+  if (tagSub.value === 'groups') loadGroups()
 }
 
 const newKey = ref({ key: '', mode: 'fixed' as 'fixed' | 'open' | 'int', label: '', description: '', sort: 0 })
@@ -212,6 +214,67 @@ async function saveAiTags() {
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 
+// ---------- 分组 / 合并 ----------
+const groupInfo = ref<TagGroupDistribution | null>(null)
+const groupLoading = ref(false)
+const groupError = ref('')
+const groupDraft = ref<Record<string, string>>({})
+const valueGroupDraft = ref<Record<string, string>>({})
+const mergeValue = ref<string | null>(null)
+
+async function loadGroups() {
+  if (!adminActiveKey.value || adminActiveTagKey.value?.mode !== 'fixed') {
+    groupInfo.value = null
+    return
+  }
+  groupLoading.value = true
+  groupError.value = ''
+  try {
+    groupInfo.value = await api.listTagGroups(adminActiveKey.value)
+    groupDraft.value = {}
+  } catch (e) {
+    groupError.value = (e as Error).message
+    groupInfo.value = null
+  } finally {
+    groupLoading.value = false
+  }
+}
+
+async function renameGroup(group: string) {
+  const next = groupDraft.value[group]?.trim()
+  if (!next || next === group) return
+  try {
+    await api.renameTagGroup(adminActiveKey.value, group, next)
+    ui.toast('分组已重命名', 'success')
+    await Promise.all([loadGroups(), tagsStore.refresh()])
+  } catch (e) { ui.toast((e as Error).message, 'error') }
+}
+
+async function clearGroup(group: string) {
+  const ok = await ui.confirm({ title: '清除分组', message: `确定清除「${group}」？该组所有值将变为未分组。`, confirmText: '清除', danger: true })
+  if (!ok) return
+  try {
+    await api.clearTagGroup(adminActiveKey.value, group)
+    ui.toast('分组已清除', 'success')
+    await Promise.all([loadGroups(), tagsStore.refresh()])
+  } catch (e) { ui.toast((e as Error).message, 'error') }
+}
+
+async function saveValueGroup(v: TagKeyValue) {
+  const d = valueGroupDraft.value[v.value]?.trim() || null
+  if (d === (v.group || null)) return
+  try {
+    await api.setTagGroup(v.id!, d)
+    ui.toast('分组已更新', 'success')
+    valueGroupDraft.value[v.value] = ''
+    await Promise.all([loadGroups(), tagsStore.refresh()])
+  } catch (e) { ui.toast((e as Error).message, 'error') }
+}
+
+async function onMergeDone() {
+  await Promise.all([loadGroups(), tagsStore.refresh()])
+}
+
 onMounted(() => {
   loadTags()
   loadSuggestions()
@@ -222,6 +285,7 @@ onMounted(() => {
   <div>
     <div class="filter-row" style="margin-bottom: 14px">
       <button class="tab" :class="{ active: tagSub === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
+      <button class="tab" :class="{ active: tagSub === 'groups' }" type="button" @click="tagSub = 'groups'; loadGroups()">分组 / 合并</button>
       <button class="tab" :class="{ active: tagSub === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
     </div>
 
@@ -306,6 +370,63 @@ onMounted(() => {
       </div>
     </template>
 
+    <template v-else-if="tagSub === 'groups'">
+      <div class="tag-pane tag-pane-tall">
+        <div class="tag-pane-keys">
+          <div class="tag-pane-group-label">固定值</div>
+          <button v-for="k in tagKeys.filter((k) => k.mode === 'fixed')" :key="k.key" class="tag-pane-key" :class="{ active: adminActiveKey === k.key }" type="button" @click="selectAdminKey(k)">
+            <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+            <span class="tag-pane-key-count">{{ k.demo_count }}</span>
+          </button>
+        </div>
+        <div class="tag-pane-values">
+          <template v-if="adminActiveTagKey">
+            <div class="tag-key-head">
+              <b>{{ adminActiveTagKey.label || adminActiveTagKey.key }} <code>{{ adminActiveTagKey.key }}</code></b>
+              <span class="mode-badge mode-badge-fixed">固定值</span>
+            </div>
+            <div v-if="groupLoading" class="loading-row"><span class="spinner"></span> 加载分组…</div>
+            <div v-else-if="groupError" class="notice notice-error">{{ groupError }}</div>
+            <template v-else-if="groupInfo">
+              <div class="form-stack" style="margin-bottom: 12px">
+                <h3 style="margin-bottom: 8px">分组分布</h3>
+                <div class="filter-row" style="margin: 0; flex-wrap: wrap">
+                  <span v-for="g in groupInfo.groups" :key="g.group" class="vendor-group" style="display: flex; align-items: center; gap: 6px; padding: 4px 8px">
+                    <b>{{ g.group }}</b><span class="count">{{ g.count }}</span>
+                    <input v-model="groupDraft[g.group]" class="input" style="max-width: 90px; padding: 2px 6px" placeholder="新名" @keyup.enter="renameGroup(g.group)" />
+                    <button class="btn btn-sm btn-outline" type="button" @click="renameGroup(g.group)">重命名</button>
+                    <button class="btn btn-sm btn-dark" type="button" @click="clearGroup(g.group)">清除</button>
+                  </span>
+                  <span v-if="groupInfo.ungrouped" class="tag-chip">未分组 {{ groupInfo.ungrouped }}</span>
+                </div>
+              </div>
+              <div class="form-stack">
+                <h3 style="margin-bottom: 8px">固定值归类 / 合并</h3>
+                <div class="filter-row" style="margin: 0; flex-wrap: wrap">
+                  <template v-for="v in adminActiveTagKey.values" :key="v.value">
+                    <span class="tag-chip mode-fixed" style="display: inline-flex; gap: 6px; align-items: center">
+                      {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+                      <input v-model="valueGroupDraft[v.value]" class="input" style="max-width: 80px; padding: 2px 6px" :placeholder="v.group || '未分组'" @keyup.enter="saveValueGroup(v)" />
+                      <button class="btn btn-sm btn-outline" type="button" @click="saveValueGroup(v)">存</button>
+                      <button class="btn btn-sm btn-dark" type="button" @click="mergeValue = v.value">合并</button>
+                    </span>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </template>
+          <div v-else class="muted">请选择左侧固定键</div>
+        </div>
+      </div>
+      <TagMergeModal
+        v-if="mergeValue && adminActiveTagKey"
+        :active-key="adminActiveTagKey.key"
+        :from-value="mergeValue"
+        :values="adminActiveTagKey.values"
+        @close="mergeValue = null"
+        @merged="onMergeDone"
+      />
+    </template>
     <template v-else>
       <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 720px">
         <h2 style="margin-bottom: 12px">AI 整理标签</h2>

@@ -2242,3 +2242,27 @@ table.data tr.inconsistent td {
   50% { opacity: 0; }
 }
 
+
+/* ---------- 骨架屏占位 ---------- */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.skeleton-card {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 10px;
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+}
+.skeleton-block {
+  background: #e6ddd0;
+  border: 2px solid var(--ink);
+  margin-bottom: 10px;
+}
+.skeleton-line {
+  height: 12px;
+  background: #e6ddd0;
+  border: 1px solid var(--ink);
+  margin-bottom: 8px;
+}

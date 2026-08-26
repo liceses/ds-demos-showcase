@@ -27,6 +27,10 @@ import type {
   SponsorBoard,
   Tag,
   TagKeyInfo,
+  TagKeyValue,
+  TagGroupDistribution,
+  TagMergeResult,
+  TagMergeInput,
   TagSuggestion,
   ThanksBoard,
   UpdateDemoPayload,
@@ -163,6 +167,9 @@ const tagKeys: TagKeyInfo[] = [
     { value: '3', description: '', demo_count: 1 },
   ], demo_count: 1 },
 ]
+
+let _tagAutoId = 1
+for (const _k of tagKeys) for (const _v of _k.values) _v.id = _tagAutoId++
 
 const demos: DemoDetail[] = [
   {
@@ -651,6 +658,47 @@ export const mockApi = {
     await delay()
     return []
   },
+  async listTagGroups(key: string): Promise<TagGroupDistribution> {
+    await delay()
+    const k = tagKeys.find((x) => x.key === key)
+    const values = k?.values || []
+    const map = new Map<string, number>()
+    let ungrouped = 0
+    for (const v of values) {
+      if (v.group) map.set(v.group, (map.get(v.group) || 0) + 1)
+      else ungrouped++
+    }
+    return { key, groups: [...map.entries()].map(([group, count]) => ({ group, count })), ungrouped }
+  },
+  async renameTagGroup(key: string, group: string, newGroup: string): Promise<{ updated: number; new_group: string }> {
+    await delay()
+    const k = tagKeys.find((x) => x.key === key)
+    let updated = 0
+    if (k) for (const v of k.values) if (v.group === group) { v.group = newGroup; updated++ }
+    return { updated, new_group: newGroup }
+  },
+  async clearTagGroup(key: string, group: string): Promise<{ cleared: number }> {
+    await delay()
+    const k = tagKeys.find((x) => x.key === key)
+    let cleared = 0
+    if (k) for (const v of k.values) if (v.group === group) { v.group = null; cleared++ }
+    return { cleared }
+  },
+  async setTagGroup(tagId: number, group: string | null): Promise<TagKeyValue> {
+    await delay()
+    const v = tagKeys.flatMap((k) => k.values).find((x) => x.id === tagId)
+    if (!v) throw new Error('标签不存在')
+    v.group = group
+    return clone(v)
+  },
+  async mergeTags(payload: TagMergeInput): Promise<TagMergeResult> {
+    await delay(250)
+    const from = payload.from_value
+    const to = payload.to_value
+    const affected = from.length + to.length
+    return { merged: affected, removed_dups: 2, affected_demos: Math.max(1, Math.floor(affected / 2)), deleted_source: true, dry_run: payload.dry_run }
+  },
+
   async reviewTagSuggestion(id: number, action: 'approve' | 'reject', group?: string): Promise<TagSuggestion> {
     await delay(200)
     return { id, key: 'model', value: 'x', description: '', group: group || null, status: action === 'approve' ? 'approved' : 'rejected', demo_id: null, created_at: new Date().toISOString() }

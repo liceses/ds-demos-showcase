@@ -5,6 +5,7 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { AdminDemo } from '../../api/types'
 import PaginationBar from '../PaginationBar.vue'
+import LoadingRow from '../LoadingRow.vue'
 import { useLocalPagination } from '../../composables/useLocalPagination'
 
 const ui = useUiStore()
@@ -94,7 +95,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载 Demo…</div>
+    <LoadingRow v-if="loading" text="加载 Demo…" />
     <div v-else class="table-wrap">
       <table class="data">
         <thead>

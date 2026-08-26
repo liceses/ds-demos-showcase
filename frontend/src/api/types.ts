@@ -30,6 +30,7 @@ export interface Tag extends TagRef {
 }
 
 export interface TagKeyValue {
+  id?: number
   value: string
   description: string
   demo_count: number
@@ -57,6 +58,28 @@ export interface TagSuggestion {
   status: 'pending' | 'approved' | 'rejected'
   demo_id?: number | null
   created_at: string
+}
+
+export interface TagGroupDistribution {
+  key: string
+  groups: { group: string; count: number }[]
+  ungrouped: number
+}
+
+export interface TagMergeResult {
+  merged: number
+  removed_dups: number
+  affected_demos: number
+  deleted_source: boolean
+  dry_run: boolean
+}
+
+export interface TagMergeInput {
+  from_key: string
+  from_value: string
+  to_key: string
+  to_value: string
+  dry_run: boolean
 }
 
 export interface DemoSummary {

@@ -5,6 +5,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoDetail, ForumTopic } from '../api/types'
 import PaginationBar from '../components/PaginationBar.vue'
+import LoadingRow from '../components/LoadingRow.vue'
+import EmptyBox from '../components/EmptyBox.vue'
 import { timeAgo } from '../utils/time'
 import { useListPage } from '../composables/useListPage'
 
@@ -101,8 +103,8 @@ onMounted(() => {
     </div>
 
     <div v-if="error" class="notice notice-error">{{ error }}</div>
-    <div v-if="loading && !topics.length" class="loading-row"><span class="spinner"></span> 加载主题…</div>
-    <div v-else-if="!topics.length" class="empty-box">暂无主题，来发第一帖吧</div>
+    <LoadingRow v-if="loading && !topics.length" text="加载主题…" />
+    <EmptyBox v-else-if="!topics.length" text="暂无主题，来发第一帖吧" />
 
     <div v-else class="forum-list">
       <RouterLink v-for="t in topics" :key="t.id" :to="`/forum/topic/${t.id}`" class="forum-topic-card">

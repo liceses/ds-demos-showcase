@@ -6,6 +6,8 @@ import type { DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import PaginationBar from '../components/PaginationBar.vue'
+import LoadingRow from '../components/LoadingRow.vue'
+import EmptyBox from '../components/EmptyBox.vue'
 import { useListPage } from '../composables/useListPage'
 
 const sorts = [
@@ -51,8 +53,8 @@ onMounted(load)
       </button>
     </div>
     <div v-if="error" class="notice notice-error">{{ error }}</div>
-    <div v-if="loading && !items.length" class="loading-row"><span class="spinner"></span> 加载榜单…</div>
-    <div v-else-if="!items.length" class="empty-box">暂无上榜作品</div>
+    <LoadingRow v-if="loading && !items.length" text="加载榜单…" />
+    <EmptyBox v-else-if="!items.length" text="暂无上榜作品" />
 
     <MasonryGrid v-else :items="items" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">

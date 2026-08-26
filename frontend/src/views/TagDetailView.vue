@@ -4,6 +4,8 @@ import { api } from '../api'
 import type { DemoSummary, Tag, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import LoadingRow from '../components/LoadingRow.vue'
+import EmptyBox from '../components/EmptyBox.vue'
 
 const props = defineProps<{ k: string; v: string }>()
 
@@ -40,8 +42,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section v-if="loading" class="loading-row"><span class="spinner"></span> 加载标签…</section>
-  <section v-else-if="error" class="empty-box">{{ error }}</section>
+  <LoadingRow v-if="loading" text="加载标签…" />
+  <EmptyBox v-else-if="error" :text="error" />
 
   <template v-else-if="tag">
     <div class="breadcrumb">
@@ -114,7 +116,7 @@ onMounted(async () => {
         <h2 class="section-title">关联 Demo</h2>
         <span class="mini-stat"><b>{{ demos.length }}</b> 个</span>
       </div>
-      <div v-if="!demos.length" class="empty-box">这个标签还很年轻，还没有 Demo</div>
+      <EmptyBox v-if="!demos.length" text="这个标签还很年轻，还没有 Demo" />
       <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
         <template #default="{ item }">
           <DemoCard :demo="item as DemoSummary" />

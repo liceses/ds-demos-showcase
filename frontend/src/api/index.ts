@@ -27,6 +27,10 @@ import type {
   SponsorBoard,
   Tag,
   TagKeyInfo,
+  TagKeyValue,
+  TagGroupDistribution,
+  TagMergeResult,
+  TagMergeInput,
   TagSuggestion,
   ThanksBoard,
   UpdateDemoPayload,
@@ -84,6 +88,27 @@ const realApi = {
     const { data } = await http.get('/tags/admin/suggestions', { params: status ? { status } : {} })
     return data
   },
+  async listTagGroups(key: string): Promise<TagGroupDistribution> {
+    const { data } = await http.get('/tags/admin/groups', { params: { key } })
+    return data
+  },
+  async renameTagGroup(key: string, group: string, newGroup: string): Promise<{ updated: number; new_group: string }> {
+    const { data } = await http.put(`/tags/admin/groups/${encodeURIComponent(key)}/${encodeURIComponent(group)}`, { new_group: newGroup })
+    return data
+  },
+  async clearTagGroup(key: string, group: string): Promise<{ cleared: number }> {
+    const { data } = await http.delete(`/tags/admin/groups/${encodeURIComponent(key)}/${encodeURIComponent(group)}`)
+    return data
+  },
+  async setTagGroup(tagId: number, group: string | null): Promise<TagKeyValue> {
+    const { data } = await http.put(`/tags/admin/values/${tagId}/group`, { group })
+    return data
+  },
+  async mergeTags(payload: TagMergeInput): Promise<TagMergeResult> {
+    const { data } = await http.post('/tags/admin/merge', payload)
+    return data
+  },
+
   async reviewTagSuggestion(id: number, action: 'approve' | 'reject', group?: string): Promise<TagSuggestion> {
     const { data } = await http.post(`/tags/admin/suggestions/${id}/review`, { action, group })
     return data

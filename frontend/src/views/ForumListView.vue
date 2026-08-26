@@ -23,6 +23,7 @@ const participatedFilter = ref(false)
 const followedFilter = ref(false)
 const demoCards = ref<Record<string, DemoDetail | null>>({})
 const hotTopics = ref<ForumTopic[]>([])
+const sideOpen = ref(true)
 
 const categories = ['all', '交流', '分享', '求助', 'demo', '公告']
 
@@ -119,6 +120,7 @@ onMounted(() => {
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">热门</button>
         <button class="tab" :class="{ active: sort === 'replies' }" type="button" @click="sort = 'replies'; apply()">回复</button>
         <button class="tab" :class="{ active: sort === 'hot' }" type="button" @click="sort = 'hot'; apply()">热度</button>
+        <button class="btn btn-sm btn-outline" type="button" @click="sideOpen = !sideOpen">{{ sideOpen ? '收起侧栏' : '展开侧栏' }}</button>
       </div>
     </div>
 
@@ -173,7 +175,7 @@ onMounted(() => {
         <PaginationBar v-if="topics.length" :page="page" :total="total" :page-size="pageSize" @change="(p) => { page = p; load() }" />
       </div>
 
-      <aside class="forum-side">
+      <aside v-if="sideOpen" class="forum-side">
         <div class="forum-side-card">
           <RouterLink class="btn btn-primary btn-block" to="/forum/new">发帖 →</RouterLink>
         </div>

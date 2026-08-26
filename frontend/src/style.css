@@ -4187,3 +4187,22 @@ table.data tr.inconsistent td {
     width: 100%;
   }
 }
+
+/* 论坛加宽 + 侧栏收起 */
+.forum-topbar-inner,
+.forum-hero-inner,
+.forum-section,
+.forum-container {
+  max-width: 1100px;
+}
+@media (max-width: 1024px) {
+  .forum-topbar-inner,
+  .forum-hero-inner,
+  .forum-section,
+  .forum-container {
+    max-width: 100%;
+  }
+  .forum-side {
+    width: 220px;
+  }
+}

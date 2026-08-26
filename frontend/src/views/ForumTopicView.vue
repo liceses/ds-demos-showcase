@@ -32,6 +32,7 @@ const replyParentId = ref<number | null>(null)
 const loadingMore = ref(false)
 const hotTopics = ref<ForumTopic[]>([])
 const authorProfile = ref<UserProfile | null>(null)
+const sideOpen = ref(true)
 
 async function load() {
   loading.value = true
@@ -165,6 +166,7 @@ onMounted(load)
         <RouterLink to="/forum">讨论区</RouterLink>
         <span class="sep">/</span>
         <span>{{ topic.title }}</span>
+        <button class="btn btn-sm btn-outline" style="margin-left: auto" type="button" @click="sideOpen = !sideOpen">{{ sideOpen ? '收起侧栏' : '展开侧栏' }}</button>
       </div>
 
       <div class="forum-layout">
@@ -244,7 +246,7 @@ onMounted(load)
           </div>
         </div>
 
-        <aside class="forum-side">
+        <aside v-if="sideOpen" class="forum-side">
           <div class="forum-side-card">
             <h3 class="forum-side-title">作者</h3>
             <div class="forum-side-author">

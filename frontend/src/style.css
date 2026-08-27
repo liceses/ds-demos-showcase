@@ -4304,3 +4304,20 @@ table.data tr.inconsistent td {
 .quick-comment-list {
   gap: 0;
 }
+
+/* 按钮轻量化：默认阴影减小，hover 位移减小 */
+.btn-primary,
+.btn-secondary,
+.btn-outline,
+.btn-dark,
+.btn-danger {
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.btn:hover {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}

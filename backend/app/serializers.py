@@ -77,7 +77,7 @@ def serialize_demo(
         "prompt": demo.prompt,
     }
 
-    if data.get("preview_url"):
+    if data.get("preview_url") and demo.updated_at:
         data["preview_url"] += f"?v={int(demo.updated_at.timestamp())}"
 
     if detail:

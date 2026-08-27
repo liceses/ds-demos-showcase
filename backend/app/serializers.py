@@ -42,6 +42,15 @@ def serialize_demo(
         db.query(func.count(SessionLog.id)).filter(SessionLog.demo_id == demo.id).scalar() or 0
     )
 
+    version = int(demo.updated_at.timestamp()) if demo.updated_at else int(demo.created_at.timestamp())
+    preview_ext = "svg" if demo.single_file == "svg" else "html"
+    if demo.demo_type != "web":
+        preview_url = ""
+    elif settings.preview_base_url:
+        preview_url = f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/v{version}/index.{preview_ext}"
+    else:
+        preview_url = f"/preview/{demo.slug}/v{version}/index.{preview_ext}"
+
     data = {
         "slug": demo.slug,
         "title": demo.title,
@@ -49,19 +58,7 @@ def serialize_demo(
         "cover_url": demo.cover_url,
         "demo_type": demo.demo_type,
         "external_url": demo.external_url,
-        "preview_url": (
-            ""
-            if demo.demo_type != "web"
-            else (
-                f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/index.{'svg' if demo.single_file == 'svg' else 'html'}"
-                if settings.preview_base_url
-                else (
-                    oss.public_url(f"demos/{demo.slug}/files/index.{'svg' if demo.single_file == 'svg' else 'html'}")
-                    if oss.enabled() and not settings.oss_serve_local
-                    else f"/preview/{demo.slug}/index.{'svg' if demo.single_file == 'svg' else 'html'}"
-                )
-            )
-        ),
+        "preview_url": preview_url,
         "author": author.username if author else "public",
         "author_id": demo.author_id,
         "tags": tags,
@@ -76,9 +73,6 @@ def serialize_demo(
         "rating_ghost": demo.rating_ghost,
         "prompt": demo.prompt,
     }
-
-    if data.get("preview_url") and demo.updated_at:
-        data["preview_url"] += f"?v={int(demo.updated_at.timestamp())}"
 
     if detail:
         from .services.storage import demo_files_dir, demo_storage_size

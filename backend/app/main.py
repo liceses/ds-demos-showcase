@@ -94,28 +94,33 @@ def api_root():
     }
 
 
-@app.get("/preview/{slug}/{path:path}")
-def preview_file(slug: str, path: str):
+def _serve_preview(slug: str, path: str, version: str | None = None):
     if "/" in slug or "\\" in slug or not slug:
         raise HTTPException(status_code=400, detail="非法的 demo 标识", )
     safe = _safe_join(slug, path)
     is_html = safe.lower().endswith((".html", ".htm"))
+    versioned = version is not None
+    # 带版本号的 URL 可安全长缓存（更新后版本号变化 → 新 URL）；旧的无版本 URL 保持 no-cache 兼容。
+    cache_control = "public, max-age=86400, immutable" if versioned else "no-cache"
 
-    # HTML 文档：同源返回 + 注入 <base> 指向 OSS，保证 localStorage 属主站源，
-    # 而页内 js/css/图片相对地址会经 <base> 自动跳到 OSS 直连，流量不占服务器。
+    # HTML 文档：同源返回 + 注入 <base>，保证 localStorage 属主站源，
+    # 而页内 js/css/图片相对地址会经 <base> 走版本化路径，CDN 可长缓存。
     if is_html:
         data = _read_preview_byte(slug, safe)
         if data is None:
             raise HTTPException(status_code=404, detail="文件不存在", )
         import re as _re
         html = data.decode("utf-8", errors="replace")
-        # 本地服务模式（serve_local=true）：base 指回本地 /preview，资源由服务器下发，OSS 仅作备份；
-        # 非本地服务模式：base 指向 OSS，资源 302 直连 OSS 省服务器带宽。
-        base_url = (
-            oss.public_url(f"demos/{slug}/files/")
-            if (oss.enabled() and not settings.oss_serve_local)
-            else f"/preview/{slug}/"
-        )
+        # 版本化路径：base 指回 /preview/{slug}/v{version}/，子资源也带版本号；
+        # 无版本路径：保持原逻辑（本地或 OSS 直连）。
+        if versioned:
+            base_url = f"/preview/{slug}/v{version}/"
+        else:
+            base_url = (
+                oss.public_url(f"demos/{slug}/files/")
+                if (oss.enabled() and not settings.oss_serve_local)
+                else f"/preview/{slug}/"
+            )
         if _re.search(r"<base\s", html, _re.IGNORECASE):
             # 若页面自带 base，替换成我们的
             html = _re.sub(r"(?i)<base[^>]*>", f'<base href="{base_url}">', html, count=1)
@@ -126,22 +131,32 @@ def preview_file(slug: str, path: str):
         return Response(
             content=html.encode("utf-8"),
             media_type="text/html; charset=utf-8",
-            headers={"Cache-Control": "no-cache"},
+            headers={"Cache-Control": cache_control},
         )
 
     # 非 HTML（js/css/图片等）：OSS 已启用且非「本地服务」模式才 302 直连 OSS
     if oss.enabled() and not settings.oss_serve_local:
         # HEAD 检查存在性（不要 get_bytes 全量下载，避免服务器重复拉取）
         if oss.object_exists(f"demos/{slug}/files/{safe}"):
-            return RedirectResponse(
-                oss.public_url(f"demos/{slug}/files/{safe}"),
-                headers={"Cache-Control": "no-cache"},
-            )
+            url = oss.public_url(f"demos/{slug}/files/{safe}")
+            if versioned:
+                url += f"?v={version}"
+            return RedirectResponse(url, headers={"Cache-Control": cache_control})
 
     file_path = (settings.demos_path / slug / "files" / safe).resolve()
     if file_path.is_file():
-        return FileResponse(file_path, headers={"Cache-Control": "no-cache"})
+        return FileResponse(file_path, headers={"Cache-Control": cache_control})
     raise HTTPException(status_code=404, detail="文件不存在", )
+
+
+@app.get("/preview/{slug}/v{version}/{path:path}")
+def preview_file_versioned(slug: str, version: str, path: str):
+    return _serve_preview(slug, path, version)
+
+
+@app.get("/preview/{slug}/{path:path}")
+def preview_file(slug: str, path: str):
+    return _serve_preview(slug, path)
 
 
 def _read_preview_byte(slug: str, safe: str) -> bytes | None:

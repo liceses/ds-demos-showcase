@@ -34,6 +34,9 @@ class User(Base):
     github_bound: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # 社区声望：收到赞 +1、感谢 +2；取消后扣回
     reputation: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # 收到的赞/感谢原始计数（排行榜用，随互动事务维护）
+    received_likes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    received_thanks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     demos: Mapped[list["Demo"]] = relationship(back_populates="author")

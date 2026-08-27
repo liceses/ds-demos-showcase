@@ -106,3 +106,32 @@ def test_cannot_follow_self(client, auth_headers):
     me = client.get("/api/v1/auth/me", headers=h).json()
     r = client.post(f"/api/v1/users/{me['id']}/follow", headers=h)
     assert r.status_code == 400
+
+
+def test_leaderboard_ranks_by_reputation_and_likes(client, auth_headers, admin_headers):
+    author_h, author_name, topic = _approved_topic(client, auth_headers, admin_headers)
+    fan_h, _ = auth_headers()
+    tid = topic["id"]
+
+    client.post(
+        "/api/v1/forum/reactions",
+        json={"target_type": "topic", "target_id": tid, "reaction_type": "like"},
+        headers=fan_h,
+    )
+    client.post(
+        "/api/v1/forum/reactions",
+        json={"target_type": "topic", "target_id": tid, "reaction_type": "thanks"},
+        headers=fan_h,
+    )
+
+    r = client.get("/api/v1/users/leaderboard?sort=reputation")
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert items[0]["username"] == author_name
+    assert items[0]["reputation"] == 3
+    assert items[0]["received_likes"] == 1
+    assert items[0]["received_thanks"] == 1
+
+    r = client.get("/api/v1/users/leaderboard?sort=likes")
+    assert r.status_code == 200
+    assert r.json()["items"][0]["username"] == author_name

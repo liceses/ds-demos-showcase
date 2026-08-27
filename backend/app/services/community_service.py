@@ -10,7 +10,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..models import Demo, ForumReaction, ForumReply, ForumTopic, User, UserFollow
-from ..schemas import FollowOut, ReactionSummary, ReactionToggleOut, UserProfileOut
+from ..schemas import (
+    FollowOut,
+    ReactionSummary,
+    ReactionToggleOut,
+    UserLeaderboardOut,
+    UserLeaderboardPage,
+    UserProfileOut,
+)
 from . import notification_service
 
 REACTION_POINTS = {"like": 1, "thanks": 2}
@@ -110,8 +117,13 @@ def toggle_reaction(
         db.delete(existing)
         if target_author_id:
             author = db.get(User, target_author_id)
-            if author and author.reputation >= points:
-                author.reputation -= points
+            if author:
+                if author.reputation >= points:
+                    author.reputation -= points
+                if reaction_type == "like" and author.received_likes > 0:
+                    author.received_likes -= 1
+                elif reaction_type == "thanks" and author.received_thanks > 0:
+                    author.received_thanks -= 1
         active = False
     else:
         db.add(ForumReaction(
@@ -124,6 +136,10 @@ def toggle_reaction(
             author = db.get(User, target_author_id)
             if author:
                 author.reputation += points
+                if reaction_type == "like":
+                    author.received_likes += 1
+                else:
+                    author.received_thanks += 1
         active = True
         if target_type == "topic":
             notify_topic_id = target_id
@@ -273,3 +289,78 @@ def delete_reactions_for_reply_tree(db: Session, reply_id: int) -> None:
         ForumReaction.target_type == "reply",
         ForumReaction.target_id.in_(ids),
     ).delete(synchronize_session=False)
+
+
+def user_leaderboard(
+    db: Session,
+    sort: str,
+    page: int,
+    page_size: int,
+) -> UserLeaderboardPage:
+    """用户排行榜：按声望/获赞/感谢/发帖/回复/作品/粉丝排序（仅 active 用户）。"""
+    users = db.query(User).filter(User.status == "active").all()
+
+    demo_counts = dict(
+        db.query(Demo.author_id, func.count(Demo.id))
+        .filter(Demo.status == "approved", Demo.author_id.isnot(None))
+        .group_by(Demo.author_id)
+        .all()
+    )
+    topic_counts = dict(
+        db.query(ForumTopic.author_id, func.count(ForumTopic.id))
+        .filter(ForumTopic.status == "normal", ForumTopic.author_id.isnot(None))
+        .group_by(ForumTopic.author_id)
+        .all()
+    )
+    reply_counts = dict(
+        db.query(ForumReply.author_id, func.count(ForumReply.id))
+        .filter(ForumReply.status == "normal", ForumReply.author_id.isnot(None))
+        .group_by(ForumReply.author_id)
+        .all()
+    )
+    follower_counts = dict(
+        db.query(UserFollow.following_id, func.count(UserFollow.id))
+        .group_by(UserFollow.following_id)
+        .all()
+    )
+
+    rows = [
+        UserLeaderboardOut(
+            id=u.id,
+            username=u.username,
+            bio=u.bio,
+            reputation=u.reputation,
+            received_likes=u.received_likes,
+            received_thanks=u.received_thanks,
+            demo_count=demo_counts.get(u.id, 0),
+            topic_count=topic_counts.get(u.id, 0),
+            reply_count=reply_counts.get(u.id, 0),
+            follower_count=follower_counts.get(u.id, 0),
+        )
+        for u in users
+    ]
+
+    if sort == "likes":
+        key = lambda r: r.received_likes  # noqa: E731
+    elif sort == "thanks":
+        key = lambda r: r.received_thanks  # noqa: E731
+    elif sort == "topics":
+        key = lambda r: r.topic_count  # noqa: E731
+    elif sort == "replies":
+        key = lambda r: r.reply_count  # noqa: E731
+    elif sort == "demos":
+        key = lambda r: r.demo_count  # noqa: E731
+    elif sort == "followers":
+        key = lambda r: r.follower_count  # noqa: E731
+    else:
+        key = lambda r: r.reputation  # noqa: E731
+
+    rows.sort(key=lambda r: (key(r), r.id), reverse=True)
+    total = len(rows)
+    start = (page - 1) * page_size
+    return UserLeaderboardPage(
+        items=rows[start : start + page_size],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )

@@ -263,6 +263,8 @@ def _ensure_user_columns() -> None:
         ("need_review", "BOOLEAN NOT NULL DEFAULT 1"),
         ("github_bound", "BOOLEAN NOT NULL DEFAULT 0"),
         ("reputation", "INTEGER NOT NULL DEFAULT 0"),
+        ("received_likes", "INTEGER NOT NULL DEFAULT 0"),
+        ("received_thanks", "INTEGER NOT NULL DEFAULT 0"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:

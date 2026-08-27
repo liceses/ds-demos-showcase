@@ -107,9 +107,10 @@
 
 ### 社区互动 / 用户主页
 - `GET /users/{username}/profile`：声望/作品/主题/回复/粉丝/关注统计
+- `GET /users/leaderboard?sort=reputation|likes|thanks|topics|replies|demos|followers`：用户排行榜（分页）
 - `POST /users/{user_id}/follow`：关注/取关切换
 - `GET /users/{username}/followers`、`GET /users/{username}/following`：粉丝/关注列表
-- 前端建议：用户卡片/主页显示声望与关注按钮；论坛列表可加「关注」过滤 Tab
+- 前端建议：用户卡片/主页显示声望与关注按钮；论坛列表可加「关注」过滤 Tab；排行榜页可加「声望/获赞/发帖」Tab
 
 ### 公告 ↔ 论坛互链
 - 公告创建/更新可传 `topic_id`

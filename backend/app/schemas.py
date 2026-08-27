@@ -510,6 +510,26 @@ class UserProfileOut(BaseModel):
     is_self: bool = False
 
 
+class UserLeaderboardOut(BaseModel):
+    id: int
+    username: str
+    bio: str = ""
+    reputation: int = 0
+    received_likes: int = 0
+    received_thanks: int = 0
+    demo_count: int = 0
+    topic_count: int = 0
+    reply_count: int = 0
+    follower_count: int = 0
+
+
+class UserLeaderboardPage(BaseModel):
+    items: list[UserLeaderboardOut]
+    total: int
+    page: int
+    page_size: int
+
+
 # ---------- 通知 ----------
 class NotificationOut(BaseModel):
     id: int

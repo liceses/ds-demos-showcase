@@ -1,13 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import current_user, optional_user, require_admin
 from ..models import Demo, User
-from ..schemas import FollowOut, UserPatch, UserProfileOut, UserPublic
+from ..schemas import FollowOut, UserLeaderboardPage, UserPatch, UserProfileOut, UserPublic
 from ..services import community_service
 
 router = APIRouter(tags=["users"])
+
+
+@router.get("/users/leaderboard", response_model=UserLeaderboardPage)
+def user_leaderboard(
+    sort: str = Query(default="reputation", pattern="^(reputation|likes|thanks|topics|replies|demos|followers)$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    return community_service.user_leaderboard(db, sort, page, page_size)
 
 
 def _user_public(db: Session, user: User) -> UserPublic:

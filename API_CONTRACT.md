@@ -637,6 +637,7 @@ GET /api/v1/demos?status=approved&author=public
 - `GET /api/v1/auth/me`：返回当前登录用户
 - `GET /api/v1/users/{username}`：公开用户信息（含 `demo_count`）
 - `GET /api/v1/users/{username}/profile`：用户主页聚合（声望/作品/主题/回复/粉丝/关注/is_following）
+- `GET /api/v1/users/leaderboard?sort=reputation|likes|thanks|topics|replies|demos|followers`：用户排行榜（分页，仅 active）
 - `POST /api/v1/users/{user_id}/follow`：关注/取关切换，返回 `{following, followers_count, following_count}`
 - `GET /api/v1/users/{username}/followers`：粉丝列表
 - `GET /api/v1/users/{username}/following`：关注列表

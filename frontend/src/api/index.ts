@@ -80,8 +80,8 @@ const realApi = {
     const { data } = await http.get(`/tags/${encodeURIComponent(`${key}:${value}`)}`)
     return data
   },
-  async createTag(key: string, value: string, description?: string, parent_id?: number | null): Promise<Tag> {
-    const { data } = await http.post('/tags', { key, value, description, parent_id })
+  async createTag(key: string, value: string, description?: string, parent_id?: number | null, group?: string): Promise<Tag> {
+    const { data } = await http.post('/tags', { key, value, description, parent_id, group })
     return data
   },
   async suggestTagValue(payload: { key: string; value: string; description?: string; group?: string; demo_id?: number | null }): Promise<TagSuggestion> {

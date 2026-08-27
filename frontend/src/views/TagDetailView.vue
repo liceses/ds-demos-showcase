@@ -4,7 +4,7 @@ import { api } from '../api'
 import type { DemoSummary, Tag, TagKeyInfo } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
-import GroupedTagValues from '../components/GroupedTagValues.vue'
+import TagGroupBox from '../components/TagGroupBox.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 
@@ -81,11 +81,10 @@ onMounted(async () => {
       <div class="section-head">
         <h2 class="section-title">同键切换</h2>
       </div>
-      <GroupedTagValues
+      <TagGroupBox
         v-if="sameKeyValues.length"
         :values="sameKeyValues"
         :route-key="tag.key"
-        :mode="keyDef?.mode || 'fixed'"
         :active-value="tag.value"
       />
     </section>

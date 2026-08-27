@@ -634,7 +634,7 @@ export const mockApi = {
     return result
   },
 
-  async createTag(key: string, value: string, description?: string, parent_id?: number | null): Promise<Tag> {
+  async createTag(key: string, value: string, description?: string, parent_id?: number | null, _group?: string): Promise<Tag> {
     await delay(200)
     if (key === 'author') throw new Error('author 为保留 key')
     if (tags.some((t) => t.key === key && t.value === value)) throw new Error('标签已存在')

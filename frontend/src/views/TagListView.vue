@@ -2,7 +2,7 @@
 defineOptions({ name: 'TagListView' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useTagsStore } from '../stores/tags'
-import GroupedTagValues from '../components/GroupedTagValues.vue'
+import TagGroupBox from '../components/TagGroupBox.vue'
 import type { TagKeyInfo } from '../api/types'
 
 const tagsStore = useTagsStore()
@@ -30,11 +30,6 @@ const filteredKeys = computed(() => {
 })
 
 const activeTagKey = computed(() => keys.value.find((k) => k.key === activeKey.value) || null)
-
-function isValueHit(k: TagKeyInfo, value: string) {
-  const q = tagSearch.value.trim().toLowerCase()
-  return !!q && (k.key.toLowerCase().includes(q) || value.toLowerCase().includes(q))
-}
 
 watch(tagSearch, () => {
   if (!filteredKeys.value.length) return
@@ -130,12 +125,11 @@ onMounted(async () => {
               </div>
             </div>
 
-            <GroupedTagValues
+            <TagGroupBox
               v-if="activeTagKey.values.length"
               :values="activeTagKey.values"
               :route-key="activeTagKey.key"
-              :mode="activeTagKey.mode"
-              :hit="(val: string) => (activeTagKey ? isValueHit(activeTagKey, val) : false)"
+              :search="tagSearch"
             />
             <span v-else class="muted">还没有值</span>
           </template>

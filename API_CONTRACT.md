@@ -325,7 +325,7 @@ commit_message / keep_old_version  同前（编辑时）
   "external_url": null,
   "prompt": "用 canvas 做一个小游戏…",
   "video_url": "https://www.bilibili.com/video/BV1xxxx",
-  "preview_url": "…"   // 仅 web 类型非空；zip/link 为空字符串
+  "preview_url": "…"   // 仅 web 类型非空；zip/link 为空字符串；web 为版本化 URL /preview/{slug}/v{ts}/index.html
 }
 ```
 
@@ -335,6 +335,7 @@ commit_message / keep_old_version  同前（编辑时）
 - **DSH 会话轨迹**：上传 zip 时若含 `*.jsonl` / `session*.json` / `trace*.json/l`（如 dsh 导出的 `session.jsonl`），自动提取进该 demo 的「会话日志」；前端对 `.jsonl` 用 DSH 轨迹渲染器展示（用户消息/AI 回复/工具调用/推理/模型信息）
 - **会话日志（session logs）**：默认**本地存储**（`storage/demos/{slug}/sessions/`）并服务本地；若启用 OSS 备份（`OSS_ENABLED=true`），log **只存 OSS**（本地不落盘），读取经后端代理 + **每 IP 限流 60 次/小时（429）**，不暴露 OSS 公网直链——防 bot 爬取刷 OSS 下行流量
 - **存储模式**：预览/封面/zip 默认**本地服务器下发**（`OSS_SERVE_LOCAL=true`），OSS 仅作**双写备份**（上行不花钱）；`OSS_SERVE_LOCAL=false` 时才直连 OSS 省服务器带宽
+- **预览版本化 URL**：`preview_url` 形如 `/preview/{slug}/v{updated_at时间戳}/index.html`；更新 demo 后时间戳变化 → 新 URL，CDN/浏览器可对旧版本长缓存（`immutable`），同时新版本立即生效，不会看到旧文件
 
 ### 前端对齐建议
 

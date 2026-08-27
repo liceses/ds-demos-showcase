@@ -276,7 +276,7 @@ def upload_demo_to_oss(slug: str) -> None:
                     content_type,
                     extra_headers={
                         "Content-Disposition": "inline",
-                        "Cache-Control": "public, max-age=86400",
+                        "Cache-Control": "no-cache",
                     },
                 )
 
@@ -292,7 +292,7 @@ def upload_demo_to_oss(slug: str) -> None:
                     content_type,
                     extra_headers={
                         "Content-Disposition": "inline",
-                        "Cache-Control": "public, max-age=86400",
+                        "Cache-Control": "no-cache",
                     },
                 )
 

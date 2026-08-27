@@ -489,7 +489,7 @@ def _oss_upload_safe(slug: str, zip_bytes: bytes | None = None) -> None:
                 f"demos/{slug}/{slug}.zip",
                 zip_bytes,
                 "application/zip",
-                extra_headers={"Cache-Control": "public, max-age=3600"},
+                extra_headers={"Cache-Control": "no-cache"},
             )
     except Exception as e:  # noqa: BLE001
         print(f"[warn] OSS 上传失败（降级本地存储）: {slug} {e}", flush=True)

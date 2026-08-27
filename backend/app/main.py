@@ -126,7 +126,7 @@ def preview_file(slug: str, path: str):
         return Response(
             content=html.encode("utf-8"),
             media_type="text/html; charset=utf-8",
-            headers={"Cache-Control": "public, max-age=60"},
+            headers={"Cache-Control": "no-cache"},
         )
 
     # 非 HTML（js/css/图片等）：OSS 已启用且非「本地服务」模式才 302 直连 OSS
@@ -135,12 +135,12 @@ def preview_file(slug: str, path: str):
         if oss.object_exists(f"demos/{slug}/files/{safe}"):
             return RedirectResponse(
                 oss.public_url(f"demos/{slug}/files/{safe}"),
-                headers={"Cache-Control": "public, max-age=86400"},
+                headers={"Cache-Control": "no-cache"},
             )
 
     file_path = (settings.demos_path / slug / "files" / safe).resolve()
     if file_path.is_file():
-        return FileResponse(file_path, headers={"Cache-Control": "public, max-age=86400"})
+        return FileResponse(file_path, headers={"Cache-Control": "no-cache"})
     raise HTTPException(status_code=404, detail="文件不存在", )
 
 

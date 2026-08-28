@@ -132,6 +132,10 @@ onBeforeUnmount(() => {
       <div class="card card-default" style="padding: 20px; max-width: 640px">
         <p style="line-height: 1.8; margin-bottom: 8px">本站收集由 AI 模型生成的网页 Demo，作者可为已注册用户或匿名「公开用户」。所有作品附生成会话日志与版本时间线，力求过程透明。</p>
         <p class="muted" style="font-size: 13px">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明。若需反馈或投稿，请到「上传 Demo」页。</p>
+        <div class="filter-row" style="margin-top: 14px; gap: 8px; flex-wrap: wrap">
+          <a class="btn btn-sm btn-outline" href="https://github.com/liceses/ds-demos-showcase" target="_blank" rel="noopener">网站仓库 →</a>
+          <a class="btn btn-sm btn-outline" href="mailto:1801203413@qq.com">站长邮箱：1801203413@qq.com</a>
+        </div>
       </div>
     </template>
   </section>

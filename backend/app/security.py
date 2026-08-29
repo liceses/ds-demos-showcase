@@ -53,7 +53,13 @@ def token_from_request(request: Request) -> str | None:
 
 
 def set_auth_cookie(request: Request, response, token: str) -> None:
-    secure = request.url.scheme == "https"
+    # HTTPS 终止在反代/CDN（如 Cloudflare）时 request.url.scheme 恒为 http，
+    # 需 COOKIE_SECURE=true 或按 X-Forwarded-Proto 判定，Cookie 才能带上 Secure 标志
+    secure = (
+        settings.cookie_secure
+        or request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto", "") == "https"
+    )
     response.set_cookie(
         COOKIE_NAME,
         token,

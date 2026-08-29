@@ -21,6 +21,7 @@ demo.deepdemos.top → Nginx 独立 server 块 → /preview、/media 反代 back
 
 ```bash
 JWT_SECRET=<强随机串>        # 必须！compose 兜底值是公开的 please-change-me
+COOKIE_SECURE=true           # 必须！全站 HTTPS（回源 http）时登录 Cookie 才带 Secure 标志
 AUTO_APPROVE=false           # 生产建议关闭自动审核（新上传需管理员通过）
 # 可选：
 # OSS_ENABLED=true/false     # 总开关；false 强制纯本地
@@ -80,7 +81,7 @@ cd web && git pull && docker compose up -d --build
 1. `JWT_SECRET` 改为强随机值（见上）。
 2. 修改 `admin` 默认密码（前端「设置」页可直接改）。
 3. `AUTO_APPROVE=false`。
-4. **HTTPS**：线上已由 **Cloudflare 提供全站 HTTPS**（边缘终止；`nginx.conf` 仅监听 80，回源为 HTTP）。浏览器 → Cloudflare 已加密，Cloudflare → 源站为明文。两个遗留：① 后端用 `request.url.scheme` 判定 Cookie `secure`，回源 http 导致 JWT Cookie 暂无 `Secure` 标志（待代码修复）；② 若脱离 Cloudflare 部署，需自配 TLS——certbot 为 `deepdemos.top` 发证书并改 nginx：`listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
+4. **HTTPS**：线上已由 **Cloudflare 提供全站 HTTPS**（边缘终止；`nginx.conf` 仅监听 80，回源为 HTTP）。浏览器 → Cloudflare 已加密，Cloudflare → 源站为明文。Cookie `Secure` 标志由 `COOKIE_SECURE` 控制（2026-08 已修）：服务器 `.env` 设 `COOKIE_SECURE=true`（compose 已透传），或自配 TLS 后由 `X-Forwarded-Proto` 自动判定。若脱离 Cloudflare 部署，需自配 TLS——certbot 为 `deepdemos.top` 发证书并改 nginx：`listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
 5. 建议后续补：zip 解压防护（压缩比/条目数/符号链接）、安全响应头（CSP/nosniff 等）、`/health` `/ready`、审计日志。这些属于"生产规范"项，当前代码尚未实现。
 6. ~~后端容器未安装 `git`~~ **已修复**：`backend/Dockerfile` 已安装 git，`site_git.py` 的站点更新公告（站点仓库 commit 信息）在容器内可用。
 

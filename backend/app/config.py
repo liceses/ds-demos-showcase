@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     jwt_secret: str = "please-change-me-to-a-long-random-string"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 天
+    # 生产 HTTPS 终止在反代/CDN（如 Cloudflare，回源 http）时设 true：登录 Cookie 强制带 Secure 标志
+    cookie_secure: bool = False
     # CORS 允许来源（逗号分隔）
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     # 匿名评分 salt：用于 sha256(device_id|ip|salt) 生成 rater_key；留空则用 jwt_secret 派生

@@ -2,6 +2,7 @@ from pathlib import Path
 
 import asyncio
 import logging
+import mimetypes
 import time
 from datetime import datetime, timezone
 
@@ -22,6 +23,9 @@ from .services.settings_service import KEY_AUTO_APPROVE
 
 logger = logging.getLogger("app")
 logging.basicConfig(level=logging.INFO)
+
+# slim 镜像的 mime 库不认识 .webp：不注册的话 /media 封面会以 application/octet-stream 下发
+mimetypes.add_type("image/webp", ".webp")
 
 def _json_dt(dt: datetime) -> str:
     """naive UTC 统一补 Z，避免前端按本地时间解析提前 8 小时"""

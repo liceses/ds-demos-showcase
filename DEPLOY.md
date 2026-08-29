@@ -32,7 +32,9 @@ AUTO_APPROVE=false           # 生产建议关闭自动审核（新上传需管�
 
 生成密钥：`openssl rand -hex 32`
 
-> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面**双写备份到阿里云 OSS**（上行免费，作为备份）；`OSS_SERVE_LOCAL`（默认 `true`）让 zip 下载**走本地服务器**，不产生 OSS 下行费用。⚠️ 已知问题：预览子资源与 `/media` 封面目前仍可能直连 OSS（待后端修复）。会话日志在启用 OSS 备份时**只存 OSS**。不配置 `OSS_*` 则全部使用本地 `storage/`。
+> compose 里的 `OSS_*` 为可选配置：配置后 demo 文件/封面**双写备份到阿里云 OSS**（上行免费，作为备份）；`OSS_SERVE_LOCAL`（默认 `true`）= zip 下载、预览子资源、封面全部**由源站下发**，不产生 OSS 下行费用；`false` = 三者 302 直连 OSS 省服务器带宽（需公有读桶）。`main.py` 的预览子资源与 `/media` 已遵守该开关（2026-08 修复）。会话日志在启用 OSS 备份时**只存 OSS**（经后端代理限流读取，不暴露直链）。不配置 `OSS_*` 则全部使用本地 `storage/`。
+>
+> **2026-08-28 线上实测**：deepdemos.top 当前为 `OSS_SERVE_LOCAL=true` 模式——子资源/zip/封面均由源站 200 直出（前置 Cloudflare 缓存），OSS 仅双写备份 + 会话日志。
 
 ### 2. 构建并启动
 
@@ -78,10 +80,9 @@ cd web && git pull && docker compose up -d --build
 1. `JWT_SECRET` 改为强随机值（见上）。
 2. 修改 `admin` 默认密码（前端「设置」页可直接改）。
 3. `AUTO_APPROVE=false`。
-4. **配 HTTPS（强烈建议）**：当前 `nginx.conf` 仅监听 80，登录凭据与 Cookie 明文传输。可用 certbot（Let's Encrypt）为 `deepdemos.top` 发证书并改 nginx 配置：
-   - `listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
+4. **HTTPS**：线上已由 **Cloudflare 提供全站 HTTPS**（边缘终止；`nginx.conf` 仅监听 80，回源为 HTTP）。浏览器 → Cloudflare 已加密，Cloudflare → 源站为明文。两个遗留：① 后端用 `request.url.scheme` 判定 Cookie `secure`，回源 http 导致 JWT Cookie 暂无 `Secure` 标志（待代码修复）；② 若脱离 Cloudflare 部署，需自配 TLS——certbot 为 `deepdemos.top` 发证书并改 nginx：`listen 443 ssl; ...` + `return 301 https://$host$request_uri;`（80 跳转）。
 5. 建议后续补：zip 解压防护（压缩比/条目数/符号链接）、安全响应头（CSP/nosniff 等）、`/health` `/ready`、审计日志。这些属于"生产规范"项，当前代码尚未实现。
-6. ⚠️ 已知问题：后端容器未安装 `git`，`site_git.py` 的站点更新公告在 Docker 内为空；如需该功能，需在 `backend/Dockerfile` 安装 git 或改实现。
+6. ~~后端容器未安装 `git`~~ **已修复**：`backend/Dockerfile` 已安装 git，`site_git.py` 的站点更新公告（站点仓库 commit 信息）在容器内可用。
 
 ## 备份
 

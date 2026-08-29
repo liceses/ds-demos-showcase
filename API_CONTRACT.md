@@ -668,23 +668,30 @@ GET /api/v1/demos?status=approved&author=public
 ### 标签
 - `POST /api/v1/tags` 支持 `parent_id`（层级标签）；返回的是**标签值对象** `TagOut`（含 `id/key/value/description/parent_id/demo_count/child_count/mode`），不是标签键对象
 
-## 11. 已知问题 / 代码待修（文档为预期行为，代码尚未完全对齐）
+## 11. 已知问题核对（2026-08-28 复核）
 
-> 以下条目是审计发现的“文档预期 vs 代码实际”差异，**待后端修复**；修复前请以本节为准。
+> 本节原为审计发现的「文档预期 vs 代码实际」差异清单（13 条）。2026-08-28 逐条复核代码后更新如下状态。
 
-1. **`link` 类型创建时未拒绝文件/zip**：`POST /demos` 与 `POST /demos/from-url` 对 link 类型传 `file`/`zip_url`/`file_url` 是静默忽略，未按文档返回 400（`PUT /demos/{slug}` 已实现 400）。
-2. **会话日志列表接口未限流**：`GET /demos/{slug}/session-logs` 未加每 IP 60 次/小时限流，只有内容接口有限流。
-3. **`PUT /admin/announcements/{id}` 无法清空 `demo_slug`**：传 `demo_slug: null` 不会生效。
-4. **`PUT /admin/tag-keys/{key}` 请求体必须带 `key`**：文档预期“不含 key”，当前复用 `TagKeyUpsert` 导致 key 必填。
-5. **保留 key 校验不完整**：`POST /tags` 只拦 `author` 漏 `version-of`；`PUT /admin/tag-keys/{key}` 完全不校验保留 key。
-6. **`OSS_SERVE_LOCAL=true` 未完全生效**：zip 下载已走本地，但 `main.py` 的预览子资源与 `/media` 封面仍直连 OSS（只要 `oss.enabled()`），仍会产生 OSS 下行流量。
-7. **Docker 后端未安装 git**：`site_git.py` 依赖 git 读站点仓库 commit，容器内无 git → `update` 站点更新公告线上为空。
-8. **排行榜 `range` 参数后端不支持**：前端传 `range=all/week/month`，后端 `leaderboard()` 未接收，静默无效。
-9. **`_ensure_demo_columns` 迁移漏 `updated_at`**：旧库不会自动补该列。
-10. **`max_cover_size` 是死配置**：定义 5MB 但从未使用，封面实际受 `max_upload_size`（默认 200MB）约束。
-11. **commits 死代码残留**：`commits.py`、`git_service.py`、`Commit*` schema、`DemoDetailOut.commit_count` 仍在，但功能已移除且未挂载路由。
-12. **CORS 硬编码本地开发源**：`main.py` 仅允许 `localhost:5173` / `127.0.0.1:5173`，生产不可配置。
-13. **`.env.example` 缺配置项**：`RATING_SALT`、`UPLOAD_CODE`、`OSS_ENABLED`、`OSS_SERVE_LOCAL`、`SITE_REPO_DIR`、`MAX_COVER_SIZE` 未列出。
+**已修复（代码已与文档对齐）：**
+
+1. ~~`link` 类型创建时未拒绝文件/zip~~ —— `POST /demos`、`POST /demos/from-url` 均已对 link 类型传 `file`/`zip_url`/`file_url` 返回 400。
+2. ~~会话日志列表接口未限流~~ —— `GET /demos/{slug}/session-logs` 已加每 IP 60 次/小时限流（与内容接口一致）。
+3. ~~`PUT /admin/announcements/{id}` 无法清空 `demo_slug`~~ —— 传 `demo_slug: null` 即置空（代码注释已标明「允许清空」）。
+4. ~~`PUT /admin/tag-keys/{key}` 请求体必须带 `key`~~ —— 已改用独立 `TagKeyUpdate` schema，key 以路径为准，请求体无需带 `key`。
+5. ~~保留 key 校验不完整~~ —— 已有 `RESERVED_TAG_KEYS = {author, version-of}`；创建/改键/删键/删值/合并均校验。
+6. ~~`OSS_SERVE_LOCAL=true` 未完全生效~~ —— `main.py` 的预览子资源与 `/media` 封面均已按 `oss.enabled() and not oss_serve_local` 判断；`true` 时全部源站下发，`false` 时 302 直连 OSS。
+7. ~~Docker 后端未安装 git~~ —— `backend/Dockerfile` 已安装 git，站点更新公告容器内可用。
+8. ~~排行榜 `range` 参数后端不支持~~ —— `GET /leaderboard` 已接收 `range=all|week|month` 并按 `created_at` 过滤。
+9. ~~`_ensure_demo_columns` 迁移漏 `updated_at`~~ —— additions 清单已含 `("updated_at", "DATETIME")`。
+10. ~~`max_cover_size` 是死配置~~ —— 该配置已从 `config.py` 整体删除；封面统一受 `max_upload_size`（默认 200MB）约束。
+11. ~~commits 死代码残留~~ —— `commits.py`、`git_service.py`、`Commit*` schema、`commit_count` 均已清理，仓库中不存在。
+
+**仍然存在：**
+
+12. **CORS 仅默认本地源**：`config.py` 已有 `cors_origins` 字段（环境变量 `CORS_ORIGINS` 可配置），但 docker-compose 未透传该变量；同源部署（当前线上）不需要，跨源部署需在 compose 增加透传。
+13. **`.env.example` 缺配置项**：`RATING_SALT`、`UPLOAD_CODE`、`OSS_ENABLED`、`OSS_SERVE_LOCAL`、`OSS_CUSTOM_DOMAIN`、`PREVIEW_BASE_URL`、`SITE_REPO_DIR`、`CORS_ORIGINS` 等均未列出（`docker-compose.yml` 与 `config.py` 实际都支持）。
+
+**另见 `docs/运维经验与排坑记录.md` §10「线上实测快照」：IP 取值口径、Cookie `Secure` 标志、PV 统计口径（8/22-23 异常峰值已定性为统计方法 bug 并改正，非刷量）等线上行为问题记录。**
 
 ## 10. 论坛 + 作品 meta（富卡片）
 

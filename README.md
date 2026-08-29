@@ -79,7 +79,7 @@ Windows 双击 `start-dev.bat`，或在 `web/` 下执行：
 
 - **admin 默认密码**：生产默认仍为 `admin/admin123`，请部署后第一时间在「设置」页改密（也可按 `DEPLOY.md` 用容器内 Python 方式）。
 - **JWT_SECRET**：docker-compose 兜底值是公开的 `please-change-me`，生产必须在 `web/.env` 设置强随机值（`openssl rand -hex 32`），否则可伪造任意用户 Token。
-- **HTTPS**：`frontend/nginx.conf` 当前只监听 80（纯 HTTP），登录凭据与 Cookie 明文传输，**强烈建议尽快配 TLS**。
+- **HTTPS**：线上由 **Cloudflare 提供全站 HTTPS**（边缘终止，`nginx.conf` 仅监听 80、回源 http）。浏览器 → Cloudflare 已加密；因后端按 `request.url.scheme` 判定 Cookie `secure`，回源 http 导致 JWT Cookie 暂无 `Secure` 标志（待代码修复）。若脱离 Cloudflare 部署，需自行配 TLS（certbot，见 `DEPLOY.md` 安全清单）。
 
 ## 部署
 

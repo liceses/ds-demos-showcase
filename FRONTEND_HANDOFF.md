@@ -46,7 +46,9 @@
 待做/可选：
 - 管理后台「标签键管理」的删除/编辑已有接口支持（`DELETE /tags/admin/tag-keys/{key}` 等），管理 UI 已实现新建/编辑/删除键、删除值、建议审核、AI 建议。
 - 前端尚未接 `POST /demos/from-url`、`idempotency_key`、`upload_code`、`force` 字段（上传页无幂等键/upload_code 输入），如需 agent 友好上传可后续补。
+  - **2026-08-28 复核：已全部接入**——`api/index.ts` 已有 `createDemoFromUrl`；上传页自动生成 `idempotency_key`（crypto.randomUUID）、提供 `upload_code` 输入框与 `force` 勾选。
 - 排行榜 `range=all/week/month` 前端已传，但后端暂不支持（静默无效），待后端修复或前端移除。
+  - **2026-08-28 复核：后端已支持**——`GET /leaderboard` 接收 `range` 并按 `created_at` 过滤（7/30 天窗口）。
 
 ## 5. 已拆页面 / 路由
 - `/` 首页：欢迎/展示/入口卡片 + 精选 + 公告（无搜索）。

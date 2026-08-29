@@ -71,7 +71,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 |---|---|---|
 | GET | `/tags/tag-keys` | 标签键定义（mode/values/group/min/max/demo_count） |
 | GET | `/tags/{key}:{value}` | 详情 + `parent` + `children` |
-| POST | `/tags` | 创建 fixed value（key=`author`/`version-of` 应保留 → 400/409；当前 `version-of` 校验待修） |
+| POST | `/tags` | 创建 fixed value（`author`/`version-of` 为保留 key → 400） |
 
 ### Demo
 | 方法 | 路径 | 说明 |
@@ -124,7 +124,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **版本时间线**：不再为每个 demo 维护 git 仓库；用 `DemoTimeline` 轻量记录创建/更新/旧版快照，避免依赖 git 子进程。
 - **DSH 会话轨迹**：dsh 导出的 zip 常含 `session.jsonl`；`extract_zip` 会把 `*.jsonl` / `session*.json` / `trace*.json/l` 自动提取进 `demo_sessions/`，进「会话日志」Tab；前端对 `.jsonl` 走 DSH 渲染器。
 - **会话日志存储与防护**：默认**本地存储**；启用 OSS 备份时 log **只进 OSS**（`demos/{slug}/sessions/`）、本地不落盘（OSS 未启用时本地兜底）；列表走 OSS 前缀，**内容经后端代理 + 每 IP 限流（60 次/小时）**，不暴露 OSS 公网直链，避免 bot 爬取刷 OSS 下行流量。
-- **存储模式**：`OSS_SERVE_LOCAL=true`（默认）→ zip 下载走本地服务器，OSS 仅**双写备份**（上行免费）；`false` → 直连 OSS 省服务器带宽。⚠️ **已知问题**：`main.py` 的预览子资源与 `/media` 封面目前只要 `oss.enabled()` 就 302 直连 OSS，未完全遵守 `OSS_SERVE_LOCAL`，仍会产生 OSS 下行流量（待后端修复）。
+- **存储模式**：`OSS_SERVE_LOCAL=true`（默认）→ zip 下载/预览子资源/封面**全部由源站下发**，OSS 仅**双写备份**（上行免费）+ 会话日志；`false` → 三者 302 直连 OSS 省服务器带宽（需公有读桶）。`main.py` 的预览子资源与 `/media` 已遵守该开关（2026-08 修复；线上实测为 `true` 模式，带宽由源站 + Cloudflare 缓存承担）。
 - **标签**：扁平存储 + `parent_id` 层级，对外用 `GET /tags/tag-keys` 返回键定义与候选值（旧 `GET /tags` 扁平列表已下线）。
 
 ### 上传去重（幂等键 + 内容哈希）
@@ -175,7 +175,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 - **模型**：`Tag.group`（固定值分组/厂商）；`TagValueSuggestion`（用户申请 fixed 值，pending/approved/rejected，可带 demo_id 审核后补挂）。
 - **审核流**：用户 `POST /tags/suggestions` 只写 pending；admin `POST /tags/admin/suggestions/{id}/review` approve 才创建 Tag。
-- **AI 辅助**：`POST /tags/admin/fetch-models` 写内置主流模型（2026-08 列表）为 pending 建议；`POST /tags/admin/ai-suggest` 返回规则启发式建议（占位，不落库）。⚠️ 当前 `fetch-models` 内置列表仍是旧版，与线上 97 个值不一致，待后端同步。
+- **AI 辅助**：`POST /tags/admin/fetch-models` 写内置**精简**模型列表为 pending 建议（旧版兜底列表，非线上全量）；模型值的标准同步走 `POST /tags/admin/sync-models`（拉 models.dev，新模型进建议、已有值更新 group）；`POST /tags/admin/ai-suggest` 返回规则启发式建议（占位，不落库）。
 - **范围检索**：`GET /demos?tag=rounds:3-10` 对 int 键用 `CAST(Tag.value AS INTEGER)` 范围比较；fixed/open 精确。
 - **分布**：`GET /tags/tag-keys` 的 int 键返回 `min/max`，前端可做滑条/直方图；fixed value 返回 `group` 分组。
 - **group 管理**：`/tags/admin/groups` 列/重命名/清除 group；`/tags/admin/values/{id}/group` 设置单个值分组（纯字段批量更新）。

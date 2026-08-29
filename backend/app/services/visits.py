@@ -1,8 +1,8 @@
 """站点访问统计：原始 PV（每次访问 +1，累加不覆盖）+ 实时在线/近期访问（内存）。
-跨天滚动，只保留近 90 天；同时维护当日 IP 集合（UV 备用）。
+跨天滚动，只保留近 90 天。
+不收集访客 IP：visit_daily.ips 为历史遗留列，已停止写入（无消费方，且有膨胀/隐私成本）。
 """
 
-import json
 import threading
 import time
 from collections import deque
@@ -18,7 +18,6 @@ ONLINE_WINDOW = 120  # 在线判定：最后 2 分钟心跳
 
 _lock = threading.Lock()
 _today: str = date.today().isoformat()
-_today_ips: set[str] = set()
 _today_count: int = 0
 _recent_hits: deque[float] = deque()   # 实时 PV 时间戳（最近 10 分钟）
 _online: dict[str, float] = {}         # ip -> 最后心跳时间
@@ -30,20 +29,17 @@ def _roll_if_needed() -> None:
     if now != _today:
         _flush_locked()   # 跨天：先落盘昨天的
         _today = now
-        _today_ips.clear()
         _today_count = 0
 
 
-def record_visit(ip: str | None = None) -> None:
-    """记录一次页面访问：原始 PV +1（ip 可选，仅用于 UV 集合）。仅内存，不落库。
+def record_visit() -> None:
+    """记录一次页面访问：原始 PV +1。仅内存，不落库。
     统计失败必须静默，绝不能影响业务请求。"""
     global _today_count
     try:
         with _lock:
             _roll_if_needed()
             _today_count += 1
-            if ip:
-                _today_ips.add(ip)
             _recent_hits.append(time.time())
             # 顺手清理过期时间戳，保持队列只存近 RECENT_WINDOW
             cutoff = time.time() - RECENT_WINDOW
@@ -88,22 +84,17 @@ def _flush_locked() -> None:
     day = _today
     if _today_count == 0:
         return
-    ips = list(_today_ips)
     db = SessionLocal()
     try:
         row = db.get(VisitDaily, day)
         if row is None:
-            row = VisitDaily(date=day, count=0, ips="[]")
+            row = VisitDaily(date=day, count=0)
             db.add(row)
         # 原始 PV：累加本次批次的增量（不覆盖）
         row.count += _today_count
-        existing = set(json.loads(row.ips)) if row.ips else set()
-        existing.update(ips)
-        row.ips = json.dumps(list(existing), ensure_ascii=False)
         db.commit()
         # 落库成功后清零，防止下一轮 flush 把同一批数据再算一遍
         _today_count = 0
-        _today_ips.clear()
         cutoff = (date.today() - timedelta(days=KEEP_DAYS)).isoformat()
         db.query(VisitDaily).filter(VisitDaily.date < cutoff).delete()
         db.commit()

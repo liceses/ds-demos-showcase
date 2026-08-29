@@ -201,13 +201,17 @@ class Setting(Base):
 
 
 class VisitDaily(Base):
-    """站点访问统计：按「天 + IP 去重」；ips 存当天已计的访客 IP（JSON 数组）。"""
+    """站点访问统计：按天计的原始访问数。
+
+    ips 列为历史遗留（曾存当日访客 IP 的 JSON 数组，UV 备用）：
+    已停止写入且无任何消费方，仅保留列避免迁移；新行恒为 "[]"。
+    """
 
     __tablename__ = "visit_daily"
 
     date: Mapped[str] = mapped_column(String(10), primary_key=True)  # YYYY-MM-DD
     count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    ips: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    ips: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # 已停写，历史遗留
 
 
 class Acknowledgment(Base):

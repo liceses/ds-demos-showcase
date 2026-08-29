@@ -40,7 +40,7 @@ def stats_visits() -> dict:
 async def stats_visit(request: Request) -> dict:
     """页面访问打点：前端每次页面浏览发一次（原始 PV +1）。带每 IP 限流。"""
     _visit_rate_limit(request)
-    await asyncio.to_thread(visits.record_visit, get_client_ip(request))
+    await asyncio.to_thread(visits.record_visit)
     return {"ok": True}
 
 

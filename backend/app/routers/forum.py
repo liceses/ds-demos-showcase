@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..database import get_db
 from ..deps import current_user, optional_user, require_admin
 from ..models import Announcement, Demo, ForumReply, ForumReport, ForumTopic, User, UserFollow
@@ -37,8 +38,7 @@ _REPLY_RATE = 30
 
 
 def _client_ip(request: Request) -> str:
-    fwd = request.headers.get("x-forwarded-for", "")
-    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    return get_client_ip(request) or "unknown"
 
 
 def _rate_limit(request: Request, key: str, limit: int, user: User) -> None:

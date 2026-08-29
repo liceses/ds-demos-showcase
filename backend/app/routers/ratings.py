@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..config import settings
 from ..database import get_db
 from ..deps import optional_user
@@ -28,8 +29,7 @@ SCORE_LABELS = {1: "鬼作", 2: "差", 3: "一般", 4: "佳作", 5: "神作"}
 
 
 def _client_ip(request: Request) -> str:
-    fwd = request.headers.get("x-forwarded-for", "")
-    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    return get_client_ip(request) or "unknown"
 
 
 def _rating_salt() -> str:

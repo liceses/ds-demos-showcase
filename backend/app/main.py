@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .client_ip import get_client_ip
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .errors import AppError
@@ -59,11 +60,18 @@ app.add_middleware(
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """请求日志：方法/路径/状态/耗时。"""
+    """请求日志：方法/路径/状态/耗时/解析出的访客 IP（验证 IP 解析与排查刷量用）。"""
     start = time.time()
     response = await call_next(request)
     duration_ms = (time.time() - start) * 1000
-    logger.info("%s %s -> %s %.0fms", request.method, request.url.path, response.status_code, duration_ms)
+    logger.info(
+        "%s %s -> %s %.0fms ip=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+        get_client_ip(request) or "-",
+    )
     return response
 
 API_PREFIX = "/api/v1"

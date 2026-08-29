@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..database import get_db
 from ..models import Demo
 from ..schemas import SessionLogOut
@@ -21,7 +22,7 @@ RATE_LIMIT = 60  # 次/小时/IP
 
 
 def _rate_limit(request: Request) -> None:
-    ip = request.client.host if request.client else "unknown"
+    ip = get_client_ip(request) or "unknown"
     now = time.time()
     _hits[ip] = [t for t in _hits[ip] if t > now - 3600]
     if len(_hits[ip]) >= RATE_LIMIT:

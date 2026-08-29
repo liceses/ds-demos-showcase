@@ -6,6 +6,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..database import get_db
 from ..deps import require_admin
 from ..models import Acknowledgment, User
@@ -20,8 +21,7 @@ _VISIT_RATE = 30  # 次/分钟/IP
 
 
 def _visit_rate_limit(request: Request) -> None:
-    fwd = request.headers.get("x-forwarded-for", "")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    ip = get_client_ip(request) or "unknown"
     now = time.time()
     _visit_hits[ip] = [t for t in _visit_hits[ip] if t > now - 60]
     if len(_visit_hits[ip]) >= _VISIT_RATE:
@@ -40,9 +40,7 @@ def stats_visits() -> dict:
 async def stats_visit(request: Request) -> dict:
     """页面访问打点：前端每次页面浏览发一次（原始 PV +1）。带每 IP 限流。"""
     _visit_rate_limit(request)
-    fwd = request.headers.get("x-forwarded-for", "")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
-    await asyncio.to_thread(visits.record_visit, ip)
+    await asyncio.to_thread(visits.record_visit, get_client_ip(request))
     return {"ok": True}
 
 
@@ -52,8 +50,7 @@ _HEARTBEAT_RATE = 10
 
 
 def _heartbeat_rate_limit(request: Request) -> None:
-    fwd = request.headers.get("x-forwarded-for", "")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    ip = get_client_ip(request) or "unknown"
     now = time.time()
     _heartbeat_hits[ip] = [t for t in _heartbeat_hits[ip] if t > now - 60]
     if len(_heartbeat_hits[ip]) >= _HEARTBEAT_RATE:
@@ -65,9 +62,7 @@ def _heartbeat_rate_limit(request: Request) -> None:
 async def stats_heartbeat(request: Request) -> dict:
     """实时在线心跳：前端每 30s 发一次；后端仅更新内存在线表。"""
     _heartbeat_rate_limit(request)
-    fwd = request.headers.get("x-forwarded-for", "")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else None)
-    await asyncio.to_thread(visits.heartbeat, ip)
+    await asyncio.to_thread(visits.heartbeat, get_client_ip(request))
     return {"ok": True}
 
 

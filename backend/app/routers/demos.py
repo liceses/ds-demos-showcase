@@ -24,6 +24,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
@@ -43,7 +44,7 @@ ANON_RATE_LIMIT = 20  # 次/小时/IP
 
 def _anon_rate_limit(request: Request) -> None:
     """匿名上传限流：每 IP 每小时最多 ANON_RATE_LIMIT 次。"""
-    ip = request.client.host if request.client else "unknown"
+    ip = get_client_ip(request) or "unknown"
     now = time.time()
     window = now - 3600
     _anon_uploads[ip] = [t for t in _anon_uploads[ip] if t > window]

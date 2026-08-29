@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..database import get_db
 from ..deps import optional_user, require_admin
 from ..models import Demo, DemoTag, Tag, TagKey, TagValueSuggestion, User
@@ -193,8 +194,7 @@ def _tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
 
 # ---------- 固定值申请（用户） ----------
 def _suggest_rate_limit(request: Request) -> None:
-    fwd = request.headers.get("x-forwarded-for", "")
-    ip = fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+    ip = get_client_ip(request) or "unknown"
     now = time.time()
     _suggest_hits[ip] = [t for t in _suggest_hits[ip] if t > now - 3600]
     if len(_suggest_hits[ip]) >= _SUGGEST_RATE:

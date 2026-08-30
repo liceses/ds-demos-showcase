@@ -6,14 +6,16 @@ import mimetypes
 import time
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .client_ip import get_client_ip
 from .config import settings
-from .database import Base, SessionLocal, engine
+from .database import Base, SessionLocal, engine, get_db
 from .errors import AppError
 from .models import ForumTopic, Setting, Tag, TagKey, User
 from .routers import admin, announcements, auth, comments, demos, forum, meta, notifications, ratings, sessions, stats, tags, users
@@ -103,7 +105,23 @@ def api_root():
         "docs": "/docs",
         "agent_guide": f"{API_PREFIX}/meta/agent-guide",
         "tag_keys": f"{API_PREFIX}/tags/tag-keys",
+        "site_info": f"{API_PREFIX}/meta/site-info",
+        "health": f"{API_PREFIX}/health",
     }
+
+
+@app.get(API_PREFIX + "/health")
+def health(db: Session = Depends(get_db)):
+    """存活探针：DB 可查即健康。no-store，避免监控读到缓存假活。"""
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:  # noqa: BLE001 —— 探针不抛栈，按 503 语义返回
+        return JSONResponse(
+            {"status": "error", "db": "error"},
+            status_code=503,
+            headers={"Cache-Control": "no-store"},
+        )
+    return JSONResponse({"status": "ok", "db": "ok"}, headers={"Cache-Control": "no-store"})
 
 
 def _serve_preview(slug: str, path: str, version: str | None = None):

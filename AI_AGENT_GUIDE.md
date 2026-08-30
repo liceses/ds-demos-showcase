@@ -158,6 +158,7 @@ echo 'UPLOAD_CODE=你自定义的随机密钥' >> /opt/ds-demos-showcase/.env
 | 接口 | 用途 |
 |---|---|
 | `GET /api/v1/meta/agent-guide` | **上传指南全文（agent 第一步先抓这个）** |
+| `GET /api/v1/meta/site-info` | 站点概况 JSON（规模 / 热门模型与题材 / 上传能力；打标签前可参考 top_models） |
 | `GET /api/v1/tags/tag-keys` | 标签键定义（打标签前必查） |
 | `POST /api/v1/demos/from-url` | JSON + zip URL 上传（推荐） |
 | `POST /api/v1/demos` | multipart 直传 |

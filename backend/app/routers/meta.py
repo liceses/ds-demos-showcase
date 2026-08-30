@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from ..config import settings
+from ..deps import optional_user
+from ..models import User
+from ..services import site_info_service
 
 router = APIRouter(prefix="/meta", tags=["meta"])
 
@@ -13,3 +16,15 @@ def agent_guide():
     if not path.exists():
         raise HTTPException(status_code=404, detail="AI_AGENT_GUIDE.md 未找到", )
     return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/site-info")
+def site_info(request: Request, refresh: int = 0, admin: User | None = Depends(optional_user)):
+    """站点公开概况：内容/社区/流量/热门/能力（机器可读，agent 与前端共用）。
+
+    60s 内存缓存 + CDN 可缓存（max-age=60）；仅 admin 可 ?refresh=1 强刷。
+    只含公开安全数字——待审队列/存储等管理面信息在 /admin/stats。
+    """
+    force = bool(refresh) and admin is not None and admin.role == "admin"
+    data = site_info_service.get_site_info(force=force)
+    return JSONResponse(data, headers={"Cache-Control": "public, max-age=60"})

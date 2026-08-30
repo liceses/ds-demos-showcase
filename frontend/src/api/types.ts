@@ -480,3 +480,28 @@ export interface RecognitionInput {
   sort?: number
   active?: boolean
 }
+
+/** 站点公开概况（GET /meta/site-info）：内容/社区/流量/热门/能力，60s 缓存 */
+export interface SiteInfo {
+  site: { name: string; description: string; info_version: number }
+  content: {
+    demos_total: number
+    demos_by_type: Record<string, number>
+    authors_total: number
+    uploads_last_7d: number
+    tags: { keys: number; values: number }
+    forum_topics: number
+  }
+  community: { users_total: number; users_active_week: number }
+  traffic: { pv_today: number; pv_yesterday: number; pv_total: number; online_now: number }
+  hot: {
+    top_models: Array<{ value: string; demos: number }>
+    top_games: Array<{ value: string; demos: number }>
+    latest_demo: { slug: string; title: string; created_at: string } | null
+  }
+  capabilities: {
+    upload: { anonymous: boolean; guide: string; tag_keys: string; idempotency: boolean }
+    features: Record<string, unknown>
+  }
+  generated_at: string
+}

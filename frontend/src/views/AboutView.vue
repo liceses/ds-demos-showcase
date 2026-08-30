@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { SiteStats, SponsorBoard, ThanksBoard, LiveStats } from '../api/types'
+import type { SiteInfo, SiteStats, SponsorBoard, ThanksBoard, LiveStats } from '../api/types'
 
 const stats = ref<SiteStats | null>(null)
+const info = ref<SiteInfo | null>(null)
 const sponsors = ref<SponsorBoard | null>(null)
 const thanks = ref<ThanksBoard | null>(null)
 const live = ref<LiveStats | null>(null)
@@ -25,14 +26,16 @@ async function loadLive() {
 
 onMounted(async () => {
   try {
-    const [s, sp, th] = await Promise.all([
+    const [s, sp, th, si] = await Promise.all([
       api.getSiteStats(),
       api.getSponsors().catch(() => null),
       api.getThanks().catch(() => null),
+      api.getSiteInfo().catch(() => null),
     ])
     stats.value = s
     sponsors.value = sp
     thanks.value = th
+    info.value = si
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -59,6 +62,19 @@ onBeforeUnmount(() => {
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载站点信息…</div>
 
     <template v-else>
+      <!-- 站点概况（/meta/site-info：内容/社区一次拿全；失败静默隐藏） -->
+      <template v-if="info">
+        <div class="section-head">
+          <h2 class="section-title">站点概况</h2>
+        </div>
+        <div class="dash-stats">
+          <div class="stat-card stat-ok"><b>{{ info.content.demos_total }}</b>作品</div>
+          <div class="stat-card"><b>{{ info.content.authors_total }}</b>创作者</div>
+          <div class="stat-card"><b>{{ info.content.uploads_last_7d }}</b>近 7 天新增</div>
+          <div class="stat-card"><b>{{ info.community.users_total }}</b>注册用户</div>
+        </div>
+      </template>
+
       <!-- 实时访问 -->
       <div class="section-head">
         <h2 class="section-title">实时访问</h2>

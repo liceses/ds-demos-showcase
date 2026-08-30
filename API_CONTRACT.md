@@ -665,6 +665,11 @@ GET /api/v1/demos?status=approved&author=public
 - `GET /api/v1/stats/recognition` 返回 `{"items": [...]}`
 - `POST /api/v1/stats/recognition`、`PUT /api/v1/stats/recognition/{id}` 返回 `{"id": ...}`
 
+### 站点
+- `GET /api/v1/meta/site-info`：站点公开概况 JSON（`site/content/community/traffic/hot/capabilities`，`info_version=1`）。60s 内存缓存 + `Cache-Control: public, max-age=60`（CDN 可缓存）；仅 admin 可 `?refresh=1` 强刷。只含公开安全数字，管理面统计在 `/admin/stats`。
+- `GET /api/v1/health`：存活探针 `{status:"ok", db:"ok"}`；DB 不可用返回 503；`Cache-Control: no-store`（防监控读到缓存假活）。
+- `GET /api/v1`（根）已补 `site_info` / `health` 两个字段，供 agent 自发现。
+
 ### 标签
 - `POST /api/v1/tags` 支持 `parent_id`（层级标签）；返回的是**标签值对象** `TagOut`（含 `id/key/value/description/parent_id/demo_count/child_count/mode`），不是标签键对象
 

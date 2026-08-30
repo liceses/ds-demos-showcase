@@ -44,6 +44,7 @@ import type {
   RatingStats,
   LiveStats,
   OssSyncJob,
+  SiteInfo,
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
@@ -954,6 +955,46 @@ export const mockApi = {
   async getLiveStats(): Promise<LiveStats> {
     await delay(100)
     return { online: 12, last1min: 8, last5min: 35, today: 168 }
+  },
+  async getSiteInfo(): Promise<SiteInfo> {
+    await delay(100)
+    const approved = demos.filter((d) => d.status === 'approved')
+    return {
+      site: { name: 'AI 全民制作人', description: 'AI 网页 Demo 作品集', info_version: 1 },
+      content: {
+        demos_total: approved.length,
+        demos_by_type: approved.reduce<Record<string, number>>((m, d) => {
+          m[d.demo_type] = (m[d.demo_type] || 0) + 1
+          return m
+        }, {}),
+        authors_total: 6,
+        uploads_last_7d: approved.length,
+        tags: { keys: 10, values: 210 },
+        forum_topics: forumTopics.length,
+      },
+      community: { users_total: 20, users_active_week: 5 },
+      traffic: { pv_today: 168, pv_yesterday: 210, pv_total: 12345, online_now: 12 },
+      hot: {
+        top_models: [
+          { value: 'ds-unknown', demos: 12 },
+          { value: 'dsv4-flash', demos: 6 },
+        ],
+        top_games: [{ value: '我的世界', demos: 4 }],
+        latest_demo: approved.length
+          ? { slug: approved[0].slug, title: approved[0].title, created_at: approved[0].created_at }
+          : null,
+      },
+      capabilities: {
+        upload: {
+          anonymous: true,
+          guide: '/api/v1/meta/agent-guide',
+          tag_keys: '/api/v1/tags/tag-keys',
+          idempotency: true,
+        },
+        features: { forum: true, ratings: true, session_logs: true, preview: 'versioned-url' },
+      },
+      generated_at: new Date().toISOString(),
+    }
   },
   async getSponsors(): Promise<SponsorBoard> {
     await delay()

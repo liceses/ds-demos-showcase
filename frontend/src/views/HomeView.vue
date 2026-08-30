@@ -165,13 +165,15 @@ onActivated(() => {
 onMounted(async () => {
   tickTagline()
   try {
-    const [g, a, keys] = await Promise.all([
+    const [g, a, info] = await Promise.all([
       api.listDemos({ status: 'approved', tags: [GRAY_TAG], page: 1, page_size: 6 }),
       api.listAnnouncements(),
-      api.listTagKeys(),
+      api.getSiteInfo(),
     ])
     grayTest.value = g.items
-    totalTags.value = keys.reduce((n, k) => n + k.values.length, 0)
+    // 计数器走 /meta/site-info（60s 缓存），替代原来的 tag-keys 全量拉取
+    totalTags.value = info.content.tags.values
+    totalDemos.value = info.content.demos_total
     announcements.value = a
     await loadFeatured()
   } catch (e) {

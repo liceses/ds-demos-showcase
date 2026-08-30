@@ -43,6 +43,7 @@ import type {
   RecognitionItem,
   RatingStats,
   LiveStats,
+  SiteInfo,
   OssSyncJob,
 } from './types'
 
@@ -451,6 +452,11 @@ const realApi = {
   },
   async getLiveStats(): Promise<LiveStats> {
     const { data } = await http.get('/stats/live')
+    return data
+  },
+  // 站点公开概况（后端 60s 缓存 + CDN 可缓存）：内容/社区/流量/热门一次拿全
+  async getSiteInfo(): Promise<SiteInfo> {
+    const { data } = await http.get('/meta/site-info')
     return data
   },
   async getSponsors(): Promise<SponsorBoard> {

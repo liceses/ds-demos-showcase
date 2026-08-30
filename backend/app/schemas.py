@@ -281,6 +281,8 @@ class SessionLogOut(ORMModel):
 class SettingsOut(BaseModel):
     auto_approve: bool = True
     auto_approve_public: bool = False
+    # 整活模式；PUT 时 None = 保持不变（旧调用方漏带字段不会静默关闭）
+    fun_mode: bool | None = None
 
 
 # ---------- 赞助/致谢 ----------

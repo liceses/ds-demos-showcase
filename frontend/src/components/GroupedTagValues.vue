@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { TagKeyValue } from '../api/types'
 import { groupedTagValues } from '../utils/tagGroups'
+import { tagLabel } from '../utils/funMode'
 
 const props = withDefaults(
   defineProps<{ values: TagKeyValue[]; routeKey: string; activeValue?: string; mode?: string; hit?: (value: string) => boolean }>(),
@@ -24,7 +25,7 @@ const multi = computed(() => groups.value.length > 1)
           :class="['mode-' + mode, { active: v.value === activeValue, 'search-hit': hit?.(v.value) }]"
           :to="`/tag/${routeKey}/${v.value}`"
         >
-          {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+          {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
         </RouterLink>
       </div>
     </div>
@@ -38,7 +39,7 @@ const multi = computed(() => groups.value.length > 1)
         :class="['mode-' + mode, { active: v.value === activeValue, 'search-hit': hit?.(v.value) }]"
         :to="`/tag/${routeKey}/${v.value}`"
       >
-        {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+        {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
       </RouterLink>
     </div>
   </template>

@@ -14,6 +14,7 @@ from sqlalchemy import func
 from ..database import SessionLocal
 from ..models import Demo, DemoTag, ForumReply, ForumTopic, Tag, TagKey, User
 from ..services import visits
+from .settings_service import get_fun_mode
 
 _TTL = 60  # 秒
 _lock = threading.Lock()
@@ -120,6 +121,8 @@ def _build() -> dict:
         top_models = _top_tag_values(db, "model")
         top_games = _top_tag_values(db, "game")
 
+        fun_mode = get_fun_mode(db)
+
         pv = visits.get_stats()
         online_now = visits.get_live_stats()["online"]
     finally:
@@ -131,6 +134,8 @@ def _build() -> dict:
             "description": "AI 网页 Demo 作品集",
             "info_version": 1,
         },
+        # 显示层开关（整活模式等）；只影响前端展示文案，不改任何数据
+        "display": {"fun_mode": fun_mode},
         "content": {
             "demos_total": demos_total,
             "demos_by_type": demos_by_type,

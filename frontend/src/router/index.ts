@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../api'
+import { titleBase } from '../utils/funMode'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -48,8 +49,8 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-  const base = 'AI 全民制作人'
-  document.title = to.meta.title ? `${String(to.meta.title)} · ${base}` : base
+  // 整活模式开启时站点标题随 titleBase 切换（响应式，开关切换即时生效）
+  document.title = to.meta.title ? `${String(to.meta.title)} · ${titleBase.value}` : titleBase.value
   // 页面访问打点：一次路由切换 = 一次浏览（原始 PV +1）
   api.reportVisit()
 })

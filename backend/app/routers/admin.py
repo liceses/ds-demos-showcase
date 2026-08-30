@@ -81,6 +81,7 @@ def get_settings(db: Session = Depends(get_db), _: User = Depends(require_admin)
     return SettingsOut(
         auto_approve=settings_service.get_auto_approve(db),
         auto_approve_public=settings_service.get_auto_approve_public(db),
+        fun_mode=settings_service.get_fun_mode(db),
     )
 
 
@@ -88,7 +89,14 @@ def get_settings(db: Session = Depends(get_db), _: User = Depends(require_admin)
 def update_settings(body: SettingsOut, db: Session = Depends(get_db), _: User = Depends(require_admin)):
     settings_service.set_auto_approve(db, body.auto_approve)
     settings_service.set_auto_approve_public(db, body.auto_approve_public)
-    return SettingsOut(auto_approve=body.auto_approve, auto_approve_public=body.auto_approve_public)
+    # fun_mode 仅在显式传入时更新（None = 不动），避免漏带字段被静默重置
+    if body.fun_mode is not None:
+        settings_service.set_fun_mode(db, body.fun_mode)
+    return SettingsOut(
+        auto_approve=settings_service.get_auto_approve(db),
+        auto_approve_public=settings_service.get_auto_approve_public(db),
+        fun_mode=settings_service.get_fun_mode(db),
+    )
 
 
 @router.post("/oss-sync")

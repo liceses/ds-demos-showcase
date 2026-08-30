@@ -4,9 +4,13 @@ import { computed, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'
+import { funEffective } from '../utils/funMode'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+
+// 整活模式：大标题/灰测区文案随全站开关切换
+const funOn = funEffective
 
 const featured = ref<DemoSummary[]>([])
 const featuredPool = ref<DemoSummary[]>([])
@@ -192,7 +196,8 @@ onBeforeUnmount(() => {
   <section class="page-hero">
     <span class="eyebrow">AI 网页 Demo 作品集</span>
     <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
-      <h1 class="huge">AI 全民<br />制作人</h1>
+      <h1 v-if="funOn" class="huge">astra 灰测<br />作品收集</h1>
+      <h1 v-else class="huge">AI 全民<br />制作人</h1>
       <span class="home-title-hint">关于本站 →</span>
     </RouterLink>
     <p class="sub">
@@ -259,7 +264,7 @@ onBeforeUnmount(() => {
   <section v-if="grayTest.length" class="section" style="padding-top: 8px">
     <div class="section-head">
       <h2 class="section-title">
-        灰测作品
+        {{ funOn ? 'astra 灰测作品' : '灰测作品' }}
         <span class="mode-badge mode-badge-int" style="margin-left: 10px">网传灰测</span>
       </h2>
       <RouterLink class="btn btn-sm btn-outline" :to="grayTagUrl">查看全部 →</RouterLink>

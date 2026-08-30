@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useUiStore } from '../stores/ui'
 import type { TagKeyValue, TagMergeResult } from '../api/types'
 import { groupedTagValues } from '../utils/tagGroups'
+import { tagLabel } from '../utils/funMode'
 
 const props = withDefaults(
   defineProps<{
@@ -214,7 +215,7 @@ async function executeMerge() {
               :role="mode === 'select' || mode === 'admin' ? 'button' : undefined"
               @click="mode === 'select' ? toggle(v.value) : (mode === 'admin' ? copyValue(v) : undefined)"
             >
-              {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+              {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
             </component>
           </template>
           <span v-if="!visibleValues(g.values).length" class="muted">空</span>
@@ -234,7 +235,7 @@ async function executeMerge() {
         <div v-if="mode === 'admin' && g.group === '未分组'" class="group-card-values" style="margin-top: 6px">
           <template v-for="v in visibleValues(g.values)" :key="v.value">
             <span class="tag-chip mode-fixed" :class="{ 'search-hit': hit(v.value) }">
-              {{ v.value }}<span class="count">{{ v.demo_count }}</span>
+              {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
               <select class="group-assign" :value="v.group || ''" @change="assignValue(v, ($event.target as HTMLSelectElement).value || null)" @click.stop>
                 <option value="">未分组</option>
                 <option v-for="gg in (mode === 'admin' ? adminGroups : []).filter((x) => x.group !== '未分组')" :key="gg.group" :value="gg.group">{{ gg.group }}</option>

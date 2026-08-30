@@ -3,10 +3,11 @@ defineOptions({ name: 'AdminSettingsSection' })
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
+import { applyServerFunMode } from '../../utils/funMode'
 import type { Settings } from '../../api/types'
 
 const ui = useUiStore()
-const settings = ref<Settings>({ auto_approve: true, auto_approve_public: false })
+const settings = ref<Settings>({ auto_approve: true, auto_approve_public: false, fun_mode: false })
 const storageInfo = ref<{ oss_enabled: boolean; mode: string; local_demos: number; local_files: number; local_size_bytes: number }>({
   oss_enabled: false,
   mode: 'local',
@@ -33,6 +34,9 @@ async function loadSettings() {
 async function saveSettings() {
   try {
     settings.value = await api.updateSettings(settings.value)
+    // 整活开关：本端立即生效 + 强刷 site-info 缓存，让全站尽快广播新状态
+    applyServerFunMode(!!settings.value.fun_mode)
+    api.getSiteInfo({ refresh: true }).catch(() => undefined)
     ui.toast('设置已保存', 'success')
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -111,6 +115,14 @@ onMounted(loadSettings)
         未注册（public）上传自动通过审核
       </label>
       <p class="hint" style="margin-bottom: 14px">开启「未注册放行」后，任何人（含 AI agent）不注册即可上传并即时上线，建议配合限流与 UPLOAD_CODE 信任通道使用。</p>
+      <label class="field">
+        <input v-model="settings.fun_mode" type="checkbox" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle" />
+        整活模式（astra 灰测作品收集）
+      </label>
+      <p class="hint" style="margin-bottom: 14px">
+        纯显示层整活：前端把 <code>ds-unknown</code> 显示为 <code>astra-grey</code>、站点标题换成「astra 灰测作品收集」。
+        不改任何数据、URL 和上传行为；保存后全站访客约 1~2 分钟内生效（CDN 缓存），管理后台恒显真实值。
+      </p>
       <button class="btn btn-primary" type="button" @click="saveSettings">保存设置</button>
     </div>
   </div>

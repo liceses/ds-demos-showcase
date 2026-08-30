@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useTagsStore } from '../stores/tags'
 import TagGroupBox from '../components/TagGroupBox.vue'
 import type { TagKeyInfo } from '../api/types'
+import { tagLabel } from '../utils/funMode'
 
 const tagsStore = useTagsStore()
 const keys = computed(() => tagsStore.keys)
@@ -121,7 +122,7 @@ onMounted(async () => {
             <div v-if="activeTagKey.values.length" class="tag-dist-bars" style="margin-bottom: 12px">
               <div v-for="v in activeTagKey.values" :key="v.value" class="tag-dist-bar-col" :title="`${v.value}: ${v.demo_count}`">
                 <div class="tag-dist-bar-fill" :class="'mode-' + activeTagKey.mode" :style="{ height: Math.max(4, Math.round((v.demo_count / maxCount(activeTagKey)) * 36)) + 'px' }"></div>
-                <span class="tag-dist-bar-label">{{ v.value }}</span>
+                <span class="tag-dist-bar-label">{{ tagLabel(v.value) }}</span>
               </div>
             </div>
 

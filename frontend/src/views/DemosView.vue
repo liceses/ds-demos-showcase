@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
+import { tagLabel, tagStrLabel } from '../utils/funMode'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import PromptDemoCard from '../components/PromptDemoCard.vue'
@@ -353,7 +354,7 @@ onBeforeUnmount(() => observer?.disconnect())
         type="button"
         @click="toggleTag(t)"
       >
-        {{ t }}<span class="chip-x">X</span>
+        {{ tagStrLabel(t) }}<span class="chip-x">X</span>
       </button>
       <button class="btn btn-sm btn-dark" type="button" @click="clearTags">清空</button>
     </div>
@@ -369,7 +370,7 @@ onBeforeUnmount(() => observer?.disconnect())
         type="button"
         @click="toggleTag(g.key + ':' + g.value)"
       >
-        {{ g.key }}:{{ g.value }}
+        {{ g.key }}:{{ tagLabel(g.value) }}
         <span class="count">{{ g.count }}</span>
       </button>
       <button class="btn btn-sm btn-outline" type="button" @click="stripsOpen = !stripsOpen">
@@ -413,7 +414,7 @@ onBeforeUnmount(() => observer?.disconnect())
                     :class="{ active: selectedTags.includes(k.key + ':' + v.value) }"
                     type="button"
                     @click="toggleTag(k.key + ':' + v.value)"
-                  >{{ v.value }}<span class="count">{{ v.count }}</span></button>
+                  >{{ tagLabel(v.value) }}<span class="count">{{ v.count }}</span></button>
                 </div>
               </div>
               <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">收起</button>
@@ -428,7 +429,7 @@ onBeforeUnmount(() => observer?.disconnect())
               type="button"
               @click="toggleTag(k.key + ':' + v.value)"
             >
-              {{ v.value }}
+              {{ tagLabel(v.value) }}
               <span class="count">{{ v.count }}</span>
             </button>
             <button

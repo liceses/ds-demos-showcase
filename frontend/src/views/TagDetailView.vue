@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { DemoSummary, Tag, TagKeyInfo } from '../api/types'
+import { tagLabel } from '../utils/funMode'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import TagGroupBox from '../components/TagGroupBox.vue'
@@ -53,7 +54,7 @@ onMounted(async () => {
       <RouterLink to="/tags">标签</RouterLink>
       <template v-if="tag.parent">
         <span class="sep">/</span>
-        <RouterLink :to="`/tag/${tag.parent.key}/${tag.parent.value}`">{{ tag.parent.key }}:{{ tag.parent.value }}</RouterLink>
+        <RouterLink :to="`/tag/${tag.parent.key}/${tag.parent.value}`">{{ tag.parent.key }}:{{ tagLabel(tag.parent.value) }}</RouterLink>
       </template>
     </div>
 
@@ -64,7 +65,7 @@ onMounted(async () => {
         </span>
         <span class="eyebrow">标签详情</span>
       </div>
-      <h1 class="huge">{{ tag.key }}:{{ tag.value }}</h1>
+      <h1 class="huge">{{ tag.key }}:{{ tagLabel(tag.value) }}</h1>
       <p class="sub">
         <template v-if="keyDef">{{ keyDef.description || '' }}</template>
         <template v-if="valueInfo?.description"><br />{{ valueInfo.description }}</template>
@@ -100,7 +101,7 @@ onMounted(async () => {
           class="tag-chip teal"
           :to="`/tag/${c.key}/${c.value}`"
         >
-          {{ c.key }}:{{ c.value }}
+          {{ c.key }}:{{ tagLabel(c.value) }}
           <span class="count">{{ c.demo_count }}</span>
         </RouterLink>
       </div>

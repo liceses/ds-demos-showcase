@@ -649,7 +649,7 @@ GET /api/v1/demos?status=approved&author=public
 - `POST /api/v1/admin/review/{slug}`：审核通过/拒绝
 - `GET /api/v1/admin/demos`：管理端 demo 列表
 - `GET /api/v1/admin/users`：用户管理列表
-- `GET /api/v1/admin/settings` / `PUT /api/v1/admin/settings`：`{auto_approve, auto_approve_public}`
+- `GET /api/v1/admin/settings` / `PUT /api/v1/admin/settings`：`{auto_approve, auto_approve_public, fun_mode}`；PUT 时 `fun_mode` 可省略（null = 保持不变，防旧调用方漏带字段被静默重置）
 - `POST /api/v1/admin/oss-sync`：强制全量 OSS 同步
 - `GET /api/v1/admin/storage-status`：存储/OSS 状态
 - `GET /api/v1/admin/stats`：管理后台概览统计（`{demos:{total,approved,pending,rejected}, users, storage}`）
@@ -666,7 +666,7 @@ GET /api/v1/demos?status=approved&author=public
 - `POST /api/v1/stats/recognition`、`PUT /api/v1/stats/recognition/{id}` 返回 `{"id": ...}`
 
 ### 站点
-- `GET /api/v1/meta/site-info`：站点公开概况 JSON（`site/content/community/traffic/hot/capabilities`，`info_version=1`）。60s 内存缓存 + `Cache-Control: public, max-age=60`（CDN 可缓存）；仅 admin 可 `?refresh=1` 强刷。只含公开安全数字，管理面统计在 `/admin/stats`。
+- `GET /api/v1/meta/site-info`：站点公开概况 JSON（`site/content/community/traffic/hot/capabilities/display`，`info_version=1`）。`display.fun_mode` 为整活模式开关（纯前端显示层替换，见 `docs/整活模式.md`）。60s 内存缓存 + `Cache-Control: public, max-age=60`（CDN 可缓存）；仅 admin 可 `?refresh=1` 强刷。只含公开安全数字，管理面统计在 `/admin/stats`。
 - `GET /api/v1/health`：存活探针 `{status:"ok", db:"ok"}`；DB 不可用返回 503；`Cache-Control: no-store`（防监控读到缓存假活）。
 - `GET /api/v1`（根）已补 `site_info` / `health` 两个字段，供 agent 自发现。
 

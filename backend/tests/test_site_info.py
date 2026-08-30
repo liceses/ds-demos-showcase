@@ -46,3 +46,27 @@ def test_site_info_refresh_needs_admin(client, admin_headers):
     r = client.get("/api/v1/meta/site-info?refresh=1", headers=admin_headers)
     assert r.status_code == 200
     assert r.json()["site"]["info_version"] == 1
+
+
+def test_fun_mode_settings_roundtrip_and_site_info(client, admin_headers):
+    # 默认关
+    r = client.get("/api/v1/admin/settings", headers=admin_headers)
+    assert r.status_code == 200
+    assert r.json()["fun_mode"] is False
+
+    # 开启
+    r = client.put("/api/v1/admin/settings", json={"auto_approve": True, "auto_approve_public": False, "fun_mode": True}, headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["fun_mode"] is True
+
+    # site-info（admin 强刷绕过缓存）应广播 display.fun_mode = True
+    r = client.get("/api/v1/meta/site-info?refresh=1", headers=admin_headers)
+    assert r.json()["display"]["fun_mode"] is True
+
+    # 漏带 fun_mode 字段的 PUT：保持不变（不被静默关闭）
+    r = client.put("/api/v1/admin/settings", json={"auto_approve": True, "auto_approve_public": False}, headers=admin_headers)
+    assert r.json()["fun_mode"] is True
+
+    # 显式关闭
+    r = client.put("/api/v1/admin/settings", json={"auto_approve": True, "auto_approve_public": False, "fun_mode": False}, headers=admin_headers)
+    assert r.json()["fun_mode"] is False

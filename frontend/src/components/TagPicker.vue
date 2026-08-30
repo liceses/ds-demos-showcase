@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useTagsStore } from '../stores/tags'
 import type { TagKeyInfo, TagKeyValue } from '../api/types'
+import { tagLabel } from '../utils/funMode'
 
 export interface TagPick {
   key: string
@@ -209,7 +210,7 @@ onMounted(async () => {
         role="button"
         :title="s.description || '点击移除'"
         @click="removeValue(s.key, s.value)"
-      >{{ s.key }}:{{ s.value }}<span class="chip-x">X</span></span>
+      >{{ s.key }}:{{ tagLabel(s.value) }}<span class="chip-x">X</span></span>
       <div v-if="!selectedList.length" class="muted">还没有已选标签</div>
     </div>
 
@@ -258,7 +259,7 @@ onMounted(async () => {
                     :class="{ active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }"
                     type="button"
                     @click="toggleValue(activeTagKey.key, v.value)"
-                  >{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                  >{{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span></button>
                 </div>
               </div>
 
@@ -323,7 +324,7 @@ onMounted(async () => {
                 role="button"
                 :title="v.description || '点击移除'"
                 @click="removeValue(activeTagKey.key, v.value)"
-              >{{ v.value }}<span class="chip-x">X</span></span>
+              >{{ tagLabel(v.value) }}<span class="chip-x">X</span></span>
             </div>
           </template>
           <div v-else class="muted">请选择左侧标签键</div>

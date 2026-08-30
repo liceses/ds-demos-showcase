@@ -455,8 +455,9 @@ const realApi = {
     return data
   },
   // 站点公开概况（后端 60s 缓存 + CDN 可缓存）：内容/社区/流量/热门一次拿全
-  async getSiteInfo(): Promise<SiteInfo> {
-    const { data } = await http.get('/meta/site-info')
+  // refresh=true 仅 admin 生效：强刷后端缓存（切整活开关后立刻广播新状态）
+  async getSiteInfo(opts?: { refresh?: boolean }): Promise<SiteInfo> {
+    const { data } = await http.get('/meta/site-info', { params: opts?.refresh ? { refresh: 1 } : {} })
     return data
   },
   async getSponsors(): Promise<SponsorBoard> {

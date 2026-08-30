@@ -187,6 +187,8 @@ export interface Settings {
   auto_approve: boolean
   /** 未注册（public）上传是否直接放行 */
   auto_approve_public: boolean
+  /** 整活模式（纯前端显示层替换）；PUT 时省略 = 保持不变 */
+  fun_mode?: boolean | null
 }
 
 export interface AuthResponse {
@@ -484,6 +486,8 @@ export interface RecognitionInput {
 /** 站点公开概况（GET /meta/site-info）：内容/社区/流量/热门/能力，60s 缓存 */
 export interface SiteInfo {
   site: { name: string; description: string; info_version: number }
+  /** 显示层开关（整活模式等）；只影响前端展示文案，不改任何数据 */
+  display?: { fun_mode: boolean }
   content: {
     demos_total: number
     demos_by_type: Record<string, number>

@@ -12,6 +12,7 @@ import DemoCard from '../components/DemoCard.vue'
 import RatingWidget from '../components/RatingWidget.vue'
 import QuickComments from '../components/QuickComments.vue'
 import { parseDate } from '../utils/time'
+import { tagLabel } from '../utils/funMode'
 
 const route = useRoute()
 const router = useRouter()
@@ -222,7 +223,7 @@ onMounted(load)
                   :class="t.key === 'author' ? 'yellow' : t.key === 'model' ? 'teal' : ''"
                   :to="`/tag/${t.key}/${t.value}`"
                 >
-                  {{ t.key }}:{{ t.value }}
+                  {{ t.key }}:{{ tagLabel(t.value) }}
                 </RouterLink>
               </div>
               <div class="notice notice-info" style="margin-top: 20px">

@@ -961,6 +961,7 @@ export const mockApi = {
     const approved = demos.filter((d) => d.status === 'approved')
     return {
       site: { name: 'AI 全民制作人', description: 'AI 网页 Demo 作品集', info_version: 1 },
+      display: { fun_mode: false },
       content: {
         demos_total: approved.length,
         demos_by_type: approved.reduce<Record<string, number>>((m, d) => {

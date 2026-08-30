@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { api } from './api'
 import { isMock } from './api'
+import { adminExempt, applyServerFunMode, funEffective, titleBase } from './utils/funMode'
 import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
 import ForumHeader from './components/ForumHeader.vue'
@@ -15,13 +17,25 @@ const mobileOpen = ref(false)
 const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView', 'ForumListView']
 // 保留页按 name 做 key（同页返回复用实例）；其他页按 fullPath（参数变化强制重挂载）
 const pageKey = computed(() => (route.meta.keepAlive ? route.name : route.fullPath))
+// 整活模式：品牌文案随全站开关切换（/admin 豁免，恒显真实值）
+const funOn = funEffective
 
 watch(
   () => route.fullPath,
   () => {
     mobileOpen.value = false
+    adminExempt.value = route.path.startsWith('/admin')
   },
+  { immediate: true }, // 直接以 /admin 打开时也要立即生效
 )
+
+// 全站整活开关：拉 site-info 校正（60s 缓存，轻量）；失败保持 localStorage 预 seed
+onMounted(() => {
+  api
+    .getSiteInfo()
+    .then((info) => applyServerFunMode(!!info.display?.fun_mode))
+    .catch(() => undefined)
+})
 
 const menuItems = [
   { to: '/', label: '首页' },
@@ -39,7 +53,8 @@ const menuItems = [
     <header class="topbar container">
       <RouterLink to="/" class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-name">AI 全民<br />制作人</span>
+        <span v-if="funOn" class="brand-name">astra 灰测<br />作品收集</span>
+        <span v-else class="brand-name">AI 全民<br />制作人</span>
       </RouterLink>
 
       <nav class="topnav topnav-desktop">
@@ -130,7 +145,7 @@ const menuItems = [
 
     <template v-if="!route.meta.forum">
       <footer class="footer container">
-        <div class="mono">AI 全民制作人 · AI 网页 Demo 作品集</div>
+        <div class="mono">{{ titleBase }} · AI 网页 Demo 作品集</div>
         <div class="mono">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明</div>
       </footer>
     </template>

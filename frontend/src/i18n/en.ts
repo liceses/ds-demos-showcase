@@ -93,6 +93,8 @@ export const en = {
   ],
 
   demos: {
+    sub: 'Search, filter and browse every AI web demo — by tags and popularity.',
+    works: 'works',
     normal: 'Normal',
     prompt: 'Prompt',
     newest: 'Newest',

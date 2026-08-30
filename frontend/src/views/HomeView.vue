@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'
 import { funEffective } from '../utils/funMode'
-import { t, tArr } from '../i18n'
+import { t, tArr, lang } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
@@ -199,7 +199,8 @@ onBeforeUnmount(() => {
   <section class="page-hero">
     <span class="eyebrow">{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
     <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
-      <h1 v-if="funOn" class="huge">astra 灰测<br />作品收集</h1>
+      <h1 v-if="funOn" class="huge">{{ lang === 'en' ? 'astra grey-test<br />collection' : 'astra 灰测<br />作品收集' }}</h1>
+      <h1 v-else-if="lang === 'en'" class="huge">AI Demo<br />Makers</h1>
       <h1 v-else class="huge">AI 全民<br />制作人</h1>
       <span class="home-title-hint">{{ t('home.aboutHint', '关于本站 →') }}</span>
     </RouterLink>

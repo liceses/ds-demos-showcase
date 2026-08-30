@@ -60,7 +60,9 @@ watchEffect(() => {
     <header class="topbar container">
       <RouterLink to="/" class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
-        <span v-if="funOn" class="brand-name">{{ lang === 'en' ? 'astra grey-test<br />collection' : 'astra 灰测<br />作品收集' }}</span>
+        <!-- <br> 写模板字面量（{{ }} 插值会转义 HTML） -->
+        <span v-if="funOn && lang === 'en'" class="brand-name">astra grey-test<br />collection</span>
+        <span v-else-if="funOn" class="brand-name">astra 灰测<br />作品收集</span>
         <span v-else-if="lang === 'en'" class="brand-name">AI Demo<br />Makers</span>
         <span v-else class="brand-name">AI 全民<br />制作人</span>
       </RouterLink>

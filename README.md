@@ -1,5 +1,7 @@
 # AI 全民制作人
 
+简体中文 | [English](./README_EN.md)
+
 「AI 网页 Demo 作品集」展示站：多栏瀑布流主页 + Demo 详情/预览 + 标签系统 + 评论 + 会话日志 + 版本时间线 + **提示词模式** + 上传下载 + 管理后台。
 
 技术栈：**Vue 3 + TypeScript + Vite（前端） / FastAPI + SQLAlchemy（后端） / SQLite + 本地存储 / Nginx（生产托管与反代） / Docker Compose（部署）**。

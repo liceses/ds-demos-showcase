@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useUiStore } from '../stores/ui'
+import { t } from '../i18n'
 
 const ui = useUiStore()
 
@@ -30,10 +31,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <p v-if="ui.confirmState.options.message" class="modal-message">{{ ui.confirmState.options.message }}</p>
         <div class="filter-row" style="margin-bottom: 0; justify-content: flex-end">
           <button class="btn btn-sm btn-dark" type="button" @click="cancel">
-            {{ ui.confirmState.options.cancelText || '取消' }}
+            {{ ui.confirmState.options.cancelText || t('common.cancel', '取消') }}
           </button>
           <button class="btn btn-sm" :class="ui.confirmState.options.danger ? 'btn-danger' : 'btn-primary'" type="button" @click="confirm">
-            {{ ui.confirmState.options.confirmText || '确定' }}
+            {{ ui.confirmState.options.confirmText || t('common.ok', '确定') }}
           </button>
         </div>
       </div>

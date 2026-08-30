@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { DemoSummary, Tag, TagKeyInfo } from '../api/types'
 import { tagLabel } from '../utils/funMode'
+import { t, modeLabel, keyLabel } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import TagGroupBox from '../components/TagGroupBox.vue'
@@ -17,8 +18,6 @@ const demos = ref<DemoSummary[]>([])
 const forumCount = ref(0)
 const loading = ref(true)
 const error = ref('')
-
-const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
 
 const valueInfo = computed(() => keyDef.value?.values.find((x) => x.value === props.v) || null)
 const sameKeyValues = computed(() => keyDef.value?.values || [])
@@ -44,43 +43,43 @@ onMounted(async () => {
 </script>
 
 <template>
-  <LoadingRow v-if="loading" text="加载标签…" />
+  <LoadingRow v-if="loading" :text="t('tags.loading', '加载标签…')" />
   <EmptyBox v-else-if="error" :text="error" />
 
   <template v-else-if="tag">
     <div class="breadcrumb">
-      <RouterLink to="/">首页</RouterLink>
+      <RouterLink to="/">{{ t('tagDetail.home', '首页') }}</RouterLink>
       <span class="sep">/</span>
-      <RouterLink to="/tags">标签</RouterLink>
+      <RouterLink to="/tags">{{ t('tagDetail.tags', '标签') }}</RouterLink>
       <template v-if="tag.parent">
         <span class="sep">/</span>
-        <RouterLink :to="`/tag/${tag.parent.key}/${tag.parent.value}`">{{ tag.parent.key }}:{{ tagLabel(tag.parent.value) }}</RouterLink>
+        <RouterLink :to="`/tag/${tag.parent.key}/${tag.parent.value}`">{{ keyLabel(tag.parent.key) }}:{{ tagLabel(tag.parent.value) }}</RouterLink>
       </template>
     </div>
 
     <section class="page-hero" style="padding-bottom: 20px">
       <div class="filter-row" style="margin: 0 0 12px">
         <span v-if="keyDef" class="mode-badge" :class="'mode-badge-' + keyDef.mode">
-          {{ keyDef.label || keyDef.key }} · {{ modeLabel[keyDef.mode] }}
+          {{ keyLabel(keyDef.key, keyDef.label) }} · {{ modeLabel(keyDef.mode) }}
         </span>
-        <span class="eyebrow">标签详情</span>
+        <span class="eyebrow">{{ t('tagDetail.eyebrow', '标签详情') }}</span>
       </div>
       <h1 class="huge">{{ tag.key }}:{{ tagLabel(tag.value) }}</h1>
       <p class="sub">
         <template v-if="keyDef">{{ keyDef.description || '' }}</template>
         <template v-if="valueInfo?.description"><br />{{ valueInfo.description }}</template>
-        <template v-if="!keyDef && !valueInfo?.description">暂无介绍</template>
+        <template v-if="!keyDef && !valueInfo?.description">{{ t('tagDetail.noDesc', '暂无介绍') }}</template>
       </p>
       <div class="filter-row" style="margin-top: 16px">
-        <span class="mini-stat"><b>{{ tag.demo_count }}</b> Demo</span>
-        <span class="mini-stat"><b>{{ sameKeyValues.length }}</b> 同键值</span>
-        <RouterLink v-if="forumCount > 0" class="mini-stat" :to="`/forum?tag=${tag.key}:${tag.value}`">相关讨论 {{ forumCount }} →</RouterLink>
+        <span class="mini-stat"><b>{{ tag.demo_count }}</b> {{ t('tagDetail.demos', 'Demo') }}</span>
+        <span class="mini-stat"><b>{{ sameKeyValues.length }}</b> {{ t('tagDetail.sameKey', '同键值') }}</span>
+        <RouterLink v-if="forumCount > 0" class="mini-stat" :to="`/forum?tag=${tag.key}:${tag.value}`">{{ t('tagDetail.related', '相关讨论 {n} →', { n: forumCount }) }}</RouterLink>
       </div>
     </section>
 
     <section v-if="sameKeyValues.length > 1" class="section" style="padding-top: 8px">
       <div class="section-head">
-        <h2 class="section-title">同键切换</h2>
+        <h2 class="section-title">{{ t('tagDetail.switchKey', '同键切换') }}</h2>
       </div>
       <TagGroupBox
         v-if="sameKeyValues.length"
@@ -92,7 +91,7 @@ onMounted(async () => {
 
     <section v-if="tag.children?.length" class="section" style="padding-top: 8px">
       <div class="section-head">
-        <h2 class="section-title">子标签</h2>
+        <h2 class="section-title">{{ t('tagDetail.children', '子标签') }}</h2>
       </div>
       <div class="filter-row">
         <RouterLink
@@ -101,7 +100,7 @@ onMounted(async () => {
           class="tag-chip teal"
           :to="`/tag/${c.key}/${c.value}`"
         >
-          {{ c.key }}:{{ tagLabel(c.value) }}
+          {{ keyLabel(c.key) }}:{{ tagLabel(c.value) }}
           <span class="count">{{ c.demo_count }}</span>
         </RouterLink>
       </div>

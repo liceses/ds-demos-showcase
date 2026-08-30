@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { api } from '../api'
 import type { Announcement, DemoSummary } from '../api/types'
 import { funEffective } from '../utils/funMode'
+import { t, tArr } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
@@ -22,7 +23,7 @@ const totalTags = ref(0)
 const loading = ref(true)
 const error = ref('')
 
-// 副标题轮换（dsh-status-rotator 风格，安全精选）
+// 副标题轮换（dsh-status-rotator 风格，安全精选）；EN 池见 src/i18n/en.ts
 const taglinePhrases = [
   '正在收集 AI 生成的网页 Demo…',
   '正在整理会话日志与版本时间线…',
@@ -73,13 +74,15 @@ const taglinePhrases = [
   '正在 try catch 一个 try catch…',
 ]
 const tagline = ref('')
+const taglinePool = computed(() => tArr('taglines', taglinePhrases))
 let taglineTimer: ReturnType<typeof setTimeout> | null = null
 let taglineIdx = 0
 let taglineChar = 0
 let taglineDeleting = false
 
 function tickTagline() {
-  const phrase = taglinePhrases[taglineIdx]
+  const pool = taglinePool.value
+  const phrase = pool[taglineIdx % pool.length]
   if (!taglineDeleting) {
     taglineChar++
     tagline.value = phrase.slice(0, taglineChar)
@@ -93,7 +96,7 @@ function tickTagline() {
     tagline.value = phrase.slice(0, taglineChar)
     if (taglineChar <= 0) {
       taglineDeleting = false
-      taglineIdx = (taglineIdx + 1) % taglinePhrases.length
+      taglineIdx = (taglineIdx + 1) % pool.length
     }
   }
   taglineTimer = setTimeout(tickTagline, taglineDeleting ? 18 : 42)
@@ -148,10 +151,10 @@ function scrollToAnnouncements() {
 }
 
 const entries = [
-  { to: '/demos', stamp: '逛', cls: 'lib', title: '作品库', desc: '搜索 · 筛选 · 全部作品' },
-  { to: '/tags', stamp: '翻', cls: 'tags', title: '标签库', desc: '固定 / 开放 / 数字 三种维度' },
-  { to: '/leaderboard', stamp: '榜', cls: 'rank', title: '排行榜', desc: '神作 / 鬼作 / 评分口碑榜' },
-  { to: '/upload', stamp: '投', cls: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
+  { to: '/demos', stamp: '逛', cls: 'lib', key: 'lib', title: '作品库', desc: '搜索 · 筛选 · 全部作品' },
+  { to: '/tags', stamp: '翻', cls: 'tags', key: 'tags', title: '标签库', desc: '固定 / 开放 / 数字 三种维度' },
+  { to: '/leaderboard', stamp: '榜', cls: 'rank', key: 'rank', title: '排行榜', desc: '神作 / 鬼作 / 评分口碑榜' },
+  { to: '/upload', stamp: '投', cls: 'upload', key: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
 ]
 
 // 论坛斜角入口
@@ -194,20 +197,20 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page-hero">
-    <span class="eyebrow">AI 网页 Demo 作品集</span>
+    <span class="eyebrow">{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
     <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
       <h1 v-if="funOn" class="huge">astra 灰测<br />作品收集</h1>
       <h1 v-else class="huge">AI 全民<br />制作人</h1>
-      <span class="home-title-hint">关于本站 →</span>
+      <span class="home-title-hint">{{ t('home.aboutHint', '关于本站 →') }}</span>
     </RouterLink>
     <p class="sub">
       <span class="tagline">{{ tagline }}</span><span class="tagline-cursor">|</span>
-      <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">查看公告 →</a>
+      <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">{{ t('home.viewAnn', '查看公告 →') }}</a>
     </p>
     <div class="filter-row" style="margin-top: 16px">
-      <span class="tag-stat"><b>{{ totalDemos }}</b> Demo</span>
-      <span class="tag-stat"><b>{{ totalTags }}</b> 标签值</span>
-      <RouterLink class="btn btn-sm btn-primary" to="/upload">投稿 →</RouterLink>
+      <span class="tag-stat"><b>{{ totalDemos }}</b> {{ t('home.demos', 'Demo') }}</span>
+      <span class="tag-stat"><b>{{ totalTags }}</b> {{ t('home.tags', '标签值') }}</span>
+      <RouterLink class="btn btn-sm btn-primary" to="/upload">{{ t('home.submit', '投稿 →') }}</RouterLink>
     </div>
   </section>
 
@@ -222,37 +225,37 @@ onBeforeUnmount(() => {
         :to="e.to"
       >
         <span class="entry-stamp">{{ e.stamp }}</span>
-        <h2>{{ e.title }}</h2>
-        <p class="muted">{{ e.desc }}</p>
-        <span class="entry-arrow">进入 →</span>
+        <h2>{{ t('home.entries.' + e.key + '.title', e.title) }}</h2>
+        <p class="muted">{{ t('home.entries.' + e.key + '.desc', e.desc) }}</p>
+        <span class="entry-arrow">{{ t('home.entries.enter', '进入 →') }}</span>
       </RouterLink>
       <button class="card card-default entry-card entry-ann" type="button" @click="scrollToAnnouncements">
         <span class="entry-stamp">看</span>
-        <h2>站点公告</h2>
-        <p class="muted">项目公告 / 系统公告 · 最新动态</p>
-        <span class="entry-arrow">查看 →</span>
+        <h2>{{ t('home.entries.ann.title', '站点公告') }}</h2>
+        <p class="muted">{{ t('home.entries.ann.desc', '项目公告 / 系统公告 · 最新动态') }}</p>
+        <span class="entry-arrow">{{ t('home.entries.view', '查看 →') }}</span>
       </button>
     </div>
   </section>
 
   <p class="muted" style="text-align: center; padding: 0 16px 8px">
-    AI 自动上传：读取 <a href="/api/v1/meta/agent-guide" target="_blank" rel="noopener" class="hero-ann-link"><code>/api/v1/meta/agent-guide</code></a> 后即可发布
+    {{ t('home.agentHintPrefix', 'AI 自动上传：读取') }} <a href="/api/v1/meta/agent-guide" target="_blank" rel="noopener" class="hero-ann-link"><code>/api/v1/meta/agent-guide</code></a> {{ t('home.agentHintSuffix', '后即可发布') }}
   </p>
 
   <!-- 精选展示 -->
   <section class="section" style="padding-top: 8px">
     <div class="section-head">
-      <h2 class="section-title">精选作品</h2>
+      <h2 class="section-title">{{ t('home.featured', '精选作品') }}</h2>
       <div class="filter-row" style="margin: 0">
         <button class="btn btn-sm btn-secondary" type="button" :disabled="featuredBusy" @click="shuffleFeatured">
-          {{ featuredBusy ? '换一批…' : '换一批' }}
+          {{ featuredBusy ? t('home.shuffling', '换一批…') : t('home.shuffle', '换一批') }}
         </button>
-        <RouterLink class="btn btn-sm btn-outline" to="/demos">查看全部 →</RouterLink>
+        <RouterLink class="btn btn-sm btn-outline" to="/demos">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
       </div>
     </div>
     <div v-if="error" class="notice notice-error">{{ error }}</div>
-    <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载精选…</div>
-    <div v-else-if="!featured.length" class="empty-box">还没有 Demo，来投第一篇稿吧。</div>
+    <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('home.loading', '加载精选…') }}</div>
+    <div v-else-if="!featured.length" class="empty-box">{{ t('home.empty', '还没有 Demo，来投第一篇稿吧。') }}</div>
     <MasonryGrid v-else :cols="3" :items="featured" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">
         <DemoCard :demo="item as DemoSummary" />
@@ -264,13 +267,13 @@ onBeforeUnmount(() => {
   <section v-if="grayTest.length" class="section" style="padding-top: 8px">
     <div class="section-head">
       <h2 class="section-title">
-        {{ funOn ? 'astra 灰测作品' : '灰测作品' }}
+        {{ t('home.gray.title', funOn ? 'astra 灰测作品' : '灰测作品') }}
         <span class="mode-badge mode-badge-int" style="margin-left: 10px">网传灰测</span>
       </h2>
-      <RouterLink class="btn btn-sm btn-outline" :to="grayTagUrl">查看全部 →</RouterLink>
-    </div>
+      <RouterLink class="btn btn-sm btn-outline" :to="grayTagUrl">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
+      </div>
     <p class="muted" style="margin: -12px 0 18px">
-      以下 Demo 由网传灰测版模型生成。
+      {{ t('home.gray.desc', '以下 Demo 由网传灰测版模型生成。') }}
     </p>
     <MasonryGrid :cols="3" :items="grayTest" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">
@@ -281,12 +284,12 @@ onBeforeUnmount(() => {
 
   <!-- 公告沉底 -->
   <section v-if="announcements.length" ref="annBottom" class="section ann-blocks">
-    <AnnouncementBlock v-if="projectAnnouncements.length" title="项目公告" :items="projectAnnouncements" />
-    <AnnouncementBlock v-if="systemAnnouncements.length" title="系统公告" :items="systemAnnouncements" />
+    <AnnouncementBlock v-if="projectAnnouncements.length" :title="t('home.ann.project', '项目公告')" :items="projectAnnouncements" />
+    <AnnouncementBlock v-if="systemAnnouncements.length" :title="t('home.ann.system', '系统公告')" :items="systemAnnouncements" />
   </section>
 
   <!-- 论坛斜角入口 -->
-  <button class="forum-peek" type="button" @click="enterForum">论坛 →</button>
+  <button class="forum-peek" type="button" @click="enterForum">{{ t('home.forum', '论坛 →') }}</button>
   <Transition name="forum-takeover">
     <div v-if="forumEntering" class="forum-takeover">
       <span class="forum-takeover-brand">讨论区</span>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
+import { t } from '../i18n'
 import type { SiteInfo, SiteStats, SponsorBoard, ThanksBoard, LiveStats } from '../api/types'
 
 const stats = ref<SiteStats | null>(null)
@@ -52,9 +53,9 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page-hero">
-    <span class="eyebrow">关于本站</span>
-    <h1 class="huge">关于本站</h1>
-    <p class="sub">一个由 AI 模型生成的网页 Demo 作品集 —— 每个作品都附带生成会话日志与版本时间线，过程全透明。</p>
+    <span class="eyebrow">{{ t('about.eyebrow', '关于本站') }}</span>
+    <h1 class="huge">{{ t('about.eyebrow', '关于本站') }}</h1>
+    <p class="sub">{{ t('about.heroSub', '一个由 AI 模型生成的网页 Demo 作品集 —— 每个作品都附带生成会话日志与版本时间线，过程全透明。') }}</p>
   </section>
 
   <section class="section" style="padding-top: 8px">
@@ -65,43 +66,43 @@ onBeforeUnmount(() => {
       <!-- 站点概况（/meta/site-info：内容/社区一次拿全；失败静默隐藏） -->
       <template v-if="info">
         <div class="section-head">
-          <h2 class="section-title">站点概况</h2>
+          <h2 class="section-title">{{ t('about.snapshot', '站点概况') }}</h2>
         </div>
         <div class="dash-stats">
-          <div class="stat-card stat-ok"><b>{{ info.content.demos_total }}</b>作品</div>
-          <div class="stat-card"><b>{{ info.content.authors_total }}</b>创作者</div>
-          <div class="stat-card"><b>{{ info.content.uploads_last_7d }}</b>近 7 天新增</div>
-          <div class="stat-card"><b>{{ info.community.users_total }}</b>注册用户</div>
+          <div class="stat-card stat-ok"><b>{{ info.content.demos_total }}</b>{{ t('about.demos', '作品') }}</div>
+          <div class="stat-card"><b>{{ info.content.authors_total }}</b>{{ t('about.authors', '创作者') }}</div>
+          <div class="stat-card"><b>{{ info.content.uploads_last_7d }}</b>{{ t('about.uploads7d', '近 7 天新增') }}</div>
+          <div class="stat-card"><b>{{ info.community.users_total }}</b>{{ t('about.users', '注册用户') }}</div>
         </div>
       </template>
 
       <!-- 实时访问 -->
       <div class="section-head">
-        <h2 class="section-title">实时访问</h2>
+        <h2 class="section-title">{{ t('about.live', '实时访问') }}</h2>
         <span class="live-badge"><span class="live-dot"></span>LIVE</span>
       </div>
       <div class="dash-stats">
-        <div class="stat-card stat-live"><b>{{ live?.online ?? '—' }}</b>在线</div>
-        <div class="stat-card"><b>{{ live?.last1min ?? '—' }}</b>近 1 分钟</div>
-        <div class="stat-card"><b>{{ live?.last5min ?? '—' }}</b>近 5 分钟</div>
-        <div class="stat-card stat-warn"><b>{{ live?.today ?? stats?.today ?? '—' }}</b>今日</div>
+        <div class="stat-card stat-live"><b>{{ live?.online ?? '—' }}</b>{{ t('about.online', '在线') }}</div>
+        <div class="stat-card"><b>{{ live?.last1min ?? '—' }}</b>{{ t('about.last1min', '近 1 分钟') }}</div>
+        <div class="stat-card"><b>{{ live?.last5min ?? '—' }}</b>{{ t('about.last5min', '近 5 分钟') }}</div>
+        <div class="stat-card stat-warn"><b>{{ live?.today ?? stats?.today ?? '—' }}</b>{{ t('about.today', '今日') }}</div>
       </div>
-      <p class="hint live-hint">页面停留时每 10s 自动刷新；离开页面不计入在线。</p>
+      <p class="hint live-hint">{{ t('about.liveHint', '页面停留时每 10s 自动刷新；离开页面不计入在线。') }}</p>
 
       <!-- 访问统计 -->
       <div class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">访问统计</h2>
+        <h2 class="section-title">{{ t('about.stats', '访问统计') }}</h2>
       </div>
       <div class="dash-stats">
-        <div class="stat-card stat-ok"><b>{{ recent48h.toLocaleString() }}</b>近 48 小时</div>
-        <div class="stat-card"><b>{{ stats?.today.toLocaleString() }}</b>今日</div>
-        <div class="stat-card"><b>{{ stats?.yesterday.toLocaleString() }}</b>昨日</div>
-        <div class="stat-card stat-warn"><b>{{ stats?.total.toLocaleString() }}</b>累计访问</div>
+        <div class="stat-card stat-ok"><b>{{ recent48h.toLocaleString() }}</b>{{ t('about.last48h', '近 48 小时') }}</div>
+        <div class="stat-card"><b>{{ stats?.today.toLocaleString() }}</b>{{ t('about.today', '今日') }}</div>
+        <div class="stat-card"><b>{{ stats?.yesterday.toLocaleString() }}</b>{{ t('about.yesterday', '昨日') }}</div>
+        <div class="stat-card stat-warn"><b>{{ stats?.total.toLocaleString() }}</b>{{ t('about.total', '累计访问') }}</div>
       </div>
 
       <!-- 近 7 天趋势（纯 CSS 柱状图） -->
       <div v-if="stats?.last7?.length" class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">近 7 天趋势</h2>
+        <h2 class="section-title">{{ t('about.trend', '近 7 天趋势') }}</h2>
       </div>
       <div v-if="stats?.last7?.length" class="trend-card card card-default">
         <div class="trend-bars">
@@ -115,8 +116,8 @@ onBeforeUnmount(() => {
 
       <!-- 赞助榜 -->
       <div class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">赞助榜</h2>
-        <span v-if="sponsors?.total_amount" class="mini-stat"><b>{{ sponsors.total_amount }}</b> 累计</span>
+        <h2 class="section-title">{{ t('about.sponsors', '赞助榜') }}</h2>
+        <span v-if="sponsors?.total_amount" class="mini-stat"><b>{{ sponsors.total_amount }}</b> {{ t('about.cumulative', '累计') }}</span>
       </div>
       <div v-if="sponsors?.sponsors?.length" class="sponsor-list">
         <div v-for="(s, i) in sponsors.sponsors" :key="s.name + i" class="sponsor-row" :class="'rank-' + (i + 1)">
@@ -126,31 +127,31 @@ onBeforeUnmount(() => {
           <span v-if="s.message" class="sponsor-msg">{{ s.message }}</span>
         </div>
       </div>
-      <div v-else class="empty-box">暂无上榜，欢迎打赏支持</div>
+      <div v-else class="empty-box">{{ t('about.noSponsors', '暂无上榜，欢迎打赏支持') }}</div>
 
       <!-- 致谢榜 -->
       <div class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">致谢榜</h2>
+        <h2 class="section-title">{{ t('about.thanks', '致谢榜') }}</h2>
       </div>
       <div v-if="thanks?.thanks?.length" class="sponsor-list">
-        <div v-for="(t, i) in thanks.thanks" :key="t.name + i" class="sponsor-row">
+        <div v-for="(t2, i) in thanks.thanks" :key="t2.name + i" class="sponsor-row">
           <span class="sponsor-rank thanks-rank" aria-hidden="true">{{ i + 1 }}</span>
-          <span class="sponsor-name">{{ t.name }}</span>
-          <span v-if="t.message" class="sponsor-msg">{{ t.message }}</span>
+          <span class="sponsor-name">{{ t2.name }}</span>
+          <span v-if="t2.message" class="sponsor-msg">{{ t2.message }}</span>
         </div>
       </div>
-      <div v-else class="empty-box">暂无致谢</div>
+      <div v-else class="empty-box">{{ t('about.noThanks', '暂无致谢') }}</div>
 
       <!-- 杂项 -->
       <div class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">关于</h2>
+        <h2 class="section-title">{{ t('about.about', '关于') }}</h2>
       </div>
       <div class="card card-default" style="padding: 20px; max-width: 640px">
-        <p style="line-height: 1.8; margin-bottom: 8px">本站收集由 AI 模型生成的网页 Demo，作者可为已注册用户或匿名「公开用户」。所有作品附生成会话日志与版本时间线，力求过程透明。</p>
-        <p class="muted" style="font-size: 13px">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明。若需反馈或投稿，请到「上传 Demo」页。</p>
+        <p style="line-height: 1.8; margin-bottom: 8px">{{ t('about.desc', '本站收集由 AI 模型生成的网页 Demo，作者可为已注册用户或匿名「公开用户」。所有作品附生成会话日志与版本时间线，力求过程透明。') }}</p>
+        <p class="muted" style="font-size: 13px">{{ t('about.descNote', '时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明。若需反馈或投稿，请到「上传 Demo」页。') }}</p>
         <div class="filter-row" style="margin-top: 14px; gap: 8px; flex-wrap: wrap">
-          <a class="btn btn-sm btn-outline" href="https://github.com/liceses/ds-demos-showcase" target="_blank" rel="noopener">网站仓库 →</a>
-          <a class="btn btn-sm btn-outline" href="mailto:1801203413@qq.com">站长邮箱：1801203413@qq.com</a>
+          <a class="btn btn-sm btn-outline" href="https://github.com/liceses/ds-demos-showcase" target="_blank" rel="noopener">{{ t('about.repo', '网站仓库 →') }}</a>
+          <a class="btn btn-sm btn-outline" href="mailto:1801203413@qq.com">{{ t('about.email', '站长邮箱：1801203413@qq.com') }}</a>
         </div>
       </div>
     </template>

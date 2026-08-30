@@ -5,6 +5,7 @@ import { useTagsStore } from '../stores/tags'
 import TagGroupBox from '../components/TagGroupBox.vue'
 import type { TagKeyInfo } from '../api/types'
 import { tagLabel } from '../utils/funMode'
+import { t, modeLabel, keyLabel } from '../i18n'
 
 const tagsStore = useTagsStore()
 const keys = computed(() => tagsStore.keys)
@@ -13,8 +14,6 @@ const error = ref('')
 const modeFilter = ref<'all' | 'fixed' | 'open' | 'int'>('all')
 const activeKey = ref('')
 const tagSearch = ref('')
-
-const modeLabel: Record<string, string> = { fixed: '固定值', open: '自定义值', int: '数字值' }
 
 const filteredKeys = computed(() => {
   const q = tagSearch.value.trim().toLowerCase()
@@ -57,17 +56,17 @@ onMounted(async () => {
 
 <template>
   <section class="page-hero">
-    <span class="eyebrow">标签系统</span>
-    <h1 class="huge">标签</h1>
-    <p class="sub">每个标签键定义一类属性：固定值是客观事实，开放值由用户创造，数字值是量化参数。</p>
+    <span class="eyebrow">{{ t('tags.eyebrow', '标签系统') }}</span>
+    <h1 class="huge">{{ t('tags.title', '标签') }}</h1>
+    <p class="sub">{{ t('tags.sub', '每个标签键定义一类属性：固定值是客观事实，开放值由用户创造，数字值是量化参数。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
-      <span class="tag-stat"><b>{{ keys.length }}</b> 标签键</span>
-      <span class="tag-stat"><b>{{ keys.reduce((n, k) => n + k.values.length, 0) }}</b> 标签值</span>
+      <span class="tag-stat"><b>{{ keys.length }}</b> {{ t('tags.keys', '标签键') }}</span>
+      <span class="tag-stat"><b>{{ keys.reduce((n, k) => n + k.values.length, 0) }}</b> {{ t('tags.values', '标签值') }}</span>
     </div>
   </section>
 
   <section class="section" style="padding-top: 8px">
-    <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载标签…</div>
+    <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('tags.loading', '加载标签…') }}</div>
     <div v-else-if="error" class="notice notice-error">{{ error }}</div>
 
     <template v-else>
@@ -80,10 +79,10 @@ onMounted(async () => {
           type="button"
           @click="modeFilter = f as typeof modeFilter"
         >
-          {{ f === 'all' ? '全部' : modeLabel[f] }}
+          {{ f === 'all' ? t('tags.all', '全部') : modeLabel(f) }}
         </button>
         <div class="search-box tag-pane-search" style="flex: 1; max-width: 320px; margin-left: auto">
-          <input v-model="tagSearch" class="input" type="search" placeholder="搜索标签键 / 值…" />
+          <input v-model="tagSearch" class="input" type="search" :placeholder="t('tags.searchPlaceholder', '搜索标签键 / 值…')" />
         </div>
       </div>
 
@@ -91,7 +90,7 @@ onMounted(async () => {
         <!-- 左：键列表 -->
         <div class="tag-pane-keys">
           <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">
-            <div v-if="filteredKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel[m] }}</div>
+            <div v-if="filteredKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel(m) }}</div>
             <button
               v-for="k in filteredKeys.filter((k) => k.mode === m)"
               :key="k.key"
@@ -100,23 +99,23 @@ onMounted(async () => {
               type="button"
               @click="activeKey = k.key"
             >
-              <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+              <span class="tag-pane-key-label">{{ keyLabel(k.key, k.label) }} <code>{{ k.key }}</code></span>
               <span class="tag-pane-key-count">{{ k.demo_count }}</span>
             </button>
           </template>
-          <div v-if="!filteredKeys.length" class="muted" style="padding: 8px">无匹配标签</div>
+          <div v-if="!filteredKeys.length" class="muted" style="padding: 8px">{{ t('tags.noMatch', '无匹配标签') }}</div>
         </div>
 
         <!-- 右：值面板 -->
         <div class="tag-pane-values">
           <template v-if="activeTagKey">
             <div class="tag-key-head">
-              <b>{{ activeTagKey.label || activeTagKey.key }} <code>{{ activeTagKey.key }}</code></b>
-              <span class="mode-badge" :class="'mode-badge-' + activeTagKey.mode">{{ modeLabel[activeTagKey.mode] }}</span>
+              <b>{{ keyLabel(activeTagKey.key, activeTagKey.label) }} <code>{{ activeTagKey.key }}</code></b>
+              <span class="mode-badge" :class="'mode-badge-' + activeTagKey.mode">{{ modeLabel(activeTagKey.mode) }}</span>
             </div>
-            <p class="muted" style="margin: 0 0 10px">{{ activeTagKey.description || '暂无介绍' }}</p>
+            <p class="muted" style="margin: 0 0 10px">{{ activeTagKey.description || t('tags.noDesc', '暂无介绍') }}</p>
             <div v-if="activeTagKey.mode === 'int' && activeTagKey.min != null && activeTagKey.max != null" class="muted" style="font-size: 12px; margin-bottom: 8px">
-              值域：{{ activeTagKey.min }} ~ {{ activeTagKey.max }}
+              {{ t('tags.range', '值域') }}：{{ activeTagKey.min }} ~ {{ activeTagKey.max }}
             </div>
 
             <div v-if="activeTagKey.values.length" class="tag-dist-bars" style="margin-bottom: 12px">
@@ -132,9 +131,9 @@ onMounted(async () => {
               :route-key="activeTagKey.key"
               :search="tagSearch"
             />
-            <span v-else class="muted">还没有值</span>
+            <span v-else class="muted">{{ t('tags.noValues', '还没有值') }}</span>
           </template>
-          <div v-else class="muted">请选择左侧标签键</div>
+          <div v-else class="muted">{{ t('tags.pickKey', '请选择左侧标签键') }}</div>
         </div>
       </div>
     </template>

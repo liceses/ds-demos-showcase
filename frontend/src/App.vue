@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { api } from './api'
 import { isMock } from './api'
+import { lang, setLang, t } from './i18n'
 import { adminExempt, applyServerFunMode, funEffective, titleBase } from './utils/funMode'
 import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
@@ -38,13 +39,19 @@ onMounted(() => {
 })
 
 const menuItems = [
-  { to: '/', label: '首页' },
-  { to: '/demos', label: '作品库' },
-  { to: '/leaderboard', label: '排行榜' },
-  { to: '/tags', label: '标签' },
-  { to: '/upload', label: '上传 Demo' },
-  { to: '/about', label: '关于本站' },
+  { to: '/', key: 'home', label: '首页' },
+  { to: '/demos', key: 'demos', label: '作品库' },
+  { to: '/leaderboard', key: 'leaderboard', label: '排行榜' },
+  { to: '/tags', key: 'tags', label: '标签' },
+  { to: '/upload', key: 'upload', label: '上传 Demo' },
+  { to: '/about', key: 'about', label: '关于本站' },
 ]
+
+// 语言切换：ref 响应式驱动全站（含 keepAlive 页）；<html lang> 同步
+const switchLang = () => setLang(lang.value === 'en' ? 'zh' : 'en')
+watchEffect(() => {
+  document.documentElement.lang = lang.value === 'en' ? 'en' : 'zh-CN'
+})
 </script>
 
 <template>
@@ -58,23 +65,26 @@ const menuItems = [
       </RouterLink>
 
       <nav class="topnav topnav-desktop">
-        <RouterLink class="nav-link" to="/">首页</RouterLink>
-        <RouterLink class="nav-link" to="/demos">作品库</RouterLink>
-        <RouterLink class="nav-link" to="/leaderboard">排行榜</RouterLink>
-        <RouterLink class="nav-link" to="/tags">标签</RouterLink>
-        <RouterLink class="nav-link" to="/upload">上传 Demo</RouterLink>
-        <RouterLink v-if="auth.isAdmin()" class="nav-link" to="/admin">管理后台</RouterLink>
+        <RouterLink class="nav-link" to="/">{{ t('app.nav.home', '首页') }}</RouterLink>
+        <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
+        <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
+        <RouterLink class="nav-link" to="/tags">{{ t('app.nav.tags', '标签') }}</RouterLink>
+        <RouterLink class="nav-link" to="/upload">{{ t('app.nav.upload', '上传 Demo') }}</RouterLink>
+        <RouterLink v-if="auth.isAdmin()" class="nav-link" to="/admin">{{ t('app.nav.admin', '管理后台') }}</RouterLink>
       </nav>
 
       <div class="topnav topnav-desktop">
+        <button class="btn btn-sm btn-outline" type="button" :title="lang === 'en' ? '切换到中文' : 'Switch to English'" @click="switchLang">
+          {{ lang === 'en' ? '中文' : 'EN' }}
+        </button>
         <template v-if="auth.isLoggedIn()">
           <NotificationBell />
           <RouterLink class="nav-link" :to="`/user/${username}`">{{ username }}</RouterLink>
-          <button class="btn btn-sm btn-dark" type="button" @click="auth.logout()">退出</button>
+          <button class="btn btn-sm btn-dark" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
         </template>
         <template v-else>
-          <RouterLink class="nav-link" to="/login">登录</RouterLink>
-          <RouterLink class="btn btn-sm btn-primary" to="/register">注册</RouterLink>
+          <RouterLink class="nav-link" to="/login">{{ t('app.nav.login', '登录') }}</RouterLink>
+          <RouterLink class="btn btn-sm btn-primary" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
         </template>
       </div>
 
@@ -94,7 +104,7 @@ const menuItems = [
       <div v-if="mobileOpen" class="mobile-drawer" @click.self="mobileOpen = false">
         <div class="mobile-drawer-inner">
           <div class="mobile-drawer-head">
-            <span class="mode-rail-stamp">菜单</span>
+            <span class="mode-rail-stamp">{{ t('app.menu', '菜单') }}</span>
             <button class="mobile-drawer-close" type="button" @click="mobileOpen = false">X</button>
           </div>
           <nav class="mobile-drawer-nav">
@@ -105,21 +115,24 @@ const menuItems = [
               :class="{ active: route.path === m.to }"
               :to="m.to"
             >
-              {{ m.label }}
+              {{ t('app.nav.' + m.key, m.label) }}
               <span class="mobile-drawer-arrow">→</span>
             </RouterLink>
             <RouterLink v-if="auth.isAdmin()" class="mobile-drawer-link" :to="'/admin'">
-              管理后台 <span class="mobile-drawer-arrow">→</span>
+              {{ t('app.nav.admin', '管理后台') }} <span class="mobile-drawer-arrow">→</span>
             </RouterLink>
           </nav>
           <div class="mobile-drawer-foot">
+            <button class="btn btn-outline btn-block" type="button" @click="switchLang">
+              {{ lang === 'en' ? '中文' : 'EN' }}
+            </button>
             <template v-if="auth.isLoggedIn()">
               <RouterLink class="btn btn-outline btn-block" :to="`/user/${username}`">{{ username }}</RouterLink>
-              <button class="btn btn-dark btn-block" type="button" @click="auth.logout()">退出</button>
+              <button class="btn btn-dark btn-block" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
             </template>
             <template v-else>
-              <RouterLink class="btn btn-outline btn-block" to="/login">登录</RouterLink>
-              <RouterLink class="btn btn-primary btn-block" to="/register">注册</RouterLink>
+              <RouterLink class="btn btn-outline btn-block" to="/login">{{ t('app.nav.login', '登录') }}</RouterLink>
+              <RouterLink class="btn btn-primary btn-block" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
             </template>
           </div>
         </div>
@@ -131,7 +144,8 @@ const menuItems = [
 
     <div v-if="isMock" class="container">
       <div class="notice notice-warn" style="margin-top: 14px">
-        <strong>Mock 模式</strong>：当前使用内置占位数据，未连接后端。设置 <code>VITE_USE_MOCK=false</code> 后切换到真实 API。
+        <span v-if="lang === 'en'">{{ t('app.mockNotice', '') }}</span>
+        <span v-else><strong>Mock 模式</strong>：当前使用内置占位数据，未连接后端。设置 <code>VITE_USE_MOCK=false</code> 后切换到真实 API。</span>
       </div>
     </div>
 
@@ -145,8 +159,8 @@ const menuItems = [
 
     <template v-if="!route.meta.forum">
       <footer class="footer container">
-        <div class="mono">{{ titleBase }} · AI 网页 Demo 作品集</div>
-        <div class="mono">时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明</div>
+        <div class="mono">{{ titleBase }} · {{ t('app.footerTail', 'AI 网页 Demo 作品集') }}</div>
+        <div class="mono">{{ t('app.footerDisclaimer', '时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明') }}</div>
       </footer>
     </template>
 

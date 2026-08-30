@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
 import { tagLabel, tagStrLabel } from '../utils/funMode'
+import { t, keyLabel, vendorLabel } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import PromptDemoCard from '../components/PromptDemoCard.vue'
@@ -295,31 +296,31 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <section class="page-hero">
-    <span class="eyebrow">作品库</span>
-    <h1 class="huge">作品库</h1>
-    <p class="sub">搜索、筛选、浏览全部 AI 网页 Demo —— 支持按标签与热度检索。</p>
-    <span class="mini-stat" style="margin-top: 14px"><b>{{ total }}</b> 件作品</span>
+    <span class="eyebrow">{{ t('app.nav.demos', '作品库') }}</span>
+    <h1 class="huge">{{ t('app.nav.demos', '作品库') }}</h1>
+    <p class="sub">{{ t('demos.sub', '搜索、筛选、浏览全部 AI 网页 Demo —— 支持按标签与热度检索。') }}</p>
+    <span class="mini-stat" style="margin-top: 14px"><b>{{ total }}</b> {{ t('demos.works', '件作品') }}</span>
   </section>
 
   <section class="section" style="padding-top: 8px">
     <!-- 视图栏：模式轨道 + 排序，独立一行，不与搜索/标签混排 -->
     <div class="view-bar">
       <div class="mode-tool">
-        <span class="mode-rail-stamp">模式</span>
+        <span class="mode-rail-stamp">{{ t('demos.mode', '模式') }}</span>
         <div class="mode-rail" :class="{ prompt: cardMode === 'prompt' }" role="group" aria-label="卡片模式">
-          <button class="mode-rail-item" type="button" @click="setCardMode('normal')">常规</button>
-          <button class="mode-rail-item" type="button" @click="setCardMode('prompt')">提示词</button>
+          <button class="mode-rail-item" type="button" @click="setCardMode('normal')">{{ t('demos.normal', '常规') }}</button>
+          <button class="mode-rail-item" type="button" @click="setCardMode('prompt')">{{ t('demos.prompt', '提示词') }}</button>
           <span class="mode-rail-knob" :class="{ prompt: cardMode === 'prompt' }">
-            {{ cardMode === 'prompt' ? '提示词' : '常规' }}
+            {{ cardMode === 'prompt' ? t('demos.prompt', '提示词') : t('demos.normal', '常规') }}
           </span>
         </div>
         <span v-if="cardMode === 'prompt'" class="mode-rail-badge">PROMPT</span>
       </div>
 
       <div v-if="cardMode === 'normal'" class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">最新</button>
-        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">最热</button>
-        <button class="tab" :class="{ active: sort === 'random' }" type="button" @click="sort = 'random'; applySort()">随机</button>
+        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; applySort()">{{ t('demos.newest', '最新') }}</button>
+        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; applySort()">{{ t('demos.hot', '最热') }}</button>
+        <button class="tab" :class="{ active: sort === 'random' }" type="button" @click="sort = 'random'; applySort()">{{ t('demos.random', '随机') }}</button>
       </div>
     </div>
 
@@ -329,16 +330,16 @@ onBeforeUnmount(() => observer?.disconnect())
           v-model="q"
           class="input"
           type="search"
-          placeholder="搜索标题 / 描述 / 标签…（回车提交）"
+          :placeholder="t('demos.searchPlaceholder', '搜索标题 / 描述 / 标签…（回车提交）')"
           @keyup.enter="submitSearch"
         />
-        <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">搜索</button>
+        <button class="btn btn-secondary search-submit" type="button" @click="submitSearch">{{ t('demos.search', '搜索') }}</button>
       </div>
     </div>
 
     <!-- 已应用搜索词 -->
     <div v-if="submittedQ" class="filter-row tag-selected-row">
-      <span class="filter-label">搜索</span>
+      <span class="filter-label">{{ t('demos.search', '搜索') }}</span>
       <button class="tag-chip active" type="button" title="点击移除搜索" @click="clearSearch">
         {{ submittedQ }}<span class="chip-x">X</span>
       </button>
@@ -346,7 +347,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
     <!-- 已选标签：置顶、可单独/一键移除 -->
     <div v-if="selectedTags.length" class="filter-row tag-selected-row">
-      <span class="filter-label">已选</span>
+      <span class="filter-label">{{ t('demos.selected', '已选') }}</span>
       <button
         v-for="t in selectedTags"
         :key="t"
@@ -356,12 +357,12 @@ onBeforeUnmount(() => observer?.disconnect())
       >
         {{ tagStrLabel(t) }}<span class="chip-x">X</span>
       </button>
-      <button class="btn btn-sm btn-dark" type="button" @click="clearTags">清空</button>
+      <button class="btn btn-sm btn-dark" type="button" @click="clearTags">{{ t('demos.clearTags', '清空') }}</button>
     </div>
 
     <!-- 热门快捷 -->
     <div v-if="hotChips.length" class="filter-row">
-      <span class="filter-label">热门</span>
+      <span class="filter-label">{{ t('demos.hotChips', '热门') }}</span>
       <button
         v-for="g in hotChips"
         :key="g.key + ':' + g.value"
@@ -370,11 +371,11 @@ onBeforeUnmount(() => observer?.disconnect())
         type="button"
         @click="toggleTag(g.key + ':' + g.value)"
       >
-        {{ g.key }}:{{ tagLabel(g.value) }}
+        {{ keyLabel(g.key) }}:{{ tagLabel(g.value) }}
         <span class="count">{{ g.count }}</span>
       </button>
       <button class="btn btn-sm btn-outline" type="button" @click="stripsOpen = !stripsOpen">
-        {{ stripsOpen ? '收起标签' : '展开全部标签' }}
+        {{ stripsOpen ? t('demos.hideTags', '收起标签') : t('demos.allTags', '展开全部标签') }}
       </button>
     </div>
 
@@ -382,14 +383,14 @@ onBeforeUnmount(() => observer?.disconnect())
     <div v-if="stripsOpen && filterGroups.length" class="tag-strips">
       <div v-for="k in filterGroups" :key="k.key" class="tag-strip-row" :class="'mode-' + k.mode">
         <span class="tag-strip-title">
-          {{ k.label }} <code>{{ k.key }}</code>
+          {{ keyLabel(k.key, k.label) }} <code>{{ k.key }}</code>
           <span class="mode-dot" :class="'mode-dot-' + k.mode"></span>
         </span>
         <template v-if="k.mode === 'int'">
           <div class="filter-row tag-strip-chips int-range-row">
             <RangeSlider :min="k.min ?? 0" :max="k.max ?? 999" v-model="intRange[k.key]" />
-            <button class="btn btn-sm btn-secondary" type="button" @click="applyIntRange(k)">应用</button>
-            <button v-if="activeRangeOf(k)" class="btn btn-sm btn-dark" type="button" @click="clearIntRange(k)">清除</button>
+            <button class="btn btn-sm btn-secondary" type="button" @click="applyIntRange(k)">{{ t('demos.apply', '应用') }}</button>
+            <button v-if="activeRangeOf(k)" class="btn btn-sm btn-dark" type="button" @click="clearIntRange(k)">{{ t('demos.clearRange', '清除') }}</button>
             <span v-if="activeRangeOf(k)" class="tag-chip active">{{ activeRangeOf(k) }}</span>
           </div>
         </template>
@@ -397,14 +398,14 @@ onBeforeUnmount(() => observer?.disconnect())
           <!-- model：厂商分组 + 彩色点，默认收起 -->
           <template v-if="k.mode === 'fixed'">
             <div v-if="isCollapsed(k)" class="filter-row tag-strip-chips">
-              <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">模型 · 展开 +{{ k.values.length }}</button>
+              <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">{{ t('demos.modelsExpandN', '模型 · 展开 +{n}', { n: k.values.length }) }}</button>
             </div>
             <div v-else class="tag-strip-chips">
               <div v-for="g in vendorGroupsOf(k)" :key="g.group" class="vendor-strip">
                 <span class="vendor-strip-head" role="button" @click="toggleVendor(g.group)">
                   <span class="vendor-dot" :style="{ background: VENDOR_DOT[g.group] || '#999' }"></span>
-                  <span class="vendor-strip-name">{{ g.group }}</span>
-                  <span class="vendor-strip-toggle">{{ isVendorCollapsed(g.group) ? '展开' : '收起' }}</span>
+                  <span class="vendor-strip-name">{{ vendorLabel(g.group) }}</span>
+                  <span class="vendor-strip-toggle">{{ isVendorCollapsed(g.group) ? t('demos.expand', '展开') : t('demos.collapse', '收起') }}</span>
                 </span>
                 <div v-if="!isVendorCollapsed(g.group)" class="filter-row" style="margin: 0">
                   <button
@@ -417,7 +418,7 @@ onBeforeUnmount(() => observer?.disconnect())
                   >{{ tagLabel(v.value) }}<span class="count">{{ v.count }}</span></button>
                 </div>
               </div>
-              <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">收起</button>
+              <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">{{ t('demos.collapse', '收起') }}</button>
             </div>
           </template>
           <div v-else class="filter-row tag-strip-chips">
@@ -438,7 +439,7 @@ onBeforeUnmount(() => observer?.disconnect())
               type="button"
               @click="toggleGroup(k)"
             >
-              展开 +{{ hiddenCount(k) }}
+              {{ t('demos.expandN', '展开 +{n}', { n: hiddenCount(k) }) }}
             </button>
             <button
               v-if="!isCollapsed(k)"
@@ -446,7 +447,7 @@ onBeforeUnmount(() => observer?.disconnect())
               type="button"
               @click="toggleGroup(k)"
             >
-              收起
+              {{ t('demos.collapse', '收起') }}
             </button>
           </div>
         </template>
@@ -456,11 +457,11 @@ onBeforeUnmount(() => observer?.disconnect())
     <div v-if="error" class="notice notice-error">{{ error }}</div>
 
     <div v-if="loading && !demos.length" class="loading-row">
-      <span class="spinner"></span> {{ refreshing ? '正在刷新…' : '加载 Demo 中…' }}
+      <span class="spinner"></span> {{ refreshing ? t('demos.refreshing', '正在刷新…') : t('demos.loading', '加载 Demo 中…') }}
     </div>
 
     <div v-else-if="!demos.length" class="empty-box">
-      没有匹配的 Demo —— 换一组标签或关键词试试。
+      {{ t('demos.noMatch', '没有匹配的 Demo —— 换一组标签或关键词试试。') }}
     </div>
 
     <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
@@ -471,8 +472,8 @@ onBeforeUnmount(() => observer?.disconnect())
     </MasonryGrid>
 
     <div ref="sentinel" class="loading-row">
-      <template v-if="loadingMore"><span class="spinner"></span> 加载更多…</template>
-      <template v-else-if="!hasMore">已加载全部 {{ total }} 个 Demo</template>
+      <template v-if="loadingMore"><span class="spinner"></span> {{ t('demos.loadMore', '加载更多…') }}</template>
+      <template v-else-if="!hasMore">{{ t('demos.allLoaded', '已加载全部 {n} 个 Demo', { n: total }) }}</template>
     </div>
   </section>
 </template>

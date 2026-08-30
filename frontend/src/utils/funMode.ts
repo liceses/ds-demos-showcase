@@ -7,6 +7,7 @@
 // 3. /admin 路由豁免（adminExempt）：管理界面恒显真实值，避免把 astra-grey 当真值再建一遍。
 
 import { computed, ref } from 'vue'
+import { lang, setLang, type Lang } from '../i18n'
 
 const LS_KEY = 'dsh_fun_mode' // 上次已知的全站状态（防上屏闪烁的预 seed，非真源）
 const SS_KEY = 'dsh_fun_mode_preview' // ?fun=1/0 当前标签页预览覆盖（sessionStorage）
@@ -30,10 +31,19 @@ const q = new URLSearchParams(location.search).get('fun')
 if (q === '1' || q === '0') preview.value = q
 funMode.value = localStorage.getItem(LS_KEY) === '1'
 
-/** App.vue 拉到后端 site-info 后调用：写入全站开关并缓存防闪 */
+/** App.vue 拉到后端 site-info 后调用：写入全站开关并缓存防闪 + 语言预设（fun ON → EN，可手动切回） */
+let funSavedLang: Lang | null = null
 export function applyServerFunMode(on: boolean) {
+  const was = funMode.value
   funMode.value = on
   localStorage.setItem(LS_KEY, on ? '1' : '0')
+  if (!was && on && lang.value !== 'en') {
+    funSavedLang = lang.value
+    setLang('en') // 整蛊预设英文；fun 关闭时若未被手动改过则恢复
+  } else if (was && !on && funSavedLang !== null) {
+    if (lang.value === 'en') setLang(funSavedLang) // fun 期间被手动改成非 EN 则尊重手动选择
+    funSavedLang = null
+  }
 }
 
 /** 最终生效状态（预览覆盖 > 后端开关 - admin 豁免） */
@@ -57,5 +67,8 @@ export function tagStrLabel(s: string): string {
   return s.slice(0, i + 1) + tagLabel(s.slice(i + 1))
 }
 
-/** 站点标题/品牌文案 */
-export const titleBase = computed(() => (funEffective.value ? 'astra 灰测作品收集' : 'AI 全民制作人'))
+/** 站点标题/品牌文案（随 fun 开关 + 语言双切换） */
+export const titleBase = computed(() => {
+  if (funEffective.value) return lang.value === 'en' ? 'astra grey-test works collection' : 'astra 灰测作品收集'
+  return lang.value === 'en' ? 'AI Demo Makers' : 'AI 全民制作人'
+})

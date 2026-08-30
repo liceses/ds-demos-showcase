@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { api } from '../api'
+import { t, lang } from '../i18n'
 
 const props = withDefaults(defineProps<{ content: string; compact?: boolean; resolveLinks?: boolean }>(), {
   compact: false,
@@ -37,11 +38,11 @@ const renderer = new marked.Renderer()
 renderer.heading = ({ tokens, depth }) => {
   const text = tokens.map((t) => (t as { text?: string }).text || '').join('')
   const id = text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '')
-  return `<h${depth} id="${id}">${text} <a class="md-anchor" href="#${id}" aria-label="锚点">#</a></h${depth}>`
+  return `<h${depth} id="${id}">${text} <a class="md-anchor" href="#${id}" aria-label="${t('md.anchor', '锚点')}">#</a></h${depth}>`
 }
-renderer.code = ({ text, lang }) => {
-  const cls = lang ? ` class="language-${lang}"` : ''
-  return `<div class="md-code"><button class="md-copy" type="button">复制</button><pre><code${cls}>${highlightCode(text)}</code></pre></div>`
+renderer.code = ({ text, lang: codeLang }) => {
+  const cls = codeLang ? ` class="language-${codeLang}"` : ''
+  return `<div class="md-code"><button class="md-copy" type="button">${t('md.copy', '复制')}</button><pre><code${cls}>${highlightCode(text)}</code></pre></div>`
 }
 renderer.link = ({ href, title, tokens }) => {
   const text = tokens.map((t) => (t as { text?: string }).text || '').join('')
@@ -53,17 +54,19 @@ renderer.link = ({ href, title, tokens }) => {
 
 marked.setOptions({ gfm: true, breaks: true, renderer })
 
-// 渲染缓存：同一 content 重复渲染（公告/回复/帖子）不再重复 parse+sanitize
+// 渲染缓存：同一 content 重复渲染（公告/回复/帖子）不再重复 parse+sanitize；
+// key 带 lang——切换语言后缓存自动失效，富卡片/按钮文案随语言更新
 const htmlCache = new Map<string, string>()
 const html = computed(() => {
   const raw = props.content || ''
-  const cached = htmlCache.get(raw)
+  const key = lang.value + '|' + raw
+  const cached = htmlCache.get(key)
   if (cached) return cached
   const out = DOMPurify.sanitize(marked.parse(raw) as string, {
     ADD_ATTR: ['target', 'rel', 'id'],
   })
   if (htmlCache.size > 500) htmlCache.clear()
-  htmlCache.set(raw, out)
+  htmlCache.set(key, out)
   return out
 })
 
@@ -83,22 +86,22 @@ function demoCardHtml(d: DemoInfo) {
     <img class="md-link-cover" src="${attr(d.cover_url)}" alt="" loading="lazy" />
     <span class="md-link-main">
       <span class="md-link-title">${attr(d.title)}</span>
-      <span class="md-link-meta">${attr(d.author)} · 查看作品 →</span>
+      <span class="md-link-meta">${attr(d.author)} · ${t('md.viewDemo', '查看作品 →')}</span>
     </span>
   </a>`
 }
 
-function topicCardHtml(t: TopicInfo) {
-  return `<a class="md-link-card md-link-topic" data-link-card="1" href="/forum/topic/${t.id}">
+function topicCardHtml(topic: TopicInfo) {
+  return `<a class="md-link-card md-link-topic" data-link-card="1" href="/forum/topic/${topic.id}">
     <span class="md-link-main">
-      <span class="md-link-title">${attr(t.title)}</span>
-      <span class="md-link-meta">${attr(t.author)} · 回复 ${t.reply_count} · 查看讨论 →</span>
+      <span class="md-link-title">${attr(topic.title)}</span>
+      <span class="md-link-meta">${attr(topic.author)} · ${t('md.topicMeta', '回复 {n} · 查看讨论 →', { n: topic.reply_count })}</span>
     </span>
   </a>`
 }
 
 function placeholderHtml() {
-  return `<span class="md-link-card md-link-loading" data-link-card="1">解析链接…</span>`
+  return `<span class="md-link-card md-link-loading" data-link-card="1">${t('md.resolving', '解析链接…')}</span>`
 }
 
 function scanLinks() {
@@ -133,12 +136,12 @@ function scanLinks() {
           id,
           api
             .getForumTopic(Number(id))
-            .then((t) => (t ? { id: t.id, title: t.title, author: t.author || '匿名', reply_count: t.reply_count } : null))
+            .then((tp) => (tp ? { id: tp.id, title: tp.title, author: tp.author || t('forum.anon', '匿名'), reply_count: tp.reply_count } : null))
             .catch(() => null),
         )
       }
-      topicCache.get(id)!.then((t) => {
-        if (t) holder.outerHTML = topicCardHtml(t)
+      topicCache.get(id)!.then((tp) => {
+        if (tp) holder.outerHTML = topicCardHtml(tp)
         else holder.outerHTML = original
       })
     }
@@ -162,8 +165,8 @@ function onRootClick(e: MouseEvent) {
   navigator.clipboard
     .writeText(text)
     .then(() => {
-      btn.textContent = '已复制'
-      setTimeout(() => (btn.textContent = '复制'), 1200)
+      btn.textContent = t('md.copied', '已复制')
+      setTimeout(() => (btn.textContent = t('md.copy', '复制')), 1200)
     })
     .catch(() => undefined)
 }

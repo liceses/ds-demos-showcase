@@ -9,6 +9,7 @@ import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { timeAgo } from '../utils/time'
 import { useListPage } from '../composables/useListPage'
+import { t, forumCatLabel } from '../i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,76 +108,76 @@ onMounted(() => {
 <template>
   <section class="forum-hero">
     <div class="forum-hero-inner">
-      <h1 class="forum-title">讨论区</h1>
-      <p class="forum-sub">作品、提示词、技术交流——都在这里。</p>
-      <RouterLink class="btn btn-primary" to="/forum/new">发帖 →</RouterLink>
+      <h1 class="forum-title">{{ t('forum.title', '讨论区') }}</h1>
+      <p class="forum-sub">{{ t('forum.sub', '作品、提示词、技术交流——都在这里。') }}</p>
+      <RouterLink class="btn btn-primary" to="/forum/new">{{ t('forum.newPost', '发帖 →') }}</RouterLink>
     </div>
   </section>
 
   <section class="forum-section">
     <div class="forum-toolbar">
       <div class="search-box" style="flex: 1; max-width: 320px">
-        <input v-model="q" class="input" type="search" placeholder="搜索主题…（回车提交）" @keyup.enter="apply" />
-        <button class="btn btn-secondary search-submit" type="button" @click="apply">搜索</button>
+        <input v-model="q" class="input" type="search" :placeholder="t('forum.searchPlaceholder', '搜索主题…（回车提交）')" @keyup.enter="apply" />
+        <button class="btn btn-secondary search-submit" type="button" @click="apply">{{ t('demos.search', '搜索') }}</button>
       </div>
       <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: scope === 'general' }" type="button" @click="scope = 'general'; apply()">综合</button>
-        <button class="tab" :class="{ active: scope === 'demo' }" type="button" @click="scope = 'demo'; apply()">作品讨论</button>
+        <button class="tab" :class="{ active: scope === 'general' }" type="button" @click="scope = 'general'; apply()">{{ t('forum.scopeGeneral', '综合') }}</button>
+        <button class="tab" :class="{ active: scope === 'demo' }" type="button" @click="scope = 'demo'; apply()">{{ t('forum.scopeDemo', '作品讨论') }}</button>
       </div>
       <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">最新</button>
-        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">热门</button>
-        <button class="tab" :class="{ active: sort === 'replies' }" type="button" @click="sort = 'replies'; apply()">回复</button>
-        <button class="tab" :class="{ active: sort === 'hot' }" type="button" @click="sort = 'hot'; apply()">热度</button>
-        <button class="btn btn-sm btn-outline" type="button" @click="sideOpen = !sideOpen">{{ sideOpen ? '收起侧栏' : '展开侧栏' }}</button>
+        <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">{{ t('demos.newest', '最新') }}</button>
+        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">{{ t('demos.hot', '热门') }}</button>
+        <button class="tab" :class="{ active: sort === 'replies' }" type="button" @click="sort = 'replies'; apply()">{{ t('forum.sortReplies', '回复') }}</button>
+        <button class="tab" :class="{ active: sort === 'hot' }" type="button" @click="sort = 'hot'; apply()">{{ t('forum.sortHeat', '热度') }}</button>
+        <button class="btn btn-sm btn-outline" type="button" @click="sideOpen = !sideOpen">{{ sideOpen ? t('forum.hideSide', '收起侧栏') : t('forum.showSide', '展开侧栏') }}</button>
       </div>
     </div>
 
     <div class="filter-row" style="margin-bottom: 12px">
-      <button class="tag-chip" :class="{ active: stickyFilter }" type="button" @click="stickyFilter = !stickyFilter; apply()">只看精华</button>
-      <button class="tag-chip" :class="{ active: participatedFilter }" type="button" @click="participatedFilter = !participatedFilter; apply()">我参与的</button>
-      <button class="tag-chip" :class="{ active: followedFilter }" type="button" @click="followedFilter = !followedFilter; apply()">我关注的</button>
+      <button class="tag-chip" :class="{ active: stickyFilter }" type="button" @click="stickyFilter = !stickyFilter; apply()">{{ t('forum.onlySticky', '只看精华') }}</button>
+      <button class="tag-chip" :class="{ active: participatedFilter }" type="button" @click="participatedFilter = !participatedFilter; apply()">{{ t('forum.mine', '我参与的') }}</button>
+      <button class="tag-chip" :class="{ active: followedFilter }" type="button" @click="followedFilter = !followedFilter; apply()">{{ t('forum.followed', '我关注的') }}</button>
     </div>
 
     <div v-if="demoFilter || tagFilter" class="filter-row" style="margin-bottom: 8px">
-      <span class="filter-label">筛选</span>
-      <span class="tag-chip active">{{ demoFilter ? `作品：${demoFilter}` : `标签：${tagFilter}` }}</span>
-      <button class="btn btn-sm btn-dark" type="button" @click="demoFilter = ''; tagFilter = ''; apply()">清除</button>
+      <span class="filter-label">{{ t('forum.filter', '筛选') }}</span>
+      <span class="tag-chip active">{{ demoFilter ? t('forum.demoFilter', '作品：{v}', { v: demoFilter }) : t('forum.tagFilter', '标签：{v}', { v: tagFilter }) }}</span>
+      <button class="btn btn-sm btn-dark" type="button" @click="demoFilter = ''; tagFilter = ''; apply()">{{ t('demos.clearRange', '清除') }}</button>
     </div>
 
     <div class="forum-layout">
       <div class="forum-main">
         <div v-if="error" class="notice notice-error">{{ error }}</div>
-        <LoadingRow v-if="loading && !topics.length" text="加载主题…" />
-        <EmptyBox v-else-if="!topics.length" text="暂无主题，来发第一帖吧" />
+        <LoadingRow v-if="loading && !topics.length" :text="t('forum.loading', '加载主题…')" />
+        <EmptyBox v-else-if="!topics.length" :text="t('forum.empty', '暂无主题，来发第一帖吧')" />
 
         <div v-else class="forum-list">
-          <RouterLink v-for="t in topics" :key="t.id" :to="`/forum/topic/${t.id}`" class="forum-topic-card">
-            <span class="forum-avatar" :class="avatarClass(t.author || '匿名')">{{ (t.author || '匿')[0] }}</span>
+          <RouterLink v-for="t2 in topics" :key="t2.id" :to="`/forum/topic/${t2.id}`" class="forum-topic-card">
+            <span class="forum-avatar" :class="avatarClass(t2.author || t('forum.anon', '匿名'))">{{ (t2.author || t('forum.anon', '匿名'))[0] }}</span>
             <div class="forum-topic-body">
               <div class="forum-topic-title">
-                <span v-if="t.pinned" class="forum-badge forum-badge-pin">置顶</span>
-                <span v-if="t.sticky" class="forum-badge forum-badge-sticky">加精</span>
-                <span v-if="t.solved" class="forum-badge" style="background: var(--mint)">已解决</span>
-                <span v-if="t.locked" class="forum-badge" style="background: var(--ink); color: var(--paper)">已关闭</span>
-                <span class="forum-cat">{{ t.category }}</span>
-                {{ t.title }}
+                <span v-if="t2.pinned" class="forum-badge forum-badge-pin">{{ t('forum.pinned', '置顶') }}</span>
+                <span v-if="t2.sticky" class="forum-badge forum-badge-sticky">{{ t('forum.sticky', '加精') }}</span>
+                <span v-if="t2.solved" class="forum-badge" style="background: var(--mint)">{{ t('forum.solved', '已解决') }}</span>
+                <span v-if="t2.locked" class="forum-badge" style="background: var(--ink); color: var(--paper)">{{ t('forum.locked', '已关闭') }}</span>
+                <span class="forum-cat">{{ forumCatLabel(t2.category) }}</span>
+                {{ t2.title }}
               </div>
-              <div v-if="t.demo_slug" class="forum-topic-demo">
-                <span class="forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t.demo_slug}`)">
-                  <img v-if="demoCards[t.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t.demo_slug]?.cover_url" alt="" loading="lazy" />
-                  <span>{{ demoCards[t.demo_slug]?.title || t.demo_slug }}</span>
+              <div v-if="t2.demo_slug" class="forum-topic-demo">
+                <span class="forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t2.demo_slug}`)">
+                  <img v-if="demoCards[t2.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t2.demo_slug]?.cover_url" alt="" loading="lazy" />
+                  <span>{{ demoCards[t2.demo_slug]?.title || t2.demo_slug }}</span>
                 </span>
               </div>
               <div class="forum-topic-meta">
-                <span>{{ t.author || '匿名' }}</span>
-                <span class="forum-stat">回复 {{ t.reply_count }}</span>
-                <span class="forum-stat">浏览 {{ t.view_count }}</span>
-                <span class="forum-stat">赞 {{ t.like_count }}</span>
-                <span>{{ timeAgo(t.created_at) }}</span>
+                <span>{{ t2.author || t('forum.anon', '匿名') }}</span>
+                <span class="forum-stat">{{ t('forum.replies', '回复 {n}', { n: t2.reply_count }) }}</span>
+                <span class="forum-stat">{{ t('forum.views', '浏览 {n}', { n: t2.view_count }) }}</span>
+                <span class="forum-stat">{{ t('forum.likes', '赞 {n}', { n: t2.like_count }) }}</span>
+                <span>{{ timeAgo(t2.created_at) }}</span>
               </div>
             </div>
-            <span class="forum-reply-badge">{{ t.reply_count }}</span>
+            <span class="forum-reply-badge">{{ t2.reply_count }}</span>
           </RouterLink>
         </div>
 
@@ -185,11 +186,11 @@ onMounted(() => {
 
       <aside v-if="sideOpen" class="forum-side">
         <div class="forum-side-card">
-          <RouterLink class="btn btn-primary btn-block" to="/forum/new">发帖 →</RouterLink>
+          <RouterLink class="btn btn-primary btn-block" to="/forum/new">{{ t('forum.newPost', '发帖 →') }}</RouterLink>
         </div>
 
         <div class="forum-side-card">
-          <h3 class="forum-side-title">分类</h3>
+          <h3 class="forum-side-title">{{ t('forum.categories', '分类') }}</h3>
           <div class="forum-side-list">
             <button
               v-for="c in categories"
@@ -198,23 +199,23 @@ onMounted(() => {
               :class="{ active: category === c }"
               type="button"
               @click="category = c; apply()"
-            >{{ c === 'all' ? '全部' : c }}</button>
+            >{{ c === 'all' ? t('tags.all', '全部') : forumCatLabel(c) }}</button>
           </div>
         </div>
 
         <div class="forum-side-card">
-          <h3 class="forum-side-title">热门话题</h3>
+          <h3 class="forum-side-title">{{ t('forum.hotTopics', '热门话题') }}</h3>
           <div class="forum-side-list">
-            <RouterLink v-for="t in hotTopics.slice(0, 5)" :key="t.id" class="forum-side-item" :to="`/forum/topic/${t.id}`">
-              <span class="forum-side-item-title">{{ t.title }}</span>
-              <span class="forum-stat">{{ t.reply_count }}</span>
+            <RouterLink v-for="t3 in hotTopics.slice(0, 5)" :key="t3.id" class="forum-side-item" :to="`/forum/topic/${t3.id}`">
+              <span class="forum-side-item-title">{{ t3.title }}</span>
+              <span class="forum-stat">{{ t3.reply_count }}</span>
             </RouterLink>
-            <div v-if="!hotTopics.length" class="muted">暂无</div>
+            <div v-if="!hotTopics.length" class="muted">{{ t('forum.none', '暂无') }}</div>
           </div>
         </div>
 
         <div class="forum-side-card">
-          <h3 class="forum-side-title">活跃用户</h3>
+          <h3 class="forum-side-title">{{ t('forum.activeUsers', '活跃用户') }}</h3>
           <div class="forum-side-list">
             <RouterLink v-for="name in activeUsers" :key="name" class="forum-side-item" :to="`/user/${name}`">
               <span class="forum-avatar avatar-sm" :class="avatarClass(name)">{{ name[0] }}</span>

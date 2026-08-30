@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { DemoSummary } from '../api/types'
 import { tagLabel } from '../utils/funMode'
+import { keyLabel } from '../i18n'
 
 const props = defineProps<{ demo: DemoSummary }>()
 
@@ -17,9 +18,9 @@ const statLabels: Record<string, string> = {
 }
 
 function label(tag: { key: string; value: string }) {
-  // 整活模式：仅显示文案走 tagLabel；:key/路由/复制仍用原始值
+  // 整活模式：仅显示文案走 tagLabel；:key/路由/复制仍用原始值。键 label 走 i18n（EN → Model/Type…）
   const v = tagLabel(tag.value)
-  return statLabels[tag.key] ? `${statLabels[tag.key]}:${v}` : `${tag.key}:${v}`
+  return `${keyLabel(tag.key, statLabels[tag.key])}:${v}`
 }
 </script>
 

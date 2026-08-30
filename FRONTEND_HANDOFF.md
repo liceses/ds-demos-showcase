@@ -58,6 +58,8 @@
 - `/leaderboard` 排行榜、`/about` 关于/统计/赞助/致谢、`/admin/sponsors` 赞助/致谢管理、`/:pathMatch(.*)*` 404。
 
 ## 6. 注意事项
+- **i18n 约定（P1 已上线）**：零依赖覆盖式——模板 `t('view.key', '中文原文')`，中文内联回落、`src/i18n/en.ts` 覆盖英文，缺 key 安全回落中文；只翻 UI 固定文案，UGC/标签值/管理后台不翻。详见 `docs/i18n-英文站.md`。
+- **类型检查双门槛（踩过坑）**：`npm run typecheck`（`vue-tsc --noEmit`）在 solution 式 tsconfig 下是**弱检查近乎空跑**；发布门槛是 `npm run build`（`vue-tsc -b`，Docker 构建同命令）。**本地验证一律跑 `npm run build`**，可空字段做索引键等写法按 `-b` 严格度写——详见 `docs/运维经验与排坑记录.md` §11。
 - **OSS 降级**：后端 OSS 失败会降级本地存储并在日志 warn，前端无需感知（`preview_url` 或 `/preview/` 路径仍可用）。
 - **封面**：新上传/历史迁移后 cover_url 都是 `.webp`，`<img>` 无需特殊处理。
 - **标签**：已下线旧 `GET /tags` 扁平接口，一律用 `tag-keys`；`post /tags` 仅 admin 加 fixed 值。

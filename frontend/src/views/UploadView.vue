@@ -7,6 +7,8 @@ import { useTagsStore } from '../stores/tags'
 import type { DemoDetail } from '../api/types'
 import TagPicker from '../components/TagPicker.vue'
 import type { TagPick } from '../components/TagPicker.vue'
+import { t } from '../i18n'
+import { tagLabel } from '../utils/funMode'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -136,7 +138,7 @@ onMounted(async () => {
       const canEdit = auth.user?.role === 'admin' || !!demo.is_author
       if (!canEdit) {
         denied.value = true
-        error.value = '你没有权限编辑这个 Demo'
+        error.value = t('upload.errDenied', '你没有权限编辑这个 Demo')
       }
     } catch (e) {
       error.value = (e as Error).message
@@ -183,27 +185,27 @@ async function submit() {
   // 防抖：提交中忽略重复触发（连点 / 回车连按）
   if (submitting.value) return
   if (!title.value.trim()) {
-    error.value = '请填写标题'
+    error.value = t('upload.errTitle', '请填写标题')
     return
   }
   if (demoType.value === 'link') {
     if (!/^https?:\/\//.test(externalUrl.value.trim())) {
-      error.value = '链接类型需要填写 http(s) 地址'
+      error.value = t('upload.errLink', '链接类型需要填写 http(s) 地址')
       return
     }
   } else if (!editSlug && !zipFile.value) {
-    error.value = '请上传文件（zip 或单个 .html/.svg）'
+    error.value = t('upload.errFile', '请上传文件（zip 或单个 .html/.svg）')
     return
   }
   const tags = collectTags()
   if (!tags.length) {
-    error.value = '请至少选择一个标签（标签是作品分类的关键）'
+    error.value = t('upload.errTags', '请至少选择一个标签（标签是作品分类的关键）')
     return
   }
 
   // 编辑模式：没有任何改动时阻止提交，避免生成空公告
   if (editSlug && !hasChanges.value) {
-    error.value = '没有任何修改，未提交'
+    error.value = t('upload.errNoChanges', '没有任何修改，未提交')
     return
   }
 
@@ -267,68 +269,70 @@ async function submit() {
 
 <template>
   <section class="page-hero">
-    <span class="eyebrow">{{ editSlug ? '编辑 Demo' : '上传 Demo' }}</span>
-    <h1 class="huge">{{ editSlug ? demoTitle || '编辑' : '上传' }}</h1>
+    <span class="eyebrow">{{ editSlug ? t('upload.editEyebrow', '编辑 Demo') : t('app.nav.upload', '上传 Demo') }}</span>
+    <h1 class="huge">{{ editSlug ? demoTitle || t('upload.edit', '编辑') : t('upload.new', '上传') }}</h1>
     <p class="sub">
-      {{ editSlug ? '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。' : '支持网页应用 / 文件包（zip）/ 外部链接三种类型，可附提示词与介绍视频；未登录也能以公开用户身份发布。' }}
+      {{ editSlug
+        ? t('upload.editSub', '修改作品信息或重新上传文件；改动会自动记录到时间线并生成更新公告。')
+        : t('upload.newSub', '支持网页应用 / 文件包（zip）/ 外部链接三种类型，可附提示词与介绍视频；未登录也能以公开用户身份发布。') }}
     </p>
   </section>
 
   <section class="section" style="padding-top: 8px">
-    <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载 Demo…</div>
+    <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</div>
 
     <div v-else-if="denied" class="empty-box" style="max-width: 560px">
       <p style="margin-bottom: 18px">{{ error }}</p>
-      <RouterLink class="btn btn-outline" to="/">返回首页</RouterLink>
+      <RouterLink class="btn btn-outline" to="/">{{ t('notFound.back', '返回首页') }}</RouterLink>
     </div>
 
     <div v-else class="upload-grid" :class="{ 'panel-open': tagsOpen }">
       <div class="card card-default upload-form-card" style="padding: 24px">
         <form class="form-stack" @submit.prevent="submit">
         <label class="field">
-          标题
-          <input v-model="title" class="input" placeholder="Demo 标题" required />
+          {{ t('upload.title', '标题') }}
+          <input v-model="title" class="input" :placeholder="t('upload.titlePlaceholder', 'Demo 标题')" required />
         </label>
         <label class="field">
-          描述
-          <textarea v-model="description" class="input textarea" rows="3" placeholder="简要描述这个 Demo"></textarea>
+          {{ t('upload.desc', '描述') }}
+          <textarea v-model="description" class="input textarea" rows="3" :placeholder="t('upload.descPlaceholder', '简要描述这个 Demo')"></textarea>
         </label>
 
         <label class="field">
-          Demo 类型
+          {{ t('upload.type', 'Demo 类型') }}
           <select v-model="demoType" class="input" style="max-width: 280px">
-            <option value="web">网页应用（zip 或单个 .html/.svg）</option>
-            <option value="zip">文件包（zip，无需 index.html）</option>
-            <option value="link">外部链接（不传文件）</option>
+            <option value="web">{{ t('upload.typeWeb', '网页应用（zip 或单个 .html/.svg）') }}</option>
+            <option value="zip">{{ t('upload.typeZip', '文件包（zip，无需 index.html）') }}</option>
+            <option value="link">{{ t('upload.typeLink', '外部链接（不传文件）') }}</option>
           </select>
         </label>
         <label v-if="demoType === 'link'" class="field">
-          外部链接地址（必填）
+          {{ t('upload.linkUrl', '外部链接地址（必填）') }}
           <input v-model="externalUrl" class="input" placeholder="https://…" />
-          <span class="hint">直接跳转打开，服务器不存储内容</span>
+          <span class="hint">{{ t('upload.linkHint', '直接跳转打开，服务器不存储内容') }}</span>
         </label>
         <label class="field">
-          信任通道 upload_code（可选，未登录免审核）
+          {{ t('upload.uploadCode', '信任通道 upload_code（可选，未登录免审核）') }}
           <input v-model="uploadCode" class="input" placeholder="UPLOAD_CODE（有则填）" />
         </label>
         <label v-if="auth.isAdmin()" class="field" style="display: flex; gap: 8px; align-items: center">
           <input v-model="forceUpload" type="checkbox" style="width: 18px; height: 18px" />
-          强制上传（跳过 zip 去重 409）
+          {{ t('upload.force', '强制上传（跳过 zip 去重 409）') }}
         </label>
-        <p class="hint" style="margin: 0 0 12px">幂等键已自动生成：<code>{{ idempotencyKey }}</code>（重试不会重复创建）</p>
+        <p class="hint" style="margin: 0 0 12px">{{ t('upload.idemPrefix', '幂等键已自动生成：') }}<code>{{ idempotencyKey }}</code>{{ t('upload.idemSuffix', '（重试不会重复创建）') }}</p>
         <label class="field">
-          第一轮提示词（可选，展示为提示词卡片）
-          <textarea v-model="prompt" class="input textarea" rows="4" placeholder="生成这个 Demo 时使用的第一轮提示词…"></textarea>
+          {{ t('upload.prompt', '第一轮提示词（可选，展示为提示词卡片）') }}
+          <textarea v-model="prompt" class="input textarea" rows="4" :placeholder="t('upload.promptPlaceholder', '生成这个 Demo 时使用的第一轮提示词…')"></textarea>
         </label>
         <label class="field">
-          介绍视频链接（可选，服务器不存视频）
-          <input v-model="videoUrl" class="input" placeholder="https://…（B站/YouTube 等）" />
+          {{ t('upload.video', '介绍视频链接（可选，服务器不存视频）') }}
+          <input v-model="videoUrl" class="input" :placeholder="t('upload.videoPlaceholder', 'https://…（B站/YouTube 等）')" />
         </label>
 
         <div class="tag-drawer-wrap">
           <button class="tag-drawer-bar" type="button" @click="tagsOpen = !tagsOpen">
-            <span class="tag-drawer-stamp">可选</span>
-            <span class="tag-drawer-title">标签（选填）</span>
+            <span class="tag-drawer-stamp">{{ t('upload.optional', '可选') }}</span>
+            <span class="tag-drawer-title">{{ t('upload.tagsOptional', '标签（选填）') }}</span>
             <span v-if="selectedList.length" class="tag-drawer-chips">
               <span
                 v-for="s in selectedList"
@@ -336,59 +340,59 @@ async function submit() {
                 class="tag-chip active"
                 :title="s.description || ''"
               >
-                {{ s.key }}:{{ s.value }}
+                {{ s.key }}:{{ tagLabel(s.value) }}
               </span>
             </span>
-            <span class="tag-drawer-count"><b>{{ selectedCount }}</b> 已选</span>
-            <span v-if="!isWide" class="tag-drawer-toggle">{{ tagsOpen ? '收起 ←' : '展开 →' }}</span>
+            <span class="tag-drawer-count"><b>{{ selectedCount }}</b> {{ t('upload.selectedCount', '已选') }}</span>
+            <span v-if="!isWide" class="tag-drawer-toggle">{{ tagsOpen ? t('upload.collapseArrow', '收起 ←') : t('upload.expandArrow', '展开 →') }}</span>
           </button>
         </div>
 
         <label class="field">
-          封面{{ editSlug ? '（可选，不选保留当前封面）' : '（可选）' }}
+          {{ t('upload.cover', '封面（可选）') }}{{ editSlug ? t('upload.coverEdit', '（可选，不选保留当前封面）') : '' }}
           <input class="input" type="file" accept="image/png,image/jpeg,image/webp" @change="onCoverChange" />
           <div v-if="currentCover || coverPreview" class="cover-preview">
             <img :src="coverPreview || currentCover" alt="封面预览" />
-            <span v-if="coverPreview" class="cover-preview-badge">新封面</span>
+            <span v-if="coverPreview" class="cover-preview-badge">{{ t('upload.newCover', '新封面') }}</span>
           </div>
         </label>
         <label v-if="demoType !== 'link'" class="field">
-          文件{{ editSlug ? '（可选，不选则保留原文件）' : '' }}
+          {{ t('upload.file', '文件') }}{{ editSlug ? t('upload.fileEdit', '（可选，不选则保留原文件）') : '' }}
           <input class="input" type="file" accept=".zip,application/zip,.html,.htm,.svg,text/html,image/svg+xml" @change="onZipChange" />
           <span class="hint">
             {{ demoType === 'web'
-              ? '支持 zip（根目录需含 index.html）或单个 .html/.svg；单 HTML 必须自包含（内联 CSS/JS，双击可直接打开）'
-              : 'zip 文件包（不要求 index.html）' }}
+              ? t('upload.fileWebHint', '支持 zip（根目录需含 index.html）或单个 .html/.svg；单 HTML 必须自包含（内联 CSS/JS，双击可直接打开）')
+              : t('upload.fileZipHint', 'zip 文件包（不要求 index.html）') }}
           </span>
         </label>
         <label v-if="editSlug" class="field">
-          更新说明 / commit 信息（可选）
-          <input v-model="commitMessage" class="input" placeholder="例如：修复第二关音效不同步的问题" />
-          <span class="hint">会生成「作品更新公告」并写入时间线</span>
+          {{ t('upload.commitMsg', '更新说明 / commit 信息（可选）') }}
+          <input v-model="commitMessage" class="input" :placeholder="t('upload.commitPlaceholder', '例如：修复第二关音效不同步的问题')" />
+          <span class="hint">{{ t('upload.commitHint', '会生成「作品更新公告」并写入时间线') }}</span>
         </label>
         <label v-if="editSlug && zipFile && demoType !== 'link'" class="field" style="display: flex; gap: 8px; align-items: center">
           <input v-model="keepOldVersion" type="checkbox" style="width: 18px; height: 18px" />
-          保留当前版本为独立旧版页面（上传新 zip 时生效）
+          {{ t('upload.keepOld', '保留当前版本为独立旧版页面（上传新 zip 时生效）') }}
         </label>
 
         <div v-if="error" class="notice notice-error">
           <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
             <span>{{ error }}</span>
-            <RouterLink v-if="dupSlug" class="btn btn-sm btn-outline" :to="`/demo/${dupSlug}`">查看已有 Demo →</RouterLink>
+            <RouterLink v-if="dupSlug" class="btn btn-sm btn-outline" :to="`/demo/${dupSlug}`">{{ t('upload.viewDup', '查看已有 Demo →') }}</RouterLink>
           </div>
         </div>
         <div v-if="success" class="notice notice-success">
           <p style="margin-bottom: 10px">
-            {{ editSlug ? '更新成功，已生成更新公告。' : success.status === 'pending' ? '已提交，等待管理员审核。' : '上传成功。' }}
+            {{ editSlug ? t('upload.updated', '更新成功，已生成更新公告。') : success.status === 'pending' ? t('upload.pending', '已提交，等待管理员审核。') : t('upload.uploaded', '上传成功。') }}
           </p>
           <div class="filter-row" style="margin: 0">
             <template v-if="success.status !== 'pending'">
               <RouterLink class="btn btn-sm btn-primary" :to="`/demo/${success.status === 'updated' ? editSlug : success.slug}`">
-                查看 Demo
+                {{ t('upload.viewDemo', '查看 Demo') }}
               </RouterLink>
             </template>
-            <span v-else class="hint">审核通过后即可展示</span>
-            <RouterLink class="btn btn-sm btn-outline" to="/">返回主页</RouterLink>
+            <span v-else class="hint">{{ t('upload.pendingHint', '审核通过后即可展示') }}</span>
+            <RouterLink class="btn btn-sm btn-outline" to="/">{{ t('upload.backHome', '返回主页') }}</RouterLink>
           </div>
         </div>
 
@@ -397,12 +401,12 @@ async function submit() {
             <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
           </div>
           <span class="hint">
-            {{ uploadProgress >= 100 ? '已上传，服务器处理中（解压 / 传 OSS）…' : `上传中 ${uploadProgress}%` }}
+            {{ uploadProgress >= 100 ? t('upload.processing', '已上传，服务器处理中（解压 / 传 OSS）…') : t('upload.uploadingN', '上传中 {n}%', { n: uploadProgress }) }}
           </span>
         </div>
 
         <button class="btn btn-primary btn-lg btn-block" type="submit" :disabled="submitting">
-          {{ submitting ? (uploadProgress >= 100 ? '处理中…' : `上传中 ${uploadProgress}%`) : editSlug ? '保存修改' : '上传' }}
+          {{ submitting ? (uploadProgress >= 100 ? t('upload.processingShort', '处理中…') : t('upload.uploadingN', '上传中 {n}%', { n: uploadProgress })) : editSlug ? t('upload.saveChanges', '保存修改') : t('upload.submit', '上传') }}
         </button>
       </form>
       </div>
@@ -412,11 +416,11 @@ async function submit() {
           <div class="tag-modal-mask" @click="tagsOpen = false"></div>
           <div class="tag-modal-panel">
             <div class="tag-modal-head">
-              <span class="filter-label">标签选择</span>
-              <button class="btn btn-sm btn-dark" type="button" @click="tagsOpen = false">关闭</button>
+              <span class="filter-label">{{ t('upload.tagPicker', '标签选择') }}</span>
+              <button class="btn btn-sm btn-dark" type="button" @click="tagsOpen = false">{{ t('common.close', '关闭') }}</button>
             </div>
         <div class="tag-drawer-head">
-          <span class="hint">固定值点选 · 自定义值输入添加 · 数字值填整数 · author 系统保留</span>
+          <span class="hint">{{ t('upload.tagPickerHint', '固定值点选 · 自定义值输入添加 · 数字值填整数 · author 系统保留') }}</span>
         </div>
 
         <TagPicker v-model="selectedTags" />

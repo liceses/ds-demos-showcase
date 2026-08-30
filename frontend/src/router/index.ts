@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../api'
 import { titleBase } from '../utils/funMode'
+import { routeTitle } from '../i18n'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -49,8 +50,9 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-  // 整活模式开启时站点标题随 titleBase 切换（响应式，开关切换即时生效）
-  document.title = to.meta.title ? `${String(to.meta.title)} · ${titleBase.value}` : titleBase.value
+  // 页面标题随语言切换（routeTitle 映射）+ 站点名随 fun/i18n 切换（titleBase）
+  const pageTitle = to.meta.title ? routeTitle(String(to.meta.title)) : ''
+  document.title = pageTitle ? `${pageTitle} · ${titleBase.value}` : titleBase.value
   // 页面访问打点：一次路由切换 = 一次浏览（原始 PV +1）
   api.reportVisit()
 })

@@ -9,6 +9,7 @@ import PaginationBar from '../components/PaginationBar.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { useListPage } from '../composables/useListPage'
+import { t } from '../i18n'
 
 const sorts = [
   { key: 'avg', label: '平均分' },
@@ -41,20 +42,20 @@ onMounted(load)
 
 <template>
   <section class="page-hero">
-    <span class="eyebrow">排行榜</span>
-    <h1 class="huge">神鬼榜</h1>
-    <p class="sub">用「神作 / 鬼作」两极语义给作品投票，看看大家的口碑。</p>
+    <span class="eyebrow">{{ t('app.nav.leaderboard', '排行榜') }}</span>
+    <h1 class="huge">{{ t('leaderboard.title', '神鬼榜') }}</h1>
+    <p class="sub">{{ t('leaderboard.sub', '用「神作 / 鬼作」两极语义给作品投票，看看大家的口碑。') }}</p>
   </section>
 
   <section class="section" style="padding-top: 8px">
     <div class="filter-row" style="margin-bottom: 8px">
       <button v-for="s in sorts" :key="s.key" class="tab" :class="{ active: sort === s.key }" type="button" @click="changeSort(s.key)">
-        {{ s.label }}
+        {{ t('leaderboard.sorts.' + s.key, s.label) }}
       </button>
     </div>
     <div v-if="error" class="notice notice-error">{{ error }}</div>
-    <LoadingRow v-if="loading && !items.length" text="加载榜单…" />
-    <EmptyBox v-else-if="!items.length" text="暂无上榜作品" />
+    <LoadingRow v-if="loading && !items.length" :text="t('leaderboard.loading', '加载榜单…')" />
+    <EmptyBox v-else-if="!items.length" :text="t('leaderboard.empty', '暂无上榜作品')" />
 
     <MasonryGrid v-else :items="items" :item-key="(d: unknown) => (d as DemoSummary).slug">
       <template #default="{ item }">

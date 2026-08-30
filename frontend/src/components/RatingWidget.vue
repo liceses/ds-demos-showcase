@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
 import { getDeviceId } from '../utils/anon'
 import type { RatingStats } from '../api/types'
+import { t, lang } from '../i18n'
 
 const props = defineProps<{ slug: string }>()
 
@@ -16,8 +17,11 @@ const ratingLoading = ref(false)
 const deviceId = ref('')
 
 const SCORE_LABEL: Record<number, string> = { 5: '神作', 4: '佳作', 3: '一般', 2: '差', 1: '鬼作' }
+const SCORE_LABEL_EN: Record<number, string> = { 5: 'Masterpiece', 4: 'Great', 3: 'OK', 2: 'Bad', 1: 'Disaster' }
 function scoreLabel(score: number | null | undefined) {
-  return score ? SCORE_LABEL[score] || `${score} 分` : '未评分'
+  if (!score) return t('rating.unrated', '未评分')
+  if (lang.value === 'en') return SCORE_LABEL_EN[score] || String(score)
+  return SCORE_LABEL[score] || t('rating.scoreN', '{n} 分', { n: score })
 }
 
 const maxDist = computed(() => Math.max(1, ...(rating.value?.distribution?.map((d) => d.count) || [1])))
@@ -68,7 +72,7 @@ onMounted(loadRating)
           :class="{ active: (rating?.my_score ?? 0) >= s, mine: rating?.my_score === s }"
           type="button"
           :disabled="ratingLoading"
-          :title="`${s} 分 · ${SCORE_LABEL[s]}`"
+          :title="`${s} ${t('rating.fen', '分')} · ${lang === 'en' ? SCORE_LABEL_EN[s] : SCORE_LABEL[s]}`"
           @click="setScore(s)"
         >★</button>
       </div>
@@ -76,14 +80,14 @@ onMounted(loadRating)
       <div class="rating-meta">
         <div class="rating-avg">
           <b>{{ rating?.avg ?? 0 }}</b> / 5
-          <span class="muted">（{{ rating?.count ?? 0 }} 人评）</span>
+          <span class="muted">{{ t('rating.ratedBy', '（{n} 人评）', { n: rating?.count ?? 0 }) }}</span>
           <span class="hint">{{ scoreLabel(rating?.my_score) }}</span>
         </div>
         <div class="rating-sub">
-          <span class="rating-god">神 {{ rating?.god ?? 0 }}</span>
+          <span class="rating-god">{{ t('rating.godShort', '神') }} {{ rating?.god ?? 0 }}</span>
           <span class="sep">·</span>
-          <span class="rating-ghost">鬼 {{ rating?.ghost ?? 0 }}</span>
-          <span v-if="rating?.my_score" class="hint">我的评分：{{ rating.my_score }}（再点一次取消）</span>
+          <span class="rating-ghost">{{ t('rating.ghostShort', '鬼') }} {{ rating?.ghost ?? 0 }}</span>
+          <span v-if="rating?.my_score" class="hint">{{ t('rating.mine', '我的评分：{n}（再点一次取消）', { n: rating?.my_score }) }}</span>
         </div>
 
         <div v-if="rating?.distribution?.length" class="rating-dist">
@@ -91,7 +95,7 @@ onMounted(loadRating)
             v-for="d in rating.distribution"
             :key="d.score"
             class="rating-dist-col"
-            :title="`${d.score} 分：${d.count} 票`"
+            :title="t('rating.distTip', '{n} 分：{c} 票', { n: d.score, c: d.count })"
           >
             <div
               class="rating-dist-bar"
@@ -102,8 +106,8 @@ onMounted(loadRating)
           </div>
         </div>
 
-        <div class="rating-legend">1 鬼作 · 2 差 · 3 一般 · 4 佳作 · 5 神作</div>
-        <p v-if="!auth.isLoggedIn()" class="hint rating-anon-hint">匿名评分会在当前浏览器记住，换浏览器/清缓存后无法找回</p>
+        <div class="rating-legend">{{ t('rating.legend', '1 鬼作 · 2 差 · 3 一般 · 4 佳作 · 5 神作') }}</div>
+        <p v-if="!auth.isLoggedIn()" class="hint rating-anon-hint">{{ t('rating.anonHint', '匿名评分会在当前浏览器记住，换浏览器/清缓存后无法找回') }}</p>
       </div>
     </div>
   </section>

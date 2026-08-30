@@ -11,8 +11,9 @@ import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import DemoCard from '../components/DemoCard.vue'
 import RatingWidget from '../components/RatingWidget.vue'
 import QuickComments from '../components/QuickComments.vue'
-import { parseDate } from '../utils/time'
+import { parseDate, currentLocale } from '../utils/time'
 import { tagLabel } from '../utils/funMode'
+import { t } from '../i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,15 +111,15 @@ const canEdit = computed(
 async function onDelete() {
   if (!demo.value) return
   const ok = await ui.confirm({
-    title: '删除 Demo',
-    message: `确定删除「${demo.value.title}」？此操作不可恢复，本地文件与 OSS 对象都会被清理。`,
-    confirmText: '删除',
+    title: t('demo.delTitle', '删除 Demo'),
+    message: t('demo.delMsg', `确定删除「${demo.value.title}」？此操作不可恢复，本地文件与 OSS 对象都会被清理。`, { title: demo.value.title }),
+    confirmText: t('demo.delConfirm', '删除'),
     danger: true,
   })
   if (!ok) return
   try {
     await api.deleteDemo(slug)
-    ui.toast('Demo 已删除', 'success')
+    ui.toast(t('demo.deleted', 'Demo 已删除'), 'success')
     router.push('/')
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -129,7 +130,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section v-if="loading" class="loading-row"><span class="spinner"></span> 加载 Demo…</section>
+  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</section>
 
   <section v-else-if="error" class="empty-box">{{ error }}</section>
 
@@ -143,18 +144,18 @@ onMounted(load)
             <RouterLink v-if="demo.author_id == null" to="/author/public" style="color: inherit">{{ demo.author }}</RouterLink>
             <RouterLink v-else :to="`/user/${demo.author}`" style="color: inherit">{{ demo.author }}</RouterLink>
           </b>
-          作者
+          {{ t('demo.author', '作者') }}
         </span>
-        <span class="mini-stat"><b>{{ parseDate(demo.created_at).toLocaleDateString('zh-CN') }}</b> 创建</span>
-        <span class="mini-stat"><b>{{ demo.view_count }}</b> 浏览</span>
-        <span class="mini-stat"><b>{{ demo.download_count }}</b> 下载</span>
-        <span class="mini-stat"><b>{{ demo.comment_count }}</b> 讨论</span>
+        <span class="mini-stat"><b>{{ parseDate(demo.created_at).toLocaleDateString(currentLocale()) }}</b> {{ t('demo.created', '创建') }}</span>
+        <span class="mini-stat"><b>{{ demo.view_count }}</b> {{ t('demo.views', '浏览') }}</span>
+        <span class="mini-stat"><b>{{ demo.download_count }}</b> {{ t('demo.downloads', '下载') }}</span>
+        <span class="mini-stat"><b>{{ demo.comment_count }}</b> {{ t('demo.discussions', '讨论') }}</span>
         <div class="btn-group">
-          <button v-if="demo.demo_type !== 'link'" class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? '下载文件' : '下载 ZIP' }}</button>
-          <RouterLink class="btn btn-sm btn-outline" :to="`/forum?demo=${demo.slug}`">讨论 →</RouterLink>
+          <button v-if="demo.demo_type !== 'link'" class="btn btn-sm btn-secondary" type="button" @click="onDownload">{{ demo.single_file ? t('demo.downloadFile', '下载文件') : t('demo.downloadZip', '下载 ZIP') }}</button>
+          <RouterLink class="btn btn-sm btn-outline" :to="`/forum?demo=${demo.slug}`">{{ t('demo.discuss', '讨论 →') }}</RouterLink>
           <template v-if="canEdit">
-            <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">编辑</RouterLink>
-            <button class="btn btn-sm btn-danger" type="button" @click="onDelete">删除</button>
+            <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">{{ t('demo.edit', '编辑') }}</RouterLink>
+            <button class="btn btn-sm btn-danger" type="button" @click="onDelete">{{ t('demo.del', '删除') }}</button>
           </template>
         </div>
       </div>
@@ -173,48 +174,48 @@ onMounted(load)
 
     <template v-else-if="demo.demo_type === 'zip'">
       <div class="card card-mint" style="padding: 32px; text-align: center">
-        <h2 style="margin-bottom: 10px">文件包项目</h2>
-        <p class="muted" style="margin-bottom: 18px">这是一个项目文件包（非网页应用），不提供在线预览，请下载后本地查看。</p>
-        <button class="btn btn-primary" type="button" @click="onDownload">下载 ZIP（{{ demo.download_count }} 次）</button>
+        <h2 style="margin-bottom: 10px">{{ t('demo.zipTitle', '文件包项目') }}</h2>
+        <p class="muted" style="margin-bottom: 18px">{{ t('demo.zipDesc', '这是一个项目文件包（非网页应用），不提供在线预览，请下载后本地查看。') }}</p>
+        <button class="btn btn-primary" type="button" @click="onDownload">{{ t('demo.downloadZipN', '下载 ZIP（{n} 次）', { n: demo.download_count }) }}</button>
       </div>
     </template>
 
     <template v-else>
       <div class="card card-coral" style="padding: 32px; text-align: center">
-        <h2 style="margin-bottom: 10px">外部链接项目</h2>
-        <p class="muted" style="margin-bottom: 18px">内容托管在外部站点，点击下方按钮跳转访问。</p>
-        <a class="btn btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">打开链接 →</a>
+        <h2 style="margin-bottom: 10px">{{ t('demo.linkTitle', '外部链接项目') }}</h2>
+        <p class="muted" style="margin-bottom: 18px">{{ t('demo.linkDesc', '内容托管在外部站点，点击下方按钮跳转访问。') }}</p>
+        <a class="btn btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">{{ t('demo.openLink', '打开链接 →') }}</a>
       </div>
     </template>
 
     <section class="section">
       <div class="tabs">
-        <button class="tab" :class="{ active: activeTab === 'info' }" type="button" @click="activeTab = 'info'">信息</button>
-        <button class="tab" :class="{ active: activeTab === 'timeline' }" type="button" @click="activeTab = 'timeline'">时间线</button>
-        <button class="tab" :class="{ active: activeTab === 'session' }" type="button" @click="activeTab = 'session'">会话日志</button>
-        <button class="tab" :class="{ active: activeTab === 'discussion' }" type="button" @click="activeTab = 'discussion'">讨论</button>
+        <button class="tab" :class="{ active: activeTab === 'info' }" type="button" @click="activeTab = 'info'">{{ t('demo.tabInfo', '信息') }}</button>
+        <button class="tab" :class="{ active: activeTab === 'timeline' }" type="button" @click="activeTab = 'timeline'">{{ t('demo.tabTimeline', '时间线') }}</button>
+        <button class="tab" :class="{ active: activeTab === 'session' }" type="button" @click="activeTab = 'session'">{{ t('demo.tabSession', '会话日志') }}</button>
+        <button class="tab" :class="{ active: activeTab === 'discussion' }" type="button" @click="activeTab = 'discussion'">{{ t('demo.tabDiscussion', '讨论') }}</button>
       </div>
 
       <Transition name="tab-pane" mode="out-in">
         <div :key="activeTab" class="tab-pane">
           <template v-if="activeTab === 'info'">
             <div class="card card-default" style="padding: 22px">
-              <h2 style="margin-bottom: 12px">描述</h2>
+              <h2 style="margin-bottom: 12px">{{ t('demo.descTitle', '描述') }}</h2>
               <p style="line-height: 1.8">{{ demo.description }}</p>
 
               <template v-if="demo.prompt">
-                <h2 style="margin: 22px 0 12px">第一轮提示词</h2>
+                <h2 style="margin: 22px 0 12px">{{ t('demo.promptTitle', '第一轮提示词') }}</h2>
                 <div class="card card-mint" style="padding: 16px; border-left: 4px solid var(--ink)">
                   <p style="margin: 0; line-height: 1.8; white-space: pre-wrap; font-family: var(--font-mono); font-size: 13px">{{ demo.prompt }}</p>
                 </div>
               </template>
 
               <template v-if="demo.video_url">
-                <h2 style="margin: 22px 0 12px">介绍视频</h2>
-                <a class="btn btn-sm btn-outline" :href="demo.video_url" target="_blank" rel="noopener">观看介绍视频 ↗</a>
+                <h2 style="margin: 22px 0 12px">{{ t('demo.videoTitle', '介绍视频') }}</h2>
+                <a class="btn btn-sm btn-outline" :href="demo.video_url" target="_blank" rel="noopener">{{ t('demo.watchVideo', '观看介绍视频 ↗') }}</a>
               </template>
 
-              <h2 style="margin: 22px 0 12px">标签</h2>
+              <h2 style="margin: 22px 0 12px">{{ t('demo.tagsTitle', '标签') }}</h2>
               <div class="filter-row">
                 <RouterLink
                   v-for="t in demo.tags"
@@ -227,29 +228,29 @@ onMounted(load)
                 </RouterLink>
               </div>
               <div class="notice notice-info" style="margin-top: 20px">
-                <strong>时间线说明：</strong>版本记录仅表示该 Demo 的创建与更新演进过程。
+                <strong>{{ t('demo.timelineNoteHead', '时间线说明：') }}</strong>{{ t('demo.timelineNote', '版本记录仅表示该 Demo 的创建与更新演进过程。') }}
               </div>
             </div>
           </template>
 
           <template v-else-if="activeTab === 'timeline'">
-            <div v-if="!demo.timeline?.length" class="empty-box">暂无版本记录</div>
+            <div v-if="!demo.timeline?.length" class="empty-box">{{ t('demo.noTimeline', '暂无版本记录') }}</div>
             <div v-else class="timeline">
-              <div v-for="t in demo.timeline" :key="t.id" class="timeline-item">
-                <span class="tag-chip" :class="{ active: true }">{{ t.version_label }}</span>
+              <div v-for="t2 in demo.timeline" :key="t2.id" class="timeline-item">
+                <span class="tag-chip" :class="{ active: true }">{{ t2.version_label }}</span>
                 <div class="timeline-body">
-                  <p style="margin: 0">{{ t.message }}</p>
-                  <RouterLink v-if="t.old_slug" class="btn btn-sm btn-outline" :to="`/demo/${t.old_slug}`" style="margin-top: 6px">
-                    查看旧版 →
+                  <p style="margin: 0">{{ t2.message }}</p>
+                  <RouterLink v-if="t2.old_slug" class="btn btn-sm btn-outline" :to="`/demo/${t2.old_slug}`" style="margin-top: 6px">
+                    {{ t('demo.viewOld', '查看旧版 →') }}
                   </RouterLink>
                 </div>
-                <span class="muted" style="white-space: nowrap">{{ parseDate(t.created_at).toLocaleString('zh-CN') }}</span>
+                <span class="muted" style="white-space: nowrap">{{ parseDate(t2.created_at).toLocaleString(currentLocale()) }}</span>
               </div>
             </div>
           </template>
 
           <template v-else-if="activeTab === 'session'">
-            <div v-if="!sessionLogs.length" class="empty-box">暂无会话日志</div>
+            <div v-if="!sessionLogs.length" class="empty-box">{{ t('demo.noSession', '暂无会话日志') }}</div>
             <div v-else class="filter-row">
               <button
                 v-for="log in sessionLogs"
@@ -263,7 +264,7 @@ onMounted(load)
               </button>
             </div>
             <div v-if="selectedLog" class="card card-mint" style="padding: 20px">
-              <div v-if="loadingLog" class="loading-row"><span class="spinner"></span> 加载会话…</div>
+              <div v-if="loadingLog" class="loading-row"><span class="spinner"></span> {{ t('demo.loadingSession', '加载会话…') }}</div>
               <DshTrajectoryView v-else-if="selectedLog.endsWith('.jsonl')" :raw="logContent" />
               <MarkdownRenderer v-else :content="logContent" />
             </div>
@@ -279,11 +280,11 @@ onMounted(load)
     <!-- 相关推荐 -->
     <section class="section" style="padding-top: 8px">
       <div class="section-head">
-        <h2 class="section-title">相关推荐</h2>
-        <button class="btn btn-sm btn-outline" type="button" @click="drawRelated">换一批</button>
+        <h2 class="section-title">{{ t('demo.related', '相关推荐') }}</h2>
+        <button class="btn btn-sm btn-outline" type="button" @click="drawRelated">{{ t('home.shuffle', '换一批') }}</button>
       </div>
-      <div v-if="relatedLoading && !relatedShown.length" class="loading-row"><span class="spinner"></span> 加载推荐…</div>
-      <div v-else-if="!relatedShown.length" class="empty-box">暂无相关推荐</div>
+      <div v-if="relatedLoading && !relatedShown.length" class="loading-row"><span class="spinner"></span> {{ t('demo.loadingRelated', '加载推荐…') }}</div>
+      <div v-else-if="!relatedShown.length" class="empty-box">{{ t('demo.noRelated', '暂无相关推荐') }}</div>
       <div v-else class="waterfall">
         <div v-for="d in relatedShown" :key="d.slug" class="waterfall-item">
           <DemoCard :demo="d" />

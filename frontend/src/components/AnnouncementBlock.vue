@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Announcement } from '../api/types'
 import { annCls, annLabel, timeAgo } from '../utils/announcement'
+import { t } from '../i18n'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 import AnnouncementModal from './AnnouncementModal.vue'
 
@@ -11,7 +12,11 @@ const expanded = ref(false)
 const activeAnn = ref<Announcement | null>(null)
 const visible = computed(() => (expanded.value ? props.items.slice(0, 6) : props.items.slice(0, 1)))
 
-const statusLabel: Record<string, string> = { draft: '草稿', published: '已发布', offline: '已下线' }
+function statusLabel(s: string): string {
+  if (s === 'draft') return t('ann.draft', '草稿')
+  if (s === 'offline') return t('ann.offline', '已下线')
+  return t('ann.published', '已发布')
+}
 </script>
 
 <template>
@@ -19,11 +24,11 @@ const statusLabel: Record<string, string> = { draft: '草稿', published: '已�
     <div class="ann-block-head">
       <h3 class="ann-block-title">{{ title }}</h3>
       <button v-if="props.items.length > 1" class="btn btn-sm btn-outline ann-more" type="button" @click="expanded = !expanded">
-        {{ expanded ? '收起' : `更多 ${props.items.length}` }}
+        {{ expanded ? t('common.collapse', '收起') : t('common.more', `更多 ${props.items.length}`, { n: props.items.length }) }}
       </button>
     </div>
 
-    <div v-if="!props.items.length" class="empty-box" style="padding: 16px">暂无公告</div>
+    <div v-if="!props.items.length" class="empty-box" style="padding: 16px">{{ t('ann.none', '暂无公告') }}</div>
 
     <div v-else class="ann-block-list">
       <component
@@ -39,10 +44,10 @@ const statusLabel: Record<string, string> = { draft: '草稿', published: '已�
         <span class="ann-stamp">{{ annLabel(a.type) }}</span>
         <div class="ann-main">
           <div class="ann-title">
-            <span v-if="a.pinned" class="ann-pin">置顶</span>
+            <span v-if="a.pinned" class="ann-pin">{{ t('common.pinned', '置顶') }}</span>
             <span v-if="a.category" class="ann-cat">{{ a.category }}</span>
-            <RouterLink v-if="a.topic_id && !a.demo_slug" class="ann-cat" :to="`/forum/topic/${a.topic_id}`">讨论</RouterLink>
-            <span v-if="showStatus && a.status" class="ann-status" :class="'status-' + a.status">{{ statusLabel[a.status] }}</span>
+            <RouterLink v-if="a.topic_id && !a.demo_slug" class="ann-cat" :to="`/forum/topic/${a.topic_id}`">{{ t('common.discuss', '讨论') }}</RouterLink>
+            <span v-if="showStatus && a.status" class="ann-status" :class="'status-' + a.status">{{ statusLabel(a.status) }}</span>
             {{ a.title }}
           </div>
           <MarkdownRenderer v-if="a.content" :content="a.content" compact />

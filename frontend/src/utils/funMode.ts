@@ -4,7 +4,7 @@
 // 1. 只改「渲染文案」——数据、URL、路由参数、请求载荷、点击复制的内容永远是原始值；
 //    标签值用全等匹配替换，绝不做子串/自由文本替换。
 // 2. 自由文本（prompt / description / Markdown 正文）一律不翻译。
-// 3. /admin 路由豁免（adminExempt）：管理界面恒显真实值，避免把 astra-grey 当真值再建一遍。
+// 3. /admin 路由豁免（adminExempt）：管理界面恒显真实值，避免把 astra-canary 当真值再建一遍。
 
 import { computed, ref } from 'vue'
 import { lang, setLang, type Lang } from '../i18n'
@@ -56,7 +56,7 @@ export const funEffective = computed(() => {
 /** 标签值显示层翻译：全等匹配，原值优先返回 */
 export function tagLabel(v: string): string {
   if (!funEffective.value) return v
-  if (v === 'ds-unknown') return 'astra-grey'
+  if (v === 'ds-unknown') return 'astra-canary'
   return v
 }
 
@@ -69,6 +69,6 @@ export function tagStrLabel(s: string): string {
 
 /** 站点标题/品牌文案（随 fun 开关 + 语言双切换） */
 export const titleBase = computed(() => {
-  if (funEffective.value) return lang.value === 'en' ? 'astra grey-test works collection' : 'astra 灰测作品收集'
+  if (funEffective.value) return lang.value === 'en' ? 'astra canary works collection' : 'astra 灰测作品收集'
   return lang.value === 'en' ? 'AI Demo Makers' : 'AI 全民制作人'
 })

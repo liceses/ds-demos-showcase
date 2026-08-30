@@ -965,7 +965,8 @@ export const mockApi = {
       content: {
         demos_total: approved.length,
         demos_by_type: approved.reduce<Record<string, number>>((m, d) => {
-          m[d.demo_type] = (m[d.demo_type] || 0) + 1
+          const t = d.demo_type || 'web' // demo_type 可空，不能直接做索引键
+          m[t] = (m[t] || 0) + 1
           return m
         }, {}),
         authors_total: 6,

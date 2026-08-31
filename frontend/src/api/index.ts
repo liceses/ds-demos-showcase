@@ -11,6 +11,7 @@ import type {
   Comment,
   CreateDemoFromUrlPayload,
   CreateDemoPayload,
+  CurationResult,
   DemoDetail,
   DemoListParams,
   ForumTopic,
@@ -406,6 +407,11 @@ const realApi = {
   },
   async adminApprove(idOrSlug: string | number, action: 'approve' | 'reject'): Promise<void> {
     await http.post(`/admin/review/${idOrSlug}`, { action })
+  },
+  /** astra 橱窗策展：发放/回收站点通行证 + 语言标记（None 字段后端保持不变） */
+  async setCuration(slug: string, body: { sites?: string[]; lang?: 'zh' | 'en' }): Promise<CurationResult> {
+    const { data } = await http.put(`/admin/demos/${encodeURIComponent(slug)}/curation`, body)
+    return data
   },
   async getSettings(): Promise<Settings> {
     const { data } = await http.get('/admin/settings')

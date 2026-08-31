@@ -177,6 +177,15 @@ export interface SessionLog {
 export interface AdminDemo extends DemoDetail {
   storage_size: number
   inconsistency: boolean
+  /** astra 橱窗策展：站点通行证（逗号枚举 deep/astra）+ 语言标记 */
+  sites?: string
+  lang?: string
+}
+
+export interface CurationResult {
+  slug: string
+  sites: string
+  lang: string
 }
 
 export interface AdminUser extends User {

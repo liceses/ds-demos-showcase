@@ -11,6 +11,7 @@ import type {
   Comment,
   CreateDemoFromUrlPayload,
   CreateDemoPayload,
+  CurationResult,
   DemoDetail,
   DemoListParams,
   ForumTopic,
@@ -516,6 +517,8 @@ const pendingDemos: DemoDetail[] = [
 ]
 
 let settings: Settings = { auto_approve: true, auto_approve_public: false }
+// astra 橱窗策展（mock 态记忆）：slug -> {sites, lang}
+const curationMap = new Map<string, { sites: string[]; lang: 'zh' | 'en' }>()
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T
@@ -1370,7 +1373,18 @@ export const mockApi = {
   // ---------- Admin ----------
   async adminDemos(): Promise<AdminDemo[]> {
     await delay()
-    return clone([...demos, ...pendingDemos].map((d) => ({ ...d, storage_size: 1024 * 20, inconsistency: false })))
+    return clone(
+      [...demos, ...pendingDemos].map((d) => {
+        const cur = curationMap.get(d.slug)
+        return {
+          ...d,
+          storage_size: 1024 * 20,
+          inconsistency: false,
+          sites: cur ? cur.sites.join(',') : 'deep',
+          lang: cur?.lang ?? 'zh',
+        }
+      }),
+    )
   },
 
   async adminUsers(): Promise<AdminUser[]> {
@@ -1395,6 +1409,17 @@ export const mockApi = {
       d.status = 'rejected'
       pendingDemos.splice(pendingDemos.indexOf(d), 1)
     }
+  },
+
+  // astra 橱窗策展（mock 记忆在 map；缺省 deep/zh 与后端默认一致）
+  async setCuration(slug: string, body: { sites?: string[]; lang?: 'zh' | 'en' }): Promise<CurationResult> {
+    await delay(200)
+    const cur = curationMap.get(slug) || { sites: ['deep'], lang: 'zh' as const }
+    const sites = body.sites ?? cur.sites
+    if (!sites.length) throw new Error('sites 需为 deep/astra 的非空子集')
+    const lang = body.lang ?? cur.lang
+    curationMap.set(slug, { sites, lang })
+    return { slug, sites: sites.join(','), lang }
   },
 
   async getSettings(): Promise<Settings> {

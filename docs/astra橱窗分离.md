@@ -59,7 +59,17 @@ PUT /api/v1/admin/demos/{slug}/curation
 
 - 纯 astra（sites='astra'）= 从主站**也**消失（详情/列表/预览全门禁）——「橱窗独占作品」的正确姿势。
 - 双栖（'deep,astra'）= 两站同时可见，用于想引流的精品。
-- 管理后台 UI（AdminDemosSection 勾选框）为后续批次。
+- 管理后台 UI 已接入：「作品管理」新增 **橱窗列**（`主`/`窗` 两枚通行证章 + 语言下拉，乐观更新失败回滚）与 **橱窗池** 筛选 tab（`AdminDemosSection.vue`）。
+
+## 四·五、橱窗前端（B2 已完成）
+
+同一份构建、运行时按 hostname 分叉（`frontend/src/main.ts`）：
+- `frontend/src/astra/scope.ts`：命中 astrademos.top → 加载 `main-astra.ts` 独立 mini-SPA（三页 + 极简壳），**主站 App/router/style.css 物理不加载**；其余域名走主站原路径，逐字节不变。
+- 三页：`AstraWorksView`（hero + 灰测叙事条 + 均匀网格画廊）、`AstraWorkView`（大预览 + operator brief = prompt 的橱窗化名；无评论/日志/时间线）、`AstraAboutView`（假 model card + request access）。
+- 视觉：`astra/astra.css` 实验室极简（白底 hairline 等宽，与主站新野兽派零交叉），astra chunk 总负载 ~14KB。
+- 橱窗内 funMode 强制开、语言锁 EN、作者落款 "astra lab"（后端输出层）；ds-unknown→astra-canary 翻译复用 `tagLabel`。
+- `AstraAboutView.REQUEST_URL` 上线前换成真实接收入口（Discord/X/mailto）。
+- 本地预览：hosts 加 `127.0.0.1 astrademos.top` → `./start-dev.ps1` → `http://astrademos.top:5173`（vite proxy 已改 `changeOrigin:false` 透传 Host，主站端口 localhost:5173 不受影响）。
 
 ## 五、部署清单（astra 域名启用时）
 
@@ -67,13 +77,12 @@ PUT /api/v1/admin/demos/{slug}/curation
 `demo.deepdemos.top` 子域只提供"跨域隔离 + demo localStorage"增值，**不是橱窗的依赖**；
 deepdemos 侧若想彻底弃用它，只需清空 `PREVIEW_BASE_URL`（`IframePreview.vue` 检测到同源会自动不放行 `allow-same-origin`，沙箱反而更严一档）。
 
-1. **DNS/CF**：`astrademos.top` A 记录接入同一 Cloudflare/服务器（不需要任何子域）。
-2. **nginx**（`frontend/nginx.conf` 加 server 块）：`server_name astrademos.top;` 与主站块同构——SPA 回退 + `/api|/preview|/media` 反代 backend:8000。
+1. **DNS/CF**：`astrademos.top`（可含 www）A 记录接入同一 Cloudflare/服务器（不需要任何子域）。
+2. **nginx**：`frontend/nginx.conf` **已含** `server_name astrademos.top www.astrademos.top` 块——SPA 回退 + `/api|/preview|/media` 同源反代（Host 原样透传，后端据此判定视区）+ 内置 robots 全 Disallow + `X-Robots-Tag: noindex`。部署侧无新增工作。
 3. **`.env`**：`ASTRA_HOSTS=astrademos.top`（代码默认已含，留空可彻底关闭视区）；`ASTRA_PREVIEW_BASE_URL` 留空即可。
 4. **CORS**：同源方案下**无需任何 CORS 变更**（当前 `OSS_SERVE_LOCAL=true`，预览/封面源站 200 直出）。仅当将来启用 OSS 直连（`=false`）时，OSS 桶 CORS 来源需追加 `https://astrademos.top`——http/https 都要加的教训见《预览架构与排坑记录》。
-5. **可选增值**：策展作品若需 localStorage 运行（存档类游戏等），再加 `demo.astrademos.top` 子域 + `ASTRA_PREVIEW_BASE_URL=https://demo.astrademos.top`（nginx 只放行 `/preview`、`/media`，照抄主站预览块）；前端 sandbox 逻辑对跨域自动放行 `allow-same-origin`，零代码改动。
-6. **robots**：astra 域 `robots.txt` Disallow 全部（橱窗不做 SEO，防止 Google 把策展池当主站镜像/顺藤摸瓜）。
-7. **Cloudflare 缓存**：默认按 hostname 分缓存键，两域不会串味；橱窗前端建议 `no-cache` 文档 + 页面资源走 assets 长缓存规则。
+5. **可选增值**：策展作品若需 localStorage 运行（存档类游戏等），再加 `demo.astrademos.top` 子域 + `ASTRA_PREVIEW_BASE_URL=https://demo.astrademos.top`（nginx 只放行 `/preview`、`/media`，照抄 demo.deepdemos.top 块）；前端 sandbox 逻辑对跨域自动放行 `allow-same-origin`，零代码改动。
+6. **Cloudflare 缓存**：默认按 hostname 分缓存键，两域不会串味；橱窗文档建议 Cache Rule no-cache，`/assets/*` 走长缓存（构建带 hash）。
 
 ## 六、与整活模式（fun mode）的关系
 

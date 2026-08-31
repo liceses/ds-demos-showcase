@@ -14,6 +14,7 @@ from ..schemas import (
     AdminStatsOut,
     AdminUserOut,
     DemoCounts,
+    DemoCurationIn,
     ReviewAction,
     SettingsOut,
     StorageStatusOut,
@@ -51,9 +52,40 @@ def review_demo(slug: str, body: ReviewAction, db: Session = Depends(get_db), ad
 
 
 @router.get("/demos", response_model=list[AdminDemoOut])
-def admin_demos(db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    demos = db.query(Demo).order_by(Demo.created_at.desc()).all()
+def admin_demos(
+    sites: str | None = Query(default=None, description="按可见域过滤（deep/astra）"),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    query = db.query(Demo)
+    if sites:
+        query = query.filter(Demo.sites.contains(sites))
+    demos = query.order_by(Demo.created_at.desc()).all()
     return [serialize_demo(db, d, detail=True) for d in demos]
+
+
+@router.put("/demos/{slug}/curation")
+def set_demo_curation(
+    slug: str, body: DemoCurationIn, db: Session = Depends(get_db), _: User = Depends(require_admin)
+):
+    """astra 橱窗策展：发放站点通行证（sites）+ 语言标记（lang）。None 字段保持不变。"""
+    demo = db.query(Demo).filter(Demo.slug == slug).first()
+    if demo is None:
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    if body.sites is not None:
+        picked = set(body.sites)
+        if not picked or not picked.issubset({"deep", "astra"}):
+            raise HTTPException(status_code=422, detail="sites 需为 deep/astra 的非空子集", )
+        # 规范化存储顺序：deep 在前（与存量默认值一致，前缀匹配 LIKE '%deep%' 不受顺序影响）
+        demo.sites = ",".join(s for s in ("deep", "astra") if s in picked)
+    if body.lang is not None:
+        demo.lang = body.lang
+    db.commit()
+    # 预览门禁缓存立即失效（不必等 60s TTL）
+    from ..services.scope import invalidate_visibility
+
+    invalidate_visibility(demo.slug)
+    return {"slug": demo.slug, "sites": demo.sites, "lang": demo.lang}
 
 
 @router.get("/users", response_model=list[AdminUserOut])

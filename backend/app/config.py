@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     # 且 HTML 由后端 /preview 返回，规避 OSS 默认域名对 HTML 的 x-oss-force-download 强制下载。
     preview_base_url: str = ""
 
+    # ---- astra 橱窗（多站可见域，见 docs/astra橱窗分离.md）----
+    # astra 域名单（逗号分隔，按 host 后缀匹配）：来自这些域名的请求进入 astra 视区——
+    # 只返回 sites 含 'astra' 的策展 demo，非白名单 API 一律 404。缺省即启用线上域名；
+    # 本地想提前验证可访问 http://astrademos.top 并 hosts 指到 127.0.0.1，或留空彻底关闭视区。
+    astra_hosts: str = "astrademos.top"
+    # astra 橱窗预览域（可选增值，如需给策展作品跨域隔离 + localStorage 时配 https://demo.astrademos.top）；
+    # 留空 = 同源相对路径 /preview/…（默认方案，零新增基建；见 docs/astra橱窗分离.md §五）
+    astra_preview_base_url: str = ""
+
     # 网站自身 git 仓库目录（用于「更新公告」= 网站仓库 commit 信息）
     # 本地开发缺省自动定位到仓库根目录；Docker 内用 /site-repo
     site_repo_dir: str = ""

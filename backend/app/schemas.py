@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -236,7 +237,16 @@ class DemoDetailOut(DemoSummaryOut):
 
 
 class AdminDemoOut(DemoDetailOut):
-    pass
+    # 策展字段仅管理面暴露（astra 橱窗）；公开 schema 未声明 → pydantic 自动剥离
+    sites: str = "deep"
+    lang: str = "zh"
+
+
+class DemoCurationIn(BaseModel):
+    """astra 橱窗策展：给 demo 发放站点通行证 + 语言标记。None = 保持不变。"""
+
+    sites: list[Literal["deep", "astra"]] | None = Field(default=None, min_length=1)
+    lang: Literal["zh", "en"] | None = None
 
 
 class Paginated(BaseModel):

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
 from .services import oss
+from .services.scope import ASTRA, current_scope
 
 
 def tag_dict(db: Session, tag: Tag) -> dict:
@@ -44,12 +45,23 @@ def serialize_demo(
 
     version = int(demo.updated_at.timestamp()) if demo.updated_at else int(demo.created_at.timestamp())
     preview_ext = "svg" if demo.single_file == "svg" else "html"
+    scope = current_scope.get()
+    preview_path = f"/preview/{demo.slug}/v{version}/index.{preview_ext}"
     if demo.demo_type != "web":
         preview_url = ""
+    elif scope == ASTRA:
+        # astra 橱窗预览域（可选增值）；留空 = 同源相对路径（橱窗 nginx 块自行服务 /preview）
+        preview_url = settings.astra_preview_base_url.rstrip("/") + preview_path if settings.astra_preview_base_url else preview_path
     elif settings.preview_base_url:
-        preview_url = f"{settings.preview_base_url.rstrip('/')}/preview/{demo.slug}/v{version}/index.{preview_ext}"
+        preview_url = f"{settings.preview_base_url.rstrip('/')}{preview_path}"
     else:
-        preview_url = f"/preview/{demo.slug}/v{version}/index.{preview_ext}"
+        preview_url = preview_path
+
+    # astra 橱窗输出层（只改响应形态，不碰存储数据）：作者统一实验室署名、剔除内部标签
+    author_out = author.username if author else "public"
+    if scope == ASTRA:
+        author_out = "astra lab"
+        tags = [t for t in tags if t.get("key") not in ("author", "version-of")]
 
     data = {
         "slug": demo.slug,
@@ -59,7 +71,7 @@ def serialize_demo(
         "demo_type": demo.demo_type,
         "external_url": demo.external_url,
         "preview_url": preview_url,
-        "author": author.username if author else "public",
+        "author": author_out,
         "author_id": demo.author_id,
         "tags": tags,
         "view_count": demo.view_count,
@@ -72,6 +84,9 @@ def serialize_demo(
         "rating_god": demo.rating_god,
         "rating_ghost": demo.rating_ghost,
         "prompt": demo.prompt,
+        # 策展字段：仅 AdminDemoOut 声明消费，公开 schema 未声明 → pydantic 自动剥离
+        "sites": demo.sites,
+        "lang": demo.lang,
     }
 
     if detail:

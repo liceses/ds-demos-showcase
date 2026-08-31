@@ -122,6 +122,10 @@ class Demo(Base):
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # 单文件模式：html | svg（直接上传单个自包含文件，非 zip）
     single_file: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # 多站可见域（astra 橱窗）：逗号分隔枚举 deep | astra | deep,astra；默认 deep = 存量行为不变
+    sites: Mapped[str] = mapped_column(String(32), default="deep", nullable=False, index=True)
+    # 作品内容语言：zh | en（astra 橱窗策展池要求 en；主站不以此过滤）
+    lang: Mapped[str] = mapped_column(String(8), default="zh", nullable=False)
     # 评分冗余统计列（榜单排序用，随评分事务更新）
     rating_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

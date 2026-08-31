@@ -5,6 +5,7 @@ from ..config import settings
 from ..deps import optional_user
 from ..models import User
 from ..services import site_info_service
+from ..services.scope import get_scope
 
 router = APIRouter(prefix="/meta", tags=["meta"])
 
@@ -26,5 +27,6 @@ def site_info(request: Request, refresh: int = 0, admin: User | None = Depends(o
     只含公开安全数字——待审队列/存储等管理面信息在 /admin/stats。
     """
     force = bool(refresh) and admin is not None and admin.role == "admin"
-    data = site_info_service.get_site_info(force=force)
+    # 按请求视区聚合（astra 橱窗与 deep 主站数据面/缓存独立，见 site_info_service）
+    data = site_info_service.get_site_info(force=force, scope=get_scope(request))
     return JSONResponse(data, headers={"Cache-Control": "public, max-age=60"})

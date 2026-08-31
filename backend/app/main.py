@@ -21,6 +21,7 @@ from .models import ForumTopic, Setting, Tag, TagKey, User
 from .routers import admin, announcements, auth, comments, demos, forum, meta, notifications, ratings, sessions, stats, tags, users
 from .security import hash_password
 from .services import oss
+from .services import scope as scope_service
 from .services.settings_service import KEY_AUTO_APPROVE
 
 logger = logging.getLogger("app")
@@ -80,6 +81,24 @@ async def log_requests(request: Request, call_next):
     )
     return response
 
+
+@app.middleware("http")
+async def site_scope(request: Request, call_next):
+    """astra 橱窗可见门禁（services/scope.py）：Host → 视区；astra 下非白名单路径直接 404。
+
+    deep 视区零改动：middleware 只挂 state + 设 contextvar（serializer/预览门禁读取），
+    不拦截任何请求。astra 视区白名单制：论坛/评论/登录/上传/docs/admin 等整体不存在。
+    """
+    scope = scope_service.resolve_scope(request)
+    request.state.scope = scope
+    if scope == scope_service.ASTRA and not scope_service.astra_path_allowed(request.method, request.url.path):
+        return JSONResponse({"detail": "Not Found", "code": "http_404"}, status_code=404)
+    token = scope_service.current_scope.set(scope)
+    try:
+        return await call_next(request)
+    finally:
+        scope_service.current_scope.reset(token)
+
 API_PREFIX = "/api/v1"
 app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(users.router, prefix=API_PREFIX)
@@ -127,6 +146,10 @@ def health(db: Session = Depends(get_db)):
 def _serve_preview(slug: str, path: str, version: str | None = None):
     if "/" in slug or "\\" in slug or not slug:
         raise HTTPException(status_code=400, detail="非法的 demo 标识", )
+    # 预览可见域门禁（60s 缓存护子资源逐文件请求）：
+    # astra 域只出策展池且已上架；deep 域存量行默认 sites 含 'deep' → 判定恒过，行为不变。
+    if not scope_service.demo_public_in_scope(slug, scope_service.current_scope.get()):
+        raise HTTPException(status_code=404, detail="文件不存在", )
     safe = _safe_join(slug, path)
     is_html = safe.lower().endswith((".html", ".htm"))
     versioned = version is not None
@@ -248,6 +271,8 @@ def _ensure_demo_columns() -> None:
         ("rating_god", "INTEGER NOT NULL DEFAULT 0"),
         ("rating_ghost", "INTEGER NOT NULL DEFAULT 0"),
         ("updated_at", "DATETIME"),
+        ("sites", "TEXT NOT NULL DEFAULT 'deep'"),  # astra 橱窗可见域（逗号枚举）
+        ("lang", "TEXT NOT NULL DEFAULT 'zh'"),     # 作品内容语言 zh|en
     ]
     with engine.begin() as conn:
         for name, ddl in additions:
@@ -257,6 +282,8 @@ def _ensure_demo_columns() -> None:
         conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_demos_idempotency_key ON demos (idempotency_key)")
         # 内容哈希普通索引（按作者去重查询）
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_content_hash ON demos (content_hash)")
+        # astra 橱窗：按可见域过滤列表的主索引
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_sites ON demos (sites)")
 
 
 def _ensure_tag_columns() -> None:

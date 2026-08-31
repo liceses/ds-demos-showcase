@@ -33,6 +33,7 @@ from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOu
 from ..serializers import serialize_demo
 from ..services import oss, storage
 from ..services import notification_service
+from ..services.scope import demo_in_scope, get_scope, scope_contains_filter
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
 
 router = APIRouter(prefix="/demos", tags=["demos"])
@@ -54,42 +55,44 @@ def _anon_rate_limit(request: Request) -> None:
 
 
 # ---- 高并发缓存：相关推荐 / 首页随机（锁只护缓存字典，不护 DB 查询）----
+# 缓存一律按「视区:slug」分键（astra 橱窗/deep 主站数据面不同，跨视区复用会漏内容）
 _CACHE_LOCK = threading.Lock()
 _RELATED_CACHE: dict[str, tuple[float, list]] = {}
-_RANDOM_EXP = 0.0
-_RANDOM_IDS: list[int] = []
+_RANDOM_CACHE: dict[str, tuple[float, list[int]]] = {}  # scope -> (过期时间, 随机 id 序)
 _RANDOM_TTL = 60  # 秒
 _RANDOM_TTL_REL = 60  # related 缓存秒数
 
 
-def _related_cache_get(slug: str) -> list | None:
+def _related_cache_get(key: str) -> list | None:
     with _CACHE_LOCK:
-        hit = _RELATED_CACHE.get(slug)
+        hit = _RELATED_CACHE.get(key)
         if hit and hit[0] > time.time():
             return hit[1]
     return None
 
 
-def _related_cache_set(slug: str, result: list) -> None:
+def _related_cache_set(key: str, result: list) -> None:
     with _CACHE_LOCK:
-        _RELATED_CACHE[slug] = (time.time() + _RANDOM_TTL_REL, result)
+        _RELATED_CACHE[key] = (time.time() + _RANDOM_TTL_REL, result)
 
 
-def _random_ids(db, page: int, page_size: int) -> list[int]:
+def _random_ids(db, page: int, page_size: int, scope: str) -> list[int]:
     """返回一次随机序下的 [offset, offset+page_size) 的已上架 demo id（60s 缓存整份随机序）。
-    锁只护缓存；DB 查询在锁外执行（复用请求会话），避免锁内二次开会话导致连接竞争/500。"""
-    global _RANDOM_IDS, _RANDOM_EXP
+    按视区分键：astra 橱窗只随机策展池。锁只护缓存；DB 查询在锁外执行（复用请求会话）。"""
     with _CACHE_LOCK:
-        fresh = time.time() <= _RANDOM_EXP and bool(_RANDOM_IDS)
-        ids = list(_RANDOM_IDS) if fresh else None
+        hit = _RANDOM_CACHE.get(scope)
+        ids = list(hit[1]) if hit and hit[0] > time.time() else None
     if ids is None:
         # 锁外：用请求会话查库 + 洗牌
-        live_ids = [d for (d,) in db.query(Demo.id).filter(Demo.status == "approved").all()]
+        live_ids = [
+            d
+            for (d,) in db.query(Demo.id).filter(Demo.status == "approved", scope_contains_filter(scope)).all()
+        ]
         random.shuffle(live_ids)
         with _CACHE_LOCK:
-            if time.time() > _RANDOM_EXP:
-                _RANDOM_IDS = live_ids
-                _RANDOM_EXP = time.time() + _RANDOM_TTL
+            hit = _RANDOM_CACHE.get(scope)
+            if not hit or hit[0] <= time.time():
+                _RANDOM_CACHE[scope] = (time.time() + _RANDOM_TTL, live_ids)
             ids = live_ids
     start = (page - 1) * page_size
     return ids[start : start + page_size]
@@ -237,8 +240,11 @@ def list_demos(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
+    scope: str = Depends(get_scope),
 ):
     query = db.query(Demo)
+    # 可见域过滤（astra 橱窗只出策展池；deep 存量行 sites='deep' 恒真，主站行为不变）
+    query = query.filter(scope_contains_filter(scope))
     if status:
         query = query.filter(Demo.status == status)
 
@@ -306,9 +312,9 @@ def list_demos(
         total = query.count()
         items = query.offset((page - 1) * page_size).limit(page_size).all()
     elif sort == "random":
-        # 首页精选整批随机：缓存整份随机 id 序（60s），避免每次 ORDER BY RANDOM() 全表扫
+        # 首页精选整批随机：缓存整份随机 id 序（60s，按视区分键），避免每次 ORDER BY RANDOM() 全表扫
         total = query.count()
-        ids = _random_ids(db, page, page_size)
+        ids = _random_ids(db, page, page_size, scope)
         if ids:
             items = db.query(Demo).filter(Demo.id.in_(ids)).all()
             order = {did: i for i, did in enumerate(ids)}
@@ -335,17 +341,25 @@ def list_demos(
 
 
 @router.get("/{slug}", response_model=DemoDetailOut)
-def get_demo(slug: str, db: Session = Depends(get_db), user: User | None = Depends(optional_user)):
+def get_demo(
+    slug: str,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(optional_user),
+    scope: str = Depends(get_scope),
+):
     demo = _find_demo(db, slug)
+    # 可见域外 = 不存在（错误文案一致，不泄露策展池外作品的存在性）
+    if not demo_in_scope(demo, scope):
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
     demo.view_count += 1
     db.commit()
     return serialize_demo(db, demo, user.id if user else None, detail=True)
 
 
 @router.get("/{slug}/meta", response_model=DemoMetaOut)
-def demo_meta(slug: str, db: Session = Depends(get_db)):
+def demo_meta(slug: str, db: Session = Depends(get_db), scope: str = Depends(get_scope)):
     """轻量作品 meta（富卡片用）：不增加 view_count。"""
-    demo = db.query(Demo).filter(Demo.slug == slug, Demo.status == "approved").first()
+    demo = db.query(Demo).filter(Demo.slug == slug, Demo.status == "approved", scope_contains_filter(scope)).first()
     if demo is None:
         raise HTTPException(status_code=404, detail="Demo 不存在或未上线", )
     author = demo.author.username if demo.author else (demo.guest_name or "public")
@@ -357,16 +371,21 @@ def related_demos(
     slug: str,
     limit: int = Query(default=30, ge=1, le=50),
     db: Session = Depends(get_db),
+    scope: str = Depends(get_scope),
 ):
-    """相关推荐候选池：标签重合度 + 同类型 + 热度 + 随机（60s 缓存，缓解高并发）。"""
-    cached = _related_cache_get(slug)
+    """相关推荐候选池：标签重合度 + 同类型 + 热度 + 随机（60s 缓存按视区分键）。"""
+    current = _find_demo(db, slug)
+    if not demo_in_scope(current, scope):
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    cache_key = f"{scope}:{slug}"
+    cached = _related_cache_get(cache_key)
     if cached is None:
-        cached = _compute_related(db, slug)
-        _related_cache_set(slug, cached)
+        cached = _compute_related(db, slug, scope)
+        _related_cache_set(cache_key, cached)
     return cached[:limit]
 
 
-def _compute_related(db: Session, slug: str) -> list:
+def _compute_related(db: Session, slug: str, scope: str) -> list:
     """计算相关推荐（结果已序列化为字典；锁外执行 DB 查询）。"""
     current = _find_demo(db, slug)
     cur_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in current.tag_associations}
@@ -376,7 +395,9 @@ def _compute_related(db: Session, slug: str) -> list:
     core_weight = {"type": 3, "game": 3, "model": 2, "category": 2,
                    "plugin": 1, "skills": 1, "preset": 1, "rounds": 1}
 
-    rows = db.query(Demo).filter(Demo.status == "approved", Demo.id != cur_id).all()
+    rows = db.query(Demo).filter(
+        Demo.status == "approved", Demo.id != cur_id, scope_contains_filter(scope)
+    ).all()
     scored: list[tuple[float, Demo]] = []
     for d in rows:
         d_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in d.tag_associations}
@@ -1034,8 +1055,10 @@ def delete_demo(slug: str, db: Session = Depends(get_db), user: User = Depends(c
 
 
 @router.get("/{slug}/download")
-def download_demo(slug: str, db: Session = Depends(get_db)):
+def download_demo(slug: str, db: Session = Depends(get_db), scope: str = Depends(get_scope)):
     demo = _find_demo(db, slug)
+    if not demo_in_scope(demo, scope):
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
     if demo.demo_type == "link":
         raise HTTPException(status_code=400, detail="链接类型无下载，请直接访问外部链接", )
     demo.download_count += 1

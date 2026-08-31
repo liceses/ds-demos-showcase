@@ -84,10 +84,46 @@ deepdemos 侧若想彻底弃用它，只需清空 `PREVIEW_BASE_URL`（`IframePr
 5. **可选增值**：策展作品若需 localStorage 运行（存档类游戏等），再加 `demo.astrademos.top` 子域 + `ASTRA_PREVIEW_BASE_URL=https://demo.astrademos.top`（nginx 只放行 `/preview`、`/media`，照抄 demo.deepdemos.top 块）；前端 sandbox 逻辑对跨域自动放行 `allow-same-origin`，零代码改动。
 6. **Cloudflare 缓存**：默认按 hostname 分缓存键，两域不会串味；橱窗文档建议 Cache Rule no-cache，`/assets/*` 走长缓存（构建带 hash）。
 
+## 五·五、本地预览手册（开发环境实测流程）
+
+**五分钟从零看到橱窗**：
+
+```powershell
+# 1) 域名映射（管理员 PowerShell，一次性；Windows 的 hosts 无通配 localhost，必须显式加）
+Add-Content C:\Windows\System32\drivers\etc\hosts "`n127.0.0.1 astrademos.top"
+
+# 2) 起服务（后端 :8000 uvicorn --reload、前端 :5173 vite）
+./start-dev.ps1
+
+# 3) 策展（关键：必须走 deep 域——橱窗域管理端点被白名单 404，这是设计而非 bug）
+#    浏览器 http://localhost:5173 → /admin → 作品管理 → 给作品点「窗」章 + 标 EN
+#    或命令行：
+#    curl -X PUT http://127.0.0.1:8000/api/v1/admin/demos/{slug}/curation -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{"sites":["astra"],"lang":"en"}'
+
+# 4) 打开橱窗
+#    http://astrademos.top:5173
+```
+
+链路要点（缺一本地就跑不通）：
+- **vite `allowedHosts`**：Vite 6+ 对非 localhost 的 Host 头直接 403（dev server 安全策略），`vite.config.ts` 已放行 `astrademos.top`；升级 vite 后失效先查这里。
+- **vite proxy `changeOrigin:false`**：把浏览器 Host 原样透传给后端，后端 `resolve_scope` 才能判出 astra 视区（端口会被自动剥掉）。改回 `true` 会恒以 `localhost:8000` 为 Host → 永远 deep。
+- 策展与浏览分离：橱窗域连 `/docs`、`/api/v1/auth/login` 都 404，admin 无法在橱窗里误操作自己——管理永远回 localhost/deepdemos 域。
+
+**皮肤预览降级方案（不想动 hosts）**：`http://localhost:5173/?astra=1`（仅 DEV 构建生效，`?astra=0` 关）。只切前端皮，API 的 Host 还是 localhost → **数据面仍是主站全量**，看不了隔离效果——快速对视觉有用，验证门禁必须走真域名。
+
+**端到端手测一行脚本**（绕开 hosts，直打后端换 Host 头，适合 CI 外的冒烟）：
+
+```bash
+# astra 域：/docs 应 404、/api/v1/demos 只回策展池、site-info fun_mode=true
+curl --resolve astrademos.top:8000:127.0.0.1 -s http://astrademos.top:8000/api/v1/meta/site-info | jq .display
+```
+
+> ⚠️ Node `fetch()` **改不了 Host 头**（fetch 规范 forbidden header，静默忽略）——脚本冒烟用 `node:http` 裸请求或 curl，别用 fetch 自带 headers.Host，会得到「门禁失效」的假象（本手册作者踩过并已写进测试：pytest 用 `TestClient(app, base_url="http://astrademos.top")`，httpx 会真实下发 Host 头，无此坑）。
+
 ## 六、与整活模式（fun mode）的关系
 
 - 旧整活 = deepdemos 上的显示层开关（设置表驱动，`?fun=1` 预览）——保留不动。
-- 新橱窗 = **域名驱动**：astra 域数据面物理隔离 + 前端强制 fun/EN（前端批次接入），不依赖 settings 开关。
+- 新橱窗 = **域名驱动**：astra 域数据面物理隔离 + 前端强制 fun/EN（见 §四·五），不依赖 settings 开关；橱窗 origin 的 localStorage 与主站天然隔离，fun 互不串台。
 
 ## 七、已知边界与后手
 

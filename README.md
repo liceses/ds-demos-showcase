@@ -12,12 +12,13 @@
 
 - **提示词模式**：作品库一键切换到「提示词」视图，直接看每个作品的第一轮提示词——AI 是怎么被“一句话点单”的，一目了然。
 - 每个作品附带**生成会话日志**与**版本时间线**，过程全透明。
+- **双域名 · astra 橱窗**：`astrademos.top` 是同一后端上的**极简只读橱窗**（面向海外、实验室风、只出策展的英文作品，无论坛/登录/上传），与主站 `deepdemos.top` 靠 Host 头分「视区」做数据级隔离——主站行为逐字节不变。详见 [docs/astra橱窗分离.md](./docs/astra橱窗分离.md)。
 
 ## 目录
 
 ```
 web/
-├── frontend/           # Vue3 + Vite SPA（含 Dockerfile、nginx.conf）
+├── frontend/           # Vue3 + Vite SPA（含 Dockerfile、nginx.conf；src/astra/ 为橱窗皮）
 ├── backend/            # FastAPI 后端（含 Dockerfile；API/预览/媒体/审核）
 ├── docker-compose.yml  # 生产部署：backend + frontend(nginx)
 ├── backend-design.md   # 后端设计 / API 契约
@@ -26,7 +27,8 @@ web/
 ├── start-dev.ps1/.bat  # 本地一键启动（开发环境）
 ├── docs/
 │   ├── 预览架构与排坑记录.md  # 预览 iframe 架构决策 + 三个大坑（localStorage/OSS 强制下载/CORS）与配置清单
-│   └── 运维经验与排坑记录.md  # 线上运维沉淀：Docker/OSS/CDN 缓存/性能/迁移/安全/AI agent 集成
+│   ├── 运维经验与排坑记录.md  # 线上运维沉淀：Docker/OSS/CDN 缓存/性能/迁移/安全/AI agent 集成
+│   └── astra橱窗分离.md       # 双域名橱窗：Host→视区、白名单 API、策展接口、本地预览与验证手册
 └── stylepkg/           # 视觉设计规范（neo-brutalist-playful）
 ```
 
@@ -54,6 +56,7 @@ Windows 双击 `start-dev.bat`，或在 `web/` 下执行：
 - 前端页面：http://localhost:5173（`.env` 设 `VITE_USE_MOCK=false` 连真实后端；缺省用内置 Mock 占位数据）
 - API 文档：http://127.0.0.1:8000/docs
 - 默认账号：`admin / admin123`（**仅限开发**；生产必须改，见「安全须知」）
+- **astra 橱窗本地预览**：管理员在 hosts 加 `127.0.0.1 astrademos.top` → 访问 http://astrademos.top:5173 即橱窗（数据面按 Host 自动收敛到策展池）；管理端仍在 localhost 域策展（点「窗」章发放通行证）。完整流程与验证见 [docs/astra橱窗分离.md](./docs/astra橱窗分离.md)。
 
 ## 需求 ↔ 实现对齐（idea.md）
 

@@ -52,42 +52,43 @@ def sync_all(force: bool = False, progress_cb=None) -> dict:
     if not oss.enabled():
         return stats
 
-    db = SessionLocal()
-    try:
-        demos = [d for d in db.query(Demo).all() if d.demo_type != "link"]
-        total = len(demos)
-        if progress_cb:
-            progress_cb(total=total, done=0, current="")
-        for demo in demos:
-            try:
-                zip_key = f"demos/{demo.slug}/{demo.slug}.zip"
-                if force or not oss.object_exists(zip_key):
-                    # 文件/会话日志镜像 + zip 一并上传
-                    storage.upload_demo_to_oss(demo.slug)
-                    files_dir = storage.demo_files_dir(demo.slug)
-                    if files_dir.exists():
-                        buf = io.BytesIO()
-                        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-                            for p in files_dir.rglob("*"):
-                                if p.is_file():
-                                    zf.write(p, p.relative_to(files_dir))
-                        oss.put_bytes(
-                            zip_key,
-                            buf.getvalue(),
-                            "application/zip",
-                            extra_headers={"Cache-Control": "public, max-age=3600"},
-                        )
-                stats["demos_ok"] += 1
-            except Exception as e:  # noqa: BLE001
-                stats["demos_fail"] += 1
-                msg = f"{demo.slug}: {e}"
-                print(f"[oss-sync] {msg}", flush=True)
-                if progress_cb:
-                    progress_cb(last_error=msg)
+    # 只借一次连接取 slug 清单，取完立刻归还。
+    # 绝不能跨整个上传循环持有会话：上传是分钟级网络 I/O，长时间占住一个连接
+    # 会在「每次容器启动自动同步」或管理端手动同步时把 QueuePool 拖干（2026-09 事故放大点）。
+    with SessionLocal() as db:
+        slugs = [slug for (slug,) in db.query(Demo.slug).filter(Demo.demo_type != "link").all()]
+
+    total = len(slugs)
+    if progress_cb:
+        progress_cb(total=total, done=0, current="")
+    for slug in slugs:
+        try:
+            zip_key = f"demos/{slug}/{slug}.zip"
+            if force or not oss.object_exists(zip_key):
+                # 文件/会话日志镜像 + zip 一并上传
+                storage.upload_demo_to_oss(slug)
+                files_dir = storage.demo_files_dir(slug)
+                if files_dir.exists():
+                    buf = io.BytesIO()
+                    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                        for p in files_dir.rglob("*"):
+                            if p.is_file():
+                                zf.write(p, p.relative_to(files_dir))
+                    oss.put_bytes(
+                        zip_key,
+                        buf.getvalue(),
+                        "application/zip",
+                        extra_headers={"Cache-Control": "public, max-age=3600"},
+                    )
+            stats["demos_ok"] += 1
+        except Exception as e:  # noqa: BLE001
+            stats["demos_fail"] += 1
+            msg = f"{slug}: {e}"
+            print(f"[oss-sync] {msg}", flush=True)
             if progress_cb:
-                progress_cb(done=stats["demos_ok"] + stats["demos_fail"], ok=stats["demos_ok"], fail=stats["demos_fail"], current=demo.slug)
-    finally:
-        db.close()
+                progress_cb(last_error=msg)
+        if progress_cb:
+            progress_cb(done=stats["demos_ok"] + stats["demos_fail"], ok=stats["demos_ok"], fail=stats["demos_fail"], current=slug)
 
     covers_dir = settings.media_path / "covers"
     if covers_dir.exists():

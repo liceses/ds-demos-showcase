@@ -21,6 +21,8 @@ _TTL = 60  # 秒
 _lock = threading.Lock()
 # 按视区分键缓存（deep/astra 数据面不同，共用会把主站规模数字漏进橱窗）
 _cache: dict[str, dict] = {}
+# 正在回源重建的视区：TTL 过期时只放一个线程去查库，其余线程吃旧值
+_refreshing: set[str] = set()
 
 
 def _utc_iso(dt: datetime) -> str:
@@ -121,8 +123,9 @@ def _build(scope: str = DEEP) -> dict:
 
             fun_mode = get_fun_mode(db)
 
-            pv = visits.get_stats()
-            online_now = visits.get_live_stats()["online"]
+            # 传 db 复用本函数已持有的会话（否则一个 site-info 请求会嵌套借 3 个连接）
+            pv = visits.get_stats(db)
+            online_now = visits.get_live_stats(db)["online"]
 
         # tags 只统计键定义内的（排除 author:/version-of 等内部保留标签）
         tag_keys_total = db.query(func.count(TagKey.key)).scalar() or 0
@@ -197,13 +200,35 @@ def _build(scope: str = DEEP) -> dict:
 
 
 def get_site_info(force: bool = False, scope: str = DEEP) -> dict:
-    """带 60s TTL 的站点概况，按视区分键（force=True 跳过缓存重建，仅 admin）。"""
+    """带 60s TTL 的站点概况，按视区分键（force=True 跳过缓存重建，仅 admin）。
+
+    TTL 过期时只有一个线程回源，其余线程直接吃旧值（stale-while-revalidate）：
+    首屏必打的聚合接口一次要跑十几条查询，若 TTL 一到就 N 个并发一起回源，
+    会瞬时把 QueuePool 吃满（2026-09 全站挂死事故的放大点之一）。
+    """
     now = time.monotonic()
+    owns_refresh = False
+    stale: dict | None = None
     with _lock:
         hit = _cache.get(scope)
-        if not force and hit is not None and now - hit["ts"] < _TTL:
-            return hit["data"]
-    data = _build(scope)
+        if hit is not None and not force:
+            if now - hit["ts"] < _TTL:
+                return hit["data"]                      # 新鲜
+            if scope in _refreshing:
+                return hit["data"]                      # 过期但已有人在刷 → 吃旧值
+            _refreshing.add(scope)                      # 本线程负责刷
+            owns_refresh = True
+            stale = hit["data"]
+    try:
+        data = _build(scope)
+    except Exception:
+        if stale is not None:
+            return stale                                # 回源失败继续吃旧值，下一批再试
+        raise
+    finally:
+        if owns_refresh:
+            with _lock:
+                _refreshing.discard(scope)
     with _lock:
         _cache[scope] = {"ts": time.monotonic(), "data": data}
     return data

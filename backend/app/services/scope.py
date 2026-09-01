@@ -69,10 +69,43 @@ def slug_in_astra(slug: str) -> bool:
     return demo_public_in_scope(slug, ASTRA)
 
 
-# ---- 预览门禁缓存：预览子资源（js/css/图片）逐文件请求，60s TTL 免每请求打库 ----
-_VIS_TTL = 60.0
+# ---- 预览门禁缓存：预览子资源（js/css/图片）逐文件请求，TTL 内免每请求打库 ----
+_VIS_TTL = 300.0
 _vis_lock = threading.Lock()
 _vis_cache: dict[str, tuple[float, str, str]] = {}  # slug -> (过期时刻, sites, status)
+# single-flight：同一 slug 的并发冷启动只打一次库。缺了它，一个 demo 页并发拉 N 个子资源
+# 会在缓存过期瞬间同时 checkout N 个连接，直接打满 QueuePool（2026-09 全站挂死放大点）。
+_slug_locks: dict[str, threading.Lock] = {}
+_slug_locks_guard = threading.Lock()
+
+
+def _slug_lock(slug: str) -> threading.Lock:
+    with _slug_locks_guard:
+        lock = _slug_locks.get(slug)
+        if lock is None:
+            lock = _slug_locks[slug] = threading.Lock()
+        return lock
+
+
+def _cache_get(slug: str) -> tuple[str, str] | None:
+    """读缓存（调用方须已持有 _vis_lock）。"""
+    hit = _vis_cache.get(slug)
+    if hit and hit[0] > time.time():
+        return hit[1], hit[2]
+    return None
+
+
+def _read_row(slug: str) -> tuple[str, str]:
+    """独立短会话读一行：只借连接做这一件小事，绝不跨网络 I/O 持有。"""
+    from ..database import SessionLocal
+    from ..models import Demo
+
+    db = SessionLocal()
+    try:
+        d = db.query(Demo).filter(Demo.slug == slug).first()
+        return (d.sites or "", d.status or "") if d else ("", "")
+    finally:
+        db.close()
 
 
 def invalidate_visibility(slug: str) -> None:
@@ -84,22 +117,21 @@ def invalidate_visibility(slug: str) -> None:
 def demo_public_in_scope(slug: str, scope: str) -> bool:
     """预览/下载等公开出口的门禁：slug 属于给定视区才可出。
     astra 域额外要求已上架；deep 域只查 sites（存量行默认含 'deep' → 行为不变）。"""
-    now = time.time()
     with _vis_lock:
-        hit = _vis_cache.get(slug)
-        row = (hit[1], hit[2]) if hit and hit[0] > now else None
+        row = _cache_get(slug)
     if row is None:
-        from ..database import SessionLocal
-        from ..models import Demo
-
-        db = SessionLocal()
-        try:
-            d = db.query(Demo).filter(Demo.slug == slug).first()
-            row = (d.sites or "", d.status or "") if d else ("", "")
-        finally:
-            db.close()
-        with _vis_lock:
-            _vis_cache[slug] = (time.time() + _VIS_TTL, row[0], row[1])
+        with _slug_lock(slug):  # 同 slug 只有一个线程去查库，其余等缓存
+            with _vis_lock:
+                row = _cache_get(slug)
+            if row is None:
+                try:
+                    row = _read_row(slug)
+                except Exception:  # noqa: BLE001 —— 查不到不缓存，下次再试
+                    # deep 视区判定本就恒过 → 打库失败时放行，绝不让预览被库拖成 500；
+                    # astra 是严格橱窗，拿不到数据一律拒绝（fail-closed）。
+                    return scope == DEEP
+                with _vis_lock:
+                    _vis_cache[slug] = (time.time() + _VIS_TTL, row[0], row[1])
     sites, status = row
     if scope not in sites.split(","):
         return False
@@ -121,7 +153,8 @@ ASTRA_ALLOW_PREFIX = (
     "/media/",
 )
 # 前缀放行后仍需剔除的子资源（astra 极简页不消费，且会漏内容面信息）
-ASTRA_DENY_SEGMENTS = ("/related", "/session-logs", "/meta")
+# v2 新增的作品子路由同样默认剔除：白名单制下宁可漏给，不可漏堵
+ASTRA_DENY_SEGMENTS = ("/related", "/session-logs", "/meta", "/same-prompt")
 
 
 def astra_path_allowed(method: str, path: str) -> bool:

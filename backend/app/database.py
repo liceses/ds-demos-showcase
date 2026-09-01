@@ -18,6 +18,9 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_size=20,
     max_overflow=20,
+    # 拿不到连接 5s 直接失败（默认 30s）：宁可快速 500 也不要 268s 挂死拖垮全站。
+    # 连接池饱和时 30s 等待会把「同时在飞请求数」放大 3000 倍 → 雪崩且只能重启自愈。
+    pool_timeout=5,
     future=True,
 )
 

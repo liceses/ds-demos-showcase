@@ -65,15 +65,16 @@ def heartbeat(ip: str | None = None) -> None:
         pass
 
 
-def get_live_stats() -> dict:
-    """实时访问：在线人数 + 近1/5分钟 PV + 今日 PV。"""
+def get_live_stats(db=None) -> dict:
+    """实时访问：在线人数 + 近1/5分钟 PV + 今日 PV。
+    db 传入时复用调用方会话（避免一个请求嵌套 checkout 第二个连接打满池子）。"""
     now = time.time()
     with _lock:
         online = sum(1 for v in _online.values() if v > now - ONLINE_WINDOW)
         recent = [t for t in _recent_hits if t > now - 300]
         last1 = sum(1 for t in recent if t > now - 60)
         last5 = len(recent)
-    today = get_stats()["today"]
+    today = get_stats(db)["today"]
     return {"online": online, "last1min": last1, "last5min": last5, "today": today}
 
 
@@ -117,17 +118,22 @@ _thread = threading.Thread(target=_flusher_loop, daemon=True)
 _thread.start()
 
 
-def get_stats() -> dict:
-    """返回 today/yesterday/total/last7（升序，当天在最后）。"""
+def get_stats(db=None) -> dict:
+    """返回 today/yesterday/total/last7（升序，当天在最后）。
+    db 传入时复用调用方会话：site-info 等聚合入口已在自己的会话里，
+    再开第二个会话会在高并发下把 QueuePool 直接吃满。"""
     with _lock:
         _roll_if_needed()
         live_today = _today_count
 
-    db = SessionLocal()
-    try:
+    if db is not None:
         rows = {r.date: r.count for r in db.query(VisitDaily).all()}
-    finally:
-        db.close()
+    else:
+        own = SessionLocal()
+        try:
+            rows = {r.date: r.count for r in own.query(VisitDaily).all()}
+        finally:
+            own.close()
 
     today = date.today().isoformat()
     yesterday = (date.today() - timedelta(days=1)).isoformat()

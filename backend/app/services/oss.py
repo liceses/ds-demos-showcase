@@ -8,12 +8,22 @@ import oss2
 from ..config import settings
 
 
+# 单次 OSS 调用硬超时（秒）：oss2 默认 60s，OSS 侧网络异常时会把调用方线程/DB 连接
+# 拖住一分钟起步。压到 10s，失败快速降级（上传走 _oss_upload_safe 静默降级本地存储）。
+_OSS_TIMEOUT = 10
+
+
 def _auth() -> oss2.Auth:
     return oss2.Auth(settings.oss_access_key_id, settings.oss_access_key_secret)
 
 
 def _bucket() -> oss2.Bucket:
-    return oss2.Bucket(_auth(), f"https://{settings.oss_endpoint}", settings.oss_bucket)
+    return oss2.Bucket(
+        _auth(),
+        f"https://{settings.oss_endpoint}",
+        settings.oss_bucket,
+        connect_timeout=_OSS_TIMEOUT,
+    )
 
 
 def enabled() -> bool:

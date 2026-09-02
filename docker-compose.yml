@@ -28,6 +28,25 @@ services:
       PREVIEW_BASE_URL: ${PREVIEW_BASE_URL:-}
       # 网站自身 git 仓库（用于「更新公告」= commit 信息）
       SITE_REPO_DIR: /site-repo
+      # ── 内存治理（2026-09-02 复盘：容器 RSS 862MiB，其中 ~645MB 是 12 段 30~64MB 的
+      #    glibc per-arena heap —— 属"多线程 arena 虚胖"，不是对象泄漏）──
+      # glibc 默认 arena 上限 = 8 × CPU 核数，且容器看到的是宿主核数（不是配额）。
+      # 每个 arena 各攥一块 heap，彼此不能合并、段顶以下的空闲块永不归还 OS：
+      # 上传 / 预览 / OSS 同步轮转过的每条线程都把"自己那一格"撑大 → RSS 只涨不跌，重启才归零。
+      # 压到 2 → 全部线程共享一把堆，free 的内存可合并、可被 trim 回收。
+      # 代价：malloc 锁竞争略升（当前 CPU ~1%，可忽略）。
+      MALLOC_ARENA_MAX: "2"
+      MALLOC_TRIM_THRESHOLD_: "131072"
+    # 不给上限 = 一次 200MB 上传（_read_limited 整包读进内存，峰值 400~600MB）
+    # 在无 swap 的 2G 机上直接把 backend 送给 OOM killer（表现又是 502）。
+    # 有天花板才既能兜住、又能把问题暴露出来，而不是拖死整台机器（含 docker build 自身）。
+    mem_limit: 768m
+    logging:
+      # json-file 驱动默认不轮转；log_requests 每请求一行（预览子资源也算）→ 数 GB 磁盘
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     volumes:
       - demo-data:/app/data
       - demo-storage:/app/storage
@@ -41,6 +60,12 @@ services:
       - backend
     ports:
       - "80:80"
+    logging:
+      # nginx 每个请求一条 access log（预览子资源也算，实测出站 26GB 量级）→ 这是宿主磁盘最大的一块写
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     restart: unless-stopped
 
 volumes:

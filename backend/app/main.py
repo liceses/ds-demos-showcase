@@ -18,7 +18,7 @@ from .config import settings
 from .database import Base, SessionLocal, engine, get_db
 from .errors import AppError
 from .models import ForumTopic, Setting, Tag, TagKey, User
-from .routers import admin, announcements, auth, comments, demos, forum, meta, notifications, ratings, sessions, stats, tags, users
+from .routers import admin, admin_entities, announcements, auth, comments, demos, explore, forum, meta, models, notifications, peek, ratings, sessions, stats, tags, tasks, users
 from .security import hash_password
 from .services import oss
 from .services import scope as scope_service
@@ -36,7 +36,10 @@ def _json_dt(dt: datetime) -> str:
         return dt.isoformat() + 'Z'
     return dt.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
 
-app = FastAPI(title="DS 民间科研成果展示 API", version="0.1.0", json_encoders={datetime: _json_dt})
+# 发布版本：与 frontend/package.json 的 version 同步维护（前后端各一份声明，改版本必须一起改）。
+APP_VERSION = "0.2.0-alpha"
+
+app = FastAPI(title="DS 民间科研成果展示 API", version=APP_VERSION, json_encoders={datetime: _json_dt})
 
 settings.media_path.mkdir(parents=True, exist_ok=True)
 
@@ -113,6 +116,14 @@ app.include_router(stats.router, prefix=API_PREFIX)
 app.include_router(ratings.router, prefix=API_PREFIX)
 app.include_router(forum.router, prefix=API_PREFIX)
 app.include_router(notifications.router, prefix=API_PREFIX)
+# v2 实体（B1）：Model / Task / Explore
+app.include_router(models.router, prefix=API_PREFIX)
+app.include_router(tasks.router, prefix=API_PREFIX)
+app.include_router(explore.router, prefix=API_PREFIX)
+# 侧滑"瞄一眼"的紧凑摘要（Demo 页第 3 期）
+app.include_router(peek.router, prefix=API_PREFIX)
+# v2 治理写接口（B1.5）：实体 CRUD / 合并 / 收件箱 / 体检 / 审计（全部 admin）
+app.include_router(admin_entities.router, prefix=API_PREFIX)
 
 
 @app.get(API_PREFIX)
@@ -271,8 +282,14 @@ def _ensure_demo_columns() -> None:
         ("rating_god", "INTEGER NOT NULL DEFAULT 0"),
         ("rating_ghost", "INTEGER NOT NULL DEFAULT 0"),
         ("updated_at", "DATETIME"),
+        ("prompt_id", "INTEGER"),
         ("sites", "TEXT NOT NULL DEFAULT 'deep'"),  # astra 橱窗可见域（逗号枚举）
         ("lang", "TEXT NOT NULL DEFAULT 'zh'"),     # 作品内容语言 zh|en
+        # v2 B5′：Run 元数据收编（标签仍是对外写入面，列用于排序/聚合）
+        ("gen_rounds", "INTEGER"),
+        ("gen_minutes", "INTEGER"),
+        ("gen_platform", "VARCHAR(32)"),
+        ("model_hint", "TEXT NOT NULL DEFAULT ''"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:
@@ -282,8 +299,49 @@ def _ensure_demo_columns() -> None:
         conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_demos_idempotency_key ON demos (idempotency_key)")
         # 内容哈希普通索引（按作者去重查询）
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_content_hash ON demos (content_hash)")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_prompt_id ON demos (prompt_id)")
         # astra 橱窗：按可见域过滤列表的主索引
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_sites ON demos (sites)")
+
+
+def _ensure_model_columns() -> None:
+    """SQLite 增量迁移：models 表补 resolution（Q2 断言强度轴）。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    from .models import Model
+
+    insp = sa_inspect(engine)
+    if "models" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("models")}
+    if "resolution" not in cols:
+        with engine.begin() as conn:
+            conn.exec_driver_sql("ALTER TABLE models ADD COLUMN resolution TEXT NOT NULL DEFAULT 'exact'")
+        # 存量回填：ds-unknown/unknown → guess；<vendor>-unknown 且有 vendor → family；unspecified → unknown
+        db = SessionLocal()
+        try:
+            from .services import model_service
+
+            for m in db.query(Model).all():
+                m.resolution = model_service.infer_resolution(m.name, m.vendor, m.slug)
+                if m.resolution == "guess":
+                    m.status = "unverified"  # 存量灰测一并纠正到「猜测未证实」档
+            db.commit()
+        finally:
+            db.close()
+
+
+def _ensure_tag_key_columns() -> None:
+    """SQLite 增量迁移：tag_keys 表补 tier（v2 重要性分层：1核心/2常用/3扩展）。"""
+    from sqlalchemy import inspect as sa_inspect
+
+    insp = sa_inspect(engine)
+    if "tag_keys" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("tag_keys")}
+    if "tier" not in cols:
+        with engine.begin() as conn:
+            conn.exec_driver_sql("ALTER TABLE tag_keys ADD COLUMN tier INTEGER NOT NULL DEFAULT 2")
 
 
 def _ensure_tag_columns() -> None:
@@ -447,28 +505,35 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_demo_columns()
     _ensure_tag_columns()
+    _ensure_tag_key_columns()
     _ensure_announcement_columns()
     _ensure_user_columns()
     _ensure_forum_columns()
     _ensure_forum_reply_columns()
+    _ensure_model_columns()
     _seed_forum_notice()
 
     db = SessionLocal()
     try:
         # 标签键定义（固定值 / 开放值 / 数字值）——幂等：缺失才插入，已有数据不动
+        # tier（v2 重要性分层）：1 核心 / 2 常用 / 3 扩展
         _DEFAULT_TAG_KEYS = [
-            ("model", "fixed", "模型", "AI 模型版本（固定值）", 1),
-            ("plugin", "fixed", "插件", "使用的插件（固定值）", 2),
-            ("type", "fixed", "类型", "Demo 类型（固定值）", 3),
-            ("skills", "fixed", "技能", "技能工作区（固定值）", 4),
-            ("preset", "fixed", "预设", "预设配置（固定值）", 5),
-            ("category", "fixed", "分类", "作品分类（固定值）", 6),
-            ("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 7),
-            ("rounds", "int", "轮数", "生成轮数（必须为整数）", 8),
+            ("model", "fixed", "模型", "AI 模型版本（固定值）", 1, 1),
+            ("plugin", "fixed", "插件", "使用的插件（固定值）", 2, 3),
+            ("type", "fixed", "类型", "Demo 类型（固定值）", 3, 2),
+            ("skills", "fixed", "技能", "技能工作区（固定值）", 4, 3),
+            ("preset", "fixed", "预设", "预设配置（固定值）", 5, 3),
+            ("category", "fixed", "分类", "作品分类（固定值）", 6, 2),
+            ("game", "open", "游戏", "游戏名称（自定义值，如 mc / pvz）", 7, 2),
+            ("rounds", "int", "轮数", "生成轮数（必须为整数）", 8, 3),
         ]
-        for key, mode, label, description, sort in _DEFAULT_TAG_KEYS:
-            if db.get(TagKey, key) is None:
-                db.add(TagKey(key=key, mode=mode, label=label, description=description, sort=sort))
+        for key, mode, label, description, sort, tier in _DEFAULT_TAG_KEYS:
+            existing = db.get(TagKey, key)
+            if existing is None:
+                db.add(TagKey(key=key, mode=mode, label=label, description=description, sort=sort, tier=tier))
+            else:
+                # 默认键的 tier 以 seed 为准（ALTER 加列带 DEFAULT 2，不能靠 "空才写" 判断）
+                existing.tier = tier
 
         # 默认标签（含历史自由值）——幂等：缺失才插入
         _DEFAULT_TAGS = [
@@ -511,6 +576,26 @@ def init_db() -> None:
             db.add(Setting(key=KEY_AUTO_APPROVE, value="true" if settings.auto_approve else "false"))
 
         db.commit()
+    finally:
+        db.close()
+
+    _ensure_fallback_models()
+
+
+def _ensure_fallback_models() -> None:
+    """兜底型号齐备（Q2）：全局 `unspecified` + 每个已知厂商一个 `<vendor>-unknown` 族节点。
+
+    「不确定」必须有正门，否则强制 model 只会把人和 agent 逼成瞎填。
+    启动失败不阻塞站点（与论坛首帖、OSS 同步同款容错）。
+    """
+    from .services import model_service
+
+    db = SessionLocal()
+    try:
+        model_service.ensure_fallback_models(db)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("兜底型号初始化失败（不阻塞启动）: %s", e)
+        db.rollback()
     finally:
         db.close()
 

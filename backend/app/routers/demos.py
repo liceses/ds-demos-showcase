@@ -28,11 +28,11 @@ from ..client_ip import get_client_ip
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
-from ..models import Announcement, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
-from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated
-from ..serializers import serialize_demo
-from ..services import oss, storage
-from ..services import notification_service
+from ..models import Announcement, Demo, DemoModel, DemoTask, DemoTimeline, DemoTag, Model, SessionLog, Tag, TagKey, Task, User
+from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated, SamePromptOut
+from ..serializers import preload_demo_relations, serialize_demo
+from ..services import model_service, oss, storage
+from ..services import notification_service, suggestion_service
 from ..services.scope import demo_in_scope, get_scope, scope_contains_filter
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
 
@@ -163,6 +163,29 @@ def _resolve_tag(db: Session, item: str | dict) -> Tag:
     return tag
 
 
+def _require_model_tags(items: list) -> None:
+    """Q2 决议（D6）：必须至少声明 1 个 model 标签（入参为已解析标签列表）。
+
+    强制的前提是「不确定也有正门」，三条路都写进错误文案，避免逼人来个瞎填：
+      - 知厂商不知型号 → `model:<vendor>-unknown`（family 档）
+      - 完全不知道 → `model:unspecified`（unknown 档）
+      - 网传灰测未证实 → `model:ds-unknown`（guess 档，可被后续「揭晓」改映射）
+    """
+    for item in items or []:
+        key = item.split(":", 1)[0] if isinstance(item, str) else item.get("key", "")
+        if key == "model":
+            return
+    raise HTTPException(
+        status_code=422,
+        detail="必须选择至少 1 个模型标签；不确定就选 model:unspecified（完全不知道）"
+               "或 model:<厂商>-unknown（知厂商不知型号），并在 model_hint 里留一句依据",
+    )
+
+
+def _require_model_tag(tags_raw: str | None) -> None:
+    _require_model_tags(_parse_tags(tags_raw))
+
+
 def _parse_tags(raw: str | None) -> list:
     """解析 tags JSON：支持字符串数组 ["k:v"] 或对象数组 [{"key","value","description?"}]。"""
     if not raw:
@@ -205,6 +228,10 @@ def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
     if author_name:
         author_tag = _ensure_tag(db, "author", author_name)
         db.add(DemoTag(demo_id=demo.id, tag_id=author_tag.id))
+    # v2 双写：model 标签 → demo_models 实体关联（旧 tag 筛选保持兼容）
+    model_service.sync_demo_models(db, demo)
+    # v2 B5′：run 语义标签 → demo 列（依赖刚写入的标签关联，故在其后；sync 内部已 flush）
+    model_service.sync_run_meta(demo)
 
 
 def _add_timeline(
@@ -230,12 +257,33 @@ def _unique_slug(db: Session, title: str) -> str:
     raise HTTPException(status_code=500, detail="slug 生成失败", )
 
 
+def _parse_int_range(raw: str) -> tuple[int | None, int | None]:
+    """`3` / `3-10` / `-10` / `3-` → (lo, hi)；非法返回 (None, None)（不因此报错，与 int 标签口径一致）。
+
+    两端都缺时按闭区间处理单值（`3` = 恰好 3），单边写法开区间。
+    """
+    s = (raw or "").strip()
+    if not s:
+        return None, None
+    if "-" in s:
+        lo_s, _, hi_s = s.partition("-")
+        lo = int(lo_s) if lo_s.strip().lstrip("+").isdigit() else None
+        hi = int(hi_s) if hi_s.strip().lstrip("+").isdigit() else None
+        return lo, hi
+    return (int(s), int(s)) if s.lstrip("+").isdigit() else (None, None)
+
+
 @router.get("", response_model=Paginated)
 def list_demos(
     status: str | None = Query(default="approved"),
     tag: list[str] = Query(default=[]),
     q: str | None = None,
     author: str | None = None,
+    model: str | None = Query(default=None, description="按模型实体 slug 过滤（v2）"),
+    task: str | None = Query(default=None, description="按题目实体 slug 过滤（v2）"),
+    rounds: str | None = Query(default=None, description="生成轮数：3 / 3-10 / -10 / 3-（v2 B5′）"),
+    minutes: str | None = Query(default=None, description="生成耗时（分钟）：同上（v2 B5′）"),
+    platform: str | None = Query(default=None, description="运行平台精确匹配（v2 B5′）"),
     sort: str = Query(default="newest", pattern="^(newest|popular|random|prompt)$"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -258,38 +306,76 @@ def list_demos(
                 return Paginated(items=[], total=0, page=page, page_size=page_size)
             query = query.filter(Demo.author_id == user.id)
 
-    for kv in tag:
-        from sqlalchemy import cast, select
-        from sqlalchemy import Integer as SAInteger
+    # 标签过滤（v2 修正）：键间 AND、键内 OR ——「model:HY4 或 model:ds-unknown」这类组合才成立
+    from sqlalchemy import cast, or_, select
+    from sqlalchemy import Integer as SAInteger
 
+    key_values: dict[str, list[str]] = {}
+    int_ranges: list[tuple[str, int, int]] = []
+    for kv in tag:
         parts = kv.split(":", 1)
         if len(parts) != 2:
             raise HTTPException(status_code=422, detail=f"非法标签过滤: {kv}", )
         key, val = parts[0], parts[1]
         key_def = db.get(TagKey, key)
         if key_def is not None and key_def.mode == "int" and "-" in val:
-            # int 键范围：tag=rounds:3-10
+            # int 键范围：tag=rounds:3-10（每个范围是独立约束，键间仍 AND）
             lo_s, _, hi_s = val.partition("-")
             try:
                 lo, hi = int(lo_s), int(hi_s)
             except ValueError:
                 raise HTTPException(status_code=422, detail=f"int 标签范围格式需为 key:lo-hi，如 rounds:3-10", )
-            sub = (
-                select(DemoTag.demo_id)
-                .join(Tag, DemoTag.tag_id == Tag.id)
-                .where(
-                    Tag.key == key,
-                    cast(Tag.value, SAInteger) >= lo,
-                    cast(Tag.value, SAInteger) <= hi,
-                )
-            )
+            int_ranges.append((key, lo, hi))
         else:
-            sub = (
-                select(DemoTag.demo_id)
-                .join(Tag, DemoTag.tag_id == Tag.id)
-                .where(Tag.key == key, Tag.value == val)
+            key_values.setdefault(key, []).append(val)
+
+    for key, vals in key_values.items():
+        subs = [
+            select(DemoTag.demo_id)
+            .join(Tag, DemoTag.tag_id == Tag.id)
+            .where(Tag.key == key, Tag.value == v)
+            for v in vals
+        ]
+        if len(subs) == 1:
+            query = query.filter(Demo.id.in_(subs[0]))
+        else:
+            query = query.filter(or_(*[Demo.id.in_(s) for s in subs]))
+    for key, lo, hi in int_ranges:
+        sub = (
+            select(DemoTag.demo_id)
+            .join(Tag, DemoTag.tag_id == Tag.id)
+            .where(
+                Tag.key == key,
+                cast(Tag.value, SAInteger) >= lo,
+                cast(Tag.value, SAInteger) <= hi,
             )
+        )
         query = query.filter(Demo.id.in_(sub))
+
+    # v2 实体过滤：?model=slug / ?task=slug
+    if model:
+        m = db.query(Model).filter(Model.slug == model).first()
+        if m is None:
+            return Paginated(items=[], total=0, page=page, page_size=page_size)
+        query = query.filter(Demo.id.in_(select(DemoModel.demo_id).where(DemoModel.model_id == m.id)))
+    if task:
+        t = db.query(Task).filter(Task.slug == task).first()
+        if t is None:
+            return Paginated(items=[], total=0, page=page, page_size=page_size)
+        query = query.filter(Demo.id.in_(select(DemoTask.demo_id).where(DemoTask.task_id == t.id)))
+
+    # v2 B5′：run 元数据按列过滤（比 tag=rounds: 的字符串 CAST 更准更快）
+    # 语法与 int 标签一致：`3` / `3-10` / `-10` / `3-`；老参数 tag=rounds:3-10 保持可用
+    for raw, col in ((rounds, Demo.gen_rounds), (minutes, Demo.gen_minutes)):
+        if not raw:
+            continue
+        lo, hi = _parse_int_range(raw)
+        if lo is not None:
+            query = query.filter(col >= lo)
+        if hi is not None:
+            query = query.filter(col <= hi)
+    if platform:
+        query = query.filter(Demo.gen_platform.ilike(platform))
 
     if q:
         like = f"%{q}%"
@@ -332,6 +418,7 @@ def list_demos(
         total = query.count()
         items = query.offset((page - 1) * page_size).limit(page_size).all()
 
+    preload_demo_relations(db, items)
     return Paginated(
         items=[serialize_demo(db, d) for d in items],
         total=total,
@@ -364,6 +451,47 @@ def demo_meta(slug: str, db: Session = Depends(get_db), scope: str = Depends(get
         raise HTTPException(status_code=404, detail="Demo 不存在或未上线", )
     author = demo.author.username if demo.author else (demo.guest_name or "public")
     return DemoMetaOut(slug=demo.slug, title=demo.title, cover_url=demo.cover_url, author=author)
+
+
+@router.get("/{slug}/same-prompt", response_model=SamePromptOut)
+def same_prompt_demos(
+    slug: str,
+    limit: int = Query(default=12, ge=1, le=50),
+    db: Session = Depends(get_db),
+    scope: str = Depends(get_scope),
+):
+    """同提示词的其他作品（v2 B2′）：prompt_id 精确共享 = 严格复现对比，零 Task 依赖。
+
+    与 Task 构成粗细两档：同 prompt = 同一句话交给不同模型；同 task = 同一题材。
+    """
+    current = _find_demo(db, slug)
+    if not demo_in_scope(current, scope):
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    prompt = (current.prompt or "").strip()
+    if not prompt:
+        return SamePromptOut(prompt="", prompt_id=None, items=[])
+
+    query = db.query(Demo).filter(
+        Demo.status == "approved",
+        Demo.id != current.id,
+        scope_contains_filter(scope),
+    )
+    if current.prompt_id is not None:
+        query = query.filter(Demo.prompt_id == current.prompt_id)
+    else:
+        # 兜底：历史行尚未回填 prompt_id（迁移脚本未跑）时按文本比对。
+        # 只做 lower/trim 的近似归一，完整规范化靠 migrate_models_v2 回填后走索引。
+        query = query.filter(
+            func.lower(func.trim(Demo.prompt)) == prompt.lower(),
+            Demo.prompt_id.is_(None),
+        )
+    rows = query.order_by(Demo.rating_avg.desc(), Demo.created_at.desc(), Demo.id.desc()).limit(limit).all()
+    preload_demo_relations(db, rows)
+    return SamePromptOut(
+        prompt=prompt,
+        prompt_id=current.prompt_id,
+        items=[serialize_demo(db, d) for d in rows],
+    )
 
 
 @router.get("/{slug}/related", response_model=list[DemoSummaryOut])
@@ -414,7 +542,9 @@ def _compute_related(db: Session, slug: str, scope: str) -> list:
         scored.append((score, d))
 
     scored.sort(key=lambda x: -x[0])
-    return [serialize_demo(db, d) for _, d in scored[:50]]
+    top = [d for _, d in scored[:50]]
+    preload_demo_relations(db, top)
+    return [serialize_demo(db, d) for d in top]
 
 
 def _validate_demo_type(t: str) -> str:
@@ -571,6 +701,8 @@ async def _create_demo_record(
     idempotency_key: str | None = None,
     content_hash: str | None = None,
     single_file: str | None = None,
+    challenge_task: Task | None = None,
+    model_hint: str | None = None,
 ) -> tuple[Demo, str, bool]:
     """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
     - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
@@ -579,6 +711,7 @@ async def _create_demo_record(
     - idempotency_key：唯一幂等键；并发/重试撞键时返回已有结果（created=False）
     - content_hash：zip/单文件内容哈希（按作者去重，由调用方校验后传入）
     - single_file：'html' | 'svg' 时按单文件保存（zip_bytes 存的是该文件内容）
+    - challenge_task：调用方已校验的 active 题目；只落一条 task_match 候选，不直接挂题
     - 解压/OSS/封面上传等阻塞操作放线程池，避免卡死事件循环（批量上传时其他接口还能响应）
     """
     demo = Demo(
@@ -588,6 +721,7 @@ async def _create_demo_record(
         demo_type=demo_type,
         external_url=external_url,
         prompt=(prompt or "").strip(),
+        model_hint=(model_hint or "").strip()[:500],
         video_url=_clean_url(video_url),
         idempotency_key=idempotency_key,
         content_hash=content_hash,
@@ -637,6 +771,8 @@ async def _create_demo_record(
         await asyncio.to_thread(_oss_upload_safe, slug, zip_bytes)
 
     _set_demo_tags(db, demo, _parse_tags(tags_raw))
+    # v2 双写：提示词实体（规范化去重，demos.prompt 原列保留）
+    model_service.set_demo_prompt(db, demo)
     db.commit()
 
     db.add(Announcement(
@@ -649,6 +785,9 @@ async def _create_demo_record(
         created_by=user.id if user else None,
     ))
     _add_timeline(db, demo.id, "v1", "创建", None)
+    # v2 B4′：挑战声明 → 候选（不直接挂题；重活已完成，此处只写一行建议）
+    if challenge_task is not None:
+        _queue_task_match(db, demo, challenge_task, user)
     db.commit()
     # 待审：通知所有管理员
     if status == "pending":
@@ -681,6 +820,43 @@ def _uploader_context(
     return trusted
 
 
+# 用户自报「挑战此题」的置信度：低于 AUTO_ACCEPT(0.99) 确保只进收件箱不自动执行，
+# 又高于 REVIEW(0.60) 保证在收件箱默认视图可见（NULL 会被阈值过滤，绝不能传 None）。
+USER_MATCH_CONFIDENCE = 0.98
+
+
+def _resolve_challenge_task(db: Session, task_slug: str | None) -> Task | None:
+    """挑战题面校验（B4′）：只允许挂到已确认（active）的题目上。
+
+    校验必须发生在**重活之前**（解压/OSS），否则一个拼错的 task 参数就会留下孤儿 demo。
+    用户声明不等于挂题权限——任意作品都能塞进 Benchmark 会污染对比，
+    因此只生成一条 task_match 候选，管理员 approve 才真正生效。
+    """
+    slug = (task_slug or "").strip()
+    if not slug:
+        return None
+    task = db.query(Task).filter(Task.slug == slug).first()
+    if task is None:
+        raise HTTPException(status_code=422, detail=f"挑战的题目不存在：{slug}", )
+    if task.status != "active":
+        raise HTTPException(status_code=422, detail="该题目尚未确认，暂不能接受挑战", )
+    return task
+
+
+def _queue_task_match(db: Session, demo: Demo, task: Task, user: User | None) -> None:
+    """把「我要挑战此题」落成待审候选（同 demo+task 的 pending 自动去重）。"""
+    suggestion_service.create(
+        db,
+        kind="task_match",
+        payload={"task_id": task.id, "task_title": task.title, "demo_id": demo.id, "demo_title": demo.title},
+        confidence=USER_MATCH_CONFIDENCE,
+        source="user",
+        demo_id=demo.id,
+        ref_id=task.id,
+        created_by=user.id if user else None,
+    )
+
+
 def _validate_idempotency_key(key: str | None) -> str | None:
     """校验幂等键：8~128 位字母数字 _ . -；空返回 None。"""
     if not key:
@@ -711,6 +887,8 @@ async def create_demo(
     video_url: str | None = Form(None),
     upload_code: str | None = Form(None),
     idempotency_key: str | None = Form(None),
+    task: str | None = Form(None, description="挑战的题目 slug（v2 B4′，进候选待审）"),
+    model_hint: str | None = Form(None, description="选了兜底型号时的依据（Q2，可选但鼓励）"),
     force: bool = Form(False),
     cover: UploadFile | None = File(None),
     file: UploadFile | None = File(None),
@@ -718,7 +896,12 @@ async def create_demo(
     user: User | None = Depends(optional_user),
 ):
     demo_type = _validate_demo_type(demo_type)
+    # Q2（D6）：模型必填 —— 不确定就走兜底值，绝不逼人瞎填
+    _require_model_tag(tags)
+    hint = (model_hint or "").strip()
     idem_key = _validate_idempotency_key(idempotency_key)
+    # 题面先校验：非法 task 必须在解压/传 OSS 之前失败，免得留下孤儿 demo
+    challenge = _resolve_challenge_task(db, task)
     # 幂等：同 key 已成功创建过 → 直接返回已有结果（agent 重试去重，省去重新上传）
     existing = _existing_demo_by_key(db, idem_key)
     if existing is not None:
@@ -779,6 +962,8 @@ async def create_demo(
         idempotency_key=idem_key,
         content_hash=content_hash,
         single_file=single_file,
+        challenge_task=challenge,
+        model_hint=hint,
     )
     return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
@@ -798,12 +983,18 @@ async def create_demo_from_url(
         raise HTTPException(status_code=422, detail="description 必填（AI 自动上传需要填写简介）", )
     if not body.tags or len(body.tags) == 0:
         raise HTTPException(status_code=422, detail="tags 至少需要 1 个标签（AI 自动上传需要打适宜标签）", )
+    # Q2（D6）：模型必填。agent 不确定时同样有正门（unspecified / <vendor>-unknown / ds-unknown），
+    # 否则强制只会让它们编一个型号出来 —— 那比空着更糟。
+    _require_model_tags(body.tags)
+    hint = (body.model_hint or "").strip()
 
     idem_key = _validate_idempotency_key(body.idempotency_key)
     # 幂等：同 key 已创建 → 直接返回已有结果（agent 超时重试不再重复上传）
     existing = _existing_demo_by_key(db, idem_key)
     if existing is not None:
         return DemoCreateResult(slug=existing.slug, status=existing.status, created=False)
+    # 题面校验放在下载之前：拼错的 task 不该留下已建好的孤儿 demo
+    challenge = _resolve_challenge_task(db, body.task)
 
     if demo_type == "link":
         ext_url = _validate_url(body.external_url, "external_url")
@@ -863,6 +1054,8 @@ async def create_demo_from_url(
         idempotency_key=idem_key,
         content_hash=content_hash,
         single_file=single_file,
+        challenge_task=challenge,
+        model_hint=hint,
     )
     return DemoCreateResult(slug=demo.slug, status=status, created=created)
 
@@ -915,6 +1108,7 @@ async def update_demo(
         demo.video_url = _clean_url(video_url)
         changed = True
     if tags is not None:
+        _require_model_tag(tags)  # Q2：编辑也不得把模型声明清空
         _set_demo_tags(db, demo, _parse_tags(tags))
         changed = True
     if cover is not None and cover.filename:
@@ -955,6 +1149,9 @@ async def update_demo(
         changed = True
 
     demo.updated_at = datetime.utcnow()
+    if changed:
+        # v2 双写：提示词实体回填（prompt 为空也会清掉 prompt_id）
+        model_service.set_demo_prompt(db, demo)
     db.commit()
 
     if changed:
@@ -985,7 +1182,7 @@ async def update_demo(
 
 def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
     """把当前 demo 的快照复制成独立的新 demo（保留旧版本为单独页面）。"""
-    from ..models import Demo as DemoModel
+    from ..models import Demo as DemoRow
 
     old_slug = demo.slug
     new_slug = _unique_slug(db, demo.title)
@@ -1002,7 +1199,7 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(sessions_src, dst)
 
-    snapshot = DemoModel(
+    snapshot = DemoRow(
         slug=new_slug,
         title=demo.title,
         description=demo.description,
@@ -1010,6 +1207,7 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
         demo_type=demo.demo_type,
         external_url=demo.external_url,
         prompt=demo.prompt,
+        prompt_id=demo.prompt_id,
         video_url=demo.video_url,
         status=demo.status,
         author_id=demo.author_id,

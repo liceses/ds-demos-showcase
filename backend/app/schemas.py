@@ -86,6 +86,7 @@ class TagKeyOut(BaseModel):
     label: str
     description: str
     sort: int = 0
+    tier: int = 2  # v2 重要性分层：1 核心 / 2 常用 / 3 扩展
     values: list[TagKeyValueOut] = []
     demo_count: int = 0
     min: int | None = None  # int 键：值域下界（供滑条）
@@ -177,7 +178,29 @@ class DemoFromUrlIn(BaseModel):
     cover_url: str | None = None
     upload_code: str = ""  # 可选：信任通道密钥（未登录时生效，匹配则直接放行）
     idempotency_key: str = ""  # 可选：8~128 位幂等键；重试带同一 key 不重复创建
+    task: str = ""  # 可选（v2 B4′）：挑战的题目 slug；只生成待审候选，不直接挂题
+    model_hint: str = Field(default="", max_length=500)  # Q2：选兜底型号时的依据留痕
     force: bool = False  # 可选：仅管理员生效，跳过内容重复校验（force=1 强制上传）
+
+
+class DemoModelBriefOut(BaseModel):
+    """demo 关联的模型实体（v2 新增字段，向后兼容默认空）。"""
+
+    id: int
+    slug: str
+    name: str
+    vendor: str | None = None
+    status: str = "active"
+    # exact/family/unknown/guess —— 卡片与模型页据此打「未定型号/未标注/canary」徽章
+    resolution: str = "exact"
+
+
+class DemoTaskBriefOut(BaseModel):
+    """demo 关联的题目实体（v2 新增字段）。"""
+
+    id: int
+    slug: str
+    title: str
 
 
 class DemoSummaryOut(BaseModel):
@@ -200,6 +223,8 @@ class DemoSummaryOut(BaseModel):
     rating_god: int = 0
     rating_ghost: int = 0
     prompt: str = ""
+    models: list[DemoModelBriefOut] = []
+    tasks: list[DemoTaskBriefOut] = []
 
 
 class RatingIn(BaseModel):
@@ -229,6 +254,8 @@ class DemoDetailOut(DemoSummaryOut):
     session_log_count: int
     is_author: bool
     prompt: str = ""
+    # Q2：选了兜底型号时的依据留痕（没记录/灰测不便说/别人传的/多模型混合 + 自由描述）
+    model_hint: str = ""
     video_url: str | None = None
     file_size: int | None = None
     storage_size: int | None = None
@@ -379,6 +406,18 @@ class DemoMetaOut(BaseModel):
     author: str
 
 
+class SamePromptOut(BaseModel):
+    """同提示词的其他作品（v2 B2′）：prompt_id 精确共享 = 严格复现对比。
+
+    与 Task 构成粗细两档：同 prompt = 同一句话交给不同模型；同 task = 同一题材。
+    本模块零 Task 依赖，是 v2 第一个用户可见的价值。
+    """
+
+    prompt: str = ""
+    prompt_id: int | None = None
+    items: list["DemoSummaryOut"] = []
+
+
 # ---------- 论坛 ----------
 class ForumTopicOut(BaseModel):
     id: int
@@ -423,6 +462,8 @@ class ForumReplyOut(BaseModel):
     thanks_count: int = 0
     my_reactions: list[str] = []
     created_at: datetime
+    # 仅管理端全局列表填充：跨主题的回复必须知道属于哪个帖子
+    topic_title: str | None = None
 
 
 class ForumReplyPage(BaseModel):
@@ -561,3 +602,265 @@ class NotificationReadIn(BaseModel):
 
 class UnreadCountOut(BaseModel):
     count: int = 0
+
+# ---------- v2 实体：Model / Task / Explore ----------
+
+
+class ModelSummaryOut(BaseModel):
+    id: int
+    slug: str
+    name: str
+    vendor: str | None = None
+    status: str = "active"
+    resolution: str = "exact"
+    description: str = ""
+    demo_count: int = 0
+    rating_avg: float | None = None  # 等权均分（旧语义，保留兼容）
+    # 收缩后的社区分 = (票数加权和 + m·C)/(票数 + m)；零票为 None（没证据 ≠ 0 分）
+    score: float | None = None
+    votes: int = 0
+    sample_level: str = "none"  # none | low | mid | high
+    created_at: datetime
+
+
+class ModelListOut(BaseModel):
+    items: list[ModelSummaryOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class ModelTaskRefOut(BaseModel):
+    id: int
+    slug: str
+    title: str
+    demo_count: int = 0
+
+
+class ModelTagDistOut(BaseModel):
+    """模型行为档案：某标签键的值分布（常见类型/常见玩法）。"""
+
+    value: str
+    demos: int
+
+
+class ModelDetailOut(ModelSummaryOut):
+    aliases: list[str] = []
+    tasks: list[ModelTaskRefOut] = []
+    recent_demos: list["DemoSummaryOut"] = []
+    merged_into: int | None = None
+    type_dist: list[ModelTagDistOut] = []
+    game_dist: list[ModelTagDistOut] = []
+    # 先验透明化：{C, m} 一起给出，读者能自己验算"为什么 6 票的 4.9 排在 412 票的 4.6 后面"
+    prior: dict = Field(default_factory=dict)
+
+
+class ModelBriefOut(BaseModel):
+    id: int
+    slug: str
+    name: str
+    vendor: str | None = None
+    status: str = "active"
+
+
+class CompareBestDemoOut(BaseModel):
+    slug: str
+    title: str
+    rating_avg: float = 0.0
+
+
+class CompareRowOut(BaseModel):
+    model: ModelBriefOut
+    demo_count: int = 0
+    avg_rating: float | None = None
+    # v2 B5′：run 元数据两指标（未填者不参与 AVG，返回 None 而不是 0）
+    avg_rounds: float | None = None
+    avg_minutes: float | None = None
+    best_demo: CompareBestDemoOut | None = None
+
+
+class TaskSummaryOut(BaseModel):
+    id: int
+    slug: str
+    title: str
+    description: str = ""
+    # 题面摘录：无描述时取该题下第一件作品的提示词（列表页要能看懂题目是什么）
+    prompt_excerpt: str = ""
+    category: str | None = None
+    status: str = "active"
+    demo_count: int = 0
+    created_at: datetime
+
+
+class TaskListOut(BaseModel):
+    items: list[TaskSummaryOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class TaskChainRowOut(BaseModel):
+    """证据表的一行 = 一件作品，列即链条环节（模型 → 题面 → 生成过程 → 评分）。"""
+
+    slug: str
+    title: str
+    models: list[ModelBriefOut] = []
+    prompt_id: int | None = None
+    # None = 该作品未填提示词，一致性未知（既不算一致也不算不一致）
+    same_prompt: bool | None = None
+    prompt_excerpt: str = ""
+    rounds: int | None = None
+    minutes: int | None = None
+    rating_avg: float | None = None
+    rating_count: int = 0
+
+
+class TaskChainOut(BaseModel):
+    brief: str = ""
+    # description=作者写的题面；prompt=回落到基准提示词（必须标注，不冒充作者描述）
+    brief_source: str = ""
+    prompt_id: int | None = None
+    prompt_variants: int = 0
+    no_prompt_count: int = 0
+    rows: list[TaskChainRowOut] = []
+
+
+class TaskDetailOut(BaseModel):
+    id: int
+    slug: str
+    title: str
+    description: str = ""
+    category: str | None = None
+    status: str = "active"
+    demos_total: int = 0
+    compare: list[CompareRowOut] = []
+    demos: list["DemoSummaryOut"] = []
+    # 链条视图（题目页主形态）：题面 + 逐作品的证据行
+    chain: TaskChainOut | None = None
+    created_at: datetime
+
+
+class TaskSuggestItemOut(BaseModel):
+    task_id: int
+    # 只有 id 的建议没法显示 —— 补齐可读字段（上传页挂题选择器用）
+    slug: str
+    title: str
+    category: str | None = None
+    demo_count: int = 0
+    score: float
+
+
+class ExploreGroupOut(BaseModel):
+    total: int = 0
+    items: list[ModelSummaryOut] = []
+    # 兜底位作品数（未定型号/未标注/灰测），前端渲染为「其他 · 未定 N」折叠行
+    fallback_demos: int = 0
+
+
+class ExploreTagValuesOut(BaseModel):
+    value: str
+    demos: int
+
+
+class ExploreOut(BaseModel):
+    models: ExploreGroupOut
+    tasks_total: int = 0
+    tasks: list[TaskSummaryOut] = []
+    tags: dict[str, list[ExploreTagValuesOut]] = {}
+
+
+# ---------- v2 B1.5：治理写接口请求体（admin only） ----------
+
+
+class ModelCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=128)
+    vendor: str | None = Field(default=None, max_length=64)
+    description: str = Field(default="", max_length=1000)
+    status: str = Field(default="active", pattern="^(candidate|active|unverified|deprecated)$")
+
+
+class ModelUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    vendor: str | None = Field(default=None, max_length=64)
+    description: str | None = Field(default=None, max_length=1000)
+    # 改 slug：ASCII 安全值，旧 slug 自动转为别名（匹配层继续认，但对外链接会变）
+    slug: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class ModelStatusIn(BaseModel):
+    status: str = Field(pattern="^(candidate|active|unverified|deprecated)$")
+    reason: str = Field(default="", max_length=500)
+
+
+class DeriveIn(BaseModel):
+    """标签建议包的输入：作者已经写下的那几样东西。"""
+
+    title: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=4000)
+    prompt: str = Field(default="", max_length=8000)
+    limit: int = Field(default=8, ge=1, le=20)
+
+
+class DeriveItemOut(BaseModel):
+    key: str
+    value: str
+    label: str = ""
+    confidence: float = 0.0
+    reason: str = ""
+    demo_count: int | None = None
+
+
+class DeriveOut(BaseModel):
+    items: list[DeriveItemOut] = []
+    note: str = ""
+
+
+class AliasIn(BaseModel):
+    alias: str = Field(min_length=1, max_length=128)
+
+
+class MergeIn(BaseModel):
+    """合并请求（model / task 同构）：dry_run=True 先预览影响面，确认后才真合。"""
+
+    target_id: int
+    dry_run: bool = False
+    reason: str = Field(default="", max_length=500)
+
+
+class UnmergeIn(BaseModel):
+    """撤销合并：dry_run=True 先看能迁回多少（合并后可能又做过归属，必须预览）。"""
+
+    dry_run: bool = False
+    reason: str = Field(default="", max_length=500)
+
+
+class TaskCreateIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=5000)
+    category: str | None = Field(default=None, max_length=64)
+    status: str = Field(default="active", pattern="^(candidate|active|merged|hidden)$")
+    # 建题即挂题（prompt 簇「成题」一次点击完成：新建 + 批量挂载）
+    demo_ids: list[int] = Field(default_factory=list, max_length=500)
+
+
+class TaskUpdateIn(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=5000)
+    category: str | None = Field(default=None, max_length=64)
+    status: str | None = Field(default=None, pattern="^(candidate|active|merged|hidden)$")
+
+
+class AttachDemosIn(BaseModel):
+    demo_ids: list[int] = Field(min_length=1, max_length=500)
+
+
+class AttributeIn(BaseModel):
+    """归属工作台：把作品从兜底位迁到真实型号。"""
+
+    demo_ids: list[int] = Field(min_length=1, max_length=200)
+    target_id: int
+    reason: str = Field(default="", max_length=500)
+
+
+class SuggestionReviewIn(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")

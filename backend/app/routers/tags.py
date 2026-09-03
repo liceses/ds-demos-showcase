@@ -14,6 +14,9 @@ from ..deps import optional_user, require_admin
 from ..models import Demo, DemoTag, Tag, TagKey, TagValueSuggestion, User
 from ..schemas import (
     AiSuggestIn,
+    DeriveIn,
+    DeriveItemOut,
+    DeriveOut,
     TagCreate,
     TagDetail,
     TagGroupRename,
@@ -321,39 +324,52 @@ def fetch_models(db: Session = Depends(get_db), _: User = Depends(require_admin)
     return {"created": created, "note": "已写入 pending 建议，需人工审核后生效"}
 
 
+@router.post("/derive", response_model=DeriveOut)
+def derive_tags(
+    body: DeriveIn,
+    db: Session = Depends(get_db),
+):
+    """标签建议包（上传页第 2 步用）：**不要求登录、不写库**，作者收下或跳过都行。
+
+    规则来自现有词表：`type` 用拆分流水线的关键词引擎、`model` 用型号名/别名命中、
+    其余键用「值本身或值的中文介绍出现在文本里」自匹配 —— 新登记固定值自动可被推荐。
+    """
+    from ..services import derive_service
+
+    items = derive_service.suggest_pack(
+        db,
+        title=body.title,
+        description=body.description,
+        prompt=body.prompt,
+        limit=body.limit,
+    )
+    return DeriveOut(
+        items=[DeriveItemOut(**i) for i in items],
+        note="规则推导，仅供参考；不收也不影响提交。" if items else "",
+    )
+
+
 @router.post("/admin/ai-suggest")
 def ai_suggest(
     body: AiSuggestIn,
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """AI 辅助整理：输入 demo 信息，返回推荐标签（只建议，不写库）。
-    当前为规则启发式占位，后续可接入真实 LLM。"""
+    """AI 辅助整理（管理端）：与 `/tags/derive` **同一规则引擎**，只是响应形态不同。
+
+    原来这里另写了一份硬编码关键词表（5 个值、命中即 break），两处规则会各自漂移；
+    现在统一委托 `derive_service`，将来接 LLM 也只改一个地方。
+    """
+    from ..services import derive_service
+
     demo = db.get(Demo, body.demo_id) if body.demo_id else None
-    text = (f"{demo.title} {demo.description}" if demo else body.text or "").lower()
-    suggestions: list[dict] = []
-
-    # type 固定值：effect/widget/game/demo；category 固定值：3D建模/仿真/动画/图形学
-    type_map = [
-        ("type", "game", ["游戏", "play", "game", "小游戏"]),
-        ("type", "effect", ["动画", "animation", "canvas", "特效", "粒子"]),
-        ("category", "3D建模", ["3d", "建模", "three", "webgl"]),
-        ("category", "仿真", ["仿真", "simulation", "物理"]),
-        ("category", "图形学", ["图形", "graphics", "shader"]),
-    ]
-    for key, value, kws in type_map:
-        if any(k in text for k in kws):
-            suggestions.append({"key": key, "value": value, "reason": f"描述命中关键词：{kws[0]}"})
-            break
-
-    if "deepseek" in text or "dsv" in text:
-        suggestions.append({"key": "model", "value": "dsv4-flash", "reason": "描述提到 DeepSeek/DSV"})
-    if "gemini" in text:
-        suggestions.append({"key": "model", "value": "gemini-3.7-flash", "reason": "描述提到 Gemini"})
-
+    title = demo.title if demo else ""
+    description = (demo.description if demo else body.text) or ""
+    prompt = (demo.prompt or "") if demo else ""
+    items = derive_service.suggest_pack(db, title=title, description=description, prompt=prompt)
     return {
-        "suggestions": suggestions,
-        "note": "规则版占位，仅作参考；接入真实 LLM 后更准。确认后请手动/接口写入标签。",
+        "suggestions": [{"key": i["key"], "value": i["value"], "reason": i["reason"]} for i in items],
+        "note": "规则版（与上传建议包同一引擎），仅供参考；确认后请手动写入标签。",
     }
 
 

@@ -36,6 +36,7 @@ def tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
         label=k.label,
         description=k.description,
         sort=k.sort,
+        tier=k.tier or 2,
         values=values,
         demo_count=sum(v.demo_count for v in values),
         min=min_v,

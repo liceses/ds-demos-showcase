@@ -5,6 +5,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -77,6 +78,8 @@ class TagKey(Base):
     label: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
     sort: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # 重要性分层（v2）：1 核心（model，毕业后由实体接管位置）/ 2 常用（type/category/game）/ 3 扩展
+    tier: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
 
 
 class TagValueSuggestion(Base):
@@ -122,6 +125,16 @@ class Demo(Base):
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # 单文件模式：html | svg（直接上传单个自包含文件，非 zip）
     single_file: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # v2：第一轮提示词实体（prompts 表去重缓存）；demos.prompt 原列保留双写
+    prompt_id: Mapped[int | None] = mapped_column(ForeignKey("prompts.id"), nullable=True, index=True)
+    # Q2：选了兜底型号（family/unknown/guess）时的依据留痕，供日后归属工作台收敛
+    # （「不确定」必须带着证据不确定，否则永远不会被收敛）
+    model_hint: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # v2 B5′：Run 语义的元数据从标签体系收编为列（可排序/可聚合，且不污染 fixed 词表）。
+    # 标签仍照常写入（`?tag=rounds:3-10` 是已发布 agent 契约），列是「可计算的那一份」。
+    gen_rounds: Mapped[int | None] = mapped_column(Integer, nullable=True)      # 生成轮数
+    gen_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)     # 耗时（分钟）
+    gen_platform: Mapped[str | None] = mapped_column(String(32), nullable=True)  # 运行平台
     # 多站可见域（astra 橱窗）：逗号分隔枚举 deep | astra | deep,astra；默认 deep = 存量行为不变
     sites: Mapped[str] = mapped_column(String(32), default="deep", nullable=False, index=True)
     # 作品内容语言：zh | en（astra 橱窗策展池要求 en；主站不以此过滤）
@@ -141,6 +154,12 @@ class Demo(Base):
     session_logs: Mapped[list["SessionLog"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     ratings: Mapped[list["DemoRating"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
     timeline: Mapped[list["DemoTimeline"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    # v2 实体关联（多对多；viewonly 便于 selectinload 预加载，写走 *_links）
+    model_links: Mapped[list["DemoModel"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    task_links: Mapped[list["DemoTask"]] = relationship(back_populates="demo", cascade="all, delete-orphan")
+    models: Mapped[list["Model"]] = relationship(secondary="demo_models", viewonly=True)
+    tasks: Mapped[list["Task"]] = relationship(secondary="demo_tasks", viewonly=True)
+    prompt_ref: Mapped["Prompt | None"] = relationship(back_populates="demos")
 
 
 class DemoTag(Base):
@@ -383,3 +402,185 @@ class Notification(Base):
 
     user: Mapped["User"] = relationship(foreign_keys="Notification.user_id")
     actor: Mapped["User | None"] = relationship(foreign_keys="Notification.actor_id")
+
+
+# ---------------- v2 实体：Model / Task / Prompt（从 Tag 毕业的一等实体） ----------------
+
+
+class Model(Base):
+    """模型实体（v2）：由 Tag(key=model) 毕业而来。
+
+    status:
+      - candidate:  自动新建/用户申请，待管理员确认
+      - active:     已确认上架
+      - unverified: 灰测/未验证模型（如 ds-unknown），照常展示 + 前端灰测徽章
+      - deprecated: 已合并/退役（merged_into_id 指向新实体，不物理删除）
+    """
+
+    __tablename__ = "models"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    vendor: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 厂商（沿用 tag.group）
+    status: Mapped[str] = mapped_column(String(16), default="candidate", nullable=False, index=True)
+    # 断言强度（Q2 决议，与 status 正交：status 管生命周期，resolution 管「有多确定」）
+    #   exact   精确型号（A）
+    #   family  知厂商不知型号（B）：vendor 有值、slug 形如 <vendor>-unknown
+    #   unknown 完全不知（C）：全局 unspecified
+    #   guess   有猜测未证实（D）：网传灰测 ds-unknown，可被「揭晓」改映射
+    resolution: Mapped[str] = mapped_column(String(16), default="exact", nullable=False, index=True)
+    merged_into_id: Mapped[int | None] = mapped_column(ForeignKey("models.id"), nullable=True)
+    description: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    aliases: Mapped[list["ModelAlias"]] = relationship(back_populates="model", cascade="all, delete-orphan")
+
+
+class ModelAlias(Base):
+    """模型别名：上传匹配用（"dsv4flash"→canonical）。规范化写法本身也存一条，查询 O(1)。"""
+
+    __tablename__ = "model_aliases"
+
+    alias: Mapped[str] = mapped_column(String(128), primary_key=True)
+    model_id: Mapped[int] = mapped_column(ForeignKey("models.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    model: Mapped["Model"] = relationship(back_populates="aliases")
+
+
+class Task(Base):
+    """题目实体（v2）：Benchmark = 固定 Task 比较多 Model。"""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    category: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 对齐 category 标签值
+    # candidate=规则/用户建议待审 | active=已确认 | merged=已并入 | hidden=下架
+    status: Mapped[str] = mapped_column(String(16), default="candidate", nullable=False, index=True)
+    merged_into_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id"), nullable=True)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class DemoModel(Base):
+    """demo ↔ model 多对多。"""
+
+    __tablename__ = "demo_models"
+    __table_args__ = (Index("ix_demo_models_model_id", "model_id"),)
+
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), primary_key=True)
+    model_id: Mapped[int] = mapped_column(ForeignKey("models.id", ondelete="CASCADE"), primary_key=True)
+
+    demo: Mapped["Demo"] = relationship(back_populates="model_links")
+    model: Mapped["Model"] = relationship()
+
+
+class DemoTask(Base):
+    """demo ↔ task 多对多（决策 D1）。"""
+
+    __tablename__ = "demo_tasks"
+    __table_args__ = (Index("ix_demo_tasks_task_id", "task_id"),)
+
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id", ondelete="CASCADE"), primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True)
+
+    demo: Mapped["Demo"] = relationship(back_populates="task_links")
+    task: Mapped["Task"] = relationship()
+
+
+class Prompt(Base):
+    """提示词实体（v2）：demos.prompt 规范化去重后的缓存；相似检索/「同提示词」模块的语料。"""
+
+    __tablename__ = "prompts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    content_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    demos: Mapped[list["Demo"]] = relationship(back_populates="prompt_ref")
+
+
+# ---------------- v2 治理地基：审计 + 统一建议收件箱 ----------------
+
+
+class AuditLog(Base):
+    """知识变更审计（治理铁律第 6 条「任何自动变化可追溯」）。
+
+    与实体变更**同事务**写入：审计写失败则业务回滚，绝不允许「合并无痕」。
+    before/after 存 JSON 快照（仅关键字段，见 audit_service.snapshot_*），
+    合并类操作靠 before 快照 + merged_into 指针即可人工回退。
+    """
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    actor_type: Mapped[str] = mapped_column(String(16), default="user", nullable=False)  # user | system
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # create|update|status_set|merge|alias_add|alias_remove|attach|detach|delete|review
+    entity_type: Mapped[str] = mapped_column(String(32), nullable=False)  # model | task | suggestion | demo_model | demo_task
+    entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    before: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    after: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    reason: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False, index=True)
+
+    __table_args__ = (
+        Index("ix_audit_entity", "entity_type", "entity_id"),
+    )
+
+
+# 建议类型（EntitySuggestion.kind）
+SUGGESTION_KINDS = ("new_model", "new_task", "task_match", "merge_model", "merge_task", "alias", "retag_demo")
+# 审计动作全集：路由的 action 过滤白名单、前端下拉都从这里取，
+# 避免「加了新写入动作但忘了补白名单」导致审计记录筛不出来（attribute 曾漏在这里）。
+AUDIT_ACTIONS = (
+    "create",
+    "update",
+    "status_set",
+    "merge",
+    "alias_add",
+    "alias_remove",
+    "attach",
+    "detach",
+    "delete",
+    "review",
+    "attribute",
+    "unmerge",
+    "slug_set",
+)
+# 建议来源六值（评审与重排.md 裁决 R2）
+SUGGESTION_SOURCES = ("user", "admin", "ai", "inferred", "external", "imported")
+
+
+class EntitySuggestion(Base):
+    """统一建议收件箱（治理文档 §三「管理员最需要的是待处理队列」）。
+
+    规则层（v2.0）与将来 LLM 层**共用本表**，靠 source + confidence 区分：
+      - confidence ≥ 0.99 → 自动接受但必须留日志（audit_log）
+      - 0.6 ~ 0.99        → 进收件箱待人工审核
+      - < 0.6             → 只记录不骚扰（列表默认不展示，admin 可显式筛）
+    approve 才由 suggestion_service 调对应 service 落库执行，本表永不直接改实体。
+    """
+
+    __tablename__ = "entity_suggestions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    payload: Mapped[str] = mapped_column(Text, default="", nullable=False)  # JSON：建议内容 + 证据摘要
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)  # 规则阶段 = TF-IDF 相似度
+    # 来源六值（评审与重排.md 裁决 R2）；规则召回记 inferred，脚本导入记 imported
+    source: Mapped[str] = mapped_column(String(16), default="inferred", nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)  # pending|approved|rejected
+    # 关联对象（按 kind 语义复用：task_match→目标 task；merge_*→源/目标；new_*→触发 demo）
+    demo_id: Mapped[int | None] = mapped_column(ForeignKey("demos.id", ondelete="SET NULL"), nullable=True)
+    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 非 FK：kind 决定指向哪张表
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

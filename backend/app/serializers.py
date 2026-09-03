@@ -2,9 +2,78 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import Comment, Demo, DemoTimeline, DemoTag, SessionLog, Tag, TagKey, User
+from .models import Comment, Demo, DemoModel, DemoTask, DemoTag, DemoTimeline, Model, SessionLog, Tag, TagKey, Task, User
 from .services import oss
 from .services.scope import ASTRA, current_scope
+
+
+def preload_demo_relations(db: Session, demos: list[Demo]) -> None:
+    """列表页批量预加载：tags/models/tasks 关联 + 评论/会话日志计数。
+
+    消除 serialize_demo 的 N+1（每页 20 条原本 ~60 条查询 → 5 条）。
+    预载结果挂 demo 实例的 _pre_* 属性，serialize_demo 优先消费。
+    """
+    if not demos:
+        return
+    ids = [d.id for d in demos]
+
+    tags_by: dict[int, list] = {}
+    for link, tag in (
+        db.query(DemoTag, Tag).join(Tag, Tag.id == DemoTag.tag_id).filter(DemoTag.demo_id.in_(ids)).all()
+    ):
+        tags_by.setdefault(link.demo_id, []).append({"key": tag.key, "value": tag.value})
+
+    models_by: dict[int, list] = {}
+    for did, m in (
+        db.query(DemoModel.demo_id, Model)
+        .join(Model, Model.id == DemoModel.model_id)
+        # 评审与重排.md §三.1 裁决：deprecated（已并入别处的空壳）不进公开页面；
+        # candidate 保留（作者上传时自己选的模型，前端 pending 徽章兜底）。
+        .filter(Model.status != "deprecated")
+        .filter(DemoModel.demo_id.in_(ids))
+        .all()
+    ):
+        models_by.setdefault(did, []).append(m)
+
+    tasks_by: dict[int, list] = {}
+    for did, t in (
+        db.query(DemoTask.demo_id, Task)
+        .join(Task, Task.id == DemoTask.task_id)
+        # 与模型同口径：merged（已并入）/hidden（下架）的题目是空壳，不进公开页
+        .filter(Task.status.notin_(("merged", "hidden")))
+        .filter(DemoTask.demo_id.in_(ids))
+        .all()
+    ):
+        tasks_by.setdefault(did, []).append(t)
+
+    comment_counts = dict(
+        db.query(Comment.demo_id, func.count(Comment.id))
+        .filter(Comment.demo_id.in_(ids))
+        .group_by(Comment.demo_id)
+        .all()
+    )
+    # 作者：批量取用户名（serialize 里一旦碰 demo.author 关系就会逐行懒加载，
+    # 实测 637 规模 page_size=20 因此多出发 11 条查询，page_size=100 涨到 49）
+    author_ids = {d.author_id for d in demos if d.author_id}
+    authors = (
+        dict(db.query(User.id, User.username).filter(User.id.in_(author_ids)).all())
+        if author_ids
+        else {}
+    )
+    log_counts = dict(
+        db.query(SessionLog.demo_id, func.count(SessionLog.id))
+        .filter(SessionLog.demo_id.in_(ids))
+        .group_by(SessionLog.demo_id)
+        .all()
+    )
+
+    for d in demos:
+        d._pre_tags = tags_by.get(d.id, [])
+        d._pre_models = models_by.get(d.id, [])
+        d._pre_tasks = tasks_by.get(d.id, [])
+        d._pre_comment_count = comment_counts.get(d.id, 0)
+        d._pre_session_log_count = log_counts.get(d.id, 0)
+        d._pre_author = authors.get(d.author_id) if d.author_id else None
 
 
 def tag_dict(db: Session, tag: Tag) -> dict:
@@ -28,20 +97,52 @@ def tag_dict(db: Session, tag: Tag) -> dict:
     }
 
 
+_NO_AUTHOR = object()  # 区分「未预加载」与「预加载结果为 public」
+
+
 def serialize_demo(
     db: Session,
     demo: Demo,
     current_user_id: int | None = None,
     detail: bool = False,
 ) -> dict:
-    author: User | None = demo.author
-    tags = [{"key": dt.tag.key, "value": dt.tag.value} for dt in demo.tag_associations]
-    comment_count = (
-        db.query(func.count(Comment.id)).filter(Comment.demo_id == demo.id).scalar() or 0
-    )
-    session_log_count = (
-        db.query(func.count(SessionLog.id)).filter(SessionLog.demo_id == demo.id).scalar() or 0
-    )
+    pre_author = getattr(demo, "_pre_author", _NO_AUTHOR)
+    if pre_author is _NO_AUTHOR:
+        author: User | None = demo.author
+        author_name = author.username if author else "public"
+    else:
+        author_name = pre_author or "public"
+    pre_tags = getattr(demo, "_pre_tags", None)
+    tags = pre_tags if pre_tags is not None else [
+        {"key": dt.tag.key, "value": dt.tag.value} for dt in demo.tag_associations
+    ]
+    comment_count = getattr(demo, "_pre_comment_count", None)
+    if comment_count is None:
+        comment_count = (
+            db.query(func.count(Comment.id)).filter(Comment.demo_id == demo.id).scalar() or 0
+        )
+    session_log_count = getattr(demo, "_pre_session_log_count", None)
+    if session_log_count is None:
+        session_log_count = (
+            db.query(func.count(SessionLog.id)).filter(SessionLog.demo_id == demo.id).scalar() or 0
+        )
+
+    pre_models = getattr(demo, "_pre_models", None)
+    model_rows = pre_models if pre_models is not None else [m for m in demo.models if m.status != "deprecated"]
+    models_out = [
+        {
+            "id": m.id,
+            "slug": m.slug,
+            "name": m.name,
+            "vendor": m.vendor,
+            "status": m.status,
+            "resolution": m.resolution,
+        }
+        for m in model_rows
+    ]
+    pre_tasks = getattr(demo, "_pre_tasks", None)
+    task_rows = pre_tasks if pre_tasks is not None else [t for t in demo.tasks if t.status not in ("merged", "hidden")]
+    tasks_out = [{"id": t.id, "slug": t.slug, "title": t.title} for t in task_rows]
 
     version = int(demo.updated_at.timestamp()) if demo.updated_at else int(demo.created_at.timestamp())
     preview_ext = "svg" if demo.single_file == "svg" else "html"
@@ -58,7 +159,7 @@ def serialize_demo(
         preview_url = preview_path
 
     # astra 橱窗输出层（只改响应形态，不碰存储数据）：作者统一实验室署名、剔除内部标签
-    author_out = author.username if author else "public"
+    author_out = author_name
     if scope == ASTRA:
         author_out = "astra lab"
         tags = [t for t in tags if t.get("key") not in ("author", "version-of")]
@@ -74,6 +175,8 @@ def serialize_demo(
         "author": author_out,
         "author_id": demo.author_id,
         "tags": tags,
+        "models": models_out,
+        "tasks": tasks_out,
         "view_count": demo.view_count,
         "download_count": demo.download_count,
         "comment_count": comment_count,
@@ -104,6 +207,7 @@ def serialize_demo(
                 "session_log_count": session_log_count,
                 "is_author": bool(current_user_id is not None and demo.author_id == current_user_id),
                 "prompt": demo.prompt,
+                "model_hint": demo.model_hint or "",
                 "video_url": demo.video_url,
                 "file_size": files_dir.stat().st_size if files_dir.exists() else None,
                 "storage_size": demo_storage_size(demo.slug),

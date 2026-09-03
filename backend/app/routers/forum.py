@@ -313,17 +313,32 @@ def admin_list_topics(
 def admin_list_replies(
     topic_id: int | None = None,
     status: str | None = Query(default=None, pattern="^(normal|hidden|reviewing)$"),
+    q: str | None = Query(default=None, description="搜回复内容或所属主题标题"),
+    limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    """管理端回复列表：可按主题/状态过滤（含 hidden/reviewing）。"""
-    q = db.query(ForumReply)
+    """管理端回复列表：**默认全局**（不必先选主题），可按主题/状态/关键词过滤。
+
+    带 topic_title 是因为：跨主题的回复列表如果不知道每条属于哪个帖子，
+    管理员就只能回到"先选主题"的老路 —— 那正是这次要修的交互。
+    不逐条算表情反应（管理列表用不到，省掉 N 次查询）。
+    """
+    query = db.query(ForumReply, ForumTopic.title).join(ForumTopic, ForumTopic.id == ForumReply.topic_id)
     if topic_id is not None:
-        q = q.filter(ForumReply.topic_id == topic_id)
+        query = query.filter(ForumReply.topic_id == topic_id)
     if status:
-        q = q.filter(ForumReply.status == status)
-    rows = q.order_by(ForumReply.created_at.desc(), ForumReply.id.desc()).all()
-    return [forum_service.reply_out(r, db) for r in rows]
+        query = query.filter(ForumReply.status == status)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(ForumReply.content.ilike(like) | ForumTopic.title.ilike(like))
+    rows = query.order_by(ForumReply.created_at.desc(), ForumReply.id.desc()).limit(limit).all()
+    out = []
+    for reply, topic_title in rows:
+        item = forum_service.reply_out(reply)
+        item.topic_title = topic_title
+        out.append(item)
+    return out
 
 
 @router.put("/admin/topics/{tid}", response_model=ForumTopicOut)

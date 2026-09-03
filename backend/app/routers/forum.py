@@ -27,7 +27,7 @@ from ..schemas import (
     ReactionToggleIn,
     ReactionToggleOut,
 )
-from ..services import community_service, forum_service, notification_service
+from ..services import community_service, counters, forum_service, notification_service
 
 router = APIRouter(prefix="/forum", tags=["forum"])
 
@@ -138,9 +138,9 @@ def get_topic(
     user: User | None = Depends(optional_user),
 ):
     t = forum_service.find_visible_topic(db, tid)
+    # 计数走内存批次 + 30s 落库：读路径零写事务（同 demos 的 view_count 处理）
+    counters.bump("topic_view", t.id)
     t.view_count += 1
-    db.commit()
-    db.refresh(t)
     return forum_service.topic_out(t, db, user.id if user else None)
 
 

@@ -146,7 +146,11 @@ class Demo(Base):
     rating_god: Mapped[int] = mapped_column(Integer, default=0, nullable=False)    # score == 5 神作
     rating_ghost: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # score == 1 鬼作
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+    # 注意：不要给 updated_at 加 onupdate —— 它会被浏览/下载/评分等任何对 demo 行的 UPDATE
+    # 顺手刷新，而版本化预览 URL 的版本 key 依赖它（2026-09-03 事故：每次浏览换新 URL，
+    # CDN 缓存命中率归零 + 读路径写风暴）。updated_at 只应在「内容被改」时显式赋值
+    # （update_demo 已显式 `demo.updated_at = datetime.utcnow()`）。
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     author: Mapped["User | None"] = relationship(back_populates="demos")
     tag_associations: Mapped[list["DemoTag"]] = relationship(back_populates="demo", cascade="all, delete-orphan")

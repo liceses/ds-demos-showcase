@@ -144,7 +144,11 @@ def serialize_demo(
     task_rows = pre_tasks if pre_tasks is not None else [t for t in demo.tasks if t.status not in ("merged", "hidden")]
     tasks_out = [{"id": t.id, "slug": t.slug, "title": t.title} for t in task_rows]
 
-    version = int(demo.updated_at.timestamp()) if demo.updated_at else int(demo.created_at.timestamp())
+    # 版本 key 必须只随「内容变化」变：用内容指纹（文件变了 hash 才变）。
+    # 不能用 updated_at —— 它曾被 onupdate 在每次浏览/下载/评分时刷新（2026-09-03 事故），
+    # 导致每次浏览都换新 URL、CDN 缓存命中率归零、全站预览流量回源。
+    # 历史数据无 content_hash 时退到 created_at（内容不变则版本稳定）。
+    version = (demo.content_hash or "")[:12] or str(int(demo.created_at.timestamp()))
     preview_ext = "svg" if demo.single_file == "svg" else "html"
     scope = current_scope.get()
     preview_path = f"/preview/{demo.slug}/v{version}/index.{preview_ext}"

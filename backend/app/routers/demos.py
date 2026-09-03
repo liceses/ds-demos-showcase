@@ -31,7 +31,7 @@ from ..deps import current_user, optional_user
 from ..models import Announcement, Demo, DemoModel, DemoTask, DemoTimeline, DemoTag, Model, SessionLog, Tag, TagKey, Task, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated, SamePromptOut
 from ..serializers import preload_demo_relations, serialize_demo
-from ..services import model_service, oss, storage
+from ..services import counters, model_service, oss, storage
 from ..services import notification_service, suggestion_service
 from ..services.scope import demo_in_scope, get_scope, scope_contains_filter
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
@@ -438,8 +438,11 @@ def get_demo(
     # 可见域外 = 不存在（错误文案一致，不泄露策展池外作品的存在性）
     if not demo_in_scope(demo, scope):
         raise HTTPException(status_code=404, detail="Demo 不存在", )
+    # 计数走内存批次 + 30s 落库（services/counters.py）：读路径零写事务，
+    # 不再有 "database is locked" 500，也不再触发 updated_at 刷新打穿预览缓存。
+    # 这里对 ORM 对象 +1 只为了让本次响应数字新鲜；不 commit，会话关闭即丢弃。
+    counters.bump("demo_view", demo.id)
     demo.view_count += 1
-    db.commit()
     return serialize_demo(db, demo, user.id if user else None, detail=True)
 
 
@@ -1259,8 +1262,9 @@ def download_demo(slug: str, db: Session = Depends(get_db), scope: str = Depends
         raise HTTPException(status_code=404, detail="Demo 不存在", )
     if demo.demo_type == "link":
         raise HTTPException(status_code=400, detail="链接类型无下载，请直接访问外部链接", )
+    # 计数走内存批次 + 30s 落库：下载路径零写事务（同 get_demo 的 view_count 处理）
+    counters.bump("demo_download", demo.id)
     demo.download_count += 1
-    db.commit()
 
     # 单文件 demo：直接返回原文件（不打包 zip）
     if demo.single_file:

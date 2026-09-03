@@ -1,22 +1,48 @@
 <script setup lang="ts">
 defineOptions({ name: 'AdminTagsSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import { useTagsStore } from '../../stores/tags'
 import { groupedTagValues } from '../../utils/tagGroups'
 import TagGroupBox from '../TagGroupBox.vue'
+import TagMergeModal from './TagMergeModal.vue'
 import { parseDate } from '../../utils/time'
 import type { AdminDemo, TagKeyInfo, TagSuggestion } from '../../api/types'
 
 const ui = useUiStore()
 
-const tagSub = ref<'keys' | 'review'>('keys')
+// only：后台导航直接把"词表"和"固定值申请"做成两个入口，不再让用户先进面板再找第二层 tab
+// （面板内再套 tab = 两套组织逻辑，是后台重设计诊断 #10 的同一个病）
+const props = withDefaults(defineProps<{ only?: 'keys' | 'review' | '' }>(), { only: '' })
+const tagSub = ref<'keys' | 'review'>(props.only || 'keys')
+watch(
+  () => props.only,
+  (v) => {
+    if (v) {
+      tagSub.value = v
+      if (v === 'review') void loadSuggestions()
+    }
+  },
+)
 const tagsStore = useTagsStore()
 const tagKeys = computed(() => tagsStore.keys)
 const demos = ref<AdminDemo[]>([])
 const adminActiveKey = ref('')
 const adminActiveTagKey = computed(() => tagKeys.value.find((k) => k.key === adminActiveKey.value) || null)
+
+// 值列表：搜索优先于翻页（model 键有 160+ 个值，管理员是来找某个值的）
+const VALUE_CAP = 60
+const valueFilter = ref('')
+const shownValues = computed(() => {
+  const all = adminActiveTagKey.value?.values || []
+  const q = valueFilter.value.trim().toLowerCase()
+  if (q) return all.filter((v) => v.value.toLowerCase().includes(q) || (v.description || '').toLowerCase().includes(q))
+  // 未搜索时按使用量排序并截断，冷门值靠搜索召回
+  return [...all].sort((a, b) => b.demo_count - a.demo_count).slice(0, VALUE_CAP)
+})
+// 换键时清掉上一个键留下的筛选词，否则会看到"没有匹配的值"这种假空态
+watch(adminActiveKey, () => (valueFilter.value = ''))
 
 function selectAdminKey(k: TagKeyInfo) {
   adminActiveKey.value = k.key
@@ -160,7 +186,7 @@ async function approveSuggestion(s: TagSuggestion) {
 async function rejectSuggestion(s: TagSuggestion) {
   try {
     await api.reviewTagSuggestion(s.id, 'reject')
-    ui.toast('已拒绝', 'success')
+    ui.toast('已驳回', 'success')
     await loadSuggestions()
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
@@ -218,6 +244,17 @@ async function saveAiTags() {
 // ---------- 分组 / 合并（TagGroupBox） ----------
 const groupSearch = ref('')
 
+// 标签合并：值行上的「并」打开弹窗（dry_run 预览 → 执行）。此前该弹窗零引用 = 功能不可达。
+const mergeFrom = ref('')
+function openMerge(value: string) {
+  mergeFrom.value = value
+}
+async function onMerged() {
+  mergeFrom.value = ''
+  await tagsStore.refresh()
+  await loadTags()
+}
+
 async function onTagsChanged() {
   await tagsStore.refresh()
 }
@@ -231,9 +268,9 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 14px">
+    <div v-if="!only" class="filter-row" style="margin-bottom: 14px">
       <button class="tab" :class="{ active: tagSub === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
-      <button class="tab" :class="{ active: tagSub === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">审核 / AI</button>
+      <button class="tab" :class="{ active: tagSub === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">固定值申请 / AI</button>
     </div>
 
     <template v-if="tagSub === 'keys'">
@@ -300,24 +337,36 @@ onMounted(() => {
               <span v-if="valueOk" class="notice notice-success" style="margin: 0">{{ valueOk }}</span>
             </div>
 
+              <!-- 值可能有 160+（model 键）：搜索比分页对症 —— 管理员是来找某个值的，不是一页页翻的 -->
+              <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">
+                <input v-model="valueFilter" class="input" type="search" placeholder="搜值名或介绍…" style="max-width: 240px" />
+                <span class="muted mono">{{ shownValues.length }} / {{ adminActiveTagKey.values.length }}</span>
+                <span v-if="!valueFilter.trim() && adminActiveTagKey.values.length > VALUE_CAP" class="hint">
+                  默认只显示前 {{ VALUE_CAP }} 个（按使用量），输入关键词看全部
+                </span>
+              </div>
+
             <template v-if="adminActiveTagKey.mode === 'fixed'">
-              <template v-for="g in groupedTagValues(adminActiveTagKey.values)" :key="g.group">
-                <div v-if="groupedTagValues(adminActiveTagKey.values).length > 1" class="tag-group-name">{{ g.group }}</div>
+              <template v-for="g in groupedTagValues(shownValues)" :key="g.group">
+                <div v-if="groupedTagValues(shownValues).length > 1" class="tag-group-name">{{ g.group }}</div>
                 <div class="filter-row" style="margin: 0; gap: 6px">
                   <template v-for="v in g.values" :key="v.value">
                     <RouterLink class="tag-chip" :class="'mode-fixed'" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
+                    <!-- 合并此前在 UI 上不可达：TagMergeModal 组件与 /tags/admin/merge 端点都在，却没人引用它 -->
+                    <button class="btn btn-sm btn-outline" type="button" style="padding: 2px 6px" title="把该值并入另一个值" @click="openMerge(v.value)">并</button>
                     <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
                   </template>
                 </div>
               </template>
-              <span v-if="!adminActiveTagKey.values.length" class="muted">无</span>
+              <span v-if="!shownValues.length" class="muted">{{ valueFilter.trim() ? '没有匹配的值，换个关键词' : '还没有值' }}</span>
             </template>
             <div v-else class="filter-row" style="margin: 0; gap: 6px">
-              <template v-for="v in adminActiveTagKey.values" :key="v.value">
+              <template v-for="v in shownValues" :key="v.value">
                 <RouterLink class="tag-chip" :class="'mode-' + adminActiveTagKey.mode" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
+                <button class="btn btn-sm btn-outline" type="button" style="padding: 2px 6px" title="把该值并入另一个值" @click="openMerge(v.value)">并</button>
                 <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
               </template>
-              <span v-if="!adminActiveTagKey.values.length" class="muted">无</span>
+              <span v-if="!shownValues.length" class="muted">{{ valueFilter.trim() ? '没有匹配的值，换个关键词' : '还没有值' }}</span>
             </div>
 
             <div v-if="adminActiveTagKey.mode === 'fixed'" class="group-workbench-inline">
@@ -389,12 +438,21 @@ onMounted(() => {
               <td>{{ parseDate(s.created_at).toLocaleString('zh-CN') }}</td>
               <td>
                 <button class="btn btn-sm btn-primary" type="button" @click="approveSuggestion(s)">批准</button>
-                <button class="btn btn-sm btn-dark" type="button" @click="rejectSuggestion(s)">拒绝</button>
+                <button class="btn btn-sm btn-dark" type="button" @click="rejectSuggestion(s)">驳回</button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </template>
+
+    <TagMergeModal
+      v-if="mergeFrom && adminActiveTagKey"
+      :active-key="adminActiveTagKey.key"
+      :from-value="mergeFrom"
+      :values="adminActiveTagKey.values"
+      @close="mergeFrom = ''"
+      @merged="onMerged"
+    />
   </div>
 </template>

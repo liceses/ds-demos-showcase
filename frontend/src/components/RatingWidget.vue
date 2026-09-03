@@ -7,7 +7,8 @@ import { getDeviceId } from '../utils/anon'
 import type { RatingStats } from '../api/types'
 import { t, lang } from '../i18n'
 
-const props = defineProps<{ slug: string }>()
+// distMax：柱高上限；layout：bars（宽版面柱形）| rows（窄栏横条+票数）
+const props = withDefaults(defineProps<{ slug: string; distMax?: number; layout?: 'bars' | 'rows' }>(), { distMax: 22, layout: 'bars' })
 
 const auth = useAuthStore()
 const ui = useUiStore()
@@ -90,7 +91,21 @@ onMounted(loadRating)
           <span v-if="rating?.my_score" class="hint">{{ t('rating.mine', '我的评分：{n}（再点一次取消）', { n: rating?.my_score }) }}</span>
         </div>
 
-        <div v-if="rating?.distribution?.length" class="rating-dist">
+        <!-- 窄栏（详情页右卡）用横条 + 票数：柱形在 356px 里读不出任何数值，
+             只有"能比长短、能看见票数"的横条才算把这张图画对 -->
+        <div v-if="rating?.distribution?.length && layout === 'rows'" class="rd-rows">
+          <div
+            v-for="d in [...rating.distribution].reverse()"
+            :key="'r' + d.score"
+            class="rd-row"
+            :title="t('rating.distTip', '{n} 分：{c} 票', { n: d.score, c: d.count })"
+          >
+            <span class="rd-n mono">{{ d.score }}</span>
+            <span class="rd-track"><i :class="'dist-' + d.score" :style="{ width: Math.round((d.count / maxDist) * 100) + '%' }"></i></span>
+            <span class="rd-c mono">{{ d.count }}</span>
+          </div>
+        </div>
+        <div v-else-if="rating?.distribution?.length" class="rating-dist">
           <div
             v-for="d in rating.distribution"
             :key="d.score"
@@ -100,7 +115,7 @@ onMounted(loadRating)
             <div
               class="rating-dist-bar"
               :class="'dist-' + d.score"
-              :style="{ height: Math.max(3, Math.round((d.count / maxDist) * 22)) + 'px' }"
+              :style="{ height: Math.max(3, Math.round((d.count / maxDist) * distMax)) + 'px' }"
             ></div>
             <div class="rating-dist-score">{{ d.score }}</div>
           </div>

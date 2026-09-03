@@ -115,6 +115,7 @@ const ROUTE_TITLES_EN: Record<string, string> = {
   标签: 'Tags', 标签详情: 'Tag detail', 登录: 'Log in', 注册: 'Sign up',
   用户: 'User', 公开用户: 'Public', 账户设置: 'Settings', 通知: 'Notifications',
   '上传 Demo': 'Upload', 管理后台: 'Admin', '赞助/致谢管理': 'Sponsors admin', '404': '404',
+  模型: 'Model', 题目: 'Task', 探索: 'Explore',
 }
 
 export function routeTitle(zhTitle: string): string {

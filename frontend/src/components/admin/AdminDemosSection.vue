@@ -98,7 +98,7 @@ async function setDemoStatus(slug: string, action: 'approve' | 'reject') {
   if (d) d.status = action === 'approve' ? 'approved' : 'rejected'
   try {
     await api.adminApprove(slug, action)
-    ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
+    ui.toast(action === 'approve' ? '已批准' : '已驳回', 'success')
   } catch (e) {
     if (d && old) d.status = old
     ui.toast((e as Error).message, 'error')

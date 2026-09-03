@@ -152,7 +152,7 @@ function scrollToAnnouncements() {
 
 const entries = [
   { to: '/demos', stamp: '逛', cls: 'lib', key: 'lib', title: '作品库', desc: '搜索 · 筛选 · 全部作品' },
-  { to: '/tags', stamp: '翻', cls: 'tags', key: 'tags', title: '标签库', desc: '固定 / 开放 / 数字 三种维度' },
+  { to: '/tags', stamp: '探', cls: 'tags', key: 'explore', title: '探索', desc: '模型 / 题目 / 标签 三个入口' },
   { to: '/leaderboard', stamp: '榜', cls: 'rank', key: 'rank', title: '排行榜', desc: '神作 / 鬼作 / 评分口碑榜' },
   { to: '/upload', stamp: '投', cls: 'upload', key: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
 ]

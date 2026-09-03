@@ -26,6 +26,7 @@ import type {
   FollowOut,
   DemoSummary,
   Paginated,
+  PeekResult,
   SessionLog,
   Settings,
   SiteStats,
@@ -46,6 +47,39 @@ import type {
   LiveStats,
   OssSyncJob,
   SiteInfo,
+  ModelDetail,
+  ModelSummary,
+  PaginatedModels,
+  PaginatedTasks,
+  TaskDetail,
+  TaskSummary,
+  TaskSuggestItem,
+  SamePromptResult,
+  PromptCluster,
+  PromptClusters,
+  SuggestionItem,
+  SuggestionList,
+  ExploreResult,
+  AttributionGroup,
+  AttributionItem,
+  AttributionPending,
+  AttributeResult,
+  TypeDemoPreview,
+  TypeDemoQueueResult,
+  InspectionCheck,
+  InspectionResult,
+  KnowledgeStats,
+  AuditList,
+  AuditEntry,
+  AdminModelList,
+  AdminTaskList,
+  MergePreview,
+  EntityConflicts,
+  MergeHistoryItem,
+  UnmergePreview,
+  ModelBrief,
+  DeriveResult,
+  DerivedTag,
 } from './types'
 
 const delay = (ms = 180) => new Promise((r) => setTimeout(r, ms))
@@ -188,6 +222,8 @@ const demos: DemoDetail[] = [
     slug: 'demo_粒子星空',
     title: '粒子星空',
     description: 'Canvas 粒子星空，鼠标移动产生引力扰动，适合作为背景特效。',
+    // 与「音频可视化」共用同一句提示词：mock 模式下也能看到 v2「同提示词」模块
+    prompt: '用 canvas 做一个全屏动态背景：粒子随鼠标移动产生引力扰动，颜色用高饱和撞色，代码必须单文件自包含。',
     cover_url: svgCover('#4ecdc4', '✦', 'particle starfield'),
     author: 'tester',
     author_id: 2,
@@ -289,6 +325,7 @@ const txt='你好，这里是 AI 生成的网页 Demo。\n每一行都由模型�
     slug: 'demo_音频可视化',
     title: '音频可视化',
     description: 'Canvas 频谱条动画，模拟音频可视化的视觉效果。',
+    prompt: '用 canvas 做一个全屏动态背景：粒子随鼠标移动产生引力扰动，颜色用高饱和撞色，代码必须单文件自包含。',
     cover_url: svgCover('#4ecdc4', 'WAVE', 'audio visualizer'),
     author: 'alice',
     author_id: 3,
@@ -517,6 +554,78 @@ const pendingDemos: DemoDetail[] = [
 ]
 
 let settings: Settings = { auto_approve: true, auto_approve_public: false }
+
+// v2 B3′：mock 题目池（adminCreateTask 会写入，列表页与治理面板立刻可见）
+const mockTasks: TaskSummary[] = [
+  { id: 1, slug: 'mc-web', title: '我的世界网页版', description: '用网页技术复刻我的世界核心玩法', category: '游戏', status: 'active', demo_count: 3, created_at: '2026-08-05T00:00:00Z' },
+]
+let mockTaskSeq = 2
+
+// v2 B4′：mock 收件箱（带 task 的上传会真的入队，能完整演一遍批准流程）
+const mockSuggestions: SuggestionItem[] = []
+let mockSuggestionSeq = 1
+
+// 合并向导 / 别名中心的可变数据源（提到模块级，避免每处各抄一份假数据）
+const mockModels: ModelSummary[] = [
+  { id: 1, slug: 'dsv4-flash', name: 'dsv4-flash', vendor: 'DeepSeek', status: 'active', resolution: 'exact', description: 'DeepSeek V4 Flash —— 快速推理', demo_count: 8, rating_avg: 4.4, score: 4.31, votes: 128, sample_level: 'high', created_at: '2026-08-01T00:00:00Z' },
+  { id: 2, slug: 'dsv4-pro', name: 'dsv4-pro', vendor: 'DeepSeek', status: 'active', resolution: 'exact', description: 'DeepSeek V4 Pro —— 强推理', demo_count: 6, rating_avg: 4.7, score: 4.62, votes: 74, sample_level: 'high', created_at: '2026-08-01T00:00:00Z' },
+  { id: 3, slug: 'ds-unknown', name: 'ds-unknown', vendor: null, status: 'unverified', resolution: 'guess', description: '灰测模型', demo_count: 12, rating_avg: 4.1, score: 3.98, votes: 9, sample_level: 'low', created_at: '2026-08-02T00:00:00Z' },
+  { id: 4, slug: 'dsv4flash', name: 'dsv4flash', vendor: 'DeepSeek', status: 'active', resolution: 'exact', description: '同一型号的另一种写法（用来演示合并向导）', demo_count: 2, rating_avg: 5.0, score: 4.02, votes: 1, sample_level: 'low', created_at: '2026-08-02T00:00:00Z' },
+]
+const mockAliases: Record<string, string[]> = { 'dsv4-flash': ['dsv4 flash'] }
+
+// 撤销合并的可变状态：dsv4flash 已被合进 dsv4-flash（与真实库里那次的形状一致）
+let mockMergeHistory: MergeHistoryItem[] = [
+  {
+    source: { id: 4, slug: 'dsv4flash', name: 'dsv4flash' },
+    target: { id: 1, slug: 'dsv4-flash', name: 'dsv4-flash' },
+    moved_total: 2,
+    movable_back: 2,
+    reliable: true,
+    reason: '合并入 dsv4-flash（id=1），迁移 2 个作品引用',
+    restored_status: 'active',
+  },
+]
+
+// Q2 第三步：mock 归属工作台（懒构造：要用到 demos，避开模块初始化顺序问题）
+const mockAttrTargets = [
+  { id: 1, slug: 'dsv4-flash', name: 'dsv4-flash', vendor: 'DeepSeek' },
+  { id: 2, slug: 'dsv4-pro', name: 'dsv4-pro', vendor: 'DeepSeek' },
+  { id: 4, slug: 'hy4', name: 'HY4', vendor: 'Tencent' },
+]
+let mockAttribution: AttributionGroup[] = []
+
+function ensureAttribution(): AttributionGroup[] {
+  if (mockAttribution.length) return mockAttribution
+  const pool = demos.filter((d) => d.status === 'approved').slice(0, 5)
+  const modelOf = (slug: string, name: string, resolution: string, vendor: string | null, n: number): ModelSummary => ({
+    id: 900 + mockAttribution.length + n,
+    slug,
+    name,
+    vendor,
+    status: 'active',
+    resolution,
+    description: '',
+    demo_count: n,
+    rating_avg: null,
+    created_at: '2026-08-05T00:00:00Z',
+  })
+  const itemsOf = (list: typeof pool, guessSlug?: string, offset = 0): AttributionItem[] =>
+    list.map((d, i) => ({
+      id: 7000 + offset + i, // mock 的 DemoDetail 不带 id，工作台只用它做选中键
+      slug: d.slug,
+      title: d.title,
+      model_hint: i === 0 ? '作者备注：看着像 dsv4-flash 出的' : '',
+      rating_avg: d.rating_avg ?? 0,
+      rating_count: d.rating_count ?? 0,
+      guess: guessSlug ? mockAttrTargets.find((t) => t.slug === guessSlug) ?? null : null,
+    }))
+  mockAttribution = [
+    { model: modelOf('unspecified', 'unspecified', 'unknown', null, 3), demos: itemsOf(pool.slice(0, 3), 'dsv4-flash', 0) },
+    { model: modelOf('deepseek-unknown', 'deepseek-unknown', 'family', 'DeepSeek', 2), demos: itemsOf(pool.slice(3, 5), undefined, 10) },
+  ]
+  return mockAttribution
+}
 // astra 橱窗策展（mock 态记忆）：slug -> {sites, lang}
 const curationMap = new Map<string, { sites: string[]; lang: 'zh' | 'en' }>()
 
@@ -567,6 +676,11 @@ function ratingDistribution(d: DemoDetail) {
     { score: 4, count: 2 },
     { score: 5, count: d.rating_god || 6 },
   ]
+}
+
+
+function demosApproved() {
+  return clone(demos.filter((d) => d.status === 'approved')) as DemoSummary[]
 }
 
 export const mockApi = {
@@ -868,6 +982,16 @@ export const mockApi = {
       .map((x) => x.d)
     return clone(others)
   },
+  async getSamePrompt(slug: string, limit = 12): Promise<SamePromptResult> {
+    await delay(150)
+    const cur = findDemo(slug)
+    if (!cur) throw new Error('Demo 不存在')
+    const prompt = (cur.prompt || '').trim()
+    if (!prompt) return { prompt: '', prompt_id: null, items: [] }
+    // mock 按提示词文本精确分组（真实接口按 prompt_id，语义一致）
+    const items = demos.filter((d) => d.slug !== slug && d.status === 'approved' && (d.prompt || '').trim() === prompt)
+    return { prompt, prompt_id: 1, items: clone(items.slice(0, limit)) }
+  },
   async getRating(slug: string, deviceId?: string): Promise<RatingStats> {
     await delay(100)
     const d = findDemo(slug)
@@ -1001,6 +1125,243 @@ export const mockApi = {
       generated_at: new Date().toISOString(),
     }
   },
+
+  // ---------- v2 实体（Mock） ----------
+  async listModels(
+    params: { status?: string; vendor?: string; q?: string; sort?: 'demos' | 'score' | 'rating' | 'votes' | 'new' | 'name'; page?: number; page_size?: number } = {},
+  ): Promise<PaginatedModels> {
+    await delay()
+    const items: ModelSummary[] = mockModels.map((m) => ({ ...m }))
+    const filtered = items.filter(
+      (m) =>
+        (!params.status || m.status === params.status) &&
+        (!params.vendor || m.vendor === params.vendor) &&
+        (!params.q || m.name.toLowerCase().includes(params.q.toLowerCase())),
+    )
+    if (params.sort === 'rating') filtered.sort((a, b) => (b.rating_avg ?? 0) - (a.rating_avg ?? 0))
+    else if (params.sort === 'score' || params.sort === 'votes')
+      filtered.sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0) || (b.score ?? 0) - (a.score ?? 0))
+    else if (params.sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name))
+    else if (params.sort === 'new') filtered.sort((a, b) => b.created_at.localeCompare(a.created_at))
+    else filtered.sort((a, b) => b.demo_count - a.demo_count)
+    return { items: filtered, total: filtered.length, page: params.page ?? 1, page_size: params.page_size ?? 20 }
+  },
+  async getModel(slug: string): Promise<ModelDetail> {
+    await delay()
+    const base = (await this.listModels({})).items.find((m) => m.slug === slug)
+    if (!base) throw new Error('模型不存在')
+    const demos = demosApproved().slice(0, 6)
+    return {
+      ...base,
+      aliases: [...(mockAliases[slug] || [])],
+      tasks: [{ id: 1, slug: 'mc-web', title: '我的世界网页版', demo_count: 3 }],
+      recent_demos: demos,
+      merged_into: null,
+      type_dist: [
+        { value: 'game', demos: 5 },
+        { value: 'demo', demos: 3 },
+      ],
+      game_dist: [{ value: '我的世界', demos: 3 }],
+    }
+  },
+  async peek(kind: 'model' | 'task' | 'demo', slug: string): Promise<PeekResult> {
+    await delay()
+    if (kind === 'model') {
+      const m = mockModels.find((x) => x.slug === slug)
+      const list = demosApproved().slice(0, 3)
+      return {
+        kind: 'model',
+        slug,
+        name: m?.name || slug,
+        vendor: m?.vendor ?? null,
+        resolution: m?.resolution || 'exact',
+        status: m?.status || 'active',
+        description: m?.description || '',
+        demo_count: m?.demo_count ?? list.length,
+        score: m?.score ?? null,
+        votes: m?.votes ?? 0,
+        sample_level: m?.sample_level || 'none',
+        demos: list.map((d) => ({ slug: d.slug, title: d.title, rating_avg: d.rating_avg ?? null, rating_count: d.rating_count ?? 0, cover_url: d.cover_url ?? null })),
+        full_path: `/models/${slug}`,
+      }
+    }
+    if (kind === 'task') {
+      return {
+        kind: 'task',
+        slug,
+        name: slug.replace(/-/g, ' · '),
+        description: '（mock）这道题要求做出一个可玩的网页作品，题面摘自第一件作品的提示词。',
+        is_prompt_excerpt: true,
+        demo_count: 4,
+        model_count: 3,
+        demos: demosApproved().slice(0, 3).map((d) => ({ slug: d.slug, title: d.title, rating_avg: d.rating_avg ?? null, rating_count: d.rating_count ?? 0, cover_url: d.cover_url ?? null })),
+        full_path: `/tasks/${slug}`,
+      }
+    }
+    const d = demosApproved().find((x) => x.slug === slug) || demosApproved()[0]
+    return {
+      kind: 'demo',
+      slug: d.slug,
+      name: d.title,
+      description: d.description,
+      demo_type: d.demo_type,
+      rating_avg: d.rating_avg,
+      rating_count: d.rating_count,
+      cover_url: d.cover_url,
+      models: d.models || [],
+      demos: [],
+      full_path: `/demo/${d.slug}`,
+    }
+  },
+  async getModelDemos(
+    slug: string,
+    params: { sort?: 'newest' | 'score' | 'popular'; type?: string; game?: string; page?: number; page_size?: number } = {},
+  ): Promise<Paginated<DemoSummary>> {
+    await delay()
+    const base = demosApproved().filter((d) => {
+      const names = new Set([...(d.models ?? []).map((m) => m.slug), ...d.tags.filter((x) => x.key === 'model').map((x) => x.value)])
+      return names.has(slug)
+    })
+    // mock 作品未逐个挂模型：一个都没有时退回全量，好让「加载更多 / 排序」能离线演示
+    const pool = base.length ? base : demosApproved()
+    const sorted = [...pool].sort((a, b) => {
+      if (params.sort === 'score') return (b.rating_avg ?? 0) - (a.rating_avg ?? 0)
+      if (params.sort === 'popular') return b.view_count + b.download_count - (a.view_count + a.download_count)
+      return b.created_at.localeCompare(a.created_at)
+    })
+    const size = params.page_size ?? 24
+    const page = params.page ?? 1
+    return {
+      items: sorted.slice((page - 1) * size, page * size).map((d) => ({ ...d })),
+      total: sorted.length,
+      page,
+      page_size: size,
+    }
+  },
+  async getExplore(): Promise<ExploreResult> {
+    await delay()
+    const models = await this.listModels({ sort: 'demos', page_size: 12 })
+    const tasks = await this.listTasks({ sort: 'demos', page_size: 8 })
+    // 描述性标签：从 mock 作品实际统计（兜底位不参与，与真接口口径一致）
+    const tally = (key: string) => {
+      const c = new Map<string, number>()
+      for (const d of demos) {
+        if (d.status !== 'approved') continue
+        for (const t of d.tags) if (t.key === key) c.set(t.value, (c.get(t.value) ?? 0) + 1)
+      }
+      return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([value, demos]) => ({ value, demos }))
+    }
+    return {
+      models: { total: models.total, items: models.items, fallback_demos: tally('model').reduce((a, b) => a + b.demos, 0) },
+      tasks_total: tasks.total,
+      tasks: tasks.items,
+      tags: { category: tally('category'), type: tally('type'), game: tally('game') },
+    }
+  },
+  async listTasks(params: { status?: string; q?: string; category?: string; sort?: string; page?: number; page_size?: number } = {}): Promise<PaginatedTasks> {
+    await delay()
+    const q = (params.q || '').toLowerCase()
+    let items = mockTasks.filter(
+      (t) =>
+        (!params.status || t.status === params.status) &&
+        (!params.category || t.category === params.category) &&
+        (!q || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)),
+    )
+    if (params.sort === 'newest') items = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at))
+    else items = [...items].sort((a, b) => b.demo_count - a.demo_count)
+    return { items: clone(items), total: items.length, page: params.page ?? 1, page_size: params.page_size ?? 20 }
+  },
+  async suggestTasks(q: string, limit = 6): Promise<TaskSuggestItem[]> {
+    await delay()
+    const s = (q || '').toLowerCase()
+    return mockTasks
+      .map((t) => {
+        const hay = `${t.title} ${t.description}`.toLowerCase()
+        const hit = hay.split(/[\s，。、·:；]/).filter((w) => w.length > 1 && s.includes(w)).length
+        return { t, score: hit ? Math.min(0.95, 0.25 + hit * 0.2) : hay && s && hay.includes(s.slice(0, 4)) ? 0.3 : 0 }
+      })
+      .filter((x) => x.score > 0.05)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((x) => ({ task_id: x.t.id, slug: x.t.slug, title: x.t.title, category: x.t.category, demo_count: x.t.demo_count, score: Number(x.score.toFixed(3)) }))
+  },
+  async getTask(slug: string): Promise<TaskDetail> {
+    await delay()
+    const task = mockTasks.find((t) => t.slug === slug)
+    if (!task) throw new Error('题目不存在')
+    const demos = demosApproved().slice(0, 4)
+    return {
+      id: task.id, slug: task.slug, title: task.title, description: task.description,
+      category: task.category, status: task.status, created_at: task.created_at, demos_total: demos.length,
+      compare: [
+        { model: { id: 1, slug: 'dsv4-flash', name: 'dsv4-flash', vendor: 'DeepSeek', status: 'active' }, demo_count: 2, avg_rating: 4.4, avg_rounds: 1.5, avg_minutes: 32, best_demo: demos[0] ? { slug: demos[0].slug, title: demos[0].title, rating_avg: 4.4 } : null },
+        { model: { id: 3, slug: 'ds-unknown', name: 'ds-unknown', vendor: null, status: 'unverified' }, demo_count: 1, avg_rating: 4.0, avg_rounds: null, avg_minutes: null, best_demo: null },
+      ],
+      demos,
+    }
+  },
+  async getPromptClusters(_opts: { refresh?: boolean; minScore?: number } = {}): Promise<PromptClusters> {
+    await delay()
+    // mock 按「同一句提示词」出 exact 簇（粒子星空 / 音频可视化 故意共用一句，面板可见效果）
+    const by = new Map<string, DemoDetail[]>()
+    for (const d of demos) {
+      const p = (d.prompt || '').trim()
+      if (!p) continue
+      by.set(p, [...(by.get(p) ?? []), d])
+    }
+    const toCluster = (members: DemoDetail[]): PromptCluster => ({
+      kind: 'exact',
+      score: null,
+      demo_count: members.length,
+      models: [...new Set(members.flatMap((m) => m.tags.filter((t) => t.key === 'model').map((t) => t.value)))].sort(),
+      distinct_models: 0,
+      covered: false,
+      suggested_title: members[0]?.title ?? '',
+      sample_prompt: (members[0]?.prompt ?? '').slice(0, 600),
+      demos: members.map((m) => ({
+        demo_id: 0,
+        slug: m.slug,
+        title: m.title,
+        models: m.tags.filter((t) => t.key === 'model').map((t) => t.value),
+        rating_avg: m.rating_avg ?? 0,
+        rating_count: m.rating_count ?? 0,
+        covered: false,
+      })),
+    })
+    const exact = [...by.values()].filter((a) => a.length >= 2).map(toCluster)
+    for (const c of exact) c.distinct_models = c.models.length
+    return {
+      exact,
+      similar: [],
+      stats: {
+        demos_with_prompt: [...by.values()].reduce((a, b) => a + b.length, 0),
+        unique_prompts: by.size,
+        exact_clusters: exact.length,
+        similar_clusters: 0,
+      },
+    }
+  },
+  async adminCreateTask(payload: {
+    title: string
+    description?: string
+    category?: string
+    status?: string
+    demo_ids?: number[]
+  }): Promise<{ id: number; slug: string; title: string; status: string; attached: number }> {
+    await delay(200)
+    const slug = `mock-task-${mockTaskSeq}`
+    mockTasks.unshift({
+      id: mockTaskSeq++,
+      slug,
+      title: payload.title,
+      description: payload.description || '',
+      category: payload.category || null,
+      status: payload.status || 'active',
+      demo_count: payload.demo_ids?.length ?? 0,
+      created_at: new Date().toISOString(),
+    })
+    return { id: mockTaskSeq - 1, slug, title: payload.title, status: payload.status || 'active', attached: payload.demo_ids?.length ?? 0 }
+  },
   async getSponsors(): Promise<SponsorBoard> {
     await delay()
     return {
@@ -1090,7 +1451,319 @@ export const mockApi = {
       previewHtml: payload.demo_type === 'web' ? '<!doctype html><html><body style="margin:0;font-family:monospace;display:grid;place-items:center;height:100vh;background:#4ecdc4"><h1>已上传 Demo</h1></body></html>' : undefined,
     }
     ;(settings.auto_approve ? demos : pendingDemos).push(demo)
+    // v2 B4′：带 task 的上传只入候选队列（与真实后端一致，不直接挂题）
+    if (payload.task) {
+      mockSuggestions.unshift({
+        id: mockSuggestionSeq++,
+        kind: 'task_match',
+        payload: { task_title: payload.task, demo_title: demo.title, demo_slug: demo.slug },
+        confidence: 0.98,
+        source: 'user',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
     return { slug: demo.slug, status: demo.status as string }
+  },
+
+  async listSuggestions(params: { status?: string; kind?: string } = {}): Promise<SuggestionList> {
+    await delay(150)
+    const st = params.status || 'pending'
+    const items = mockSuggestions.filter(
+      (s) => (st === 'all' || s.status === st) && (!params.kind || s.kind === params.kind),
+    )
+    const byKind: Record<string, number> = {}
+    for (const s of mockSuggestions) if (s.status === 'pending') byKind[s.kind] = (byKind[s.kind] || 0) + 1
+    return { items: clone(items), pending_by_kind: byKind, thresholds: { auto_accept: 0.99, review: 0.6 } }
+  },
+  async reviewSuggestion(id: number, action: 'approve' | 'reject'): Promise<SuggestionItem> {
+    await delay(200)
+    const s = mockSuggestions.find((x) => x.id === id)
+    if (!s) throw new Error('建议不存在')
+    if (s.status !== 'pending') throw new Error('该建议已处理')
+    s.status = action === 'approve' ? 'approved' : 'rejected'
+    s.reviewed_at = new Date().toISOString()
+    // 批准挂题：mock 里把对应题目的作品数 +1，面板反馈可见
+    if (action === 'approve' && s.kind === 'task_match') {
+      const title = String(s.payload.task_title || '')
+      const t = mockTasks.find((x) => x.slug === title || x.title === title)
+      if (t) t.demo_count += 1
+    }
+    return clone(s)
+  },
+
+  async getAttributionPending(): Promise<AttributionPending> {
+    await delay(150)
+    return clone({ groups: ensureAttribution(), targets: mockAttrTargets })
+  },
+  async attributeDemos(payload: { demo_ids: number[]; target_id: number; reason?: string }): Promise<AttributeResult> {
+    await delay(200)
+    const target = mockAttrTargets.find((t) => t.id === payload.target_id)
+    if (!target) throw new Error('目标型号不存在')
+    const moved: number[] = []
+    for (const g of mockAttribution) {
+      const hits = g.demos.filter((d) => payload.demo_ids.includes(d.id))
+      if (!hits.length) continue
+      moved.push(...hits.map((d) => d.id))
+      g.demos = g.demos.filter((d) => !payload.demo_ids.includes(d.id))
+      g.model.demo_count = g.demos.length
+    }
+    mockAttribution = mockAttribution.filter((g) => g.demos.length)
+    if (!moved.length) throw new Error('这些作品已归属过')
+    return { moved: moved.length, demo_ids: moved, target: { ...target } }
+  },
+
+  async getTypeDemoPreview(params: { limit?: number; min_confidence?: number } = {}): Promise<TypeDemoPreview> {
+    await delay(200)
+    // mock 版规则：与后端同一批关键词的极简副本，只为离线演示「预览→入队→批准」链路
+    const rules: [string, string[]][] = [
+      ['simulation', ['仿真', '模拟', '物理', '引力']],
+      ['music', ['音乐', '钢琴', '节奏', 'audio']],
+      ['utility', ['工具', '计算', '转换', '二维码']],
+      ['visualization', ['可视化', '图表', '数据']],
+      ['education', ['教学', '科普', '学习']],
+    ]
+    const minConf = params.min_confidence ?? 0.7
+    const inDemo = demos.filter((d) => d.status === 'approved' && d.tags.some((x) => x.key === 'type' && x.value === 'demo'))
+    const samples: TypeDemoPreview['samples'] = []
+    const byTarget: Record<string, number> = {}
+    for (const d of [...inDemo, ...demos.slice(0, 4)]) {
+      const text = `${d.title} ${d.description} ${d.prompt || ''}`
+      const hit = rules.find(([, ws]) => ws.some((w) => text.includes(w)))
+      if (!hit) continue
+      const conf = 0.82
+      if (conf < minConf) continue
+      byTarget[hit[0]] = (byTarget[hit[0]] || 0) + 1
+      if (samples.length < 40) {
+        samples.push({
+          demo_slug: d.slug,
+          demo_title: d.title,
+          add: hit[0],
+          alt: [],
+          confidence: conf,
+          matched: rules.find(([, ws]) => ws.some((w) => text.includes(w)))?.[1].filter((w) => text.includes(w)) || [],
+          label_zh: hit[0],
+        })
+      }
+    }
+    const dist = new Map<string, number>()
+    for (const d of demos.filter((x) => x.status === 'approved')) {
+      for (const tg of d.tags) if (tg.key === 'type') dist.set(tg.value, (dist.get(tg.value) || 0) + 1)
+    }
+    const approved = demos.filter((d) => d.status === 'approved').length
+    return {
+      stats: {
+        approved,
+        demo_share: (dist.get('demo') || 0) / (approved || 1),
+        type_dist: [...dist.entries()].map(([value, n]) => ({ value, demos: n, rate: n / (approved || 1) })),
+      },
+      scanned: params.limit ?? 500,
+      proposed: samples.length,
+      by_target: byTarget,
+      samples,
+    }
+  },
+  async queueTypeDemo(): Promise<TypeDemoQueueResult> {
+    await delay(200)
+    return { proposed: 0, queued: 0 }
+  },
+
+  async getInspection(): Promise<InspectionResult> {
+    await delay(200)
+    const approved = demos.filter((d) => d.status === 'approved').length
+    const noType = demos.filter((d) => d.status === 'approved' && !d.tags.some((x) => x.key === 'type')).length
+    const noPrompt = demos.filter((d) => d.status === 'approved' && !(d.prompt || '').trim()).length
+    const rows: InspectionCheck[] = [
+      { id: 'type_missing', label: '作品没有 type 标签', level: 'action', hint: '规则可从提示词/标题推断，生成补值候选', count: noType, can_queue: true, rate: noType / (approved || 1), samples: demos.slice(0, 3).map((d) => ({ slug: d.slug, title: d.title })) },
+      { id: 'type_multi', label: '作品挂了多个 type', level: 'action', hint: '只处理含 demo 的组合（删垃圾桶留具体值）', count: 2, can_queue: true, fixable: 1, samples: [] },
+      { id: 'demo_left', label: '仍挂 type:demo 且规则无信号', level: 'warn', hint: '机器没把握，需人工逐件看', count: 4, can_queue: false, samples: [] },
+      { id: 'no_prompt', label: '缺第一轮提示词', level: 'warn', hint: '只能靠作者/管理员补，机器编不出来', count: noPrompt, can_queue: false, rate: noPrompt / (approved || 1) },
+      { id: 'model_fallback', label: '挂在兜底型号上的作品', level: 'warn', hint: '去「归属工作台」处理', count: mockAttribution.reduce((n, g) => n + g.demos.length, 0), can_queue: false },
+      { id: 'fixed_no_desc', label: '固定值缺少介绍', level: 'warn', hint: '词表补课：悬浮提示与搜索都依赖它', count: 6, can_queue: false },
+      { id: 'orphan_values', label: '零引用的标签值', level: 'info', hint: '可能错拼或已废弃，人工决定清理', count: 3, can_queue: false, samples: [] },
+      { id: 'dup_model_slug', label: '重复 slug 的模型实体', level: 'warn', hint: '违反实体唯一性，需要合并', count: 0, can_queue: false },
+      { id: 'inbox_pending', label: '收件箱积压', level: 'info', hint: '待人工批准的候选数', count: mockSuggestions.filter((s) => s.status === 'pending').length, can_queue: false },
+    ]
+    return { approved, total_findings: rows.reduce((n, c) => n + c.count, 0), checks: rows }
+  },
+  async queueInspection(checkId: string): Promise<{ check: string; proposed: number; queued: number }> {
+    await delay(220)
+    if (checkId !== 'type_missing' && checkId !== 'type_multi') throw new Error('该巡检项没有可自动执行的补救动作')
+    return { check: checkId, proposed: 0, queued: 0 }
+  },
+
+  async deriveTags(payload: { title?: string; description?: string; prompt?: string; limit?: number }): Promise<DeriveResult> {
+    await delay(180)
+    const text = `${payload.title || ''} ${payload.description || ''} ${payload.prompt || ''}`
+    if (text.trim().length < 4) return { items: [], note: '' }
+    const rules: [string, string, string[], number, string][] = [
+      ['type', 'simulation', ['仿真', '模拟', '物理', '轨道'], 0.85, '描述命中：仿真、物理'],
+      ['type', 'music', ['音乐', '钢琴', '节奏'], 0.85, '描述命中：音乐'],
+      ['type', 'puzzle', ['解谜', '拼图', '消消乐'], 0.85, '描述命中：解谜'],
+      ['model', 'dsv4-flash', ['dsv4', 'deepseek'], 0.9, '文本里出现该型号名'],
+      ['category', '3D建模', ['3d', '三维', '建模'], 0.77, '名称命中「3D建模」（163 件在用）'],
+    ]
+    const items: DerivedTag[] = []
+    for (const [key, value, kws, conf, reason] of rules) {
+      if (!kws.some((k) => text.toLowerCase().includes(k.toLowerCase()))) continue
+      items.push({ key, value, label: value, confidence: conf, reason })
+      if (key === 'type') break // type 单值语义：只给最合适的一个
+    }
+    items.sort((a, b) => b.confidence - a.confidence)
+    return { items: items.slice(0, payload.limit ?? 8), note: items.length ? '规则推导，仅供参考；不收也不影响提交。' : '' }
+  },
+  async adminListModels(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminModelList> {
+    await delay(160)
+    const items = mockModels.filter(
+      (m) => (!params.q || m.name.toLowerCase().includes(params.q.toLowerCase())) && (!params.status || m.status === params.status),
+    )
+    const count = (s: string) => mockModels.filter((m) => m.status === s).length
+    return { items: items.map((m) => ({ ...m })), total: items.length, status_counts: { candidate: count('candidate'), active: count('active'), unverified: count('unverified'), deprecated: count('deprecated') } }
+  },
+  async adminListEntityTasks(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminTaskList> {
+    await delay(160)
+    const items = mockTasks.filter((x) => (!params.q || x.title.includes(params.q)) && (!params.status || x.status === params.status))
+    return { items, total: items.length, page: 1, page_size: params.page_size ?? 50, status_counts: { candidate: 0, active: items.length, merged: 0, hidden: 0 } }
+  },
+  async getEntityConflicts(): Promise<EntityConflicts> {
+    await delay(160)
+    // 造一组真冲突给向导演示：dsv4-flash 与 dsv4flash 规范化后同键
+    const alive = mockModels.filter((m) => m.status !== 'deprecated')
+    const groups: Record<string, typeof alive> = {}
+    for (const m of alive) {
+      const key = m.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+      ;(groups[key] ||= []).push(m)
+    }
+    const models = Object.entries(groups)
+      .filter(([, v]) => v.length > 1)
+      .map(([key, v]) => ({ key, items: v.map((m) => ({ id: m.id, label: m.name, demos: m.demo_count })) }))
+    return { models, tasks: [], groups: models.length }
+  },
+  async mergeEntity(kind: 'models' | 'tasks', ident: string, payload: { target_id: number; dry_run?: boolean; reason?: string }): Promise<MergePreview> {
+    await delay(240)
+    const srcId = Number(ident)
+    if (!Number.isFinite(srcId) || srcId === payload.target_id) throw new Error('不能合并到自身')
+    const ref = (id: number): MergePreview['source'] => {
+      const m = mockModels.find((x) => x.id === id)
+      if (m) return { id, slug: m.slug, name: m.name }
+      const t = mockTasks.find((x) => x.id === id)
+      return { id, slug: t?.slug, title: t?.title || `#${id}` }
+    }
+    const affected = kind === 'models' ? mockModels.find((m) => m.id === srcId)?.demo_count ?? 0 : 1
+    if (payload.dry_run) {
+      return { source: ref(srcId), target: ref(payload.target_id), affected_demos: affected, aliases_moved: 1, dry_run: true }
+    }
+    const row = mockModels.find((m) => m.id === srcId)
+    const target = mockModels.find((m) => m.id === payload.target_id)
+    if (row && target) {
+      row.status = 'deprecated'
+      target.demo_count += row.demo_count
+      mockAliases[target.slug] = [...new Set([...(mockAliases[target.slug] || []), row.name, ...(mockAliases[row.slug] || [])])]
+    }
+    return { source: ref(srcId), target: ref(payload.target_id), affected_demos: affected, aliases_moved: 1, dry_run: false }
+  },
+  async addModelAlias(ident: string, alias: string): Promise<{ ok: boolean }> {
+    await delay(180)
+    const row = mockModels.find((m) => m.id === Number(ident))
+    if (!row) throw new Error('实体不存在')
+    mockAliases[row.slug] = [...new Set([...(mockAliases[row.slug] || []), alias])]
+    return { ok: true }
+  },
+  async removeModelAlias(ident: string, alias: string): Promise<void> {
+    await delay(180)
+    const row = mockModels.find((m) => m.id === Number(ident))
+    if (row) mockAliases[row.slug] = (mockAliases[row.slug] || []).filter((a) => a !== alias)
+  },
+  async getMergeHistory(): Promise<{ items: MergeHistoryItem[] }> {
+    await delay(160)
+    return { items: mockMergeHistory.map((x) => ({ ...x })) }
+  },
+  async unmergeEntity(ident: string | number, payload: { dry_run?: boolean; reason?: string }): Promise<UnmergePreview> {
+    await delay(220)
+    const id = Number(ident)
+    const rec = mockMergeHistory.find((x) => x.source.id === id)
+    if (!rec) throw new Error('该实体不处于「已被合并」状态，无需撤销')
+    const src = mockModels.find((m) => m.id === id)
+    const tgt = mockModels.find((m) => m.id === rec.target?.id)
+    const view: UnmergePreview = {
+      source: { id, slug: src?.slug, name: src?.name },
+      target: rec.target ?? { id: 0 },
+      moved_total: rec.moved_total,
+      will_restore: rec.movable_back,
+      already_moved_away: rec.moved_total - rec.movable_back,
+      restored_status: rec.restored_status,
+      reliable: rec.reliable,
+      dry_run: !!payload.dry_run,
+    }
+    if (!payload.dry_run) {
+      if (src) {
+        src.status = rec.restored_status
+        if (tgt) {
+          tgt.demo_count = Math.max(0, tgt.demo_count - rec.movable_back)
+          src.demo_count += rec.movable_back
+        }
+      }
+      mockMergeHistory = mockMergeHistory.filter((x) => x.source.id !== id)
+      view.unmerged = true
+    }
+    return view
+  },
+  async updateModel(ident: string | number, payload: { name?: string; vendor?: string; description?: string; slug?: string }): Promise<ModelBrief> {
+    await delay(200)
+    const row = mockModels.find((m) => m.id === Number(ident) || m.slug === String(ident))
+    if (!row) throw new Error('模型不存在')
+    if (payload.slug) {
+      const clean = payload.slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '')
+      if (!clean) throw new Error('slug 必须是 ASCII（字母数字与连字符）')
+      if (clean !== payload.slug.trim()) throw new Error(`slug 含非法字符，建议用「${clean}」`)
+      if (mockModels.some((m) => m.slug === clean && m.id !== row.id)) throw new Error(`slug「${clean}」已被其他实体占用`)
+      mockAliases[clean] = [...new Set([...(mockAliases[clean] || []), row.slug])]
+      row.slug = clean
+    }
+    if (payload.vendor !== undefined) row.vendor = payload.vendor
+    if (payload.description !== undefined) row.description = payload.description
+    if (payload.name && payload.name !== row.name) {
+      mockAliases[row.slug] = [...new Set([...(mockAliases[row.slug] || []), row.name])]
+      row.name = payload.name
+    }
+    return { id: row.id, slug: row.slug, name: row.name, vendor: row.vendor, status: row.status, resolution: row.resolution }
+  },
+  async getKnowledgeStats(): Promise<KnowledgeStats> {
+    await delay(200)
+    const approved = demos.filter((d) => d.status === 'approved').length
+    const cov = (key: string) => {
+      const n = demos.filter((d) => d.status === 'approved' && d.tags.some((x) => x.key === key)).length
+      return { label: key, tier: key === 'model' ? 1 : key === 'type' ? 2 : 3, demos: n, rate: n / (approved || 1) }
+    }
+    return {
+      demos_approved: approved,
+      coverage: { model: cov('model'), type: cov('type'), category: cov('category'), game: cov('game'), rounds: cov('rounds') },
+      model_entity: { demos: cov('model').demos, rate: cov('model').rate, total_models: 6, active: 5, candidate: 0, unverified: 1, deprecated: 0 },
+      task: { total: mockTasks.length, active: mockTasks.length, candidate: 0 },
+      inbox: { pending: mockSuggestions.filter((s) => s.status === 'pending').length, pending_actionable: {} },
+      duplicate_slugs: 0,
+    }
+  },
+  async getAudit(
+    params: { action?: string; entity_type?: string; entity_id?: number; q?: string; page?: number; page_size?: number } = {},
+  ): Promise<AuditList> {
+    await delay(200)
+    const items: AuditEntry[] = [
+      { id: 3, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'review', entity_type: 'suggestion', entity_id: 1, reason: '批准挂题请求', created_at: new Date().toISOString(), before: { status: 'pending' }, after: { status: 'approved', result: '挂题成功' } },
+      { id: 2, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'attribute', entity_type: 'model', entity_id: 1, reason: '归属 2 个作品到 dsv4-flash', created_at: new Date().toISOString(), before: null, after: { target: 'dsv4-flash', moved: 2, from: ['unspecified'] } },
+      { id: 1, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'create', entity_type: 'task', entity_id: 1, reason: '从题目候选成题', created_at: new Date().toISOString(), before: null, after: { slug: 'mc-web' } },
+    ]
+    const filtered = items.filter(
+      (x) => (!params.action || x.action === params.action) && (!params.entity_type || x.entity_type === params.entity_type) && (!params.q || (x.reason || '').includes(params.q)),
+    )
+    return {
+      items: filtered,
+      total: filtered.length,
+      page: params.page ?? 1,
+      page_size: params.page_size ?? 50,
+      actions: ['create', 'update', 'status_set', 'merge', 'alias_add', 'alias_remove', 'attach', 'detach', 'delete', 'review', 'attribute'],
+      entity_types: ['model', 'task', 'suggestion'],
+    }
   },
 
   async getForumTopic(id: number): Promise<ForumTopic | null> {

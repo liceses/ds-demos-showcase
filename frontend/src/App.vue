@@ -15,9 +15,16 @@ const auth = useAuthStore()
 const route = useRoute()
 const username = computed(() => auth.user?.username ?? '')
 const mobileOpen = ref(false)
-const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView', 'ForumListView']
+const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView', 'ForumListView', 'ModelsView', 'TasksView', 'ExploreView']
 // 保留页按 name 做 key（同页返回复用实例）；其他页按 fullPath（参数变化强制重挂载）
-const pageKey = computed(() => (route.meta.keepAlive ? route.name : route.fullPath))
+// key 只用 path，不用 fullPath：
+// fullPath 当 key 会让「同一路径只改 query」（排序/筛选/分页/切面板）**整页重挂** ——
+// 表现为滚动弹回顶部、已填内容丢失、请求重发。各视图改为自己 watch 关心的 query。
+// 例外：meta.remountOnQuery 的页面（如 /upload?slug=xxx —— 它的身份就是那个 query）保留重挂。
+const pageKey = computed(() => {
+  if (route.meta.keepAlive) return route.name as string
+  return route.meta.remountOnQuery ? route.fullPath : (route.path as string)
+})
 // 整活模式：品牌文案随全站开关切换（/admin 豁免，恒显真实值）
 const funOn = funEffective
 
@@ -42,7 +49,7 @@ const menuItems = [
   { to: '/', key: 'home', label: '首页' },
   { to: '/demos', key: 'demos', label: '作品库' },
   { to: '/leaderboard', key: 'leaderboard', label: '排行榜' },
-  { to: '/tags', key: 'tags', label: '标签' },
+  { to: '/tags', key: 'explore', label: '探索' },
   { to: '/upload', key: 'upload', label: '上传 Demo' },
   { to: '/about', key: 'about', label: '关于本站' },
 ]
@@ -71,7 +78,7 @@ watchEffect(() => {
         <RouterLink class="nav-link" to="/">{{ t('app.nav.home', '首页') }}</RouterLink>
         <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
         <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
-        <RouterLink class="nav-link" to="/tags">{{ t('app.nav.tags', '标签') }}</RouterLink>
+        <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
         <RouterLink class="nav-link" to="/upload">{{ t('app.nav.upload', '上传 Demo') }}</RouterLink>
         <RouterLink v-if="auth.isAdmin()" class="nav-link" to="/admin">{{ t('app.nav.admin', '管理后台') }}</RouterLink>
       </nav>

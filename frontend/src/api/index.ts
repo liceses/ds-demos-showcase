@@ -26,6 +26,7 @@ import type {
   FollowOut,
   DemoSummary,
   Paginated,
+  PeekResult,
   SessionLog,
   Settings,
   SiteStats,
@@ -46,6 +47,31 @@ import type {
   LiveStats,
   SiteInfo,
   OssSyncJob,
+  ModelDetail,
+  PaginatedModels,
+  PaginatedTasks,
+  TaskDetail,
+  TaskSuggestItem,
+  SamePromptResult,
+  PromptClusters,
+  ExploreResult,
+  AttributionPending,
+  AttributeResult,
+  TypeDemoPreview,
+  TypeDemoQueueResult,
+  InspectionResult,
+  KnowledgeStats,
+  AuditList,
+  AdminModelList,
+  AdminTaskList,
+  MergePreview,
+  EntityConflicts,
+  MergeHistoryItem,
+  UnmergePreview,
+  ModelBrief,
+  DeriveResult,
+  SuggestionItem,
+  SuggestionList,
 } from './types'
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
@@ -154,6 +180,8 @@ const realApi = {
         tag: params.tags,
         q: params.q,
         author: params.author,
+        model: params.model,
+        task: params.task,
         sort: params.sort,
         page: params.page,
         page_size: params.page_size,
@@ -168,6 +196,10 @@ const realApi = {
   },
   async getRelated(slug: string): Promise<DemoSummary[]> {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/related`, { params: { limit: 30 } })
+    return data
+  },
+  async getSamePrompt(slug: string, limit = 12): Promise<SamePromptResult> {
+    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/same-prompt`, { params: { limit } })
     return data
   },
   async getRating(slug: string, deviceId?: string): Promise<RatingStats> {
@@ -250,7 +282,7 @@ const realApi = {
     const { data } = await http.post(`/forum/topics/${topicId}/replies`, { content, parent_id: parentId ?? null })
     return data
   },
-  async adminListForumTopics(params: { status?: string; category?: string; pinned?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
+  async adminListForumTopics(params: { q?: string; status?: string; category?: string; pinned?: boolean; page?: number; page_size?: number } = {}): Promise<Paginated<ForumTopic>> {
     const { data } = await http.get('/forum/admin/topics', { params })
     return data
   },
@@ -272,7 +304,7 @@ const realApi = {
     const { data } = await http.post(`/forum/admin/replies/${id}/review`, { action })
     return data
   },
-  async adminListForumReplies(params: { topic_id?: number; status?: string } = {}): Promise<ForumReply[]> {
+  async adminListForumReplies(params: { topic_id?: number; status?: string; q?: string; limit?: number } = {}): Promise<ForumReply[]> {
     const { data } = await http.get('/forum/admin/replies', { params })
     return data
   },
@@ -322,6 +354,8 @@ const realApi = {
     if (payload.cover) form.append('cover', payload.cover)
     if (payload.file) form.append('file', payload.file)
     if (payload.idempotency_key) form.append('idempotency_key', payload.idempotency_key)
+    if (payload.task) form.append('task', payload.task)
+    if (payload.model_hint) form.append('model_hint', payload.model_hint)
     if (payload.upload_code) form.append('upload_code', payload.upload_code)
     if (payload.force) form.append('force', 'true')
     // 上传含解压 + OSS 传输，放宽超时（默认 15s 不够）；onUploadProgress 给前端进度条
@@ -464,6 +498,147 @@ const realApi = {
   // refresh=true 仅 admin 生效：强刷后端缓存（切整活开关后立刻广播新状态）
   async getSiteInfo(opts?: { refresh?: boolean }): Promise<SiteInfo> {
     const { data } = await http.get('/meta/site-info', { params: opts?.refresh ? { refresh: 1 } : {} })
+    return data
+  },
+
+  // ---------- v2 实体：Model / Task ----------
+  async listModels(params: { status?: string; vendor?: string; q?: string; sort?: 'demos' | 'score' | 'rating' | 'votes' | 'new' | 'name'; page?: number; page_size?: number } = {}): Promise<PaginatedModels> {
+    const { data } = await http.get('/models', { params })
+    return data
+  },
+  async getExplore(): Promise<ExploreResult> {
+    const { data } = await http.get('/explore')
+    return data
+  },
+  async getModel(slug: string): Promise<ModelDetail> {
+    const { data } = await http.get(`/models/${encodeURIComponent(slug)}`)
+    return data
+  },
+  /** 模型页作品清单（详情接口只带首屏 12 件，看全部走这里） */
+  /** 侧滑"瞄一眼"：紧凑摘要（比详情接口轻得多，见 API_CONTRACT §27） */
+  async peek(kind: 'model' | 'task' | 'demo', slug: string): Promise<PeekResult> {
+    const { data } = await http.get(`/peek/${kind}/${encodeURIComponent(slug)}`)
+    return data
+  },
+  async getModelDemos(
+    slug: string,
+    params: { sort?: 'newest' | 'score' | 'popular'; type?: string; game?: string; page?: number; page_size?: number } = {},
+  ): Promise<Paginated<DemoSummary>> {
+    const { data } = await http.get(`/models/${encodeURIComponent(slug)}/demos`, { params })
+    return data
+  },
+  async listTasks(params: { status?: string; q?: string; category?: string; sort?: 'demos' | 'newest'; page?: number; page_size?: number } = {}): Promise<PaginatedTasks> {
+    const { data } = await http.get('/tasks', { params })
+    return data
+  },
+  /** 规则层相似题目建议（上传页挂题选择器；纯读、无 LLM） */
+  async suggestTasks(q: string, limit = 6): Promise<TaskSuggestItem[]> {
+    const { data } = await http.get('/tasks/suggest', { params: { q, limit } })
+    return data
+  },
+  async getTask(slug: string): Promise<TaskDetail> {
+    const { data } = await http.get(`/tasks/${encodeURIComponent(slug)}`)
+    return data
+  },
+  // ---------- v2 B3′：治理台（admin only） ----------
+  async getPromptClusters(opts: { refresh?: boolean; minScore?: number } = {}): Promise<PromptClusters> {
+    const { data } = await http.get('/admin/prompt-clusters', {
+      params: { refresh: opts.refresh ? 1 : undefined, min_score: opts.minScore },
+    })
+    return data
+  },
+  async adminCreateTask(payload: {
+    title: string
+    description?: string
+    category?: string
+    status?: string
+    demo_ids?: number[]
+  }): Promise<{ id: number; slug: string; title: string; status: string; attached: number }> {
+    const { data } = await http.post('/admin/tasks', payload)
+    return data
+  },
+  async listSuggestions(params: { status?: string; kind?: string } = {}): Promise<SuggestionList> {
+    const { data } = await http.get('/admin/suggestions', { params })
+    return data
+  },
+  async reviewSuggestion(id: number, action: 'approve' | 'reject'): Promise<SuggestionItem> {
+    const { data } = await http.post(`/admin/suggestions/${id}/review`, { action })
+    return data
+  },
+  async getAttributionPending(): Promise<AttributionPending> {
+    const { data } = await http.get('/admin/attribution/pending')
+    return data
+  },
+  async attributeDemos(payload: { demo_ids: number[]; target_id: number; reason?: string }): Promise<AttributeResult> {
+    const { data } = await http.post('/admin/attribution', payload)
+    return data
+  },
+  async getTypeDemoPreview(params: { limit?: number; min_confidence?: number } = {}): Promise<TypeDemoPreview> {
+    const { data } = await http.get('/admin/type-demo/preview', { params })
+    return data
+  },
+  async queueTypeDemo(payload: { limit?: number; min_confidence?: number } = {}): Promise<TypeDemoQueueResult> {
+    const { data } = await http.post('/admin/type-demo/queue', null, { params: payload })
+    return data
+  },
+  async getInspection(params: { sample_limit?: number } = {}): Promise<InspectionResult> {
+    const { data } = await http.get('/admin/inspection', { params })
+    return data
+  },
+  async queueInspection(checkId: string, minConfidence = 0.8): Promise<{ check: string; proposed: number; queued: number }> {
+    const { data } = await http.post(`/admin/inspection/${encodeURIComponent(checkId)}/queue`, null, {
+      params: { min_confidence: minConfidence },
+    })
+    return data
+  },
+  async getKnowledgeStats(): Promise<KnowledgeStats> {
+    const { data } = await http.get('/admin/knowledge/stats')
+    return data
+  },
+  async getAudit(
+    params: { action?: string; entity_type?: string; entity_id?: number; q?: string; page?: number; page_size?: number } = {},
+  ): Promise<AuditList> {
+    const { data } = await http.get('/admin/audit', { params })
+    return data
+  },
+  async adminListModels(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminModelList> {
+    const { data } = await http.get('/admin/models', { params })
+    return data
+  },
+  async adminListEntityTasks(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminTaskList> {
+    const { data } = await http.get('/admin/tasks', { params })
+    return data
+  },
+  async mergeEntity(kind: 'models' | 'tasks', ident: string, payload: { target_id: number; dry_run?: boolean; reason?: string }): Promise<MergePreview> {
+    const { data } = await http.post(`/admin/${kind}/${encodeURIComponent(ident)}/merge`, payload)
+    return data
+  },
+  async addModelAlias(ident: string, alias: string): Promise<{ ok: boolean }> {
+    const { data } = await http.post(`/admin/models/${encodeURIComponent(ident)}/aliases`, { alias })
+    return data
+  },
+  async removeModelAlias(ident: string, alias: string): Promise<void> {
+    await http.delete(`/admin/models/${encodeURIComponent(ident)}/aliases/${encodeURIComponent(alias)}`)
+  },
+  async getEntityConflicts(): Promise<EntityConflicts> {
+    const { data } = await http.get('/admin/entity-conflicts')
+    return data
+  },
+  async updateModel(ident: string | number, payload: { name?: string; vendor?: string; description?: string; slug?: string }): Promise<ModelBrief> {
+    const { data } = await http.put(`/admin/models/${encodeURIComponent(String(ident))}`, payload)
+    return data
+  },
+  async getMergeHistory(): Promise<{ items: MergeHistoryItem[] }> {
+    const { data } = await http.get('/admin/models/merge-history')
+    return data
+  },
+  async unmergeEntity(ident: string | number, payload: { dry_run?: boolean; reason?: string }): Promise<UnmergePreview> {
+    const { data } = await http.post(`/admin/models/${encodeURIComponent(String(ident))}/unmerge`, payload)
+    return data
+  },
+  /** 上传第 2 步的建议包：匿名可用、纯只读（不写库） */
+  async deriveTags(payload: { title?: string; description?: string; prompt?: string; limit?: number }): Promise<DeriveResult> {
+    const { data } = await http.post('/tags/derive', payload)
     return data
   },
   async getSponsors(): Promise<SponsorBoard> {

@@ -4,6 +4,9 @@ import { api } from '../api'
 import { useUiStore } from '../stores/ui'
 import type { RecognitionItem } from '../api/types'
 
+// embedded：作为管理后台的一个面板渲染时不再自带 page-hero（后台已有自己的标题区）
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+
 const ui = useUiStore()
 const items = ref<RecognitionItem[]>([])
 const kind = ref<'sponsor' | 'thanks'>('sponsor')
@@ -119,7 +122,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="page-hero">
+  <section v-if="!embedded" class="page-hero">
     <span class="eyebrow">管理后台</span>
     <h1 class="huge">赞助 / 致谢榜</h1>
     <p class="sub">管理员添加赞助者与致谢名单，前台「关于本站」页展示。</p>

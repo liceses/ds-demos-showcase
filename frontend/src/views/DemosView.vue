@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'DemosView' })
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
@@ -15,6 +15,8 @@ const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
 const selectedTags = ref<string[]>([])
 const q = ref('')
+// v2：模型实体过滤（?model=slug，来自模型页「查看全部」）
+const modelFilter = ref('')
 const submittedQ = ref('')
 const sort = ref<'newest' | 'popular' | 'random'>('newest')
 const cardMode = ref<'normal' | 'prompt'>(localStorage.getItem('ds_card_mode') === 'prompt' ? 'prompt' : 'normal')
@@ -27,6 +29,7 @@ function syncQuery() {
   const query: Record<string, string> = {}
   if (submittedQ.value) query.q = submittedQ.value
   if (selectedTags.value.length) query.tag = selectedTags.value.join(',')
+  if (modelFilter.value) query.model = modelFilter.value
   if (sort.value !== 'newest') query.sort = sort.value
   router.replace({ query })
 }
@@ -193,6 +196,7 @@ async function load(reset = false) {
       status: 'approved',
       tags: selectedTags.value,
       q: submittedQ.value || undefined,
+      model: modelFilter.value || undefined,
       sort: cardMode.value === 'prompt' ? 'prompt' : sort.value,
       page: p,
       page_size: pageSize,
@@ -258,17 +262,33 @@ function clearSearch() {
   }
 }
 
-onMounted(async () => {
-  // 从 URL query 还原状态
+/** 从 URL query 还原筛选状态；返回"是否真的变了"。
+ *  必须幂等：本页自己也会写 query（第 34 行），监听器不能把自家写入再当成一次新导航。 */
+function applyRouteQuery(): boolean {
   const qq = typeof route.query.q === 'string' ? route.query.q : ''
+  const tagQ = typeof route.query.tag === 'string' ? route.query.tag : ''
+  const modelQ = typeof route.query.model === 'string' ? route.query.model : ''
+  const sortQ = route.query.sort === 'popular' || route.query.sort === 'random' ? (route.query.sort as 'popular' | 'random') : sort.value
+  const nextTags = tagQ ? tagQ.split(',').filter(Boolean) : selectedTags.value
+  const changed =
+    qq !== submittedQ.value ||
+    modelQ !== modelFilter.value ||
+    sortQ !== sort.value ||
+    nextTags.join(',') !== selectedTags.value.join(',')
+  if (!changed) return false
   if (qq) {
     q.value = qq
     submittedQ.value = qq
   }
-  const tagQ = typeof route.query.tag === 'string' ? route.query.tag : ''
-  if (tagQ) selectedTags.value = tagQ.split(',').filter(Boolean)
-  const sortQ = route.query.sort
-  if (sortQ === 'popular' || sortQ === 'random') sort.value = sortQ
+  if (tagQ) selectedTags.value = nextTags
+  modelFilter.value = modelQ
+  sort.value = sortQ
+  return true
+}
+
+onMounted(async () => {
+  // 从 URL query 还原状态
+  applyRouteQuery()
   try {
     tagKeys.value = await api.listTagKeys()
   } catch {
@@ -290,6 +310,14 @@ onMounted(async () => {
   )
   if (sentinel.value) observer.observe(sentinel.value)
 })
+
+// pageKey 不再包含 query（同路径换筛选不重挂），所以外部链接跳来本页时靠这里同步
+watch(
+  () => [route.query.q, route.query.tag, route.query.model, route.query.sort].join('|'),
+  () => {
+    if (applyRouteQuery()) reset()
+  },
+)
 
 onBeforeUnmount(() => observer?.disconnect())
 </script>

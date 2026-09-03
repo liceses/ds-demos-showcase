@@ -28,13 +28,37 @@ async function loadUsers() {
   }
 }
 
+/**
+ * 权限级动作必须"说清目标态 → 二次确认 → 回执"：
+ * 原实现一点就生效，而且按钮只写「切换角色」——不告诉管理员要切到哪，
+ * 误点一次就把某人降权或把某人提成管理员。
+ */
 async function toggleUser(u: AdminUser, field: 'role' | 'status') {
+  const toAdmin = u.role !== 'admin'
+  const toSuspended = u.status === 'active'
+  const title = field === 'role' ? (toAdmin ? '设为管理员？' : '取消管理员？') : toSuspended ? '停用该用户？' : '恢复该用户？'
+  const message =
+    field === 'role'
+      ? toAdmin
+        ? `${u.username} 将获得后台全部权限（含审核、删除、合并）。`
+        : `${u.username} 将立刻失去后台权限${u.demo_count ? `；其 ${u.demo_count} 件作品不受影响` : ''}。`
+      : toSuspended
+        ? `${u.username} 将无法登录与上传${u.demo_count ? `；已发布的 ${u.demo_count} 件作品仍会保留` : ''}。`
+        : `${u.username} 将恢复登录与上传。`
+  const ok = await ui.confirm({
+    title,
+    message,
+    confirmText: field === 'role' ? (toAdmin ? '设为管理员' : '取消管理员') : toSuspended ? '停用' : '恢复',
+    danger: field === 'role' ? !toAdmin : toSuspended,
+  })
+  if (!ok) return
   try {
     if (field === 'role') {
-      await api.updateUser(u.id, { role: u.role === 'admin' ? 'user' : 'admin' })
+      await api.updateUser(u.id, { role: toAdmin ? 'admin' : 'user' })
     } else {
-      await api.updateUser(u.id, { status: u.status === 'active' ? 'suspended' : 'active' })
+      await api.updateUser(u.id, { status: toSuspended ? 'suspended' : 'active' })
     }
+    ui.toast(`${u.username}：${field === 'role' ? (toAdmin ? '已设为管理员' : '已取消管理员') : toSuspended ? '已停用' : '已恢复'}`, 'success')
     await loadUsers()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -75,7 +99,8 @@ onMounted(loadUsers)
             <td><span class="status-pill" :class="`status-${u.status}`">{{ u.status }}</span></td>
             <td>{{ u.demo_count }}</td>
             <td>
-              <button class="btn btn-sm btn-outline" type="button" @click="toggleUser(u, 'role')">切换角色</button>
+              <!-- 按钮写"目标态"而不是"切换"：管理员该在点之前就知道会发生什么 -->
+              <button class="btn btn-sm btn-outline" type="button" @click="toggleUser(u, 'role')">{{ u.role === 'admin' ? '取消管理员' : '设为管理员' }}</button>
               <button class="btn btn-sm btn-dark" type="button" @click="toggleUser(u, 'status')">{{ u.status === 'active' ? '停用' : '启用' }}</button>
             </td>
           </tr>

@@ -15,7 +15,13 @@ const router = createRouter({
     { path: '/forum/topic/:id', name: 'forum-topic', component: () => import('../views/ForumTopicView.vue'), props: true, meta: { title: '主题', forum: true } },
     { path: '/forum/new', name: 'forum-new', component: () => import('../views/ForumNewView.vue'), meta: { title: '发帖', forum: true, requiresAuth: true } },
     { path: '/demo/:slug', name: 'demo', component: () => import('../views/DemoView.vue'), props: true, meta: { title: 'Demo' } },
-    { path: '/tags', name: 'tags', component: () => import('../views/TagListView.vue'), meta: { title: '标签', keepAlive: true } },
+    { path: '/models', name: 'models', component: () => import('../views/ModelsView.vue'), meta: { title: '模型', keepAlive: true } },
+    { path: '/models/:slug', name: 'model-detail', component: () => import('../views/ModelDetailView.vue'), props: true, meta: { title: '模型' } },
+    { path: '/tasks', name: 'tasks', component: () => import('../views/TasksView.vue'), meta: { title: '题目', keepAlive: true } },
+    { path: '/tasks/:slug', name: 'task-detail', component: () => import('../views/TaskDetailView.vue'), props: true, meta: { title: '题目' } },
+    // v2 D3：/tags 原地升级为「探索」（URL 不变保外链兼容），旧的键浏览页下移到 /tags/keys
+    { path: '/tags', name: 'explore', component: () => import('../views/ExploreView.vue'), meta: { title: '探索', keepAlive: true } },
+    { path: '/tags/keys', name: 'tag-keys', component: () => import('../views/TagListView.vue'), meta: { title: '标签', keepAlive: true } },
     { path: '/tag/:k/:v', name: 'tag-detail', component: () => import('../views/TagDetailView.vue'), props: true, meta: { title: '标签详情' } },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { title: '登录' } },
     { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { title: '注册' } },
@@ -23,14 +29,18 @@ const router = createRouter({
     { path: '/author/public', name: 'public-author', component: () => import('../views/PublicView.vue'), meta: { title: '公开用户' } },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '账户设置', requiresAuth: true } },
     { path: '/notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知', requiresAuth: true } },
-    { path: '/upload', name: 'upload', component: () => import('../views/UploadView.vue'), meta: { title: '上传 Demo' } },
+    { path: '/upload', name: 'upload', component: () => import('../views/UploadView.vue'), meta: { title: '上传 Demo', remountOnQuery: true } },
     { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { title: '管理后台', requiresAuth: true, requiresAdmin: true } },
-    { path: '/admin/sponsors', name: 'admin-recognition', component: () => import('../views/RecognitionAdminView.vue'), meta: { title: '赞助/致谢管理', requiresAuth: true, requiresAdmin: true } },
+    // 赞助/致谢已并入管理后台面板；旧地址保留重定向（书签与外链不该突然死）
+    { path: '/admin/sponsors', redirect: { path: '/admin', query: { tab: 'sponsors' } } },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue'), meta: { title: '404' } },
   ],
-  scrollBehavior(_to, _from, savedPosition) {
-    // 浏览器返回/前进时恢复滚动位置；新导航回顶部
+  scrollBehavior(to, from, savedPosition) {
+    // 浏览器返回/前进时恢复滚动位置
     if (savedPosition) return savedPosition
+    // 同一路由只改 query（排序 / 筛选 / 分页 / 加载更多）绝不回顶部：
+    // 那会让「再显示 24 件」看起来毫无反应（实测症状），也会打断阅读位置。
+    if (to.path === from.path) return false
     return { top: 0 }
   },
 })

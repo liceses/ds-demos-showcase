@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'ForumListView' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoDetail, ForumTopic } from '../api/types'
@@ -86,23 +86,34 @@ function apply() {
   load()
 }
 
-onMounted(() => {
+/** 从 URL query 还原论坛筛选（本页不写 query，所以直接套用即可）。
+ *  pageKey 不再含 query，外部链接 /forum?tag=x 跳来时靠 watch 重新应用。 */
+function applyRouteFilters() {
   const sq = route.query.sort
-  if (sq === 'popular') sort.value = 'popular'
-  if (sq === 'replies') sort.value = 'replies'
-  if (sq === 'hot') sort.value = 'hot'
+  if (sq === 'popular' || sq === 'replies' || sq === 'hot') sort.value = sq
   const sc = route.query.category
   if (typeof sc === 'string' && categories.includes(sc)) category.value = sc
-  if (typeof route.query.demo === 'string') demoFilter.value = route.query.demo
-  if (typeof route.query.tag === 'string') tagFilter.value = route.query.tag
-  if (route.query.sticky === '1') stickyFilter.value = true
-  if (route.query.participated === '1') participatedFilter.value = true
-  if (route.query.followed === '1') followedFilter.value = true
-  if (route.query.scope === 'demo') scope.value = 'demo'
-  if (route.query.scope === 'general') scope.value = 'general'
+  demoFilter.value = typeof route.query.demo === 'string' ? route.query.demo : ''
+  tagFilter.value = typeof route.query.tag === 'string' ? route.query.tag : ''
+  stickyFilter.value = route.query.sticky === '1'
+  participatedFilter.value = route.query.participated === '1'
+  followedFilter.value = route.query.followed === '1'
+  scope.value = route.query.scope === 'demo' || route.query.scope === 'general' ? (route.query.scope as 'demo' | 'general') : scope.value
+}
+
+onMounted(() => {
+  applyRouteFilters()
   load()
   api.listForumTopics({ sort: 'hot', page_size: 5 }).then((r) => (hotTopics.value = r.items)).catch(() => (hotTopics.value = []))
 })
+
+watch(
+  () => [route.query.sort, route.query.category, route.query.demo, route.query.tag, route.query.sticky, route.query.participated, route.query.followed, route.query.scope].join('|'),
+  () => {
+    applyRouteFilters()
+    load()
+  },
+)
 </script>
 
 <template>

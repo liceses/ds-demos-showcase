@@ -28,7 +28,7 @@ async function review(slug: string, action: 'approve' | 'reject') {
   if (item) pending.value.splice(idx, 1)
   try {
     await api.adminApprove(slug, action)
-    ui.toast(action === 'approve' ? '已通过' : '已拒绝', 'success')
+    ui.toast(action === 'approve' ? '已批准' : '已驳回', 'success')
   } catch (e) {
     if (item) pending.value.splice(idx, 0, item)
     ui.toast((e as Error).message, 'error')
@@ -52,8 +52,8 @@ onMounted(load)
         <span v-for="t in d.tags" :key="t.key + ':' + t.value" class="tag-chip">{{ t.key }}:{{ t.value }}</span>
       </div>
       <div class="filter-row" style="margin-bottom: 0">
-        <button class="btn btn-sm btn-primary" type="button" @click="review(d.slug, 'approve')">通过</button>
-        <button class="btn btn-sm btn-dark" type="button" @click="review(d.slug, 'reject')">拒绝</button>
+        <button class="btn btn-sm btn-primary" type="button" @click="review(d.slug, 'approve')">批准</button>
+        <button class="btn btn-sm btn-dark" type="button" @click="review(d.slug, 'reject')">驳回</button>
         <RouterLink class="btn btn-sm btn-outline" :to="`/demo/${d.slug}`">预览</RouterLink>
       </div>
     </div>

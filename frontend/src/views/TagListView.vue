@@ -55,6 +55,14 @@ onMounted(async () => {
 </script>
 
 <template>
+  <div class="container">
+    <!-- v2 D3：本页是「探索」的下钻页（旧 /tags 浏览），补一条返回路径 -->
+    <nav class="breadcrumb" style="padding-top: 18px">
+      <RouterLink to="/tags">{{ t('tags.exploreCrumb', '探索') }}</RouterLink>
+      <span class="sep">/</span>
+      <span>{{ t('tags.title', '标签') }}</span>
+    </nav>
+  </div>
   <section class="page-hero">
     <span class="eyebrow">{{ t('tags.eyebrow', '标签系统') }}</span>
     <h1 class="huge">{{ t('tags.title', '标签') }}</h1>

@@ -103,16 +103,23 @@ const selectedList = computed(() =>
 )
 
 const searchActive = computed(() => tagSearch.value.trim().length > 0)
+// §4.5 tier 驱动：核心键（tier1，如 model）排在最前并标「必选」，扩展键沉底
+const orderedKeys = computed(() =>
+  [...tagKeys.value].sort((a, b) => (a.tier ?? 2) - (b.tier ?? 2) || a.sort - b.sort || a.key.localeCompare(b.key)),
+)
 const filteredKeys = computed(() => {
   const q = tagSearch.value.trim().toLowerCase()
-  if (!q) return tagKeys.value
-  return tagKeys.value.filter(
+  if (!q) return orderedKeys.value
+  return orderedKeys.value.filter(
     (k) =>
       k.key.toLowerCase().includes(q) ||
       (k.label || '').toLowerCase().includes(q) ||
       k.values.some((v) => v.value.toLowerCase().includes(q)),
   )
 })
+function isRequiredKey(k: TagKeyInfo) {
+  return (k.tier ?? 2) === 1
+}
 const activeTagKey = computed(() => tagKeys.value.find((k) => k.key === activeKey.value) || null)
 
 const VENDOR_PREFIX: [string, string][] = [
@@ -187,7 +194,8 @@ async function submitSuggestion() {
 
 onMounted(async () => {
   await tagsStore.load()
-  if (!activeKey.value && tagKeys.value.length) activeKey.value = tagKeys.value[0].key
+  // 默认落在核心键（tier1，通常是「模型」）——上传的第一问就是它
+  if (!activeKey.value && orderedKeys.value.length) activeKey.value = orderedKeys.value[0].key
   for (const k of tagKeys.value) {
     if (k.mode !== 'fixed') inputs.value[k.key] = { value: '', description: '' }
   }
@@ -232,6 +240,7 @@ onMounted(async () => {
               @click="activeKey = k.key"
             >
               <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+              <span v-if="isRequiredKey(k)" class="mode-badge mode-badge-fixed">必选</span>
               <span class="tag-pane-key-count">{{ selectedOf(k.key).length }}</span>
             </button>
           </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import AdminForumSection from '../components/admin/AdminForumSection.vue'
 import AdminAnnouncementsSection from '../components/admin/AdminAnnouncementsSection.vue'
@@ -8,9 +9,111 @@ import AdminSettingsSection from '../components/admin/AdminSettingsSection.vue'
 import AdminReviewSection from '../components/admin/AdminReviewSection.vue'
 import AdminDemosSection from '../components/admin/AdminDemosSection.vue'
 import AdminTagsSection from '../components/admin/AdminTagsSection.vue'
+import AdminClustersSection from '../components/admin/AdminClustersSection.vue'
+import AdminInboxSection from '../components/admin/AdminInboxSection.vue'
+import AdminAttributionSection from '../components/admin/AdminAttributionSection.vue'
+import AdminRefineSection from '../components/admin/AdminRefineSection.vue'
+import AdminInspectionSection from '../components/admin/AdminInspectionSection.vue'
+import AdminStatsSection from '../components/admin/AdminStatsSection.vue'
+import AdminAuditSection from '../components/admin/AdminAuditSection.vue'
+import AdminMergeSection from '../components/admin/AdminMergeSection.vue'
+import AdminAliasesSection from '../components/admin/AdminAliasesSection.vue'
+import AdminConsoleSection from '../components/admin/AdminConsoleSection.vue'
+import RecognitionAdminView from './RecognitionAdminView.vue'
+import { useQueues, type QueueKey } from '../composables/adminQueues'
+import { t } from '../i18n'
 import type { AdminStats } from '../api/types'
 
-const tab = ref<'review' | 'demos' | 'tags' | 'forum' | 'users' | 'settings' | 'announcements'>('review')
+const route = useRoute()
+const router = useRouter()
+const ALL_TABS: TabKey[] = ['console', 'review', 'inbox', 'clusters', 'refine', 'inspection', 'attribution', 'merge', 'aliases', 'demos', 'announcements', 'tags', 'tagreq', 'forum', 'users', 'stats', 'audit', 'settings', 'sponsors']
+const initialTab = (ALL_TABS as string[]).includes(String(route.query.tab)) ? (String(route.query.tab) as TabKey) : 'console'
+const tab = ref<TabKey>(initialTab)
+// 同路径换 ?tab= 不再触发重挂（pageKey 已改为 path），所以必须自己监听
+watch(() => route.query.tab, (v) => {
+  const k = String(v ?? 'console')
+  if ((ALL_TABS as string[]).includes(k) && k !== tab.value) tab.value = k as TabKey
+})
+const { queues, refresh: refreshQueues } = useQueues()
+
+// 后台信息架构（重设计第 1 期）：按「对象 × 动作」分组，不再按加面板的时间顺序分组。
+// 队列徽章计数统一取自 adminQueues 的单一描述符 —— 侧栏、概览台共用一份，杜绝口径漂移。
+type TabKey =
+  | 'console' | 'review' | 'inbox' | 'clusters' | 'refine' | 'inspection' | 'attribution'
+  | 'merge' | 'aliases' | 'demos' | 'announcements' | 'tags' | 'tagreq'
+  | 'forum' | 'users' | 'stats' | 'audit' | 'settings' | 'sponsors'
+
+interface AdminTab {
+  key: TabKey | 'sponsors'
+  label: string
+  to?: string
+  /** 关联队列：侧栏徽章数字来源 */
+  q?: QueueKey
+}
+
+const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
+  { label: '总览', tabs: [{ key: 'console', label: '概览台' }] },
+  {
+    label: '队列（待办）',
+    tabs: [
+      { key: 'review', label: '审核队列', q: 'review' },
+      { key: 'inbox', label: '知识候选', q: 'inbox' },
+      { key: 'clusters', label: '题目候选', q: 'clusters' },
+      { key: 'refine', label: '类型细分', q: 'refine' },
+      { key: 'inspection', label: '巡检' },
+      { key: 'attribution', label: '归属工作台', q: 'attribution' },
+    ],
+  },
+  { label: '实体', tabs: [{ key: 'merge', label: '合并向导' }, { key: 'aliases', label: '别名中心' }] },
+  { label: '内容', tabs: [{ key: 'demos', label: 'Demo 管理' }, { key: 'announcements', label: '公告管理' }] },
+  { label: '词表', tabs: [{ key: 'tags', label: '标签词表', q: 'wordlist' }, { key: 'tagreq', label: '固定值申请' }] },
+  { label: '社区', tabs: [{ key: 'forum', label: '论坛管理' }, { key: 'users', label: '用户管理' }] },
+  {
+    label: '站点与度量',
+    tabs: [
+      // 「体检指标」已并入概览台（两处讲同一批数必然漂移）；?tab=stats 仍可直达，只是不再占一个入口
+      { key: 'audit', label: '审计日志' },
+      { key: 'settings', label: '站点设置' },
+      { key: 'sponsors', label: '赞助/致谢' },
+    ],
+  },
+]
+
+// 侧栏可搜索 + 键盘可达（后台是高频重复劳动，只给鼠标等于让熟练用户每次从头找）
+const navQuery = ref('')
+const navRefs = ref<Record<string, HTMLElement | null>>({})
+const visibleGroups = computed(() => {
+  const q = navQuery.value.trim().toLowerCase()
+  if (!q) return TAB_GROUPS
+  return TAB_GROUPS
+    .map((g) => ({ ...g, tabs: g.tabs.filter((t) => t.label.toLowerCase().includes(q) || g.label.toLowerCase().includes(q)) }))
+    .filter((g) => g.tabs.length)
+})
+const flatTabs = computed(() => visibleGroups.value.flatMap((g) => g.tabs.filter((t) => !t.to) as { key: TabKey }[]))
+
+function selectTab(k: TabKey) {
+  tab.value = k
+  // 面板写进 URL：可分享、刷新不丢位置、概览台"去处理"能被后退撤销
+  void router.replace({ query: k === 'console' ? {} : { tab: k } })
+}
+
+function onNavKeydown(e: KeyboardEvent) {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return
+  const list = flatTabs.value.map((t) => t.key as string)
+  if (!list.length) return
+  const cur = list.indexOf(tab.value)
+  if (e.key === 'Enter') return
+  e.preventDefault()
+  const nextIdx = Math.min(list.length - 1, Math.max(0, cur + (e.key === 'ArrowDown' ? 1 : -1)))
+  const key = list[nextIdx]
+  tab.value = key as TabKey
+  navRefs.value[key]?.focus()
+}
+
+function badgeOf(t: AdminTab): number {
+  return t.q ? queues.value[t.q].count : 0
+}
+
 const adminStats = ref<AdminStats | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -52,7 +155,10 @@ const dashStats = computed(() => ({
   users: adminStats.value?.users ?? 0,
 }))
 
-onMounted(loadAll)
+onMounted(() => {
+  void loadAll()
+  void refreshQueues()
+})
 </script>
 
 <template>
@@ -62,26 +168,45 @@ onMounted(loadAll)
   </section>
 
   <section class="section" style="padding-top: 8px">
-    <div class="tabs">
-      <button class="tab" :class="{ active: tab === 'review' }" type="button" @click="tab = 'review'">
-        审核队列
-        <span v-if="dashStats.pending" class="badge">{{ dashStats.pending }}</span>
-      </button>
-      <button class="tab" :class="{ active: tab === 'demos' }" type="button" @click="tab = 'demos'">Demo 管理</button>
-      <button class="tab" :class="{ active: tab === 'tags' }" type="button" @click="tab = 'tags'">标签管理</button>
-      <button class="tab" :class="{ active: tab === 'forum' }" type="button" @click="tab = 'forum'">论坛管理</button>
-      <button class="tab" :class="{ active: tab === 'users' }" type="button" @click="tab = 'users'">用户管理</button>
-      <button class="tab" :class="{ active: tab === 'announcements' }" type="button" @click="tab = 'announcements'">公告管理</button>
-      <button class="tab" :class="{ active: tab === 'settings' }" type="button" @click="tab = 'settings'">站点设置</button>
-      <RouterLink class="tab" style="text-decoration: none" to="/admin/sponsors">赞助/致谢</RouterLink>
-    </div>
+    <!-- 第 1 期壳层：左侧两级导航（带队列徽章 + 可搜索 + ↑↓ 键切换），窄屏退化为下拉 -->
+    <div class="admin-shell">
+      <aside class="ad-nav" @keydown="onNavKeydown">
+        <input v-model="navQuery" class="input ad-nav-search" type="search" :placeholder="t('admin.navSearch', '搜面板…')" aria-label="搜索面板" />
+        <select class="ad-nav-select" :value="tab" @change="selectTab(($event.target as HTMLSelectElement).value as TabKey)">
+          <optgroup v-for="g in visibleGroups" :key="g.label" :label="g.label">
+            <option v-for="x in g.tabs.filter((y) => !y.to)" :key="x.key" :value="x.key">{{ x.label }}</option>
+          </optgroup>
+        </select>
+        <nav class="ad-nav-list">
+          <div v-for="g in visibleGroups" :key="g.label" class="ad-nav-group">
+            <span class="ad-nav-label">{{ g.label }}</span>
+            <button
+              v-for="x in g.tabs"
+              :key="x.key"
+              :ref="(el) => (navRefs[String(x.key)] = el as HTMLElement)"
+              class="ad-nav-item"
+              :class="{ active: tab === x.key }"
+              :aria-current="tab === x.key ? 'page' : undefined"
+              type="button"
+              @click="x.to ? null : selectTab(x.key as TabKey)"
+            >
+              <RouterLink v-if="x.to" class="ad-nav-link" :to="x.to" @click.stop>{{ x.label }}</RouterLink>
+              <template v-else>
+                <span class="ad-nav-text">{{ x.label }}</span>
+                <span v-if="badgeOf(x) > 0" class="ad-nav-badge">{{ badgeOf(x) }}</span>
+              </template>
+            </button>
+          </div>
+        </nav>
+      </aside>
 
+      <div class="ad-main">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载后台…</div>
     <div v-else-if="error" class="notice notice-error">{{ error }}</div>
 
     <template v-else>
-      <!-- 概览统计 -->
-      <div class="dash-stats">
+      <!-- 概览统计：console 自己有更大的待办数，这里重复显示只会制造噪音 -->
+      <div v-if="tab !== 'console'" class="dash-stats">
         <div class="stat-card"><b>{{ dashStats.total }}</b>总作品</div>
         <div class="stat-card stat-ok"><b>{{ dashStats.approved }}</b>已上线</div>
         <div class="stat-card stat-warn"><b>{{ dashStats.pending }}</b>待审</div>
@@ -92,7 +217,11 @@ onMounted(loadAll)
 
       <Transition name="tab-pane" mode="out-in">
         <div :key="tab" class="tab-pane">
-          <template v-if="tab === 'review'">
+          <template v-if="tab === 'console'">
+            <AdminConsoleSection @go="(k: string) => selectTab(k as TabKey)" />
+          </template>
+
+          <template v-else-if="tab === 'review'">
             <AdminReviewSection />
           </template>
 
@@ -101,7 +230,47 @@ onMounted(loadAll)
           </template>
 
           <template v-else-if="tab === 'tags'">
-            <AdminTagsSection />
+            <AdminTagsSection only="keys" />
+          </template>
+
+          <template v-else-if="tab === 'tagreq'">
+            <AdminTagsSection only="review" />
+          </template>
+
+          <template v-else-if="tab === 'clusters'">
+            <AdminClustersSection />
+          </template>
+
+          <template v-else-if="tab === 'inbox'">
+            <AdminInboxSection />
+          </template>
+
+          <template v-else-if="tab === 'attribution'">
+            <AdminAttributionSection />
+          </template>
+
+          <template v-else-if="tab === 'refine'">
+            <AdminRefineSection />
+          </template>
+
+          <template v-else-if="tab === 'inspection'">
+            <AdminInspectionSection />
+          </template>
+
+          <template v-else-if="tab === 'stats'">
+            <AdminStatsSection />
+          </template>
+
+          <template v-else-if="tab === 'audit'">
+            <AdminAuditSection />
+          </template>
+
+          <template v-else-if="tab === 'merge'">
+            <AdminMergeSection />
+          </template>
+
+          <template v-else-if="tab === 'aliases'">
+            <AdminAliasesSection />
           </template>
 
           <template v-else-if="tab === 'forum'">
@@ -120,8 +289,14 @@ onMounted(loadAll)
             <AdminSettingsSection />
           </template>
 
+          <template v-else-if="tab === 'sponsors'">
+            <RecognitionAdminView embedded />
+          </template>
+
         </div>
       </Transition>
     </template>
+      </div><!-- /ad-main -->
+    </div><!-- /admin-shell -->
   </section>
 </template>

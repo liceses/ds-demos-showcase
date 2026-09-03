@@ -43,6 +43,8 @@ export interface TagKeyInfo {
   label: string
   description: string
   sort: number
+  /** v2 D3/§4.5：重要性分层 1 核心 / 2 常用 / 3 扩展 —— 驱动选择器排序与「必选」标记 */
+  tier?: number
   values: TagKeyValue[]
   demo_count: number
   min?: number | null
@@ -104,6 +106,438 @@ export interface DemoSummary {
   rating_count?: number
   rating_god?: number
   rating_ghost?: number
+  /** v2：关联模型实体（双写，迁移后返回） */
+  models?: ModelBrief[]
+  /** v2：关联题目实体 */
+  tasks?: DemoTaskBrief[]
+}
+
+/** v2：模型实体（demo 序列化内嵌简版） */
+export interface ModelBrief {
+  id: number
+  slug: string
+  name: string
+  vendor?: string | null
+  status: string
+  /** Q2：exact / family（知厂商不知型号）/ unknown（完全不知）/ guess（灰测未证实） */
+  resolution?: string
+  /** 收缩后的社区分（(wsum+m·C)/(v+m)）；零票为 null —— 没证据不等于 0 分 */
+  score?: number | null
+  /** 该模型作品收到的总票数（判断分数能不能信的证据量） */
+  votes?: number
+  sample_level?: 'none' | 'low' | 'mid' | 'high'
+}
+
+/** v2：题目实体（demo 序列化内嵌简版） */
+export interface DemoTaskBrief {
+  id: number
+  slug: string
+  title: string
+}
+
+/** v2：模型列表项 */
+export interface ModelSummary extends ModelBrief {
+  description: string
+  demo_count: number
+  rating_avg?: number | null
+  created_at: string
+}
+
+/** v2：模型行为档案的标签值分布（常见类型/常见玩法） */
+export interface ModelTagDist {
+  value: string
+  demos: number
+}
+
+/** v2：模型详情（§11 行为档案：统计 + 分布 + 热门任务 + 最近作品） */
+export interface ModelDetail extends ModelSummary {
+  aliases: string[]
+  tasks: { id: number; slug: string; title: string; demo_count: number }[]
+  recent_demos: DemoSummary[]
+  merged_into?: number | null
+  type_dist: ModelTagDist[]
+  game_dist: ModelTagDist[]
+  /** 全站先验：{C 先验分, m 收缩强度=票数中位数}，供"为什么低票高分排在后面"的验算 */
+  prior?: { C: number; m: number }
+}
+
+/** v2：题目列表项 */
+export interface TaskSummary {
+  id: number
+  slug: string
+  title: string
+  description: string
+  /** 题面摘录（无描述时取该题下第一件作品的提示词） */
+  prompt_excerpt?: string
+  category?: string | null
+  status: string
+  demo_count: number
+  created_at: string
+}
+
+/** 侧滑"瞄一眼"的紧凑摘要（三种实体共用一个形状，缺字段按 kind 判断） */
+export interface PeekResult {
+  kind: 'model' | 'task' | 'demo'
+  slug: string
+  name: string
+  description: string
+  full_path: string
+  demo_count?: number
+  vendor?: string | null
+  resolution?: string
+  status?: string
+  score?: number | null
+  votes?: number
+  sample_level?: string
+  is_prompt_excerpt?: boolean
+  model_count?: number
+  demo_type?: string
+  rating_avg?: number | null
+  rating_count?: number
+  cover_url?: string | null
+  models?: ModelBrief[]
+  demos?: { slug: string; title: string; rating_avg: number | null; rating_count: number; cover_url: string | null }[]
+}
+
+/** 上传页「挂到哪道题」的建议项（规则层 TF-IDF，无 LLM） */
+export interface TaskSuggestItem {
+  task_id: number
+  slug: string
+  title: string
+  category?: string | null
+  demo_count: number
+  /** 相似度 0~1 */
+  score: number
+}
+
+/** 证据表的一行 = 一件作品；列即链条环节（模型 → 题面 → 生成过程 → 评分） */
+export interface TaskChainRow {
+  slug: string
+  title: string
+  models: ModelBrief[]
+  prompt_id: number | null
+  /** null = 该作品未填提示词，一致性未知（既不算一致也不算不一致） */
+  same_prompt: boolean | null
+  prompt_excerpt: string
+  rounds: number | null
+  minutes: number | null
+  rating_avg: number | null
+  rating_count: number
+}
+
+export interface TaskChain {
+  brief: string
+  /** description=作者写的题面；prompt=回落到基准提示词 */
+  brief_source: 'description' | 'prompt' | ''
+  prompt_id: number | null
+  prompt_variants: number
+  no_prompt_count: number
+  rows: TaskChainRow[]
+}
+
+/** v2：题目详情——compare 即 Benchmark 对比行 */
+export interface TaskCompareRow {
+  model: ModelBrief
+  demo_count: number
+  avg_rating?: number | null
+  /** v2 B5′：平均轮数 / 平均耗时（分钟），未填为 null（不用 0 冒充数据） */
+  avg_rounds?: number | null
+  avg_minutes?: number | null
+  best_demo?: { slug: string; title: string; rating_avg: number } | null
+}
+
+export interface TaskDetail extends Omit<TaskSummary, 'demo_count'> {
+  demos_total: number
+  compare: TaskCompareRow[]
+  demos: DemoSummary[]
+  /** 链条视图（题面 + 逐作品证据行） */
+  chain?: TaskChain | null
+}
+
+/** v2 B2′：同提示词的其他作品（prompt_id 精确共享 = 严格复现对比） */
+export interface SamePromptResult {
+  prompt: string
+  prompt_id?: number | null
+  items: DemoSummary[]
+}
+
+/** v2 D3：探索页聚合数据源（模型 / 题目 / 描述性标签；兜底位折叠为 fallback_demos） */
+export interface ExploreResult {
+  models: { total: number; items: ModelSummary[]; fallback_demos: number }
+  tasks_total: number
+  tasks: TaskSummary[]
+  tags: Record<string, { value: string; demos: number }[]>
+}
+
+/** v2 B3′：prompt 簇 → 待确认题目（管理端「成题」面板的数据源） */
+export interface ClusterDemo {
+  demo_id: number
+  slug: string
+  title: string
+  models: string[]
+  rating_avg: number
+  rating_count: number
+  covered: boolean
+}
+
+export interface PromptCluster {
+  kind: 'exact' | 'similar'
+  score?: number | null
+  demo_count: number
+  models: string[]
+  distinct_models: number
+  covered: boolean
+  suggested_title: string
+  sample_prompt: string
+  demos: ClusterDemo[]
+}
+
+export interface PromptClusters {
+  exact: PromptCluster[]
+  similar: PromptCluster[]
+  stats: {
+    demos_with_prompt?: number
+    unique_prompts?: number
+    exact_clusters?: number
+    similar_clusters?: number
+    thresholds?: { min_score: number; exact_min_demos: number; similar_min_demos: number; similar_min_models: number }
+  }
+}
+
+/** §4.2 标签建议包：规则从现有词表推出，作者收下或跳过都行 */
+export interface DerivedTag {
+  key: string
+  value: string
+  label: string
+  confidence: number
+  reason: string
+  demo_count?: number | null
+}
+
+export interface DeriveResult {
+  items: DerivedTag[]
+  note: string
+}
+
+/** B4 合并向导 / 别名中心：管理端实体清单与冲突、合并预览 */
+export interface AdminModelList {
+  items: ModelSummary[]
+  total: number
+  status_counts: Record<string, number>
+}
+
+export interface AdminTaskList {
+  items: (TaskSummary & { merged_into_id?: number | null })[]
+  total: number
+  page: number
+  page_size: number
+  status_counts: Record<string, number>
+}
+
+export interface MergeEntityRef {
+  id: number
+  slug?: string
+  /** 模型用 name、题目用 title */
+  name?: string
+  title?: string
+}
+
+export interface MergePreview {
+  source: MergeEntityRef
+  target: MergeEntityRef
+  affected_demos: number
+  aliases_moved?: number
+  merged_demos?: number
+  dry_run: boolean
+}
+
+export interface ConflictItem {
+  id: number
+  label: string
+  demos: number
+}
+
+export interface ConflictGroup {
+  key: string
+  items: ConflictItem[]
+}
+
+export interface EntityConflicts {
+  models: ConflictGroup[]
+  tasks: ConflictGroup[]
+  groups: number
+}
+
+/** 撤销合并：merge-history 条目与 unmerge 预览 */
+export interface MergeHistoryItem {
+  source: MergeEntityRef
+  target: MergeEntityRef | null
+  moved_total: number
+  movable_back: number
+  /** false = 早期合并没记 moved_demo_ids，只能恢复实体、无法迁回引用 */
+  reliable: boolean
+  reason: string
+  restored_status: string
+}
+
+export interface UnmergePreview {
+  source: MergeEntityRef
+  target: MergeEntityRef
+  moved_total: number
+  will_restore: number
+  already_moved_away: number
+  restored_status: string
+  reliable: boolean
+  dry_run: boolean
+  unmerged?: boolean
+}
+
+/** B4 治理体检面板（knowledge_stats 的真实形状：覆盖率/积压/重复率，不用标签数量当指标） */
+export interface KnowledgeStats {
+  demos_approved: number
+  coverage: Record<string, { label: string; tier: number; demos: number; rate: number }>
+  model_entity: {
+    demos: number
+    rate: number
+    total_models: number
+    active: number
+    candidate: number
+    unverified: number
+    deprecated: number
+  }
+  task: { total: number; active: number; candidate: number }
+  inbox: { pending: number; pending_actionable: Record<string, number> }
+  duplicate_slugs: number
+}
+
+/** B4 审计浏览 */
+export interface AuditEntry {
+  id: number
+  actor_type: string
+  actor_id?: number | null
+  /** 后端批量解析出的署名（系统/匿名动作为 actor_type） */
+  actor: string
+  action: string
+  entity_type: string
+  entity_id: number
+  before?: Record<string, unknown> | string | null
+  after?: Record<string, unknown> | string | null
+  reason?: string | null
+  created_at: string
+}
+
+export interface AuditList {
+  items: AuditEntry[]
+  total: number
+  page: number
+  page_size: number
+  /** 可选动作清单由后端给（前端不硬编码，避免白名单与写入脱节） */
+  actions: string[]
+  entity_types: string[]
+}
+
+/** B4 巡检：一个检查项（level=action 才有可自动执行的补救） */
+export interface InspectionCheck {
+  id: string
+  label: string
+  level: 'action' | 'warn' | 'info'
+  hint: string
+  count: number
+  can_queue: boolean
+  rate?: number
+  fixable?: number
+  samples?: Record<string, unknown>[]
+}
+
+export interface InspectionResult {
+  approved: number
+  total_findings: number
+  checks: InspectionCheck[]
+}
+
+/** type:demo 拆分流水线的预览结果（规则只出建议，批准在收件箱） */
+export interface TypeDemoPreview {
+  stats: { approved: number; demo_share: number; type_dist: { value: string; demos: number; rate: number }[] }
+  scanned: number
+  proposed: number
+  by_target: Record<string, number>
+  samples: {
+    demo_slug: string
+    demo_title: string
+    add: string
+    alt?: string[]
+    confidence: number
+    matched?: string[]
+    label_zh?: string
+  }[]
+}
+
+export interface TypeDemoQueueResult {
+  proposed: number
+  queued: number
+}
+
+/** Q2 第三步：归属工作台 —— 兜底实体及其待归属作品（含规则预填目标） */
+export interface AttributionItem {
+  id: number
+  slug: string
+  title: string
+  model_hint: string
+  rating_avg: number
+  rating_count: number
+  guess?: { id: number; slug: string; name: string } | null
+}
+
+export interface AttributionGroup {
+  model: ModelSummary
+  demos: AttributionItem[]
+}
+
+export interface AttributionPending {
+  groups: AttributionGroup[]
+  targets: { id: number; slug: string; name: string; vendor?: string | null }[]
+}
+
+export interface AttributeResult {
+  moved: number
+  demo_ids: number[]
+  target: { id: number; slug: string; name: string }
+}
+
+/** v2 B4′：治理收件箱条目（kind/payload 组合，approve 才由 service 执行） */
+export interface SuggestionItem {
+  id: number
+  kind: 'new_model' | 'new_task' | 'task_match' | 'merge_model' | 'merge_task' | 'alias' | 'retag_demo'
+  payload: Record<string, unknown>
+  confidence?: number | null
+  source: 'user' | 'admin' | 'ai' | 'inferred' | 'external' | 'imported'
+  status: 'pending' | 'approved' | 'rejected'
+  demo_id?: number | null
+  ref_id?: number | null
+  created_at: string
+  reviewed_at?: string | null
+  /** 仅 approve 响应里出现：service 实际做了什么（用于提示文案，不入库） */
+  result?: string
+}
+
+export interface SuggestionList {
+  items: SuggestionItem[]
+  pending_by_kind: Record<string, number>
+  thresholds: { auto_accept: number; review: number }
+}
+
+export interface PaginatedModels {
+  items: ModelSummary[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface PaginatedTasks {
+  items: TaskSummary[]
+  total: number
+  page: number
+  page_size: number
 }
 
 export interface RatingStats {
@@ -212,6 +646,10 @@ export interface DemoListParams {
   /** 作者过滤：public = 未注册上传；其他 = 用户名 */
   author?: string
   sort?: 'newest' | 'popular' | 'random' | 'prompt'
+  /** v2：按模型实体 slug 过滤 */
+  model?: string
+  /** v2：按题目实体 slug 过滤 */
+  task?: string
   page?: number
   page_size?: number
 }
@@ -230,6 +668,10 @@ export interface CreateDemoPayload {
   idempotency_key?: string
   /** 信任通道密钥（未登录免审核） */
   upload_code?: string
+  /** v2 B4′：挑战的题目 slug —— 只生成挂题候选，待管理员确认 */
+  task?: string
+  /** Q2：选了兜底型号（未标注 / 未定型号 / 灰测）时的依据留痕 */
+  model_hint?: string
   /** 管理员强制上传（跳过 zip 去重 409） */
   force?: boolean
 }
@@ -246,6 +688,8 @@ export interface CreateDemoFromUrlPayload {
   cover_url?: string
   upload_code?: string
   idempotency_key?: string
+  /** v2 B4′：挑战的题目 slug（只生成挂题候选） */
+  task?: string
   force?: boolean
 }
 
@@ -299,6 +743,8 @@ export interface ForumReply {
   thanks_count?: number
   my_reactions?: string[]
   created_at: string
+  /** 仅管理端全局列表返回：这条回复属于哪个帖子 */
+  topic_title?: string | null
 }
 
 export interface ForumTopicInput {

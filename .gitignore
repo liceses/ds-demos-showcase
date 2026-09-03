@@ -36,6 +36,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# AgentTeams 插件状态（团队/信箱/任务记录），不是项目源码
+.agent-teams/
+
 # uv / local cache
 .uv-cache/
 .npm-cache/

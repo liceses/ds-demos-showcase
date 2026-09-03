@@ -70,6 +70,16 @@ GET {BASE_URL}/api/v1/meta/agent-guide
    - int（数字值）：value 必须是整数（如 rounds:3）
    为作品挑选 **2~5 个最贴切的标签**（模型、类型、插件、技能、分类、游戏名等）。
    禁止使用返回列表里不存在的 key；fixed 值必须存在于候选中。
+   **`model` 是必填项**（至少 1 个）。不确定时**必须走兜底值，严禁编一个型号**：
+
+   | 情况 | 写法 |
+   |---|---|
+   | 知道确切型号 | `model:dsv4-flash` 等词表内值 |
+   | 知道厂商、不确定具体型号 | `model:<厂商>-unknown`（如 `model:deepseek-unknown`） |
+   | 完全不知道是什么模型 | `model:unspecified` |
+   | 网传灰测/内部版、未经证实 | `model:ds-unknown`（可被站方后续「揭晓」改映射） |
+
+   走兜底时请同时给 `model_hint`（如 `"prompt 标注为灰测版，未公开型号"`），站方后续可据此批量归位。
 
 3. **判断 demo_type**
    - zip 里有 index.html → `web`（网页应用，可在线预览）
@@ -100,6 +110,8 @@ GET {BASE_URL}/api/v1/meta/agent-guide
        "prompt": "第一轮提示词(可选)",
        "upload_code": "免审核密钥(有就给)",
        "idempotency_key": "本次上传的唯一幂等键",
+       "task": "要挑战的题目 slug(可选，见 §7)",
+       "model_hint": "型号不确定时的依据(可选，配合兜底 model 值使用)",
        "tags": ["model:DeepSeek-V4", {"key":"game","value":"mc","description":"我的世界"}]
      }'
    ```
@@ -113,6 +125,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
      -F "demo_type=web" \
      -F "upload_code=免审核密钥(有就给)" \
      -F "idempotency_key=本次上传的唯一幂等键" \
+     -F "task=要挑战的题目slug(可选)" \
      -F 'tags=["model:DeepSeek-V4", {"key":"game","value":"mc"}]' \
      -F "prompt=第一轮提示词(可选)" \
      -F "file=@本地zip路径.zip" \
@@ -130,6 +143,7 @@ GET {BASE_URL}/api/v1/meta/agent-guide
 
 ## 自检清单（提交前逐项确认）
 - [ ] title / description 都写了，且是中文、通顺、准确
+- [ ] **至少 1 个 `model:` 标签**；不确定则用兜底值（`unspecified` / `<厂商>-unknown` / `ds-unknown`）**并写 `model_hint`**，绝不编造型号
 - [ ] tags 全部来自 /tags/tag-keys 的真实 key；fixed 值在候选中；int 值是整数
 - [ ] demo_type 与 zip 内容一致（有 index.html 才用 web）
 - [ ] link 类型一定给了 external_url；web/zip 一定给了 zip 文件
@@ -239,7 +253,21 @@ curl -X PUT https://deepdemos.top/api/v1/demos/<slug> \
 ```bash
 # int 键范围：rounds 在 [3,10]
 curl "https://deepdemos.top/api/v1/demos?tag=rounds:3-10"
+
+# v2 起 run 元数据已收编为列，可直接按列筛（语法一致：3 / 3-10 / -10 / 3-）
+curl "https://deepdemos.top/api/v1/demos?rounds=3-10&minutes=-60&platform=DSH"
 ```
+
+> 两种写法都可用：`tag=rounds:...` 是旧契约（保留不废），`?rounds=` 走列、更准更快。
+> 上传时把轮数/耗时/平台作为 `rounds:` / `time:` / `platform:` 标签提交即可，系统自动同步到列，**不需要单独传字段**。
+
+### 7. 挑战已有题目（v2）
+
+看到同题材已有作品时，上传可带 `task=<题目 slug>`（题目列表：`GET /api/v1/tasks`）：
+
+- 后端**不会**直接挂题，而是生成一条挂题候选，管理员确认后该作品才进入同题对比
+- 题面必须 `active`；不存在或未确认 → `422`（校验发生在入库之前，不会留下半个 demo）
+- 因此 `task` 写错不影响本次上传成功与否以外的东西，但仍建议先 `GET /api/v1/tasks?q=关键词` 确认 slug
 
 ### 安全提醒
 

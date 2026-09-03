@@ -773,3 +773,625 @@ GET /api/v1/demos?status=approved&author=public
 ### 数据
 - `notifications`：`user_id/type/actor_id/demo_slug?/topic_id?/reply_id?/read/created_at`
 - 通知创建走独立事务，**失败静默不阻塞主流程**
+
+## 12. v2 实体接口：Model / Task / Explore（B1 已实现，2026-08-30）
+
+> Model / Task / Prompt 从 Tag 升格为一等实体（方案见 `docs/deepdemosv2/落地计划.md`）。
+> **双写兼容**：`model` 标签继续保留并可正常筛选/上传，同时自动同步 `demo_models` 实体关联；
+> 序列化新增 `models[]` / `tasks[]` 字段（旧字段全部不变）。
+
+### 模型实体
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/v1/models` | 列表：`?status=&vendor=&q=&sort=demos\|rating\|new\|name&page=&page_size=`；status 缺省展示 active+unverified；含 `demo_count` / `rating_avg` 聚合 |
+| GET | `/api/v1/models/{slug}` | 详情：统计 + `aliases[]` + `tasks[]`（参与题目）+ `recent_demos[]`（已序列化） |
+
+### 题目实体（Benchmark = 固定 Task 比较多 Model）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/v1/tasks` | 列表：`?status=&q=&category=&sort=demos\|newest&page=&page_size=`（缺省 active） |
+| GET | `/api/v1/tasks/{slug}` | 详情：`compare[]`（**按模型分组对比行**：作品数/平均分/最好作品）+ `demos[]` |
+| GET | `/api/v1/tasks/suggest?q=` | 规则层相似任务建议（TF-IDF，纯规则无 LLM；上传页挂题参考） |
+
+### Explore（/tags 原地升级的数据源）
+- `GET /api/v1/explore`：`{models:{total,items:Top12}, tasks_total, tasks:Top8, tags:{category,type,game 各 Top12}}`
+
+### Demo 列表增强
+- `?model=<slug>` / `?task=<slug>`：按实体过滤
+- 标签过滤语义修正：**同一键内 OR、不同键之间 AND**（`tag=model:a&tag=model:b` = a 或 b；`tag=model:a&tag=game:mc` = 且）
+- `GET /tags/tag-keys` 新增 `tier`（1 核心 model / 2 常用 type·category·game / 3 扩展其余）——驱动上传页排序、卡片取值、筛选面板
+
+### 同提示词的其他作品（v2 B2′，零 Task 依赖）
+`GET /api/v1/demos/{slug}/same-prompt?limit=12` → `{ prompt, prompt_id, items: DemoSummary[] }`
+
+- 语义：`prompt_id` 精确共享 = **同一句提示词交给不同模型**的严格复现对比；与 Task（同题材）构成粗细两档
+- `items` 只含 `approved` 且同可见域（astra 橱窗按 `ASTRA_DENY_SEGMENTS` 屏蔽本子路由）的作品，不含自身；按社区分 → 时间倒序
+- 无提示词的作品返回 `prompt: "" / items: []`（前端据此隐藏模块，不出空态）
+- `prompt_id` 尚未回填的历史行按 `lower(trim(prompt))` 文本兜底匹配；跑过 `migrate_models_v2.py` 后走索引精确匹配
+
+### 数据迁移（服务器执行一次，幂等可重跑）
+```bash
+docker compose exec backend python /site-repo/scripts/migrate_models_v2.py [--dry-run]
+```
+行为：`Tag(key=model)` → models/model_aliases/demo_models（迁移批次置 active，ds-unknown → unverified）；`demos.prompt` → prompts 去重回填。上传链路已双写，迁移前后数据不丢失。
+
+## 13. v2 B1.5：治理写接口（Model / Task / 收件箱 / 体检 / 审计）
+
+> 全部 `require_admin`（匿名 401、普通用户 403）。路由薄、业务全在 service：**这些端点是「写操作全走 service」的唯一入口**，前端不得绕过直改实体。
+> 依据 `docs/deepdemosv2/评审与重排.md`（批次 B1.5）。
+
+### 实体状态机
+- `Model.status`：`candidate`（自动新建/申请，待确认）→ `active`（已确认）｜`unverified`（灰测未验证，照常展示 + canary 徽章）｜`deprecated`（已合并/退役，靠 `merged_into_id` 指向，不物理删除）
+- `Task.status`：`candidate` → `active` ｜ `merged` ｜ `hidden`
+- 可见性口径：公开 `/models` 缺省只出 `active + unverified`；公开 `/demos` 序列化的 `models[]` 过滤 `deprecated`、`tasks[]` 过滤 `merged|hidden`（退役/已并的实体是空壳，不进新页面）
+
+### Model 管理
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/admin/models?status=&q=&sort=demos\|name\|new` | 管理端列表：**任何状态都可见**（含 candidate/deprecated），返回 `status_counts` |
+| POST | `/admin/models` | `{name, vendor?, description?, status?}`；名称或别名已存在 → **409**（引导走合并/加别名，落实「匹配不重复建」） |
+| PUT | `/admin/models/{id 或 slug}` | `{name?, vendor?, description?}`；改名会把**旧名自动转为别名**（历史标签值仍可匹配）；目标名被占用 → 409 |
+| PUT | `/admin/models/{id}/status` | `{status, reason?}` 状态机迁移 |
+| DELETE | `/admin/models/{id}` | 仅零引用实体可删，有引用 → **409**（请走合并） |
+| POST | `/admin/models/{id}/aliases` | `{alias}`；重复或等于规范名 → 409 |
+| DELETE | `/admin/models/{id}/aliases/{alias}` | 规范名本身不可删（400） |
+| POST | `/admin/models/{id}/merge` | `{target_id, dry_run?, reason?}`：`dry_run=true` 返回影响面 `{affected_demos, aliases_moved}`；防呆四项（自身/目标已退役/源已合并过/成环）一律 422 |
+
+### Task 管理
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/admin/tasks?status=&q=&page=&page_size=` | 任何状态；返回 `status_counts` |
+| POST | `/admin/tasks` | `{title, description?, category?, status?, demo_ids?}`；**带 `demo_ids` = 建题即挂题**（prompt 簇「一键成题」走这条） |
+| PUT | `/admin/tasks/{id 或 slug}` | `{title?, description?, category?, status?}` |
+| DELETE | `/admin/tasks/{id}` | 仅零挂载可删，否则 409 |
+| POST | `/admin/tasks/{id}/merge` | `{target_id, dry_run?, reason?}`（同 model 合并语义） |
+| POST | `/admin/tasks/{id}/demos` | `{demo_ids:[...]}` 批量挂题 → `{attached}` |
+| DELETE | `/admin/tasks/{id}/demos/{demo_id}` | 摘题；不在该题下 → 404 |
+
+### 建议收件箱 / 体检 / 审计
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/admin/suggestions?status=pending\|approved\|rejected\|all&kind=&min_confidence=` | 收件箱。`kind ∈ new_model\|new_task\|task_match\|merge_model\|merge_task\|alias`；`source ∈ user\|admin\|ai\|inferred\|external\|imported` |
+| POST | `/admin/suggestions/{id}/review` | `{action: approve\|reject}`；**approve 才按 kind 调对应 service 真正落库**，已处理过 → 409 |
+| GET | `/admin/knowledge/stats` | 覆盖率 KPI + 实体积压 + 收件箱待处理 + 重复 slug 数（明确不用「标签数量」当指标） |
+| GET | `/admin/audit?entity_type=&action=&entity_id=&q=&page=&page_size=` | 审计回溯，含 `before/after` JSON 快照 + `total/actor` 与可选值清单（详见 §20） |
+
+### Prompt 聚类 → 一键成题（v2 B3′）
+`GET /api/v1/admin/prompt-clusters?min_score=0.35&exact_min_demos=2&similar_min_demos=3&similar_min_models=2&refresh=1`
+
+两档产物（**全部是建议，绝不自动落库**）：
+
+| 档 | 成立条件 | 依据 |
+|---|---|---|
+| `exact` | 同一句提示词、≥2 作品，不要求跨模型 | 线上 235 条真实提示词实测：11 个同句簇、其中 8 个跨模型（如「科幻坦克」6 作品横跨 HY4/灰测/Qwen/GLM/Mimo）——零判断成本、质量最高 |
+| `similar` | TF-IDF 余弦 ≥ `min_score`，且 ≥3 作品 + ≥2 不同模型 | 0.35 是唯一有质量档位；降到 0.25 仅多 1 簇且混入「反向复合弩 / 双叉臂悬挂台架」这类不同题误簇，0.20 以下基本是噪声 |
+
+返回 `{exact[], similar[], stats}`；簇含 `suggested_title`（高频非停用分词拼的草稿名，仍需人工改名）、`sample_prompt`、`demos[{demo_id,slug,title,models,rating_avg,rating_count,covered}]`、`covered`（已有 active 题目挂载即 true，面板不再主推）。
+
+成题 = 复用 `POST /admin/tasks {title, demo_ids}`（一次调用建题 + 批量挂题），审计照落。
+结果 60s 缓存；prompt / 题目任一写路径主动失效（`refresh=1` 强制重算，面板「重新扫描」即走此参）。
+模型口径双轨取值：`demo_models` 实体优先、`model:` 标签兜底（迁移未跑时不至于空池）。
+
+### 挑战上传（v2 B4′）
+两个上传入口都接受可选 `task`（题目 slug）：multipart 表单字段 `task=` / from-url JSON `"task": "<slug>"`。
+
+- **用户自报不等于挂题权限**：后端**不写 `demo_tasks`**，而是生成一条 `entity_suggestions(kind=task_match, source='user', confidence=0.98)`；管理员在收件箱 approve 后才真正挂题（`suggestion_service._execute` 转调 `task_service.attach_demos`）。任意塞题会污染 Benchmark，故必须过人工
+- 校验时机：`task` 在**解压/下载/OSS 之前**校验，非法或题目非 `active` → **422** 且**不留孤儿 demo**；幂等命中（同 `idempotency_key`）直接返回旧结果，不重复入队
+- `confidence` 必须是数值：`0.98 < AUTO_ACCEPT(0.99)` 保证只进人工，`> REVIEW(0.60)` 保证默认视图可见；**传 None 会被 `>= 0.6` 过滤掉从而永久隐身**（NULL 语义陷阱，已在测试里锁住）
+- 同 `demo + task` 的 pending 建议自动去重，不堆噪音
+- 前端链路：Task 页「用你的模型挑战此题」→ `/upload?task=<slug>` → 挑战卡片（题面 + 原题提示词「复制 / 填入」）→ 提交 → 成功态提示「挂题请求待管理员确认」
+- 管理端：新 Tab「**收件箱**」（`AdminInboxSection`）——按 status/kind 筛、批准前显示影响面并二次确认、执行走 `POST /admin/suggestions/{id}/review`
+- agent 通道的 `task` 字段暂不写进 `AI_AGENT_GUIDE`（定稿 B5′ 再开，避免 Task 池尚浅时 agent 乱挂）
+
+### 置信度分级（建表即定规格，LLM 接入零改表）
+- `≥ 0.99` 可自动执行（**必须落审计**）；v2.0 规则层默认**关闭**自动执行——TF-IDF 分数不是概率，误判即不可逆变更，一律走人工
+- `≥ 0.60` 进收件箱默认视图；`< 0.60` 只入库（需显式 `min_confidence` 才看到），不骚扰管理员
+- 同类同目标 `pending` 建议自动去重；更高置信度只刷新证据，不重复建行
+
+### 视区与安全边界
+- **astra 橱窗默认不可见**：`/models`、`/tasks`、`/explore`、`/admin/*` 均不在白名单 → 返回 404（白名单制，新增路由默认堵死，防漏堵）
+- **决策（2026-08-31，决策人拍板）**：astra **不放行** v2 路由，橱窗代码整体不动。核实依据：橱窗是**独立 mini-SPA**（`main-astra` + `AstraWorksView/AstraWorkView`），不加载主站 `DemoCard/ModelChips`，站内链接只指向 `/`、`/about`、`/demo/:slug` → 无死链；且 astra 输出层历史上就保留 `model:` 标签（只过滤 `author`/`version-of`），故序列化新增的 `models[]` 不构成新泄露面
+
+## 14. v2 B5′：Run 元数据收编（轮数 / 耗时 / 平台）
+
+`rounds` `time` `platform` 本质是「一次生成过程」的属性而非描述性标签，已收编为 demos 列：
+
+| 列 | 来源标签 | 类型 |
+|---|---|---|
+| `gen_rounds` | `rounds:` (int) | 整数，同键多值取最大 |
+| `gen_minutes` | `time:` (int) | 整数分钟，非数字静默忽略 |
+| `gen_platform` | `platform:` (open) | 字符串（截断 32） |
+
+- **写入面不变**：仍按标签提交（`-F 'tags=["rounds:3","time:90","platform:DSH"]'`），系统在 `_set_demo_tags` 里派生列；**`?tag=rounds:3-10` 旧契约继续可用**（不静默失效）
+- 新增按列过滤：`?rounds=3-10`、`?minutes=-60`、`?platform=DSH`（语法同 int 标签：`3` / `3-10` / `-10` / `3-`；非法返回不过滤）
+- 历史数据回填：`scripts/migrate_models_v2.py` 第 4 步（每次重算，幂等，统计键 `run_meta_filled`）
+- **Benchmark 对比行升为三指标**：`compare[]` 新增 `avg_rounds` / `avg_minutes`（AVG 忽略未填 → `null`，绝不用 0 冒充数据），Task 页展示 `DEMO / RATE / ROUND / MIN`
+- 迁移：`_ensure_demo_columns` 增三列（SQLite `ALTER TABLE ADD COLUMN`，无新库无新基建）
+- 审计与业务**同事务**：审计写失败连带回滚，不允许「合并了但查不到谁干的」
+
+## 15. v2 Q2：模型必填 + 三档兜底
+
+`model` 从「建议填」升级为**必填**，同时给「不确定」三条正门 —— 强制与兜底必须同时落地，否则只会逼人编一个型号。
+
+### 断言强度 `Model.resolution`（与 `status` 正交）
+
+| 值 | 语义 | 载体 | status |
+|---|---|---|---|
+| `exact` | 精确型号 | 正常实体 | 按流程 |
+| `family` | 知厂商不知型号 | `model:<vendor>-unknown`（如 `deepseek-unknown`） | active |
+| `unknown` | 完全不知 | `model:unspecified` | active |
+| `guess` | 有猜测未证实（网传灰测） | `model:ds-unknown` / `unknown` | **unverified** |
+
+- 兜底位是**真实 Tag 值 + 真实实体**（`model` 是 fixed 键，不进词表就没有正门）
+- 启动/迁移自动确保齐备：`unspecified` + 每个已知厂商一个族节点；登记带 `vendor` 的精确型号时自动补齐该厂商族节点
+- D（灰测猜测）与 B/C 严格分开：`ds-unknown` 是「灰测揭晓」资产池，不可混入「懒得填」
+
+### 校验规则（三处，均在下发/解压**之前**）
+
+| 入口 | 行为 |
+|---|---|
+| `POST /demos`（multipart，网页） | 缺 model → **422**，错误文案直接列出三条出路 |
+| `POST /demos/from-url`（agent） | 原 `tags≥1` 之外追加 model 必填 → 422 |
+| `PUT /demos/{slug}` | 传入 `tags` 时不得清空 model（不传 `tags` 则不动） |
+
+### 证据字段
+
+`model_hint`（≤500 字，可选，multipart 表单字段与 from-url JSON 字段同名）：选兜底位时记依据（如「网传灰测版」「只知是 DeepSeek」「别人传的没写」）。
+序列化：`GET /demos/{slug}` 详情新增 `model_hint`；`models[]` 每项新增 `resolution`。
+
+### 统计折叠
+
+- `GET /explore` → `models.fallback_demos`：兜底位作品总数，前端渲染「其他 · 未定 N」折叠行，**兜底位不参与热门模型排名**（`list_models(exclude_fallback=True)` / `fallback_demo_count()`）
+- 显示层：`family` → 「厂商 · 未定型号」，`unknown` → 「未标注模型」，`guess` → canary 徽章（`modelDisplay()`）
+
+### 迁移
+
+存量 `resolution` 回填随启动 `_ensure_model_columns()` 自动执行（`ds-unknown → guess` 且纠正 `status=unverified`）；`scripts/migrate_models_v2.py` 幂等可重跑。
+
+## 16. v2 D3：前端路由与 slug 约定
+
+| 路径 | 页面 | 说明 |
+|---|---|---|
+| `/tags` | **探索**（`ExploreView`） | 数据源 `GET /explore`：模型 Top12 + 题目 Top8 + 描述性标签（category/type/game）；**URL 不变保外链兼容** |
+| `/tags/keys` | 标签键浏览（原 `/tags` 页内容下移） | 键/值全量浏览与搜索 |
+| `/models`、`/models/:slug` | 模型列表 / 模型页 | 只从探索页、卡片徽章进入，不占顶栏 |
+| `/tasks`、`/tasks/:slug` | 题目列表 / 同题对比 | 同上 |
+
+顶栏导航固定 5 项：**首页 / 作品库 / 排行榜 / 探索 / 上传 Demo**（新增一级实体不再加导航位，一律从「探索」下钻）。
+
+**slug 约定**：展示字段可中文（`title`/`name`），**URL slug 必须 ASCII**（`slugify()` 剔除非 ASCII）。中文题面退化为 `task-N`；中文厂商名的族节点用 `vendor-<hash6>-unknown` 避免互相改指向。
+
+`/explore` 返回新增 `models.fallback_demos`（兜底位作品总数）：前端渲染「其他 · 未定型号 / 未标注：N 个作品」折叠行，**兜底位不参与热门模型排名**。
+
+## 17. v2 Q2：归属工作台（兜底位 → 真实型号）
+
+| 端点 | 权限 | 说明 |
+|---|---|---|
+| `GET /admin/attribution/pending?limit_models=&limit_demos=` | admin | 兜底实体分组清单：每组含实体信息 + 其下已上架作品（带 `model_hint` 证据与 `guess` 规则预填目标）+ 全量可选真实型号 `targets[]` |
+| `POST /admin/attribution` `{demo_ids[1..200], target_id, reason?}` | admin | 批量归属；返回 `{moved, demo_ids, target}` |
+
+行为约束：
+
+- **目标必须 `resolution=exact` 且未退役**，否则 422 —— 兜底位之间该走 `merge_model`，不是归属
+- **归属 = 回写 `model:` 标签 + 重跑实体双写**，不是只改 `demo_models`：编辑作品时 `_set_demo_tags` 会按标签重新派生实体，只改实体表的归属会在下一次编辑时静默退回兜底位
+- **幂等**：作品已在目标型号上时不计入 `moved`；`moved=0` 时**不写审计**（变更日志只记真实变更）
+- 每次有效归属写一条 `audit_log(action='attribute', entity_type='model', after={target, moved, demo_ids, from})`，理由字段可追溯「谁把哪些作品从哪个兜底位迁到哪」
+- 归属后自动失效别名缓存与聚类缓存
+- `guess` 只是**规则预填**（扫 `model_hint`/提示词/标题里的已知型号名/别名，取最长命中），管理员可改；LLM 后置时替换 `guess_target()` 即可
+
+管理端 UI：后台「归属工作台」Tab —— 按兜底实体分组、全选、组内多数猜测作为默认目标、提交前显示影响面并二次确认。
+
+## 18. v2 B4：type:demo 拆分流水线（规则版）
+
+`type:demo` 吞了 44% 的作品（不是分类，是垃圾桶）。流水线把它拆成真实归属，**三段式、绝不自动改标签**。
+
+| 端点 | 权限 | 说明 |
+|---|---|---|
+| `GET /admin/type-demo/preview?limit=&min_confidence=` | admin | 规则预览，**不写库**：`stats`（当前 type 分布 + demo 占比）、`proposed`（可细分件数）、`by_target`（建议去向计数）、`samples`（前 40 条含命中关键词，可解释） |
+| `POST /admin/type-demo/queue?limit=&min_confidence=` | admin | 把建议落成 `retag_demo` 候选进收件箱；返回 `{proposed, queued}`，同 `demo` 的 pending 自动去重 |
+
+### 新候选类型 `retag_demo`
+
+`payload = {demo_id, demo_slug, demo_title, remove:"demo", add:"<新值>", alt:[次优], matched:[命中词], reason}`，`source='inferred'`。
+批准时由 `refine_service.apply_retag()` 执行：**只替换 `type` 键的值，其余标签一律不动**；目标固定值不存在则自动补进词表（批准动作即授权，`type` 是 fixed 键）；幂等（已是目标值返回「无需改动」）。
+
+### 审核响应新增瞬时字段
+
+`POST /admin/suggestions/{id}/review` 批准成功时回 `"result": "<实际改了什么>"`（不入库，仅用于前端提示文案，避免 UI 自己编造变更描述）。
+
+### 规则与置信度（真实语料校准）
+
+- 关键词来自 `prompt`(1.0) / `title`(0.9) / `description`(0.7) 三个字段加权；英文按词前缀匹配（`visualiz` 覆盖 visualize），中文按子串
+- `category`/`game` 标签只作弱佐证（+0.06），不单独成案
+- 置信度：**≥0.85 基本可信**（实测占 80%）、**0.72~0.84 偶有误判**（多为单词命中，如博客站因"物理"二字被判 simulation）→ 管理面板默认 **0.8**，低段建议逐条看
+- 命中不到就**不提案**（实测 285 件里 84 件无信号，保持原样），不硬塞值把垃圾桶换个名字继续装
+- 14 个目标值：`simulation / visualization / education / music / art / puzzle / strategy / action / card / story / utility / chat / benchmark / spatial`
+
+### 实测效果（637→640 件线上仿真库）
+
+入队 201 条（重扫 0 新增，幂等）→ 批量批准 161 条 0 失败 → **`type:demo` 从 285 件 44% 降到 124 件 19%**，type 值 **5 → 17 个**。
+完整性核验：批准后无一例「`demo` 与新值共存」由流水线产生（现存 10 例是线上原有数据，作者同时打了 `demo`+`game`）。
+
+## 19. v2 B4：治理巡检（结构性缺口 → 可处理清单）
+
+与 `GET /admin/knowledge/stats`（体检=读数）分工：巡检出**待办**。
+
+| 端点 | 权限 | 说明 |
+|---|---|---|
+| `GET /admin/inspection?sample_limit=` | admin | 跑 9 项检查，**只读不写库**；返回 `{approved, total_findings, checks[]}` |
+| `POST /admin/inspection/{check_id}/queue?min_confidence=` | admin | 可执行项生成 `retag_demo` 候选进收件箱；**不可执行项返回 422** |
+
+### 检查项与分级
+
+| id | 检查 | level | 能否生成候选 |
+|---|---|---|---|
+| `type_missing` | 作品没有 type 标签 | action | ✅ 规则补值（默认门槛 0.85，比拆分流水线更高） |
+| `type_multi` | 挂了多个 type | action | ✅ 仅处理含 `demo` 的组合（机械判断，置信 0.95） |
+| `demo_left` | 仍挂 `type:demo` 且规则无信号 | warn | ❌ 机器没把握 |
+| `no_prompt` | 缺第一轮提示词 | warn | ❌ 机器编不出来 |
+| `model_fallback` | 挂在兜底型号上的作品 | warn | ❌ 去「归属工作台」 |
+| `fixed_no_desc` | 固定值缺少介绍 | warn | ❌ 词表补课需人写 |
+| `orphan_values` | 零引用的标签值 | info | ❌ 人工决定清理 |
+| `dup_model_slug` | 重复 slug 的模型实体 | warn | ❌ 走合并 |
+| `inbox_pending` | 收件箱积压 | info | ❌ 去收件箱批准 |
+
+**设计克制**：`can_queue` 恒等于 `level === 'action'`，其余项调用 queue 一律 422 —— **不为"界面上有按钮"而造一个假动作**。
+
+### 复用的执行通道
+
+`retag_demo` 的 `remove` 现支持字符串或数组，`apply_retag()` 覆盖三种用法：拆分（`add='simulation', remove='demo'`）、纯补值（`remove=[]`）、多值收敛（`remove=['demo'], add='game'`）。执行永远只碰 `type` 键，其余标签不动（有测试锁这条）。
+
+### 真实规模实测（640 件仿真库）
+
+```
+type_missing   191 件（30%）→ 规则可补 98 件（≥0.85）
+type_multi      28 件 → 其中 10 件含 demo 可机械收敛（入队 8，另 2 件已有 pending 被去重）
+demo_left       84 件 → 标为需人工，无自动动作
+no_prompt      381 件 / model_fallback 374 / fixed_no_desc 101 / orphan_values 93
+重复入队 → queued 0（幂等）；不可执行项 → 422
+```
+
+## 20. v2 B4：治理体检面板与审计浏览
+
+管理端补两块只读面板（数据接口原本就有，缺的是界面）。
+
+### 体检 `GET /admin/knowledge/stats`
+
+后台「治理总览 → 体检」。指标刻意选**覆盖率与积压**，不用「标签数量」：
+
+- KPI：已上架数 / 模型覆盖率 / 收件箱待批 / 重复 slug 数
+- 覆盖率表：按 `tier` 分组（核心 / 常用 / 扩展），每键给 `demos` 与 `rate`
+- 实体健康度：模型 `total/active/unverified/candidate/deprecated`、题目 `total/active/candidate`
+- 待批候选构成：`inbox.pending_actionable` 按 kind 明细
+
+### 审计 `GET /admin/audit`（**响应结构本轮变更**）
+
+| 参数 | 说明 |
+|---|---|
+| `entity_type` | `model` / `task` / `suggestion` |
+| `action` | 必须 ∈ `AUDIT_ACTIONS`，否则 422 |
+| `entity_id` / `q` | 按对象 ID / 按 `reason` 关键词（LIKE）定位 |
+| `page` / `page_size` | 分页（`page_size ≤ 200`）；**旧 `limit` 参数已移除** |
+
+响应：`{items[], total, page, page_size, actions[], entity_types[]}`，每条新增 `actor`（批量解析出的用户名，不是逐行查）。
+
+**单一来源规则**：动作白名单定义在 `models.AUDIT_ACTIONS`，路由的校验 pattern 与前端下拉都从这里取。
+缘由：`attribute` 动作上线时漏在硬编码 pattern 里，导致这类记录**筛不出来**（不报错、只是看不见）—— 回归测试 `test_audit_whitelist_covers_every_action_written` 会拿数据库里实际出现过的 action 与常量做差集，漏一个就红。
+
+## 21. v2 B4：合并向导与别名中心（实体治理收口）
+
+### 发现层
+
+`GET /admin/entity-conflicts`（admin）→ `{models[], tasks[], groups}`，每组 `{key, items:[{id,label,demos}]}`。
+`key` 是 `normalize()` 后的同键：**两个实体同键意味着第三种写法会分叉到不同实体**，这组数据就是该合并的清单。只报不动手。
+
+### 合并（两端点已存在，界面强制走四步）
+
+`POST /admin/{models|tasks}/{ident}/merge`，body `{target_id, dry_run, reason}`：
+
+1. ① 选源 → ② 选归宿（互斥，不能选到自己）→ ③ **`dry_run=true` 预览**（`affected_demos` / `aliases_moved`）→ ④ 预览出来后「执行合并」才可点
+2. 防呆：自合并 422、目标已退役 422、源已被合并过 422、不成环
+3. 执行 = 迁引用 + 旧名转别名 + 源转 `deprecated`，单事务 + 审计（`action='merge'`）
+
+### 别名中心
+
+`GET /models/{slug}`（公开详情，含 `aliases: string[]`）+ `POST /admin/models/{ident}/aliases {alias}`（201）+ `DELETE /admin/models/{ident}/aliases/{alias}`（204）。
+移除别名前界面会警告后果：**历史里用该写法打的标签将不再指向本实体**（可能落到同键的另一个实体上）—— 这不是 cosmetic 提示，是真的会改变归属。
+
+### 管理端列表（供选择器用）
+
+`GET /admin/models?q=&status=&page_size=` → `{items[], total, status_counts}`（含 `resolution`，candidate/deprecated 可见）；
+`GET /admin/tasks?q=&status=&page_size=` → `{items[], total, page, page_size, status_counts}`。
+
+### 实测（真实规模环境）
+
+`dry_run` 预览 `dsv4-flash → dsv4-pro` 显示 `affected_demos=40, aliases_moved=1`；自合并 422；别名「登记 → 详情可见 → 移除 → 完全复原」净零通过；匿名访问冲突端点 401。
+另：`dsv4-flash` 的别名表里现在有 `dsv4flash` —— 是上一轮合并自动带过来的，实证「合并后旧写法继续命中历史标签」。
+
+## 22. v2 §4.2：标签建议包（上传第 2 步）
+
+`POST /tags/derive`（**匿名可用、纯只读、不写库**）：
+
+```jsonc
+// 请求
+{ "title": "", "description": "", "prompt": "", "limit": 8 }
+// 响应
+{ "items": [ { "key": "type", "value": "music", "label": "音乐音频类",
+                "confidence": 0.85, "reason": "描述命中：钢琴、节奏、音乐", "demo_count": null } ],
+  "note": "规则推导，仅供参考；不收也不影响提交。" }
+```
+
+### 三个来源、一套产物
+
+| 键 | 匹配依据 | 置信 |
+|---|---|---|
+| `type` | `refine_service.classify`（与拆分流水线**同一个关键词引擎**，14 个细分值） | 0.72~0.9，次选写进 `reason` |
+| `model` | **`model:` 词表**的值或介绍出现在文本里 | 0.9 |
+| `game/category/plugin/skills/preset` | 词表自匹配：值本身（ASCII 按词边界）或值的**中文介绍**命中 | 0.72~0.88 |
+
+- **为什么 model 查词表而不是实体表**：建议必须落在作者真能点选的候选值上，而实体表要等首次上传才建出来，新库查不到。归属工作台相反（那里要实体 id），所以用 `guess_model`。两个数据源、两种用途，已在代码注释写明。
+- **词表自匹配的额外收益**：新登记的固定值自动获得被推荐能力，不必再改代码。
+- 边界：文本 <4 字直接返回空；`type` 单值语义只推 top-1（作者已有 type 时前端不再显示）；**不推垃圾桶与兜底值**（`demo` / `unspecified` / `*-unknown`）—— 兜底要作者主动选，不能被"推荐"。
+- 短 ASCII 值按词边界命中：`mc` 不会从 "mcdonald" 里跳出来（有测试锁这条）。
+
+### 旧端点归一
+
+`POST /tags/admin/ai-suggest`（admin）现在**委托同一引擎**，响应形态保持 `{suggestions:[{key,value,reason}], note}` 向后兼容。此前它自带一份硬编码 5 值关键词表且命中即 `break` —— 两处规则必然漂移，现已消除。
+
+实测（真实规模环境）：`3d魔方求解 / 用 dsv4-flash…` → `model:dsv4-flash 0.9`、`type:spatial 0.85`、`game:魔方 0.72`；`McDonald` 不误命中 `game:mc`；derive 前后作品数与待批候选数不变（只读）；公开端与管理端对同一文本给出相同 type 建议（同源）。
+
+## 23. v2 D5：组盒语汇的适用边界（防止过度统一）
+
+「面板级标签统一组盒」**不等于所有 chips 都要转**。逐处核对现有界面后的结论：
+
+| 位置 | 形态 | 转组盒 | 理由 |
+|---|---|---|---|
+| 探索页 描述性标签段 | 面板级标签浏览 | ✅ 已转（盒头 = 键标签） | 与标签页同一语汇 |
+| 标签页 / 标签详情页 | 面板级 | ✅ 本来就是 | D5 原生场景 |
+| 作品卡片行内（≤3 chips） | 行内 | ❌ 保留 | D5 明确「面板 vs 行内分层」 |
+| 详情页 meta 标签区 | 行内 | ❌ 保留 | 同上 |
+| 作品库筛选条 | 交互控件 | ❌ 保留 | 筛选器不是标签展示 |
+| 模型页 类型/玩法分布 | **数据条**（带数量对比） | ❌ 保留 | 转组盒会丢掉数量可视化，是倒退不是统一 |
+
+## 24. v2 B4 补：撤销合并与改 slug
+
+### 实体解析单一来源（行为变更，需知晓）
+
+`model_service._find_model()` 是**唯一**的实体解析路径：**id → slug → 别名**。公开详情 `GET /models/{slug}`、admin 全部端点、合并/撤销/别名都走它。
+
+**因此 `/models/<别名>` 现在也能打开实体**（过去只有精确 slug 可以）。这不是顺手加的功能，是修漏洞：改 slug 与合并都会产生别名，若详情不认别名，那些"旧链接该继续可用"的承诺就是空的。此前路由与 service **各写了一遍 `Model.slug == slug` 查询**，正是这类承诺落空的结构性原因。
+
+### 撤销合并
+
+| 端点 | 说明 |
+|---|---|
+| `GET /admin/models/merge-history` | 处于「已被合并」状态的实体：`{source, target, moved_total, movable_back, reliable, reason, restored_status}` |
+| `POST /admin/models/{ident}/unmerge` `{dry_run, reason}` | 撤销；`dry_run=true` 返回 `{will_restore, already_moved_away, restored_status, reliable}` |
+
+- 前提：合并审计现在写 `after.moved_demo_ids` —— 没有它，事后无从知道当初迁走了哪几个，撤销就成半截活
+- **诚实边界**：早期合并（无该字段）时 `reliable=false`，执行**只恢复实体状态与指针、作品留在归宿**，绝不猜归属；界面也会这么写
+- 合并之后若又对作品做过归属：`already_moved_away` 会算出来并**不动它们**（所以必须先预览）
+- 审计动作 `unmerge`（已入 `AUDIT_ACTIONS` 单一来源）
+
+### 改 slug
+
+`PUT /admin/models/{ident}` 现接受 `slug`：
+
+- 必须 ASCII 安全：非 ASCII → 422；含非法字符 → 422 且**回一个可用建议**（`a b*c` → 「用 a-b-c」）
+- 撞名 → **409**（带占用者名字）
+- 成功后旧 slug 自动转为**别名**（配合上面的解析规则，旧链接不失效），审计动作 `slug_set`，理由里写明新旧值与「对外链接会变」
+
+实测（真实规模环境，用一次性实体、语料 640 件未动）：合并→history 可见→撤销预览/执行→源实体回到 `active` 且 `merged_into` 清空；改 slug 后新链接 200、旧链接 200（别名救回）；非法 422 / 需修正 422 / 撞名 409 三条各按其状；`?action=unmerge`、`?action=slug_set` 均能筛出记录。
+
+## 25. v2 优化轮：模型页分页、社区分、论坛回复全局列表
+
+### 25.1 收缩社区分（**排序与展示的唯一口径**）
+
+```
+score = (wsum + m·C) / (votes + m)        # 闭式，SQL 可直接 ORDER BY
+wsum  = Σ(demo.rating_avg × demo.rating_count)   # 票数加权和
+votes = Σ demo.rating_count                      # 该模型收到的总票数
+C     = 全站按票数加权的整体均分（先验）
+m     = 全站各模型票数的中位数（收缩强度，自适应）
+```
+
+- `ModelSummary` 新增 `score` / `votes` / `sample_level`（`none|low|mid|high`，阈值 10 / 50 票）；
+  **`rating_avg` 保留原语义**（等权均分）向后兼容，前端不再拿它排序。
+- `ModelDetail` 额外回 `prior: {C, m}` —— 让读者能自己验算"为什么 6 票的 4.9 排在 412 票的 4.6 后面"。
+- `GET /models?sort=` 接受 `demos | score | rating | votes | new | name`（`rating` 是 `score` 的旧别名）；
+  `/explore` 的热门模型改按 `score`（仍排除兜底位）。
+- **demo 数不参与分数**（那等于把"多产"当"好用"）；只与分数、票数并列呈现。
+- 实测（真实语料）：`C=4.4078 m=15`；`1 票 raw 5.0 → score 4.44`，`77 票 raw 4.66 → 4.66`。
+
+### 25.2 `GET /models/{slug}/demos`（模型页看全）
+
+| 参数 | 说明 |
+|---|---|
+`sort` | `newest`（默认）/ `score` / `popular`，非法值 422 |
+`type` / `game` | 按标签值筛（facet 来源＝详情接口的 `type_dist` / `game_dist`） |
+`page` / `page_size` | 默认 24，上限 50 |
+
+返回标准 `Paginated<DemoSummary>`。存在的原因：详情接口原本硬编码 `recent_demos(limit=12)`，
+`ds-unknown` 396 件只能看到 3%。**`{slug}` 解析走同一入口**（id/slug/别名 + 合并链），不重复写查询。
+
+### 25.3 合并后的名字匹配必须跟 `merged_into` 链（修静默数据丢失）
+
+- `match_model()` 现在：精确名 → 规范化别名 → **跟随合并链**（深度上限 10）。
+- `_alias_map()` 只收**未退役**实体（含别名 join Model 过滤）。
+- 原因：合并后源实体仍占着自己的 `name`，旧实现先命中退役实体就返回；而序列化会过滤
+  `deprecated` → **用旧写法上传的作品看起来"没有模型"**。别名因此根本没机会生效。
+- 只退役、未合并的实体仍解析到它自己（不猜、不误改归属）。
+
+### 25.4 `GET /forum/admin/replies` 改为默认全局
+
+新增 `q`（搜回复内容或**所属主题标题**）、`limit`（默认 50，上限 200）；`topic_id` 变可选。
+`ForumReplyOut` 新增 `topic_title`（仅管理端列表填充）。
+原因：原实现要求先选主题，上百个主题时等于让管理员先做一遍检索。
+同时管理列表**不再逐条算表情反应**（省 N 次查询）。
+
+## 26. 前端路由约定：`pageKey` 不含 query
+
+`App.vue` 的 `<component :key="pageKey">` 原本对非 keepAlive 页面用 `route.fullPath`，
+导致**任何 query 变化都整页重挂**（滚动弹回顶部、已填内容丢失、请求重发）。现规则：
+
+- `pageKey = keepAlive ? route.name : (meta.remountOnQuery ? fullPath : path)`
+- 视图若依赖 query，必须**自己 watch**（`DemosView` / `ForumListView` / `AdminView` 已补）；
+  且自写 query 的页面（如 `DemosView`）其应用函数**必须幂等**，否则自家写入会被当成新导航再触发一次。
+- 例外：`/upload` 标了 `meta.remountOnQuery`（它的身份就是 `?slug=`/`?task=`，换参数=换对象）。
+- `scrollBehavior` 同步改为：同 path 只改 query → 返回 `false`（不滚动）。
+
+## 27. v2 全站回归体检后的两处补齐（2026-09-02）
+
+### 27.1 `TaskSummary.prompt_excerpt`
+
+题目实体**不存提示词**（题面在它挂的作品上）。而"成题"自动建的题目只有标题、`description` 为空 →
+列表页读者无从判断这道题让你做什么。
+
+- `GET /tasks` 每项新增 `prompt_excerpt: str`：取该题下**第一件有提示词的已上架作品**，截 160 字。
+- **一次批量查询**覆盖整页（`WHERE task_id IN (...)`），不按任务循环 —— N+1 是本项目反复踩过的坑。
+- 前端显示优先级：`description`（作者写的）→ 否则显示 `prompt_excerpt` 并加「题面」标记（不冒充作者描述）。
+
+### 27.2 探索页显示口径必须等于排序口径
+
+`/explore` 的模型排序已改为**收缩社区分**（§25.1），但格子仍显示原始 `RATE 5.0` →
+出现"1 件作品 5.0 排在 13 件 4.8 后面"的**页面自相矛盾**。现改为显示 `SCORE 4.66` + 票数，
+原始均分放进 `title` 悬浮（要看得懂差异，不必并列两个大数字）。
+
+> 通则：**任何"按 X 排序"的列表，必须显示 X**。显示另一个数就是在制造疑问。
+
+### 27.3 全站回归体检（自动化，非肉眼）
+
+14 个页面 × 6 项检查：内部链接是否命中路由表 / 横向溢出 / 破图 / 裸 `.hint`（>13px）/
+未归一过渡时长 / 无可访问名的按钮。结果：
+
+```
+130 个内部链接 → 0 个不匹配路由
+14 页 → 0 横向溢出（桌面 1440 与手机 390 各测）
+0 破图 · 0 裸 .hint · 0 未归一过渡 · 0 无名称按钮
+```
+
+体检脚本从 `src/router/index.ts` **读真实路由表**做匹配，而不是凭印象列合法路径 ——
+上一轮我自己埋的 `/admin/stats` 死链就是"凭印象"造成的。
+
+## 28. v2 Demo 页第 3 期：`/peek` 紧凑摘要（侧滑预览）
+
+```
+GET /api/v1/peek/{kind}/{ident}      kind ∈ model | task | demo   （匿名可读）
+```
+
+**为什么新开一个端点而不是复用详情接口**：`/models/{slug}` 带 12 件最近作品 + 任务 + 类型/玩法分布 + 先验；
+`/tasks/{slug}` 带整张 Benchmark 对比表；`/demos/{slug}` 带时间线与标签全集。
+抽屉只需要"这是什么、多强、三件代表作" —— 让前端拉三种重载荷再各写一套取数与降级，是浪费也是重复实现。
+
+| 字段 | 说明 |
+|---|---|
+`kind/slug/name/description` | 三种实体共用的最小身份 |
+`full_path` | 服务端给跳转路径，前端不自己拼 URL（避免路径规则两处漂移） |
+`score/votes/sample_level` | model：与 §25.1 **同一口径**（同一函数算，不另写一套） |
+`demo_count/model_count` | task：答过这道题的作品数与模型数 |
+`is_prompt_excerpt` | task：`description` 为空时回落题面摘录，**必须显式标注**，不冒充作者描述 |
+`demos[]` | 最多 3 件代表作（slug/title/rating/cover），按评分排序 |
+`models[]` | demo：该作品的模型（**过滤退役实体**，与全站口径一致） |
+
+错误口径：未知 `kind` → **422**（不猜）；实体不存在 → **404**。
+
+**astra 橱窗**：白名单是 GET + 前缀制且默认拒绝，`/peek` 未列入 → 在 astra 下自动 404，无需额外 DENY 规则。
+
+### 前端约定
+
+- 详情页模型署名与「继续逛」出口用 **◱ 图标**表示"就地预览"，`→` 表示"直接导航" —— 两种动作必须有不同视觉，否则用户无法预期后果。
+- 抽屉内给两条出路：**在本页打开**（真的导航）与 **新标签 ↗**（保住当前作品）。
+- 打开时焦点移入抽屉、`aria-modal`、Esc 与遮罩点击关闭；动效遵守 §动效规范（150ms ease-out、无淡入面板）。
+
+### 实测（CDP 断言 11/11）
+
+```
+署名渲染为 BUTTON ✓   抽屉打开 ✓   URL 未变（没离开本页）✓
+本页内容仍在 ✓        社区分+票数呈现 ✓   代表作列出 ✓   焦点入抽屉 + aria-modal ✓
+Esc 关闭 ✓   遮罩关闭 ✓   ◱ 打开预览 ✓   「在本页打开」真的导航且关抽屉 ✓
+```
+
+## 29. v2 挂题链路打通（第 6 条）+ 两处修复
+
+### 29.1 `GET /tasks/suggest` 现在返回可读字段
+
+```jsonc
+[{ "task_id": 1, "slug": "tank-brief", "title": "硬表面科幻坦克试验",
+   "category": null, "demo_count": 6, "score": 0.39 }]
+```
+
+原实现只回 `{task_id, score}` —— **前端拿到 ID 也无法渲染**，这是它"建好了却长期没人调用"的直接原因。
+分层纪律保持不变：`matching_service.suggest_task_for()` 只出算法结果（id + 余弦分，将来换 LLM 只替换这一处），
+`task_service.suggest_for_demo()` 负责补齐可读字段并**过滤非 active 题目**（未确认的题不该出现在挂题建议里）。
+
+### 29.2 上传页挂题入口（第 3 步）
+
+- 唯一状态源 `pickedTask`：从题目页带 `?task=` 进来、或在上传页主动选，都写进同一个状态；
+  「不挑战这题了」清空它。提交时 `task=<slug>`。
+- 填了标题/描述/提示词就**自动出建议**（防抖 320ms，≥8 字触发），也提供关键词手搜与"都不是，我自己找"。
+- 文案明确 **挂题是申请**：走 `task_match` 候选，管理员批准后才进同题对比（不是直接挂上）。
+- 无匹配时给出口（不挂题也能提交 / 新标签看题目页），且**不会把作者锁死**。
+
+### 29.3 修复：写路径的索引失效从未生效（真 bug）
+
+`bump_task_index()` 原实现只 `_idx["version"] += 1`，而调用方传给 `_ensure_index` 的
+正是同一个 `_idx["version"]`（`index_version()` 读它）⇒ 两边永远相等 ⇒ `fresh` 恒真 ⇒
+**只有 300s TTL 会重建索引**，新建/改过的题目最长 5 分钟搜不到（而注释写着"由写路径 bump 主动失效"）。
+
+改为：数据代数 `_data_gen` 与"索引构建于哪一代" `_idx["version"]` **分开记**，
+`bump_task_index()` 同时把 `_idx["built_at"] = 0` 强制下次读取重建。
+回归测试：`test_write_path_actually_invalidates_index`（建索引 → 写新题 → 立刻能搜到）。
+
+### 29.4 修复：上传向导第 4 步渲染崩溃（真 bug，功能不可用级）
+
+`stepProblems` 只定义了键 `1/2/3`，模板与 watcher 无条件读 `stepProblems[step].length`
+⇒ 进入第 4 步（核对发布）时 `undefined.length` 抛 `TypeError`，**渲染函数崩溃、整页坏掉**，
+表现为"点下一步没反应"，且**上传无法提交**。
+
+修复：补齐键 `4`（并把"还差什么"汇总到核对页），模板与 watcher 全部改 `?.` + `?? 0` 兜底 ——
+**一个字典少一个键不该有能力崩掉整页**。
+
+## 30. v2 题目链条视图（第 3 条，方案 A）
+
+`GET /api/v1/tasks/{slug}` 新增 `chain` 载荷：
+
+```jsonc
+"chain": {
+  "brief": "做一个复杂的硬表面结构的3d科幻坦克…",
+  "brief_source": "prompt",          // description=作者写的题面 | prompt=回落基准提示词
+  "prompt_id": 12,                    // 基准提示词（出现次数最多的那个）
+  "prompt_variants": 2,               // 本题下有多少种不同提示词
+  "no_prompt_count": 1,               // 多少件作品没填提示词
+  "rows": [{
+    "slug": "…", "title": "…",
+    "models": [{ id, slug, name, vendor, resolution }],   // 已过滤退役实体
+    "prompt_id": 12,
+    "same_prompt": true | false | null,   // null = 未填提示词，一致性**未知**
+    "prompt_excerpt": "…(120 字)",
+    "rounds": 4, "minutes": null,         // 生成过程；缺数据是 null，不用 0 冒充
+    "rating_avg": 4.8, "rating_count": 5
+  }]
+}
+```
+
+### 三条设计纪律
+
+1. **题面来源必须诚实**：作者写了 `description` 就用它并标「题面」；没写才回落基准提示词，
+   并标「题面（取自作品提示词）」—— 不冒充作者描述。
+2. **一致性是 benchmark 的有效性前提，必须显式化**：同一题下若作品用的是不同提示词，
+   那就不是严格对比。`same_prompt` 三态（true/false/**null**）—— 未填提示词是"未知"，
+   既不算一致也不算不一致；有 false/unknown 时页头给出红字警示。
+3. **基准提示词 = 出现次数最多的 `prompt_id`**（并列取更早的），不是"第一件的"，
+   否则排序变化会让"谁算一致"随机漂移。
+
+### 前端
+
+题目页 `全部作品` 瀑布被 **`逐件证据` 表**取代：一行一件作品，列 = 链条环节
+（模型 → 题面 → 生成过程 → 作品 → 评分），可排序（评分/轮数/标题）、可筛（只看同一题面）。
+读表的动作本身就是读链条。
+
+### 一处措辞修正（看图发现）
+
+`按模型对比` 每行的"最好作品"实测都指向同一件 5 模型联合作品 —— 逻辑没错（它是含该模型的最高分），
+但"最好作品"会被读成"这个模型自己最好的答案"。改为 **「含此模型的最高分：」**。
+

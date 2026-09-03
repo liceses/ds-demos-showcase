@@ -32,4 +32,16 @@ export default defineConfig({
       },
     },
   },
+  // preview：让 `vite preview` 也能跑构建产物（否则 /api 404，
+  // 发布前就无法用 dist 验证 —— 而 dev server 跑的源码与线上产物不是同一份东西）
+  preview: {
+    host: true,
+    port: 5199,
+    allowedHosts: ['astrademos.top', '.astrademos.top'],
+    proxy: {
+      '/api': { target: API_TARGET, changeOrigin: false },
+      '/preview': { target: API_TARGET, changeOrigin: false },
+      '/media': { target: API_TARGET, changeOrigin: false },
+    },
+  },
 })

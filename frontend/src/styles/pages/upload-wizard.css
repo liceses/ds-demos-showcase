@@ -344,4 +344,21 @@
     transform: none;
   }
 }
-
+/* P2-8 处理中语汇（03 §12.5 v3.3）：上传中按钮 = 底边蚂蚁线（单实例焦点场景，动画版 march 合规；
+   reduce 下走全局 0.01ms 闸自动静止） */
+.btn.is-uploading {
+  position: relative;
+}
+.btn.is-uploading::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 7px;
+  height: 4px;
+  animation: b-march 0.6s linear infinite;
+  background-image: repeating-linear-gradient(90deg, var(--on-accent, #000) 0 8px, transparent 8px 16px);
+  background-size: 32px 4px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+}

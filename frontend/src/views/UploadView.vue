@@ -1348,6 +1348,7 @@ async function submit() {
             <button
               v-else
               class="btn btn-primary btn-lg"
+              :class="{ 'is-uploading': submitting }"
               type="submit"
               :disabled="submitting || !readyToSubmit"
               :title="readyToSubmit ? '' : t('upload.needMust', '必答项还没齐：' + checklist.filter((c) => c.must && !c.done).map((c) => c.label).join('、'))"

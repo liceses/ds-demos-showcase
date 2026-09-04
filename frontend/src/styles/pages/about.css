@@ -447,15 +447,17 @@
   box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
 }
 .live-dot {
-  width: 10px;
-  height: 10px;
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  animation: live-pulse 1.2s infinite;
-}
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.7); }
+  display: inline-block;
+  width: 18px;
+  height: 4px;
+  border: 0;
+  /* P2-8 处理中语汇（03 §12.5 v3.3）：live 脉冲（opacity 动画，违反法则 02）废止 → 蚂蚁线条
+     （b-march 全局关键帧；单实例焦点场景，运行实例 ≤1 红线内） */
+  animation: b-march 0.6s linear infinite;
+  background-image: repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px);
+  background-size: 32px 4px;
+  background-repeat: repeat-x;
+  background-position: bottom;
 }
 .stat-card.stat-live {
   border-top: 8px solid var(--red);

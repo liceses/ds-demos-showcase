@@ -67,7 +67,14 @@ router.afterEach((to) => {
   api.reportVisit()
 })
 
-// 实时在线心跳：每 30s 发一次（模块级，单页一次）
-setInterval(() => api.reportHeartbeat(), 30_000)
+// 实时在线心跳：每 30s 发一次（模块级，单页一次）。
+// 后台标签页停发（visibilityState 判定）：休眠窗口不打点，避免无意义请求与失真在线数（P0-3）；
+// 回到前台立即补一拍——上次心跳可能已是 30s+ 之前，消除休眠间隙。
+setInterval(() => {
+  if (document.visibilityState === 'visible') api.reportHeartbeat()
+}, 30_000)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') api.reportHeartbeat()
+})
 
 export default router

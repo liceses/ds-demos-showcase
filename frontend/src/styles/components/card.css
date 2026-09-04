@@ -7,16 +7,16 @@
 }
 .card-default {
   box-shadow: var(--shadow-teal);
-  transform: rotate(1deg);
+  /* R8：静止零倾斜（原 rotate(1deg) 清零） */
 }
 .card-coral {
   box-shadow: var(--shadow-red);
-  transform: rotate(-1deg);
+  /* R8：静止零倾斜（原 rotate(-1deg) 清零） */
 }
 .card-sunny {
   background: var(--wash-yellow);
   box-shadow: var(--shadow-lg);
-  transform: rotate(2deg);
+  /* R8：静止零倾斜（原 rotate(2deg) 清零） */
 }
 .card-mint {
   background: var(--wash-mint);

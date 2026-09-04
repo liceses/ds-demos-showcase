@@ -33,7 +33,7 @@
   padding: 4px 8px;
   border: 3px solid var(--ink);
   background: var(--paper);
-  transform: rotate(-2deg);
+  /* R8：eyebrow 静止零倾斜（原 rotate(-2deg) 清零） */
   box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
 }
 .ann-card-demo .ann-stamp,
@@ -191,7 +191,7 @@
   background: var(--red);
   color: var(--on-accent, #000);
   box-shadow: var(--shadow-lg);
-  transform: rotate(1deg);
+  /* R8：静止零倾斜（原 rotate(1deg) 清零） */
 }
 
 /* 修正底部公告块内深色卡片的文字颜色（覆盖 .ann-item 默认黑字） */
@@ -282,7 +282,7 @@
 }
 .hero-ann-link:hover {
   background: var(--yellow);
-  transform: rotate(-1deg);
+  /* R8：hover 不倾斜（原 rotate(-1deg) 清零，色变 0ms 硬切承担反馈） */
 }
 
 /* 封面预览（编辑模式） */

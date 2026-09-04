@@ -63,13 +63,13 @@
   background: var(--red);
   color: var(--on-accent, #000);
   box-shadow: var(--shadow-lg);
-  transform: rotate(-1deg);
+  /* R8 v3.2：静止零倾斜（原 rotate(-1deg) 清零；微倾仅 :active 叠 --tilt-press） */
 }
 .btn-secondary {
   background: var(--wash-teal);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
-  transform: rotate(1deg);
+  /* R8：静止零倾斜（原 rotate(1deg) 清零） */
 }
 .btn-outline {
   background: var(--wash-yellow);
@@ -85,7 +85,7 @@
   background: #b3001b;
   color: white;
   box-shadow: var(--shadow-lg);
-  transform: rotate(1deg);
+  /* R8：静止零倾斜（原 rotate(1deg) 清零） */
 }
 .btn-lg {
   padding: 16px 30px;

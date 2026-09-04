@@ -65,7 +65,7 @@
   background: var(--yellow);
   border: 4px solid var(--ink);
   box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
-  transform: rotate(-1deg);
+    /* R8：面板文字承载静止零倾斜（原 rotate(-1deg) 清零） */
   padding: 22px 18px 4px;
   margin: 6px 6px 14px;
 }
@@ -168,11 +168,11 @@
   color: var(--ink);
   cursor: pointer;
   text-align: left;
-  transform: rotate(-0.5deg);
+    /* R8：静止零倾斜（原 rotate(-0.5deg) 清零） */
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .tag-drawer-bar:hover {
-  transform: translate(-1px, -1px) rotate(-0.5deg);
+  transform: translate(-1px, -1px); /* R6：hover 抬起不倾斜（原 rotate(-0.5deg) 清零） */
   box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
 }
 .tag-drawer-stamp {
@@ -242,7 +242,7 @@
   background: var(--yellow);
   border: 4px solid var(--ink);
   box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
-  transform: rotate(1deg);
+    /* R8：面板静止零倾斜（原 rotate(1deg) 清零） */
   padding: 14px 16px 4px;
   align-self: stretch;
   max-height: calc(100vh - 160px);

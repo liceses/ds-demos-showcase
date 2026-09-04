@@ -60,6 +60,6 @@
   border-color: var(--on-accent, #000);
   color: var(--on-accent, #000); /* 选中/悬停 tab：荧光底黑字（t16 追加轮） */
   background: var(--yellow);
-  transform: rotate(-1deg);
+  /* R8：导航态静止零倾斜（原 rotate(-1deg) 清零） */
 }
 

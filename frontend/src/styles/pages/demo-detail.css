@@ -1,9 +1,10 @@
-/* ---------- v2 Demo 详情页重设计 第 1 期：作品本体（sticky）+ 事实卡 ---------- */
+/* ---------- v2 Demo 详情页重设计 第 1 期：作品本体（sticky）+ 事实卡 ----------
+   t21 外挂形态改版（用户生产实测）：主列恒全宽——
+   ① 预览与描述卡同宽（此前 grid 分列 830 vs 描述卡 1280 不同宽）
+   ② 信息卡外挂：fixed 停靠视口右缘，展开/收起零主列位移（原 grid 列宽切换 = 382px 推挤/CLS 源）
+   ③ 信息卡浮于右缘留白区，与版心内描述卡彻底分离（强投影 + 不在流内） */
 .dv-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.85fr);
-  gap: 22px;
-  align-items: start;
+  position: relative;
   margin-bottom: 8px;
 }
 .dv-stage { position: sticky; top: 78px; min-width: 0; }
@@ -12,13 +13,21 @@
 .dv-standin h2 { margin-bottom: 10px; }
 .dv-standin p { margin-bottom: 18px; }
 .dv-facts {
+  position: fixed; /* 外挂：停靠视口右缘留白带，不占版心栅格 */
+  top: 86px;
+  right: 12px;
+  z-index: 60; /* drawer 段位（--z-nav 40 之上、modal/toast 之下） */
+  width: min(380px, 27vw);
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 14px 16px 16px;
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
-  box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
+  box-shadow: 10px 10px 0 0 var(--ink); /* 浮层强投影：与页面内容的物理分离 */
 }
 /* 分组：身份 / 热度 / 评分 / 词表 / 动作 / 档案摘要 —— 用分隔线代替大间距，
    窄栏里间距会失控，线才是稳定的阅读节奏 */
@@ -210,7 +219,8 @@
 }
 .dv-facts .rating-dist-col { flex: 1; }
 .dv-facts .rating-dist-bar { width: 100%; max-width: 24px; }
-/* 信息卡可收起：预览是主角的时候让它整宽，右侧只留一条"回得来"的轨 */
+/* 信息卡可收起：预览是主角的时候它整宽，右侧只留一条"回得来"的轨。
+   t21：rail 同改 fixed 外挂（贴视口右缘），主列零位移；收起入口常在 */
 .dv-facts-head { display: flex; align-items: center; gap: 10px; }
 .dv-facts-head .eyebrow { flex: 1; }
 .dv-collapse {
@@ -225,8 +235,11 @@
   cursor: pointer;
 }
 .dv-collapse:hover { background: var(--yellow); color: var(--on-accent, #000); }
-.dv-shell.facts-collapsed { grid-template-columns: minmax(0, 1fr) 46px; }
 .dv-rail {
+  position: fixed;
+  top: 86px;
+  right: 12px;
+  z-index: 60;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -238,9 +251,7 @@
   border: var(--border-w) solid var(--ink);
   box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
   cursor: pointer;
-  position: sticky;
-  top: 78px;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 110px);
 }
 .dv-rail:hover { background: var(--yellow); }
 .dv-rail-label {
@@ -269,7 +280,6 @@
 }
 @media (max-width: 1024px) {
   /* 窄屏收起后仍要能恢复（藏掉入口＝自造的死角），轨改成横向按钮 */
-  .dv-shell.facts-collapsed { grid-template-columns: minmax(0, 1fr); }
   .dv-rail {
     position: static;
     flex-direction: row;
@@ -284,7 +294,15 @@
 }
 
 @media (max-width: 1024px) {
-  .dv-shell { grid-template-columns: minmax(0, 1fr); }
+  /* 窄屏：外挂形态退回文档流（fixed 停靠会盖满小屏）——标题/信息卡先于预览（order -1 既有语义） */
+  .dv-shell { display: flex; flex-direction: column; }
+  .dv-facts {
+    position: static;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+    box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
+  }
   /* 窄屏：预览先走 sticky 反而挡住正文，退回普通流 */
   .dv-stage { position: static; }
   .dv-stage iframe { max-height: 62vh; }

@@ -870,7 +870,11 @@ export const mockApi = {
 
   async listTagKeys(): Promise<TagKeyInfo[]> {
     await delay()
-    return clone(tagKeys)
+    // M3-2/M3-3 实体总表/详情按 value.id 定位（真实 TagKeyOut 自带 id）——mock 出口补确定性 id（1000+ 按序，会话内稳定）
+    const out = clone(tagKeys)
+    let n = 1000
+    for (const k of out) for (const v of k.values) if (v.id == null) v.id = n++
+    return out
   },
   async createTagKey(payload: { key: string; mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
     await delay(200)
@@ -1541,6 +1545,24 @@ export const mockApi = {
     const byKind: Record<string, number> = {}
     for (const s of mockSuggestions) if (s.status === 'pending') byKind[s.kind] = (byKind[s.kind] || 0) + 1
     return { items: clone(items), pending_by_kind: byKind, thresholds: { auto_accept: 0.99, review: 0.6 } }
+  },
+  // M3-3 直改权演示：Model 状态跃迁/Task 题面直改（mock 内存态，与真实端点同形状）
+  async setModelStatus(ident: string, payload: { status: string; reason?: string }): Promise<{ id: number; slug: string; status: string }> {
+    await delay(200)
+    const m = mockModels.find((x) => x.slug === ident || String(x.id) === ident)
+    if (!m) throw new Error('模型实体不存在')
+    m.status = payload.status
+    return { id: m.id, slug: m.slug, status: m.status }
+  },
+  async updateTask(ident: string, payload: { title?: string; description?: string; category?: string | null; status?: string }): Promise<{ id: number; slug: string; title: string; status: string }> {
+    await delay(200)
+    const k = mockTasks.find((x) => x.slug === ident || String(x.id) === ident)
+    if (!k) throw new Error('题目不存在')
+    if (payload.title) k.title = payload.title
+    if (payload.description != null) k.description = payload.description
+    if (payload.category !== undefined) k.category = payload.category
+    if (payload.status) k.status = payload.status
+    return { id: k.id, slug: k.slug, title: k.title, status: k.status }
   },
   async reviewSuggestion(id: number, action: 'approve' | 'reject'): Promise<SuggestionItem> {
     await delay(200)

@@ -1,25 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
-import AdminForumSection from '../components/admin/AdminForumSection.vue'
-import AdminAnnouncementsSection from '../components/admin/AdminAnnouncementsSection.vue'
-import AdminUsersSection from '../components/admin/AdminUsersSection.vue'
-import AdminSettingsSection from '../components/admin/AdminSettingsSection.vue'
-import AdminReviewSection from '../components/admin/AdminReviewSection.vue'
-import AdminDemosSection from '../components/admin/AdminDemosSection.vue'
-import AdminTagsSection from '../components/admin/AdminTagsSection.vue'
-import AdminClustersSection from '../components/admin/AdminClustersSection.vue'
-import AdminInboxSection from '../components/admin/AdminInboxSection.vue'
-import AdminAttributionSection from '../components/admin/AdminAttributionSection.vue'
-import AdminRefineSection from '../components/admin/AdminRefineSection.vue'
-import AdminInspectionSection from '../components/admin/AdminInspectionSection.vue'
-import AdminStatsSection from '../components/admin/AdminStatsSection.vue'
-import AdminAuditSection from '../components/admin/AdminAuditSection.vue'
-import AdminMergeSection from '../components/admin/AdminMergeSection.vue'
-import AdminAliasesSection from '../components/admin/AdminAliasesSection.vue'
 import AdminConsoleSection from '../components/admin/AdminConsoleSection.vue'
-import RecognitionAdminView from './RecognitionAdminView.vue'
+// 体检指标已并入概览台（AdminConsoleSection 静态引用 AdminStatsSection）——stats 直达 tab 复用同一模块，走静态避免 dynamic/static 双导入警告
+import AdminStatsSection from '../components/admin/AdminStatsSection.vue'
 import { useQueues, type QueueKey } from '../composables/adminQueues'
 import { t } from '../i18n'
 import type { AdminStats } from '../api/types'
@@ -42,6 +27,30 @@ type TabKey =
   | 'console' | 'review' | 'inbox' | 'clusters' | 'refine' | 'inspection' | 'attribution'
   | 'merge' | 'aliases' | 'demos' | 'announcements' | 'tags' | 'tagreq'
   | 'forum' | 'users' | 'stats' | 'audit' | 'settings' | 'sponsors'
+
+// 面板懒加载（04 §5.2）：除概览台外全部惰性组件表——后台按 tab 按需拉取，
+// 概览台是默认落地页，随壳加载避免二次瀑布；相邻 tab 的 prefetch（requestIdleCallback）留给 P3。
+const sections: Record<TabKey, Component> = {
+  console: AdminConsoleSection,
+  review: defineAsyncComponent(() => import('../components/admin/AdminReviewSection.vue')),
+  inbox: defineAsyncComponent(() => import('../components/admin/AdminInboxSection.vue')),
+  clusters: defineAsyncComponent(() => import('../components/admin/AdminClustersSection.vue')),
+  refine: defineAsyncComponent(() => import('../components/admin/AdminRefineSection.vue')),
+  inspection: defineAsyncComponent(() => import('../components/admin/AdminInspectionSection.vue')),
+  attribution: defineAsyncComponent(() => import('../components/admin/AdminAttributionSection.vue')),
+  merge: defineAsyncComponent(() => import('../components/admin/AdminMergeSection.vue')),
+  aliases: defineAsyncComponent(() => import('../components/admin/AdminAliasesSection.vue')),
+  demos: defineAsyncComponent(() => import('../components/admin/AdminDemosSection.vue')),
+  announcements: defineAsyncComponent(() => import('../components/admin/AdminAnnouncementsSection.vue')),
+  tags: defineAsyncComponent(() => import('../components/admin/AdminTagsSection.vue')),
+  tagreq: defineAsyncComponent(() => import('../components/admin/AdminTagsSection.vue')),
+  forum: defineAsyncComponent(() => import('../components/admin/AdminForumSection.vue')),
+  users: defineAsyncComponent(() => import('../components/admin/AdminUsersSection.vue')),
+  stats: AdminStatsSection,
+  audit: defineAsyncComponent(() => import('../components/admin/AdminAuditSection.vue')),
+  settings: defineAsyncComponent(() => import('../components/admin/AdminSettingsSection.vue')),
+  sponsors: defineAsyncComponent(() => import('./RecognitionAdminView.vue')),
+}
 
 interface AdminTab {
   key: TabKey | 'sponsors'
@@ -217,82 +226,13 @@ onMounted(() => {
 
       <Transition name="tab-pane" mode="out-in">
         <div :key="tab" class="tab-pane">
-          <template v-if="tab === 'console'">
-            <AdminConsoleSection @go="(k: string) => selectTab(k as TabKey)" />
-          </template>
-
-          <template v-else-if="tab === 'review'">
-            <AdminReviewSection />
-          </template>
-
-          <template v-else-if="tab === 'demos'">
-            <AdminDemosSection />
-          </template>
-
-          <template v-else-if="tab === 'tags'">
-            <AdminTagsSection only="keys" />
-          </template>
-
-          <template v-else-if="tab === 'tagreq'">
-            <AdminTagsSection only="review" />
-          </template>
-
-          <template v-else-if="tab === 'clusters'">
-            <AdminClustersSection />
-          </template>
-
-          <template v-else-if="tab === 'inbox'">
-            <AdminInboxSection />
-          </template>
-
-          <template v-else-if="tab === 'attribution'">
-            <AdminAttributionSection />
-          </template>
-
-          <template v-else-if="tab === 'refine'">
-            <AdminRefineSection />
-          </template>
-
-          <template v-else-if="tab === 'inspection'">
-            <AdminInspectionSection />
-          </template>
-
-          <template v-else-if="tab === 'stats'">
-            <AdminStatsSection />
-          </template>
-
-          <template v-else-if="tab === 'audit'">
-            <AdminAuditSection />
-          </template>
-
-          <template v-else-if="tab === 'merge'">
-            <AdminMergeSection />
-          </template>
-
-          <template v-else-if="tab === 'aliases'">
-            <AdminAliasesSection />
-          </template>
-
-          <template v-else-if="tab === 'forum'">
-            <AdminForumSection />
-          </template>
-
-          <template v-else-if="tab === 'users'">
-            <AdminUsersSection />
-          </template>
-
-          <template v-else-if="tab === 'announcements'">
-            <AdminAnnouncementsSection />
-          </template>
-
-          <template v-else-if="tab === 'settings'">
-            <AdminSettingsSection />
-          </template>
-
-          <template v-else-if="tab === 'sponsors'">
-            <RecognitionAdminView embedded />
-          </template>
-
+          <!-- 概览台随壳加载（默认落地页），@go 是它独有的事件 -->
+          <AdminConsoleSection v-if="tab === 'console'" @go="(k: string) => selectTab(k as TabKey)" />
+          <!-- 词表双入口共用 AdminTagsSection（惰性），only 区分键表 / 申请 -->
+          <component :is="sections.tags" v-else-if="tab === 'tags'" only="keys" />
+          <component :is="sections.tagreq" v-else-if="tab === 'tagreq'" only="review" />
+          <component :is="sections.sponsors" v-else-if="tab === 'sponsors'" embedded />
+          <component v-else :is="sections[tab]" />
         </div>
       </Transition>
     </template>

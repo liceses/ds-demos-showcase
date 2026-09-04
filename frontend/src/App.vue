@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { api } from './api'
@@ -7,6 +7,7 @@ import { isMock } from './api'
 import { lang, setLang, t } from './i18n'
 import { adminExempt, applyServerFunMode, funEffective, titleBase } from './utils/funMode'
 import { applyThemePreviewFromUrl, getEffectiveTheme, initTheme, setTheme } from './utils/theme'
+import { useQueues } from './composables/adminQueues'
 import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
 import ForumHeader from './components/ForumHeader.vue'
@@ -49,11 +50,46 @@ onMounted(() => {
 const menuItems = [
   { to: '/', key: 'home', label: '首页' },
   { to: '/demos', key: 'demos', label: '作品库' },
-  { to: '/leaderboard', key: 'leaderboard', label: '排行榜' },
   { to: '/tags', key: 'explore', label: '探索' },
-  { to: '/upload', key: 'upload', label: '上传 Demo' },
+  { to: '/leaderboard', key: 'leaderboard', label: '排行榜' },
+  { to: '/forum', key: 'forum', label: '论坛' },
   { to: '/about', key: 'about', label: '关于本站' },
 ]
+
+// 用户菜单（03 §2.4）：admin 从顶栏移入下拉，「管理工作台」徽章 = 待办合计，
+// 数字走 adminQueues 单一口径（useQueues().totalMust，与后台侧栏/概览台同源，不自算）
+const { totalMust: adminQueueTotal, refresh: refreshQueues } = useQueues()
+const userMenuOpen = ref(false)
+const userMenuRoot = ref<HTMLElement | null>(null)
+function toggleUserMenu() {
+  userMenuOpen.value = !userMenuOpen.value
+}
+function onDocClick(e: MouseEvent) {
+  if (userMenuOpen.value && userMenuRoot.value && !userMenuRoot.value.contains(e.target as Node)) {
+    userMenuOpen.value = false
+  }
+}
+watch(
+  () => route.fullPath,
+  () => {
+    userMenuOpen.value = false
+  },
+)
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocClick)
+})
+// 管理员：进站即拉一次队列计数（badge 合计的数据源；去重逻辑在 composable 内；
+// 用 watch 而非 onMounted——首屏时 fetchMe 可能尚未返回，身份就绪后再拉）
+watch(
+  () => auth.user,
+  (u) => {
+    if (u?.role === 'admin') void refreshQueues().catch(() => undefined)
+  },
+  { immediate: true },
+)
 
 // 语言切换：ref 响应式驱动全站（含 keepAlive 页）；<html lang> 同步
 const switchLang = () => setLang(lang.value === 'en' ? 'zh' : 'en')
@@ -99,10 +135,10 @@ onMounted(() => {
       <nav class="topnav topnav-desktop">
         <RouterLink class="nav-link" to="/">{{ t('app.nav.home', '首页') }}</RouterLink>
         <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
-        <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
         <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
-        <RouterLink class="nav-link" to="/upload">{{ t('app.nav.upload', '上传 Demo') }}</RouterLink>
-        <RouterLink v-if="auth.isAdmin()" class="nav-link" to="/admin">{{ t('app.nav.admin', '管理后台') }}</RouterLink>
+        <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
+        <RouterLink class="nav-link" to="/forum">{{ t('app.nav.forum', '论坛') }}</RouterLink>
+        <RouterLink class="nav-link" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
       </nav>
 
       <div class="topnav topnav-desktop">
@@ -114,13 +150,31 @@ onMounted(() => {
         </button>
         <template v-if="auth.isLoggedIn()">
           <NotificationBell />
-          <RouterLink class="nav-link" :to="`/user/${username}`">{{ username }}</RouterLink>
-          <button class="btn btn-sm btn-dark" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
+          <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径 -->
+          <div ref="userMenuRoot" class="user-menu">
+            <button class="user-menu-trigger" type="button" :aria-expanded="userMenuOpen" @click="toggleUserMenu">
+              {{ username }}
+              <span v-if="auth.isAdmin() && adminQueueTotal > 0" class="user-menu-dot" aria-hidden="true"></span>
+              <span class="user-menu-caret" aria-hidden="true">▾</span>
+            </button>
+            <Transition name="user-menu-pop">
+              <div v-if="userMenuOpen" class="user-menu-panel">
+                <RouterLink class="user-menu-item" :to="`/user/${username}`">{{ t('app.menu.profile', '个人主页') }}</RouterLink>
+                <RouterLink v-if="auth.isAdmin()" class="user-menu-item" to="/admin">
+                  {{ t('app.nav.workbench', '管理工作台') }}
+                  <span v-if="adminQueueTotal > 0" class="user-menu-badge">{{ adminQueueTotal }}</span>
+                </RouterLink>
+                <button class="user-menu-item user-menu-quit" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
+              </div>
+            </Transition>
+          </div>
         </template>
         <template v-else>
           <RouterLink class="nav-link" to="/login">{{ t('app.nav.login', '登录') }}</RouterLink>
-          <RouterLink class="btn btn-sm btn-primary" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
+          <RouterLink class="nav-link" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
         </template>
+        <!-- 上传 Demo 升为主 CTA（03 §2.4：单一主动作，不与信息项竞争；URL /upload 不变） -->
+        <RouterLink class="btn btn-sm btn-primary topnav-cta" to="/upload">{{ t('app.nav.upload', '上传 Demo') }}</RouterLink>
       </div>
 
       <button
@@ -153,11 +207,14 @@ onMounted(() => {
               {{ t('app.nav.' + m.key, m.label) }}
               <span class="mobile-drawer-arrow">→</span>
             </RouterLink>
-            <RouterLink v-if="auth.isAdmin()" class="mobile-drawer-link" :to="'/admin'">
-              {{ t('app.nav.admin', '管理后台') }} <span class="mobile-drawer-arrow">→</span>
-            </RouterLink>
           </nav>
           <div class="mobile-drawer-foot">
+            <!-- 上传 CTA：抽屉内也保持主按钮地位（03 §2.4 同步移动端） -->
+            <RouterLink class="btn btn-primary btn-block" to="/upload">{{ t('app.nav.upload', '上传 Demo') }} →</RouterLink>
+            <RouterLink v-if="auth.isAdmin()" class="btn btn-outline btn-block" to="/admin">
+              {{ t('app.nav.workbench', '管理工作台') }}
+              <span v-if="adminQueueTotal > 0" class="user-menu-badge">{{ adminQueueTotal }}</span>
+            </RouterLink>
             <button class="btn btn-outline btn-block" type="button" :title="themeTitle" @click="cycleTheme">
               {{ themeNow === 'ink' ? t('app.theme.toPaper', '换纸白') : t('app.theme.toInk', '换墨黑') }}
             </button>
@@ -212,3 +269,98 @@ onMounted(() => {
     <ToastHost />
   </div>
 </template>
+
+<style scoped>
+/* 用户菜单（M1-1，03 §2.4）：样式组件级（style.css 冻结令生效中，令牌经 var() 引用全局既有值并带回落） */
+.user-menu {
+  position: relative;
+}
+.user-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  color: var(--ink, #000);
+}
+.user-menu-caret {
+  font-size: 10px;
+}
+/* 管理员有待办时的红点提示（点击展开看合计） */
+.user-menu-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--red, #ff6b6b);
+  border: 2px solid var(--ink, #000);
+}
+.user-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper, #fff);
+  border: var(--border-w, 4px) solid var(--ink, #000);
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+}
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  color: var(--ink, #000);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.user-menu-item:hover {
+  background: var(--paper-deep, #f2eee6);
+}
+.user-menu-quit {
+  border-top: 2px solid var(--ink, #000);
+}
+.user-menu-badge {
+  min-width: 22px;
+  padding: 1px 6px;
+  text-align: center;
+  background: var(--red, #ff6b6b);
+  color: var(--on-accent, #000);
+  border: 2px solid var(--ink, #000);
+  font-size: 12px;
+  font-weight: 900;
+}
+.topnav-cta {
+  margin-left: 2px;
+}
+/* 弹层登场（编排类豁免口径，R7 白名单内） */
+.user-menu-pop-enter-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.user-menu-pop-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.user-menu-pop-leave-active {
+  transition: none;
+}
+.user-menu-pop-leave-to {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .user-menu-pop-enter-active {
+    transition: none;
+  }
+}
+</style>

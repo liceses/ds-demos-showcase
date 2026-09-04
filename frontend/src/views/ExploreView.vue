@@ -132,6 +132,40 @@ onMounted(load)
       </div>
       <EmptyBox v-if="!data.models.items.length && !data.tasks.length" :text="t('explore.emptyAll', '还没有可探索的内容')" />
     </template>
+
+    <!-- M1-C 词表降级：标签词表从导航沉入探索页尾部（/tags/keys URL 保留不动，外链不死） -->
+    <div class="explore-tail">
+      <RouterLink class="explore-tail-link" to="/tags/keys">{{ t('explore.glossary', '标签词表') }} →</RouterLink>
+    </div>
   </section>
   </div>
 </template>
+
+<style scoped>
+/* M1-C 词表入口：styles/ 冻结令——全 scoped；mono 小字+虚线上缘，探索页收尾的低调出口 */
+.explore-tail {
+  margin-top: 30px;
+  padding: 12px 0 2px;
+  border-top: 2px dashed rgba(0, 0, 0, 0.18);
+  display: flex;
+  justify-content: center;
+}
+.explore-tail-link {
+  font-family: var(--font-mono, var(--font-body, monospace));
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft, #555);
+  text-decoration: none;
+  padding: 6px 4px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+@media (hover: hover) {
+  .explore-tail-link:hover {
+    color: var(--ink, #000);
+    background: var(--yellow, #ffd93d);
+  }
+}
+</style>

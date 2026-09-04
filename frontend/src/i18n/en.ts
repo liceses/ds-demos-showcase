@@ -322,6 +322,8 @@ export const en = {
   notFound: {
     sub: 'This page does not exist — it may have been moved or removed.',
     back: 'Back to home',
+    guessTitle: 'Did you mean:',
+    mapTitle: 'Site map',
   },
 
   user: {
@@ -963,6 +965,7 @@ export const en = {
     votesUnit: ' votes',
     labelsTitle: 'Descriptive tags',
     allKeys: 'All tag keys →',
+    glossary: 'Tag glossary',
     catTitle: 'Categories',
     typeTitle: 'Types',
     gameTitle: 'Gameplay',

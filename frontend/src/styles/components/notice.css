@@ -14,7 +14,7 @@
 }
 .notice-error {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
 }
 .notice-success {
   background: var(--teal);

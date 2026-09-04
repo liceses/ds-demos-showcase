@@ -23,7 +23,7 @@
 }
 .tag-chip.red {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
 }
 .tag-chip.teal {
   background: var(--teal);

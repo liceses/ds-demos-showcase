@@ -185,7 +185,7 @@
 /* Q2：模型必答 —— 未答时印章转红，答完回到常态 */
 .tag-drawer-stamp.stamp-must {
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent, #000);
 }
 .tag-drawer-title {
   font-weight: 800;

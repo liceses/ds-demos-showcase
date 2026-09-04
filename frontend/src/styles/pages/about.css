@@ -70,7 +70,7 @@
 }
 .trend-date {
   font-size: 11px;
-  color: #555;
+  color: var(--ink-soft, #555);
 }
 
 /* ---------- 赞助榜 ---------- */
@@ -109,7 +109,7 @@
 .sponsor-row.rank-3 .sponsor-rank { background: var(--mint); color: var(--ink); }
 .sponsor-name { font-weight: 800; }
 .sponsor-amount { margin-left: auto; font-weight: 800; flex-shrink: 0; }
-.sponsor-msg { width: 100%; font-size: 12px; color: #555; }
+.sponsor-msg { width: 100%; font-size: 12px; color: var(--ink-soft, #555); }
 
 /* 致谢榜：不排名，用青色方块代替名次 */
 .sponsor-rank.thanks-rank {
@@ -153,7 +153,7 @@
 .rating-dist-score {
   font-size: 10px;
   font-weight: 700;
-  color: #555;
+  color: var(--ink-soft, #555);
 }
 
 /* 显式提交搜索按钮 */
@@ -221,7 +221,7 @@
   display: inline-flex;
   align-items: center;
   font-size: 12px;
-  color: #666;
+  color: var(--ink-faint, #767676);
   white-space: nowrap;
 }
 .rating-god {
@@ -239,7 +239,7 @@
   display: inline-flex;
   align-items: center;
   font-size: 11px;
-  color: #666;
+  color: var(--ink-faint, #767676);
   white-space: nowrap;
 }
 .rating-anon-hint {
@@ -285,7 +285,7 @@
   overflow: hidden;
 }
 .prompt-text.prompt-empty {
-  color: #999;
+  color: var(--ink-faint, #767676);
   font-family: var(--font-body);
 }
 .prompt-copy {
@@ -438,7 +438,7 @@
   padding: 2px 8px;
   border: 3px solid var(--ink);
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent, #000);
   font-weight: 900;
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -466,6 +466,6 @@
 .live-hint {
   margin-top: 8px;
   font-size: 11px;
-  color: #666;
+  color: var(--ink-faint, #767676);
 }
 

@@ -21,7 +21,7 @@
 }
 .ann-card-manual { background: var(--yellow); }
 .ann-card-auto { background: var(--teal); }
-.ann-card-demo { background: var(--red); color: white; }
+.ann-card-demo { background: var(--red); color: var(--on-accent, #000); }
 .ann-card-update { background: var(--ink); color: var(--paper); }
 .ann-stamp {
   flex-shrink: 0;
@@ -189,7 +189,7 @@
 /* 亮色按钮覆盖：删除用新野兽派高饱和红 */
 .btn-danger {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
   box-shadow: var(--shadow-lg);
   transform: rotate(1deg);
 }
@@ -199,7 +199,7 @@
   color: var(--paper);
 }
 .ann-item.ann-card-demo {
-  color: #fff;
+  color: var(--on-accent, #000);
 }
 .ann-item.ann-card-update .ann-title,
 .ann-item.ann-card-update .ann-content,
@@ -254,7 +254,7 @@
   color: var(--paper);
 }
 .ann-tip.ann-card-demo {
-  color: #fff;
+  color: var(--on-accent, #000);
 }
 .ann-tip.ann-card-update .ann-tip-more,
 .ann-tip.ann-card-demo .ann-tip-more {

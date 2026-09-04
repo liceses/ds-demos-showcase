@@ -43,6 +43,6 @@ p {
 
 ::selection {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
 }
 

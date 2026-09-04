@@ -18,9 +18,9 @@
   padding: 6px 10px;
   font-size: 12px;
   background: #ffe3e8;
-  border-left: 5px solid #a4001d;
+  border-left: 5px solid var(--err, #a4001d);
 }
-.brief-caveat b { color: #a4001d; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.brief-caveat b { color: var(--err, #a4001d); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
 .chain-table { table-layout: fixed; }
 .chain-table th:nth-child(1) { width: 18%; }
 .chain-table th:nth-child(2) { width: 30%; }

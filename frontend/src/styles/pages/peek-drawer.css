@@ -41,7 +41,7 @@
   border: 2px solid var(--ink);
   cursor: pointer;
 }
-.peek-close:hover { background: var(--red); color: #fff; }
+.peek-close:hover { background: var(--red); color: var(--on-accent, #000); }
 .peek-close:active { transform: translate(2px, 2px); }
 .peek-title { font-family: var(--font-heading); font-size: 20px; font-weight: 900; line-height: 1.2; margin: 0 0 8px; overflow-wrap: anywhere; }
 .peek-brief { font-size: 13px; line-height: 1.65; margin: 0 0 12px; overflow-wrap: anywhere; }

@@ -49,7 +49,7 @@
   height: 36px;
   border: 3px solid var(--ink);
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent, #000);
   font-weight: 900;
   cursor: pointer;
 }
@@ -368,7 +368,7 @@
 .tag-dist-bar-fill.mode-int { background: var(--mint); }
 .tag-dist-bar-label {
   font-size: 10px;
-  color: #555;
+  color: var(--ink-soft, #555);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -432,7 +432,7 @@
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: #555;
+  color: var(--ink-soft, #555);
 }
 
 /* 上传标签弹窗：呼吸感 + 搜索命中 + 申请新值 */
@@ -449,7 +449,7 @@
   padding: 10px 12px 4px;
   font-size: 11px;
   font-weight: 800;
-  color: #666;
+  color: var(--ink-faint, #767676);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }

@@ -59,7 +59,7 @@
 }
 .md-tok-kw { color: var(--yellow); font-weight: 700; }
 .md-tok-str { color: var(--mint); }
-.md-tok-com { color: #999; font-style: italic; }
+.md-tok-com { color: var(--ink-faint, #767676); font-style: italic; }
 .md-tok-num { color: var(--red); }
 .markdown-body blockquote {
   margin: 12px 0;
@@ -116,7 +116,7 @@
   padding: 1px 6px;
   border: 2px solid var(--ink);
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent, #000);
   font-size: 10px;
   font-weight: 800;
   transform: rotate(-2deg);
@@ -139,7 +139,7 @@
   font-size: 10px;
   font-weight: 800;
 }
-.ann-status.status-draft { background: var(--paper); color: #666; }
+.ann-status.status-draft { background: var(--paper); color: var(--ink-faint, #767676); }
 .ann-status.status-published { background: var(--mint); color: var(--ink); }
 .ann-status.status-offline { background: var(--ink); color: var(--paper); }
 .ann-item.clickable {
@@ -224,11 +224,11 @@
 }
 .md-link-meta {
   font-size: 12px;
-  color: #666;
+  color: var(--ink-faint, #767676);
 }
 .md-link-loading {
   justify-content: center;
-  color: #666;
+  color: var(--ink-faint, #767676);
   background: var(--paper);
   border-style: dashed;
 }

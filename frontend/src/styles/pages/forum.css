@@ -135,7 +135,7 @@
   font-weight: 800;
   transform: rotate(-2deg);
 }
-.forum-badge-pin { background: var(--red); color: #fff; }
+.forum-badge-pin { background: var(--red); color: var(--on-accent, #000); }
 .forum-badge-sticky { background: var(--yellow); color: var(--ink); }
 .forum-cat {
   display: inline-block;

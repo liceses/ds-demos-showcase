@@ -15,7 +15,7 @@
 }
 .status-rejected {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
 }
 .status-processing {
   background: var(--teal);

@@ -92,7 +92,7 @@
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .ac-card:hover { transform: translate(-2px, -2px); box-shadow: var(--shadow-black, 3px 3px 0 rgba(0, 0, 0, 0.25)); }
-.ac-card.hot { border-left-width: 9px; border-left-color: #a4001d; }
+.ac-card.hot { border-left-width: 9px; border-left-color: var(--err, #a4001d); }
 .ac-num { font-family: var(--font-heading); font-size: 26px; font-weight: 900; line-height: 1; }
 .ac-label { font-size: 13px; font-weight: 800; }
 .ac-why { font-size: 11px; color: var(--ink-soft); line-height: 1.45; }

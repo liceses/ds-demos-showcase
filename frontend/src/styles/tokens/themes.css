@@ -30,6 +30,7 @@ html.theme-switching *::after {
   --yellow: var(--k-yellow);
   --mint: var(--k-orange);
   --coral: var(--k-red);
+  --err: var(--k-err); /* t16：错误色墨黑提亮（#ff8a8a，对 --k-ink 8.12:1） */
 
   color-scheme: dark;
 }
@@ -41,5 +42,6 @@ html.theme-switching *::after {
   --paper-deep: #f2e8d5;
   --ink: #000000;
   --ink-soft: #555555;
+  --err: #a4001d; /* 孤岛锚定：牛皮纸上墨系亮红 1.87:1 不可读，保持纸系深红 */
   color-scheme: light;
 }

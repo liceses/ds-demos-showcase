@@ -24,6 +24,6 @@ table.data th {
 }
 table.data tr.inconsistent td {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
 }
 

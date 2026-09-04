@@ -38,7 +38,7 @@
 }
 .btn-primary {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
   box-shadow: var(--shadow-lg);
   transform: rotate(-1deg);
 }

@@ -36,7 +36,7 @@
   font-family: var(--font-heading);
   font-weight: 900;
   font-size: 56px;
-  color: white;
+  color: var(--on-accent, #000);
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 1);
 }
 .demo-card-body {
@@ -55,7 +55,7 @@
   gap: 12px;
   flex-wrap: wrap;
   font-size: 11px;
-  color: #333;
+  color: var(--ink-soft, #555);
   margin-bottom: 10px;
 }
 .demo-stats {
@@ -80,6 +80,6 @@
 }
 .stat-red {
   background: var(--red);
-  color: white;
+  color: var(--on-accent, #000);
 }
 

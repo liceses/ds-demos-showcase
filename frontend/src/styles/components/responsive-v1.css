@@ -103,7 +103,7 @@
 .preview-hint {
   margin-top: 8px;
   font-size: 11px;
-  color: #666;
+  color: var(--ink-faint, #767676);
   letter-spacing: 0.04em;
 }
 .preview-frame {

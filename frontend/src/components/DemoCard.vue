@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import type { DemoSummary } from '../api/types'
 import { tagLabel } from '../utils/funMode'
-import { keyLabel } from '../i18n'
+import { keyLabel, t } from '../i18n'
 import ModelChips from './ModelChips.vue'
 
 const props = defineProps<{ demo: DemoSummary }>()
@@ -57,7 +57,15 @@ function label(tag: { key: string; value: string }) {
         </span>
       </div>
       <div class="demo-stats">
-        <span v-if="demo.rating_count" class="stat stat-mint">RATE {{ Number(demo.rating_avg || 0).toFixed(1) }} ({{ demo.rating_count }})</span>
+        <!-- M0-C 分数+样本档成对（03 §5.2）：n≥5 显示 ★均分 · n=N；n<5 灰显分数主体只给「样本不足」——
+             n<5 的均值是噪声，不给结论（红线：样本不足不许伪装成有效口碑） -->
+        <span v-if="demo.rating_count" class="stat rate-pair" :class="{ 'rate-low': demo.rating_count < 5 }">
+          <svg v-if="demo.rating_count >= 5" class="rate-star" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 1l2 4.4 4.8.5-3.6 3.2 1 4.7L8 11.4 3.8 13.8l1-4.7L1.2 5.9 6 5.4z" fill="var(--yellow, #ffe66d)" stroke="var(--ink, #000)" stroke-width="1.2" />
+          </svg>
+          <template v-if="demo.rating_count >= 5">{{ Number(demo.rating_avg || 0).toFixed(1) }} · n={{ demo.rating_count }}</template>
+          <template v-else>{{ t('card.sampleLow', '样本不足') }} · n={{ demo.rating_count }}</template>
+        </span>
         <span class="stat stat-yellow">VIEW {{ demo.view_count }}</span>
         <span class="stat stat-teal">DL {{ demo.download_count }}</span>
         <span class="stat stat-red">CMT {{ demo.comment_count }}</span>
@@ -65,3 +73,24 @@ function label(tag: { key: string; value: string }) {
     </div>
   </RouterLink>
 </template>
+
+<style scoped>
+/* M0-C 分数+样本档成对（组件级样式；全局 style.css 冻结——P1 拆迁后并入语义 token 体系） */
+.rate-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.rate-star {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+/* n<5：灰显分数主体（覆盖 stat-mint 的彩色底——信息降级必须看得见） */
+.rate-pair.rate-low {
+  color: var(--ink-soft, #555);
+  background: var(--paper-deep, #f2eee6);
+  border-color: var(--ink-soft, #555);
+}
+</style>

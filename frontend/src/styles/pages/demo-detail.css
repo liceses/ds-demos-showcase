@@ -222,7 +222,7 @@
   color: var(--ink-soft);
   cursor: pointer;
 }
-.dv-collapse:hover { background: var(--yellow); color: var(--ink); }
+.dv-collapse:hover { background: var(--yellow); color: var(--on-accent, #000); }
 .dv-shell.facts-collapsed { grid-template-columns: minmax(0, 1fr) 46px; }
 .dv-rail {
   display: flex;

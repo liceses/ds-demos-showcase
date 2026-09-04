@@ -8,6 +8,7 @@
 .mini-stat b {
   background: var(--yellow);
   border: 2px solid var(--ink);
+  color: var(--on-accent, #000); /* 计数方块：荧光底黑字 */
   padding: 1px 7px;
 }
 

@@ -50,9 +50,9 @@
 .entry-card.entry-tags { border-top: 8px solid var(--yellow); }
 .entry-card.entry-upload { border-top: 8px solid var(--red); }
 .entry-card.entry-ann { border-top: 8px solid var(--mint); }
-.entry-card.entry-tags .entry-stamp { background: var(--yellow); color: var(--ink); }
+.entry-card.entry-tags .entry-stamp { background: var(--yellow); color: var(--on-accent, #000); }
 .entry-card.entry-upload .entry-stamp { background: var(--red); color: var(--on-accent, #000); }
-.entry-card.entry-ann .entry-stamp { background: var(--mint); color: var(--ink); }
+.entry-card.entry-ann .entry-stamp { background: var(--mint); color: var(--on-accent, #000); }
 
 /* 上传页标签分组提示条 */
 .tag-key-hint {

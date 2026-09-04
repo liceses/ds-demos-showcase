@@ -50,7 +50,7 @@
 }
 .tag-strip-toggle:hover {
   background: var(--teal);
-  color: var(--ink);
+  color: var(--on-accent, #000);
 }
 
 /* 上传页 open/int 已有值建议行 */

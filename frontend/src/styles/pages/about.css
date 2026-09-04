@@ -104,9 +104,9 @@
   font-size: 14px;
   flex-shrink: 0;
 }
-.sponsor-row.rank-1 .sponsor-rank { background: var(--yellow); color: var(--ink); }
+.sponsor-row.rank-1 .sponsor-rank { background: var(--yellow); color: var(--on-accent, #000); }
 .sponsor-row.rank-2 .sponsor-rank { background: var(--paper); color: var(--ink); }
-.sponsor-row.rank-3 .sponsor-rank { background: var(--mint); color: var(--ink); }
+.sponsor-row.rank-3 .sponsor-rank { background: var(--mint); color: var(--on-accent, #000); }
 .sponsor-name { font-weight: 800; }
 .sponsor-amount { margin-left: auto; font-weight: 800; flex-shrink: 0; }
 .sponsor-msg { width: 100%; font-size: 12px; color: var(--ink-soft, #555); }
@@ -302,7 +302,7 @@
 }
 .prompt-copy:hover {
   background: var(--teal);
-  color: var(--ink);
+  color: var(--on-accent, #000);
 }
 .prompt-toggle {
   display: block;
@@ -404,7 +404,7 @@
 .mode-rail-knob.prompt {
   left: 50%;
   background: var(--teal);
-  color: var(--ink);
+  color: var(--on-accent, #000);
 }
 .mode-rail-badge {
   padding: 2px 8px;
@@ -458,7 +458,7 @@
 }
 .stat-card.stat-live {
   border-top: 8px solid var(--red);
-  background: var(--yellow);
+  background: var(--wash-yellow); /* 大面积统计卡：墨黑暗橄榄+暖白 */
 }
 .stat-card.stat-live b {
   color: var(--ink);

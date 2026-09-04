@@ -20,6 +20,7 @@
 .markdown-body code {
   background: var(--yellow);
   border: 2px solid var(--ink);
+  color: var(--on-accent, #000); /* 正文内联代码：荧光底黑字（墨黑下继承暖白必炸，t16 追加轮最高频修复） */
   padding: 1px 6px;
   font-size: 12px;
 }

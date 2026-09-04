@@ -35,6 +35,7 @@
   font-weight: 700;
   padding: 4px 10px;
   background: var(--mint);
+  color: var(--on-accent, #000);
   border: 2px solid var(--ink);
   text-decoration: none;
   color: var(--ink);

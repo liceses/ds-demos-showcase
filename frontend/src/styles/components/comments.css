@@ -13,6 +13,7 @@
   padding: 10px 14px;
   border-bottom: 3px solid var(--ink);
   background: var(--yellow);
+  color: var(--on-accent, #000); /* 头条：荧光底黑字 */
   font-size: 12px;
   font-weight: 700;
 }

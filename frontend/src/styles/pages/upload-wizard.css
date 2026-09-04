@@ -234,7 +234,7 @@
   cursor: pointer;
   color: var(--ink-soft);
 }
-.uw-edit:hover { background: var(--yellow); color: var(--ink); }
+.uw-edit:hover { background: var(--yellow); color: var(--on-accent, #000); }
 .btn-ghost {
   background: transparent;
   border: 2px dashed var(--ink-soft);

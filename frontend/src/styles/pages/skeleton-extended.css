@@ -259,7 +259,7 @@
 }
 .forum-side-item:hover,
 .forum-side-item.active {
-  border-color: var(--ink);
+  border-color: var(--on-accent, #000);
   background: var(--yellow);
 }
 .forum-side-item-title {

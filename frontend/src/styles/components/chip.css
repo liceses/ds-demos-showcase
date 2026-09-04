@@ -33,6 +33,7 @@
 }
 .tag-chip.yellow {
   background: var(--yellow);
+  color: var(--on-accent, #000); /* 小面积原饱和+黑字 */
 }
 .tag-chip .count {
   font-size: 10px;

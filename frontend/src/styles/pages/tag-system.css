@@ -4,9 +4,11 @@
 }
 .tag-chip.mode-open {
   background: var(--yellow);
+  color: var(--on-accent, #000); /* 小面积原饱和+黑字（t16 追加轮全站扫描） */
 }
 .tag-chip.mode-int {
   background: var(--mint);
+  color: var(--on-accent, #000); /* 小面积原饱和+黑字 */
   font-variant-numeric: tabular-nums;
 }
 .tag-chip.mode-fixed.active,
@@ -52,6 +54,7 @@
 .tag-stat b {
   background: var(--yellow);
   border: 2px solid var(--ink);
+  color: var(--on-accent, #000); /* 计数小方块：荧光底黑字（全站复用） */
   padding: 1px 7px;
 }
 
@@ -156,7 +159,7 @@
   width: 100%;
   padding: 8px 12px;
   border: 3px solid var(--ink);
-  background: var(--yellow);
+  background: var(--wash-yellow); /* 大面积已选条：墨黑下暗橄榄+暖白（t16 用户反馈） */
   box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
   font-family: var(--font-body);
   font-size: 14px;

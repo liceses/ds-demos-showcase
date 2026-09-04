@@ -29,9 +29,11 @@
 
 .status-active {
   background: var(--mint);
+  color: var(--on-accent, #000);
 }
 .status-suspended {
   background: var(--yellow);
+  color: var(--on-accent, #000);
 }
 .status-deleted {
   background: var(--ink);
@@ -133,6 +135,7 @@
   margin: 0;
   padding: 4px 10px;
   background: var(--yellow);
+  color: var(--on-accent, #000);
   border: 3px solid var(--ink);
   z-index: 1;
 }

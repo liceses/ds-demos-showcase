@@ -50,3 +50,22 @@ export function fmtTime(iso: string): string {
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
 }
+
+/**
+ * 收件箱 kind 词表（M2-t4 单一源化）：概览台 kind 直达链/收件箱分节/批量确认共用同一份，
+ * 杜绝「概览台叫类型细分、收件箱叫 retag」的双词表漂移。[zh, en]。
+ */
+export const INBOX_KINDS: Record<string, [string, string]> = {
+  task_match: ['挂题请求', 'attach task'],
+  new_model: ['新模型', 'new model'],
+  new_task: ['新题目', 'new task'],
+  merge_model: ['模型合并', 'merge model'],
+  merge_task: ['题目合并', 'merge task'],
+  alias: ['别名归一', 'alias'],
+  retag_demo: ['类型细分', 'refine type'],
+}
+
+export function inboxKindLabel(k: string): string {
+  const hit = INBOX_KINDS[k]
+  return hit ? t(`admin.kind.${k}`, hit[0]) : k
+}

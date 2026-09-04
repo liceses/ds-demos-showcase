@@ -579,6 +579,17 @@ let mockTaskSeq = 2
 // v2 B4′：mock 收件箱（带 task 的上传会真的入队，能完整演一遍批准流程）
 const mockSuggestions: SuggestionItem[] = []
 let mockSuggestionSeq = 1
+// M2-t4 演示种子：kind 分节/批量消化的可见样例（mock 占位数据性质；id 9001+ 不与上传入队冲突）
+void (() => {
+  const seed = (id: number, kind: SuggestionItem['kind'], payload: Record<string, unknown>, confidence: number, status: SuggestionItem['status'] = 'pending', created_at = '2026-08-20T10:00:00Z') =>
+    mockSuggestions.push({ id, kind, payload, confidence, source: 'ai', status, created_at })
+  seed(9001, 'retag_demo', { demo_title: '重力迷宫', demo_slug: 'demo_重力迷宫', remove: 'demo', add: 'puzzle', matched: ['puzzle', 'maze', 'grid'] }, 0.72)
+  seed(9002, 'retag_demo', { demo_title: '粒子星空', demo_slug: 'demo_粒子星空', remove: 'demo', add: 'visual', matched: ['canvas', 'shader'] }, 0.68)
+  seed(9003, 'retag_demo', { demo_title: '霓虹打字机', demo_slug: 'demo_霓虹打字机', remove: 'demo', add: 'effect', matched: ['text-fx'] }, 0.66)
+  seed(9004, 'task_match', { demo_title: '粒子星空', demo_slug: 'demo_粒子星空', task_title: '用 Canvas 画星空' }, 0.81)
+  seed(9005, 'alias', { name: 'dsv4flash', alias: 'DSV4 Flash（旧写法）', model_id: 'dsv4flash' }, 0.77)
+  seed(9006, 'new_model', { name: 'kimi-k3.5', model_id: 'kimi-k3.5' }, 0.55, 'rejected')
+})()
 
 // 合并向导 / 别名中心的可变数据源（提到模块级，避免每处各抄一份假数据）
 const mockModels: ModelSummary[] = [
@@ -638,6 +649,8 @@ function ensureAttribution(): AttributionGroup[] {
   mockAttribution = [
     { model: modelOf('unspecified', 'unspecified', 'unknown', null, 3), demos: itemsOf(pool.slice(0, 3), 'dsv4-flash', 0) },
     { model: modelOf('deepseek-unknown', 'deepseek-unknown', 'family', 'DeepSeek', 2), demos: itemsOf(pool.slice(3, 5), undefined, 10) },
+    // M2-t4 灰测池样例（guess 档）：概览台池卡有实数可演（件数取 demo_count=12）
+    { model: modelOf('ds-unknown', 'ds-unknown', 'guess', null, 12), demos: itemsOf(pool.slice(0, 2), 'dsv4-flash', 20) },
   ]
   return mockAttribution
 }
@@ -1802,6 +1815,8 @@ export const mockApi = {
   ): Promise<AuditList> {
     await delay(200)
     const items: AuditEntry[] = [
+      // M2-t4：灰测池揭晓审计样例（100 天前自 ds-unknown 揭晓 → 概览台池卡 90 天红线可演）
+      { id: 4, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'attribute', entity_type: 'model', entity_id: 1, reason: '归属 3 个作品到 dsv4-flash（自 ds-unknown 揭晓）', created_at: new Date(Date.now() - 100 * 86400000).toISOString(), before: null, after: { target: 'dsv4-flash', moved: 3, from: ['ds-unknown'] } },
       { id: 3, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'review', entity_type: 'suggestion', entity_id: 1, reason: '批准挂题请求', created_at: new Date().toISOString(), before: { status: 'pending' }, after: { status: 'approved', result: '挂题成功' } },
       { id: 2, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'attribute', entity_type: 'model', entity_id: 1, reason: '归属 2 个作品到 dsv4-flash', created_at: new Date().toISOString(), before: null, after: { target: 'dsv4-flash', moved: 2, from: ['unspecified'] } },
       { id: 1, actor_type: 'user', actor_id: 1, actor: 'admin', action: 'create', entity_type: 'task', entity_id: 1, reason: '从题目候选成题', created_at: new Date().toISOString(), before: null, after: { slug: 'mc-web' } },

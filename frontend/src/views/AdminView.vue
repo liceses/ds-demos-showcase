@@ -100,10 +100,12 @@ const visibleGroups = computed(() => {
 })
 const flatTabs = computed(() => visibleGroups.value.flatMap((g) => g.tabs.filter((t) => !t.to) as { key: TabKey }[]))
 
-function selectTab(k: TabKey) {
+function selectTab(k: TabKey, filter?: string) {
   tab.value = k
   // 面板写进 URL：可分享、刷新不丢位置、概览台"去处理"能被后退撤销
-  void router.replace({ query: k === 'console' ? {} : { tab: k } })
+  // M2-t4 深链升级（03 §9.3）：?tab=x&filter=y 带条件直达（如 ?tab=inbox&filter=retag_demo），
+  // 消灭「看见积压但要多点三下才开工」；侧栏普通切换不带 filter（query 整体替换自然清掉）
+  void router.replace({ query: k === 'console' ? {} : filter ? { tab: k, filter } : { tab: k } })
 }
 
 function onNavKeydown(e: KeyboardEvent) {
@@ -228,7 +230,7 @@ onMounted(() => {
       <Transition name="tab-pane" mode="out-in">
         <div :key="tab" class="tab-pane">
           <!-- 概览台随壳加载（默认落地页），@go 是它独有的事件 -->
-          <AdminConsoleSection v-if="tab === 'console'" @go="(k: string) => selectTab(k as TabKey)" />
+          <AdminConsoleSection v-if="tab === 'console'" @go="(k: string, f?: string) => selectTab(k as TabKey, f)" />
           <!-- 词表双入口共用 AdminTagsSection（惰性），only 区分键表 / 申请 -->
           <component :is="sections.tags" v-else-if="tab === 'tags'" only="keys" />
           <component :is="sections.tagreq" v-else-if="tab === 'tagreq'" only="review" />

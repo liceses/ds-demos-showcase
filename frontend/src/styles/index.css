@@ -46,7 +46,6 @@
 @import './pages/admin.css';
 @import './pages/demos-ledger.css';
 @import './pages/about.css';
-@import './pages/_mobile-legacy.css';
 @import './pages/markdown.css';
 @import './pages/forum.css';
 @import './pages/skeleton-extended.css';
@@ -76,3 +75,8 @@
 @import './pages/task-detail.css';
 @import './pages/interactions.css';
 @import './pages/user-follow.css';
+
+@import './pages/user-follow.css';
+
+@import './pages/user-follow.css';
+@import './pages/_mobile-responsive.css'; /* 泊位：@720/@480 断点块与 responsive-v1 互搏，级联胜负靠链尾导入（P2-7 拆散自 _mobile-legacy；P3 断点收敛时合并） */

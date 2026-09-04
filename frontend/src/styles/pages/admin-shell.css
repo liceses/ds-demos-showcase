@@ -116,7 +116,7 @@
 .ac-act { padding: 0 6px; background: var(--ink); color: var(--paper); font-size: 11px; }
 .ac-act.warn { background: var(--err); }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .admin-shell { grid-template-columns: minmax(0, 1fr); }
   .ad-nav { position: static; }
   .ad-nav-list { display: none; }

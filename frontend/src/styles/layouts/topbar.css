@@ -63,3 +63,101 @@
   /* R8：导航态静止零倾斜（原 rotate(-1deg) 清零） */
 }
 
+/* ============================================================
+   移动端导航/抽屉（自 pages/_mobile-legacy.css 拆散归位·P2-7；移动组件无条件规则，原文件已删除）
+   ============================================================ */
+/* ---------- 移动端适配 ---------- */
+.mobile-nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  cursor: pointer;
+}
+.mobile-nav-toggle span {
+  display: block;
+  height: 3px;
+  background: var(--ink);
+}
+
+.mobile-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.4);
+}
+.mobile-drawer-inner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 86vw);
+  background: var(--paper);
+  border-left: 4px solid var(--ink);
+  box-shadow: -6px 0 0 0 rgba(0, 0, 0, 1);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.mobile-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mobile-drawer-close {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--ink);
+  background: var(--red);
+  color: var(--on-accent, #000);
+  font-weight: 900;
+  cursor: pointer;
+}
+.mobile-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-drawer-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  font-weight: 800;
+  text-decoration: none;
+  color: var(--ink);
+}
+.mobile-drawer-link.active {
+  background: var(--yellow);
+}
+.mobile-drawer-arrow {
+  font-weight: 900;
+}
+.mobile-drawer-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-drawer-enter-active,
+.mobile-drawer-leave-active {
+  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+}
+.mobile-drawer-enter-from,
+.mobile-drawer-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+/* 平板/手机断点 */

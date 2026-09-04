@@ -237,7 +237,7 @@
 .forum-takeover-leave-to {
   transform: translateX(100%);
 }
-@media (max-width: 760px) {
+@media (max-width: 720px) {
   .forum-peek {
     right: 10px;
     top: auto;

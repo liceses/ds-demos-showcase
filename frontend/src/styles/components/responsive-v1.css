@@ -71,21 +71,7 @@
   100% { transform: scale(1) rotate(0deg); }
 }
 
-/* 整页路由切换动效 */
-.page-enter-active {
-  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
-}
-.page-leave-active {
-  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
-}
-.page-enter-from {
-  opacity: 0;
-  transform: translateY(14px);
-}
-.page-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
+/* 整页路由切换动效：v1 淡入淡出已废止（P2-7）——.page-* 类统一走 tokens/motion.css v3.3 stamp-lite（本文件原后置导入会盖掉 0ms 硬切离场，P2-1 转场曾被污染） */
 
 /* iframe 预览容器与全屏按钮 */
 .preview-shell {

@@ -1,0 +1,86 @@
+/* ============================================================
+   移动端断点覆盖（@720/@480）——自 pages/_mobile-legacy.css 拆散·P2-7 泊位
+   泊位理由：本块与 components/responsive-v1.css 的 @720 规则互搏（.topbar row vs column 等），
+   级联胜负靠导入序（本文件必须保持链尾导入）。P3 断点收敛时与 responsive-v1 一并合并归位。
+   ============================================================ */
+
+@media (max-width: 720px) {
+  .topnav-desktop {
+    display: none;
+  }
+  .mobile-nav-toggle {
+    display: flex;
+  }
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .view-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mode-rail {
+    width: 100%;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-box {
+    max-width: 100%;
+  }
+  .rating-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .rating-stars {
+    justify-content: center;
+  }
+  .rating-meta {
+    min-width: 0;
+  }
+  .btn,
+  .tag-chip {
+    min-height: 40px;
+  }
+}
+
+/* 手机竖屏 */
+@media (max-width: 480px) {
+  .entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .entry-card {
+    min-height: 120px;
+    padding: 16px 12px 12px;
+  }
+  .entry-card h2 {
+    font-size: 18px;
+  }
+  .dash-stats {
+    gap: 10px;
+  }
+  .stat-card {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+  .tag-strip-chips {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page-hero .huge {
+    font-size: 40px;
+  }
+}

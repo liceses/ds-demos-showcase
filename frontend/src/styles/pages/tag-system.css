@@ -277,3 +277,258 @@
   }
 }
 
+/* ============================================================
+   上传/标签两栏选择器族（自 _mobile-legacy 拆散归位·P2-7；保持原相对顺序：基础→弹窗→追加覆盖）
+   ============================================================ */
+/* 上传页两栏标签选择器 */
+.tag-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--ink);
+}
+.tag-pane-search {
+  margin-bottom: 10px;
+  max-width: none;
+}
+.tag-pane {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  min-height: 220px;
+}
+.tag-pane-keys {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  overflow-y: auto;
+  max-height: 320px;
+}
+.tag-pane-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 2px solid var(--ink);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.tag-pane-key:hover {
+  background: var(--yellow);
+  color: var(--on-accent, #000); /* hover 亮底必须换字色（t17 用户实测：标签 hover 黑底黑字近亲=亮底亮字） */
+}
+.tag-pane-key.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.tag-pane-key.active code {
+  background: var(--yellow);
+  color: var(--on-accent, #000);
+}
+.tag-pane-key-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tag-pane-key-label code {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  color: var(--on-accent, #000);
+  padding: 0 3px;
+  font-size: 10px;
+}
+.tag-pane-key-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+  border: 2px solid currentColor;
+  padding: 0 4px;
+  font-size: 11px;
+}
+.tag-pane-values {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 320px;
+}
+.tag-pane-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid var(--ink);
+}
+.tag-pane-selected-all {
+  margin-top: 0;
+  border-top: none;
+}
+.vendor-group {
+  margin-bottom: 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+.vendor-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  background: var(--mint);
+  border-bottom: 2px solid var(--ink);
+}
+.vendor-group-head:hover {
+  background: var(--yellow);
+}
+.vendor-group-name {
+  font-weight: 800;
+  font-size: 12px;
+}
+.vendor-group-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+.vendor-group .filter-row {
+  padding: 8px;
+}
+
+/* 标签分布条 mode 配色 */
+.int-dist-fill.mode-fixed { background: var(--ink); }
+.int-dist-fill.mode-open { background: var(--yellow); }
+.int-dist-fill.mode-int { background: var(--mint); }
+
+/* 上传页标签弹窗（替代右侧常驻面板） */
+.upload-grid {
+  display: block;
+}
+.upload-form-card {
+  max-width: 760px;
+}
+.tag-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.tag-modal-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+.tag-modal-panel {
+  position: relative;
+  width: min(860px, 100%);
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--yellow);
+  border: 4px solid var(--ink);
+  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  padding: 16px;
+}
+.tag-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* 标签主页紧凑分布（竖条） */
+.tag-dist-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 52px;
+}
+.tag-dist-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.tag-dist-bar-fill {
+  width: 100%;
+  max-width: 28px;
+  border: 2px solid var(--ink);
+  background: var(--teal);
+}
+.tag-dist-bar-fill.mode-fixed { background: var(--ink); }
+.tag-dist-bar-fill.mode-open { background: var(--yellow); }
+.tag-dist-bar-fill.mode-int { background: var(--mint); }
+.tag-dist-bar-label {
+  font-size: 10px;
+  color: var(--ink-soft);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 上传标签弹窗：呼吸感 + 搜索命中 + 申请新值 */
+.tag-modal-panel {
+  width: min(960px, 100%);
+  background: var(--paper);
+  padding: 20px;
+}
+.tag-pane {
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+}
+.tag-pane-group-label {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-faint, #767676);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tag-pane-key {
+  padding: 10px 12px;
+}
+.tag-pane-values {
+  padding: 18px;
+}
+.vendor-group {
+  margin-bottom: 14px;
+}
+.tag-suggest-new {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--ink);
+}
+.tag-suggest-new-form {
+  margin-top: 8px;
+}
+.tag-suggest-block {
+  margin-top: 8px;
+}
+.search-hit {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* 两栏加高（Tags 页 / 管理页键管理） */
+.tag-pane-tall .tag-pane-keys,
+.tag-pane-tall .tag-pane-values {
+  max-height: calc(100vh - 240px);
+  min-height: 60vh;
+}

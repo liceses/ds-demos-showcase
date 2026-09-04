@@ -316,3 +316,21 @@
   box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
 }
 
+/* ============================================================
+   首页副标题打字机（自 _mobile-legacy 拆散归位·P2-7）
+   ============================================================ */
+/* 首页副标题打字机 */
+.tagline {
+  font-family: var(--font-mono);
+}
+.tagline-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--red);
+  font-weight: 900;
+  animation: tagline-blink 0.9s steps(1) infinite;
+}
+@keyframes tagline-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

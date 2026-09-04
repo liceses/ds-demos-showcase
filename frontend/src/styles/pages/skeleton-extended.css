@@ -343,7 +343,7 @@
 .forum-side-author-name {
   font-weight: 800;
 }
-@media (max-width: 760px) {
+@media (max-width: 720px) {
   .forum-layout {
     flex-direction: column;
   }

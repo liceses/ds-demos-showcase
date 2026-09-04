@@ -6,7 +6,9 @@
 
 :root {
   --ink: #000000;
+  --ink-soft: #555555; /* P0-1 断 token 修复：次级文字（此前未定义却 ~40 处引用，靠继承碰运气；对 --paper 对比度 7.5:1） */
   --paper: #ffffff;
+  --paper-deep: #f2eee6; /* P0-1 断 token 修复：沉降底（此前未定义却 ~25 处引用，三套 fallback 色并一） */
 
   --red: #ff6b6b;
   --teal: #4ecdc4;
@@ -16,6 +18,7 @@
 
   --font-heading: "Inter", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-body: "JetBrains Mono", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", ui-monospace, monospace;
+  --font-mono: var(--font-body); /* P0-1 断 token 修复：等宽别名（此前未定义却 10 处引用，font-family 静默失效）；别名指向 --font-body 的 JBM 栈，源头单一 */
 
   --border-w: 4px;
 
@@ -24,6 +27,7 @@
   --shadow-teal: 8px 8px 0px 0px rgba(78, 205, 196, 1);
   --shadow-red: 8px 8px 0px 0px rgba(255, 107, 107, 1);
   --shadow-yellow: 8px 8px 0px 0px rgba(255, 230, 109, 1);
+  --shadow-black-sm: 2px 2px 0 0 var(--ink); /* P0-1 断 token 修复：小号硬影（此前未定义，L4908 一处引用带临时 fallback） */
 
   color-scheme: light;
   font-family: var(--font-body);

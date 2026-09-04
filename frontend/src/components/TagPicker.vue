@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useTagsStore } from '../stores/tags'
+import TagTip from './TagTip.vue'
 import type { TagKeyInfo, TagKeyValue } from '../api/types'
 import { tagLabel } from '../utils/funMode'
 
@@ -299,7 +300,7 @@ onMounted(async () => {
                   <template v-else>
                     <div class="filter-row tag-suggest-row">
                       <span class="filter-label tag-suggest-label">已有值</span>
-                      <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip mode-open" :class="{ active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }" type="button" @click="toggleValue(activeTagKey.key, v.value, v.description || '')">{{ v.value }}<span class="count">{{ v.demo_count }}</span></button>
+                      <button v-for="v in suggestionValues(activeTagKey)" :key="v.value" class="tag-chip mode-open" :class="{ active: selectedOf(activeTagKey.key).some((x) => x.value === v.value) }" type="button" @click="toggleValue(activeTagKey.key, v.value, v.description || '')">{{ v.value }}<span class="count">{{ v.demo_count }}</span><TagTip :tag-key="activeTagKey.key" :value="v.value" :description="v.description || ''" /></button>
                     </div>
                   </template>
                 </div>

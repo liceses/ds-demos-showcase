@@ -10,6 +10,7 @@ import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import PromptDemoCard from '../components/PromptDemoCard.vue'
 import RangeSlider from '../components/RangeSlider.vue'
+import TagTip from '../components/TagTip.vue'
 
 const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
@@ -56,7 +57,7 @@ type FilterGroup = {
   total: number
   min?: number | null
   max?: number | null
-  values: { value: string; count: number }[]
+  values: { value: string; count: number; description?: string }[]
 }
 
 // 分组筛选（A）：按标签键分行，组内 values 按热度排序
@@ -74,7 +75,7 @@ const filterGroups = computed<FilterGroup[]>(() =>
       values: [...k.values]
         .filter((v) => v.demo_count > 0)
         .sort((a, b) => b.demo_count - a.demo_count)
-        .map((v) => ({ value: v.value, count: v.demo_count })),
+        .map((v) => ({ value: v.value, count: v.demo_count, description: v.description })),
     })),
 )
 
@@ -127,7 +128,7 @@ function guessVendor(value: string): string {
   return '其他'
 }
 function vendorGroupsOf(k: FilterGroup) {
-  const map = new Map<string, { value: string; count: number }[]>()
+  const map = new Map<string, { value: string; count: number; description?: string }[]>()
   for (const v of k.values) {
     const g = guessVendor(v.value)
     if (!map.has(g)) map.set(g, [])
@@ -443,7 +444,7 @@ onBeforeUnmount(() => observer?.disconnect())
                     :class="{ active: selectedTags.includes(k.key + ':' + v.value) }"
                     type="button"
                     @click="toggleTag(k.key + ':' + v.value)"
-                  >{{ tagLabel(v.value) }}<span class="count">{{ v.count }}</span></button>
+                  >{{ tagLabel(v.value) }}<span class="count">{{ v.count }}</span><TagTip :tag-key="k.key" :value="v.value" :description="v.description" /></button>
                 </div>
               </div>
               <button class="tag-chip tag-strip-toggle" type="button" @click="toggleGroup(k)">{{ t('demos.collapse', '收起') }}</button>
@@ -460,6 +461,7 @@ onBeforeUnmount(() => observer?.disconnect())
             >
               {{ tagLabel(v.value) }}
               <span class="count">{{ v.count }}</span>
+              <TagTip :tag-key="k.key" :value="v.value" :description="v.description" />
             </button>
             <button
               v-if="isCollapsed(k) && k.values.length > COLLAPSED_SHOW"

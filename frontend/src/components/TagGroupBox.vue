@@ -5,6 +5,7 @@ import { useUiStore } from '../stores/ui'
 import type { TagKeyValue, TagMergeResult } from '../api/types'
 import { groupedTagValues } from '../utils/tagGroups'
 import { tagLabel } from '../utils/funMode'
+import TagTip from './TagTip.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -216,6 +217,8 @@ async function executeMerge() {
               @click="mode === 'select' ? toggle(v.value) : (mode === 'admin' ? copyValue(v) : undefined)"
             >
               {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
+              <!-- M0-A TagTip：标签介绍悬浮消费（ExploreView 展示模式；description 直传免查 store） -->
+              <TagTip v-if="mode === 'display'" :tag-key="routeKey" :value="v.value" :description="v.description" />
             </component>
           </template>
           <span v-if="!visibleValues(g.values).length" class="muted">空</span>

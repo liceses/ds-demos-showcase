@@ -394,6 +394,10 @@ export const en = {
     deleted: 'Demo deleted',
   },
 
+  tagtip: {
+    show: 'Show tag description',
+  },
+
   common: {
     loading: 'Loading…',
     search: 'Search',

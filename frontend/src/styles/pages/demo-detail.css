@@ -10,6 +10,13 @@
   gap: 24px;
   align-items: start;
   margin-bottom: 8px;
+  /* t23：列宽变化 0ms 硬切——用户反感的是推挤「动效」（补间中间帧），不是布局变化本身；
+     显式 transition:none 防任何未来规则给栅格补间 */
+  transition: none;
+}
+/* 收起态：侧栏槽不占位——预览/描述回到全宽（=顶栏同宽）；信息卡缩为竖轨悬浮右缘 */
+.dv-shell.facts-collapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 .dv-stage {
   grid-column: 1;
@@ -252,25 +259,26 @@
 }
 .dv-collapse:hover { background: var(--yellow); color: var(--on-accent, #000); }
 .dv-rail {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  justify-self: start;
-  align-self: start;
-  position: sticky;
+  /* t23 收起态形态：竖向窄轨悬浮右缘（40px）——此时槽不占位、主列全宽；
+     fixed=常随视口（预览 sticky 时轨始终在手边） */
+  position: fixed;
   top: 86px;
-  width: 100%;
+  right: 12px;
+  z-index: 60; /* drawer 段位 */
+  width: 40px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 10px 4px;
   font: inherit;
   color: var(--ink);
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
   box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
   cursor: pointer;
+  max-height: calc(100vh - 110px);
 }
 .dv-rail:hover { background: var(--yellow); }
 .dv-rail-label {
@@ -288,15 +296,15 @@
   border: 2px solid var(--ink);
 }
 .dv-rail-title {
-  /* t22：槽内横条形态——标题横排省略（原竖排 writing-mode 随浮层/竖轨形态废止） */
-  writing-mode: horizontal-tb;
+  /* t23：竖轨形态——标题竖排（writing-mode 回归），40px 轨内纵向省略 */
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
   font-size: 11px;
   color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
-  min-width: 0;
+  max-height: 40vh;
 }
 @media (max-width: 1024px) {
   /* 窄屏：侧栏槽退回文档流（flex 纵排 + order 语义），栅格成员全部归位 */
@@ -305,6 +313,8 @@
   /* 窄屏收起后仍要能恢复（藏掉入口＝自造的死角），轨改成横向按钮 */
   .dv-rail {
     position: static;
+    width: auto;
+    max-height: none;
     justify-self: auto;
     align-self: auto;
     flex-direction: row;

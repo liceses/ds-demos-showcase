@@ -7,10 +7,17 @@ import MarkdownRenderer from './MarkdownRenderer.vue'
 import AnnouncementModal from './AnnouncementModal.vue'
 
 const props = defineProps<{ title: string; items: Announcement[]; showStatus?: boolean }>()
+// open：弹层打开即广播（宿主据此把公告标为已读、清未读徽章）
+const emit = defineEmits<{ open: [id: number] }>()
 
 const expanded = ref(false)
 const activeAnn = ref<Announcement | null>(null)
 const visible = computed(() => (expanded.value ? props.items.slice(0, 6) : props.items.slice(0, 1)))
+
+function openAnn(a: Announcement) {
+  activeAnn.value = a
+  emit('open', a.id)
+}
 
 function statusLabel(s: string): string {
   if (s === 'draft') return t('ann.draft', '草稿')
@@ -39,7 +46,7 @@ function statusLabel(s: string): string {
         class="ann-item animate-in"
         :class="[annCls(a.type), { clickable: !a.demo_slug }]"
         :role="a.demo_slug ? undefined : 'button'"
-        @click="a.demo_slug ? undefined : (activeAnn = a)"
+        @click="a.demo_slug ? undefined : openAnn(a)"
       >
         <span class="ann-stamp">{{ annLabel(a.type) }}</span>
         <div class="ann-main">

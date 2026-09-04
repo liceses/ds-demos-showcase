@@ -21,7 +21,7 @@
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease); /* R7：background 剥离 */
 }
-.uw-step:hover { background: var(--paper-deep, #f2eee6); }
+.uw-step:hover { background: var(--paper-deep); }
 .uw-step.active {
   background: var(--wash-yellow); /* 选中步骤条：大面积，墨黑下暗橄榄+暖白（t17 上传向导深扫） */
   box-shadow: var(--shadow-black, 3px 3px 0 rgba(0, 0, 0, 0.25));
@@ -75,11 +75,11 @@
   color: var(--ink-soft);
   cursor: pointer;
 }
-.uw-item:hover { border-color: var(--ink); color: var(--ink); background: var(--paper-deep, #f2eee6); }
+.uw-item:hover { border-color: var(--ink); color: var(--ink); background: var(--paper-deep); }
 .uw-item.done { color: var(--ink); }
 /* 红色只留给"当前这一步确实卡住"的项；其它未完成项保持中性，
    否则仪表盘里一排红字会让人以为到处都在报错 */
-.uw-item.pending { color: var(--err, #a4001d); font-weight: 800; }
+.uw-item.pending { color: var(--err); font-weight: 800; }
 .uw-item:not(.done):not(.pending) { color: var(--ink-soft); }
 .uw-mc { display: inline-flex; align-items: center; gap: 6px; }
 .uw-mc-vendor {
@@ -156,15 +156,15 @@
   cursor: pointer;
   color: var(--ink-soft);
 }
-.uw-adv-toggle:hover { color: var(--ink); background: var(--paper-deep, #f2eee6); }
+.uw-adv-toggle:hover { color: var(--ink); background: var(--paper-deep); }
 .uw-adv { border: 2px dashed var(--ink); padding: 10px 12px; background: var(--paper); }
-.uw-err { color: var(--err, #a4001d); font-weight: 800; font-size: 13px; margin: 8px 0 0; }
+.uw-err { color: var(--err); font-weight: 800; font-size: 13px; margin: 8px 0 0; }
 /* 步内问题：红底块 + 标题，与"清单"在视觉上明确区分（同形状会被读成同类信息） */
 .uw-problems {
   margin: 10px 0 0;
   padding: 8px 12px;
   background: #ffe3e8;
-  border: 2px solid var(--err, #a4001d);
+  border: 2px solid var(--err);
   border-left-width: 8px;
   font-size: 13px;
 }
@@ -174,12 +174,12 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--err, #a4001d);
+  color: var(--err);
 }
 .uw-problems ul { margin: 4px 0 0; padding-left: 18px; }
 /* 文件选择框：不该长得像主行动按钮（黄色大条会让人以为"选择文件"就是下一步） */
 .upload-form-card input[type='file'] {
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   padding: 8px;
   font-size: 12px;
 }
@@ -263,7 +263,7 @@
   padding: 6px 10px;
   font-size: 12px;
   font-style: italic;
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   border-left: 4px solid var(--yellow);
 }
 .uw-aside-toggle {
@@ -284,8 +284,8 @@
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--err, #a4001d);
-  border: 2px solid var(--err, #a4001d);
+  color: var(--err);
+  border: 2px solid var(--err);
   transform: rotate(-6deg);
   animation: uw-stamp-in 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }

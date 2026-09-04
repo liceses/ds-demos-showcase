@@ -11,13 +11,13 @@
   box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
 }
 .skeleton-block {
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   border: 2px solid var(--ink);
   margin-bottom: 10px;
 }
 .skeleton-line {
   height: 12px;
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   border: 1px solid var(--ink);
   margin-bottom: 8px;
 }
@@ -197,7 +197,7 @@
 .notif-time {
   flex-shrink: 0;
   font-size: 12px;
-  color: var(--text-forum, #666);
+  color: var(--text-forum);
 }
 
 /* 论坛嵌套回复 */
@@ -404,10 +404,10 @@
   font-weight: 800;
 }
 .quick-comment-floor {
-  color: var(--text-forum, #666);
+  color: var(--text-forum);
 }
 .quick-comment-time {
   margin-left: auto;
-  color: var(--text-forum, #666);
+  color: var(--text-forum);
 }
 

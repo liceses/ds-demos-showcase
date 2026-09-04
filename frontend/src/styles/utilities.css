@@ -34,7 +34,7 @@
   text-transform: uppercase;
 }
 .muted {
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 .strike {

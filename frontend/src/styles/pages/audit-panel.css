@@ -10,7 +10,7 @@
 .cov-bar.cov-low { background: var(--red); }
 .audit-time { font-size: 11px; white-space: nowrap; }
 .audit-reason { overflow-wrap: anywhere; }
-.audit-diff-row td { background: var(--paper-deep, #f2eee6); }
+.audit-diff-row td { background: var(--paper-deep); }
 .audit-diff {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

@@ -55,7 +55,7 @@
   gap: 12px;
   flex-wrap: wrap;
   font-size: 11px;
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
   margin-bottom: 10px;
 }
 .demo-stats {

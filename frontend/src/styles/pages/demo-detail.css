@@ -46,7 +46,7 @@
   font-size: 10px;
   letter-spacing: 0.04em;
   color: var(--ink-soft);
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   border: 2px solid var(--ink);
   text-transform: uppercase;
 }
@@ -60,7 +60,7 @@
   margin: 0;
   padding: 6px 8px;
   font-size: 12px;
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   border-left: 5px solid var(--teal);
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@
 .dv-disclose summary::-webkit-details-marker { display: none; }
 .dv-disclose summary::before { content: '▸'; font-weight: 900; transition: transform var(--b-dur) var(--b-ease); }
 .dv-disclose[open] summary::before { transform: rotate(90deg); }
-.dv-disclose summary:hover { background: var(--paper-deep, #f2eee6); }
+.dv-disclose summary:hover { background: var(--paper-deep); }
 .dv-disclose-n {
   min-width: 22px;
   padding: 0 6px;
@@ -163,7 +163,7 @@
   background: var(--ink);
 }
 .dv-cmp-repro .dv-cmp-tag { background: #0f766e; }
-.dv-cmp-task .dv-cmp-tag { background: #a4001d; }
+.dv-cmp-task .dv-cmp-tag { background: var(--err); }
 .dv-cmp-random .dv-cmp-tag { background: var(--ink-soft); }
 .dv-cmp-random { opacity: 0.94; }
 /* 评分组件原本按整宽排版（星标与元信息并排），塞进右栏会溢出。

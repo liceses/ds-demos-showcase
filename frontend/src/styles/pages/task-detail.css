@@ -18,9 +18,9 @@
   padding: 6px 10px;
   font-size: 12px;
   background: #ffe3e8;
-  border-left: 5px solid var(--err, #a4001d);
+  border-left: 5px solid var(--err);
 }
-.brief-caveat b { color: var(--err, #a4001d); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.brief-caveat b { color: var(--err); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
 .chain-table { table-layout: fixed; }
 .chain-table th:nth-child(1) { width: 18%; }
 .chain-table th:nth-child(2) { width: 30%; }
@@ -52,8 +52,8 @@
   padding: 0 6px;
   font-size: 11px;
   font-weight: 900;
-  color: #fff;
-  background: #a4001d;
+  color: var(--paper);
+  background: var(--err);
   border: 2px solid var(--ink);
 }
 .chain-excerpt {

@@ -56,7 +56,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   border: 2px solid var(--ink);
 }
 .peek-stat b { font-family: var(--font-heading); font-size: 18px; color: var(--ink); line-height: 1; }

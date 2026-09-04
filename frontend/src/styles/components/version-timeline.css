@@ -34,7 +34,7 @@
 }
 .commit-meta {
   font-size: 11px;
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
 }
 .diff-block {
   border: 3px solid var(--ink);

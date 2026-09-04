@@ -9,7 +9,7 @@
 .model-chip.model-chip-plain {
   border-width: 1px;
   border-style: solid;
-  background: var(--paper-deep, #f2eee6);
+  background: var(--paper-deep);
   padding: 1px 7px;
   font-size: 11px;
   text-decoration: none;

@@ -370,7 +370,7 @@
 .tag-dist-bar-fill.mode-int { background: var(--mint); }
 .tag-dist-bar-label {
   font-size: 10px;
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -434,7 +434,7 @@
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
 }
 
 /* 上传标签弹窗：呼吸感 + 搜索命中 + 申请新值 */

@@ -44,7 +44,7 @@
   border: 2px solid transparent;
   cursor: pointer;
 }
-.ad-nav-item:hover { background: var(--paper-deep, #f2eee6); border-color: var(--ink); }
+.ad-nav-item:hover { background: var(--paper-deep); border-color: var(--ink); }
 .ad-nav-item.active { background: var(--yellow); border-color: var(--on-accent, #000); font-weight: 800; }
 .ad-nav-text { flex: 1; }
 .ad-nav-link { color: inherit; text-decoration: none; flex: 1; }
@@ -55,8 +55,8 @@
   font-family: var(--font-heading);
   font-size: 11px;
   font-weight: 900;
-  color: #fff;
-  background: #a4001d;
+  color: var(--paper);
+  background: var(--err);
   border: 2px solid var(--ink);
 }
 .ad-nav-item.active .ad-nav-badge { background: var(--ink); color: var(--paper); }
@@ -92,7 +92,7 @@
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .ac-card:hover { transform: translate(-2px, -2px); box-shadow: var(--shadow-black, 3px 3px 0 rgba(0, 0, 0, 0.25)); }
-.ac-card.hot { border-left-width: 9px; border-left-color: var(--err, #a4001d); }
+.ac-card.hot { border-left-width: 9px; border-left-color: var(--err); }
 .ac-num { font-family: var(--font-heading); font-size: 26px; font-weight: 900; line-height: 1; }
 .ac-label { font-size: 13px; font-weight: 800; }
 .ac-why { font-size: 11px; color: var(--ink-soft); line-height: 1.45; }
@@ -114,7 +114,7 @@
 .ac-actor { font-weight: 900; }
 .ac-time { font-size: 11px; color: var(--ink-soft); min-width: 92px; }
 .ac-act { padding: 0 6px; background: var(--ink); color: var(--paper); font-size: 11px; }
-.ac-act.warn { background: #a4001d; }
+.ac-act.warn { background: var(--err); }
 
 @media (max-width: 900px) {
   .admin-shell { grid-template-columns: minmax(0, 1fr); }

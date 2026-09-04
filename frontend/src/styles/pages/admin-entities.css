@@ -52,7 +52,7 @@
   font: inherit;
   color: var(--ink);
 }
-.ep-row:hover { background: var(--paper-deep, #f2eee6); border-color: var(--ink); }
+.ep-row:hover { background: var(--paper-deep); border-color: var(--ink); }
 .ep-row.active { background: var(--yellow); border-color: var(--on-accent, #000); font-weight: 800; }
 .ep-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .ep-meta { font-size: 11px; color: var(--ink-soft); white-space: nowrap; }

@@ -12,7 +12,7 @@
   outline: none;
 }
 .input::placeholder {
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
 }
 .input:focus {
   box-shadow: var(--shadow-black);
@@ -57,7 +57,7 @@ label.field .hint {
   font-size: 11px;
   font-weight: 400;
   text-transform: none;
-  color: var(--ink-soft, #555);
+  color: var(--ink-soft);
 }
 
 .field-label {

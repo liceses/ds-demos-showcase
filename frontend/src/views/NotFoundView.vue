@@ -44,10 +44,14 @@ onMounted(async () => {
   const maxDist = Math.max(2, Math.round(s.length * 0.34))
   const rank = (items: DemoSummary[]) =>
     items
-      .map((d) => ({
-        demo: d,
-        dist: Math.min(levenshtein(s, d.slug.toLowerCase()), levenshtein(s, d.title.toLowerCase())),
-      }))
+      .map((d) => {
+        const slugFull = d.slug.toLowerCase() // t28 验收修复：用户输错的是 URL 末段（无前缀），slug 常带 demo-/pvz- 首段——对全串比距离恒差前缀长度、永不过阈；取全串/去首段双路最小
+        const slugTail = slugFull.includes('-') ? slugFull.split('-').slice(1).join('-') : slugFull
+        return {
+          demo: d,
+          dist: Math.min(levenshtein(s, slugFull), levenshtein(s, slugTail), levenshtein(s, d.title.toLowerCase())),
+        }
+      })
       .filter((x) => x.dist <= maxDist)
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 3)

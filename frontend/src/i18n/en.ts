@@ -130,6 +130,17 @@ export const en = {
     eyebrow: 'Leaderboard',
     title: 'Gods & Ghosts',
     sub: 'Vote with the two extremes — masterpiece or disaster — and watch the verdict roll in.',
+    usersSub: 'Who keeps this community alive — reputation, likes and works do the talking.',
+    tab: {
+      works: 'Works board',
+      users: 'Reputation board',
+    },
+    range: {
+      all: 'All time',
+      week: 'This week',
+      month: 'This month',
+    },
+    rangeSoon: 'Time windows coming soon (all-time only for now)',
     sorts: {
       avg: 'Avg score',
       god: 'Masterpieces',
@@ -138,8 +149,22 @@ export const en = {
       count: 'Most rated',
       heat: 'Hottest',
     },
+    col: {
+      user: 'User',
+      reputation: 'Rep',
+      likes: 'Likes',
+      thanks: 'Thanks',
+      topics: 'Topics',
+      replies: 'Replies',
+      demos: 'Demos',
+      followers: 'Followers',
+    },
+    howRep: 'How is reputation calculated?',
+    howRepLink: 'See the rules →',
     loading: 'Loading board…',
     empty: 'Nothing on the board yet',
+    usersLoading: 'Loading reputation board…',
+    usersEmpty: 'Nobody on the board yet',
   },
 
   tags: {

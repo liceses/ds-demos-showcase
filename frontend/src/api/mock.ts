@@ -41,6 +41,7 @@ import type {
   ThanksBoard,
   UpdateDemoPayload,
   User,
+  UserLeaderboardItem,
   RecognitionInput,
   RecognitionItem,
   RatingStats,
@@ -1058,6 +1059,44 @@ export const mockApi = {
     else items.sort((a, b) => (b.rating_avg || 0) - (a.rating_avg || 0))
     const start = (page - 1) * pageSize
     return { items: clone(items.slice(start, start + pageSize)), total: items.length, page, page_size: pageSize }
+  },
+
+  async userLeaderboard(
+    sort: 'reputation' | 'likes' | 'thanks' | 'topics' | 'replies' | 'demos' | 'followers',
+    page = 1,
+    pageSize = 20,
+  ): Promise<Paginated<UserLeaderboardItem>> {
+    await delay()
+    // 占位统计表：mock 用户无真实声望数据，按 id 给一组确定值（与后端 UserLeaderboardOut 同形）
+    const stats: Record<number, { reputation: number; received_likes: number; received_thanks: number; topic_count: number; reply_count: number; follower_count: number }> = {
+      1: { reputation: 120, received_likes: 45, received_thanks: 12, topic_count: 2, reply_count: 8, follower_count: 6 },
+      2: { reputation: 66, received_likes: 30, received_thanks: 5, topic_count: 1, reply_count: 6, follower_count: 2 },
+      3: { reputation: 88, received_likes: 51, received_thanks: 9, topic_count: 3, reply_count: 11, follower_count: 4 },
+    }
+    const demoCountOf = (id: number) => demos.filter((d) => d.status === 'approved' && (d as unknown as { author_id?: number }).author_id === id).length
+    const rows: UserLeaderboardItem[] = users.map((u) => ({
+      id: u.id,
+      username: u.username,
+      bio: u.bio || '',
+      reputation: stats[u.id]?.reputation ?? 0,
+      received_likes: stats[u.id]?.received_likes ?? 0,
+      received_thanks: stats[u.id]?.received_thanks ?? 0,
+      demo_count: demoCountOf(u.id),
+      topic_count: stats[u.id]?.topic_count ?? 0,
+      reply_count: stats[u.id]?.reply_count ?? 0,
+      follower_count: stats[u.id]?.follower_count ?? 0,
+    }))
+    const keyOf = (r: UserLeaderboardItem): number =>
+      sort === 'likes' ? r.received_likes
+      : sort === 'thanks' ? r.received_thanks
+      : sort === 'topics' ? r.topic_count
+      : sort === 'replies' ? r.reply_count
+      : sort === 'demos' ? r.demo_count
+      : sort === 'followers' ? r.follower_count
+      : r.reputation
+    rows.sort((a, b) => (keyOf(b) - keyOf(a)) || (b.id - a.id))
+    const start = (page - 1) * pageSize
+    return { items: clone(rows.slice(start, start + pageSize)), total: rows.length, page, page_size: pageSize }
   },
 
 

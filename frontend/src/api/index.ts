@@ -41,6 +41,7 @@ import type {
   ThanksBoard,
   UpdateDemoPayload,
   User,
+  UserLeaderboardItem,
   RecognitionInput,
   RecognitionItem,
   RatingStats,
@@ -221,6 +222,14 @@ const realApi = {
     range: 'all' | 'week' | 'month' = 'all',
   ): Promise<Paginated<DemoSummary>> {
     const { data } = await http.get('/leaderboard', { params: { sort, page, page_size: pageSize, range } })
+    return data
+  },
+  async userLeaderboard(
+    sort: 'reputation' | 'likes' | 'thanks' | 'topics' | 'replies' | 'demos' | 'followers',
+    page = 1,
+    pageSize = 20,
+  ): Promise<Paginated<UserLeaderboardItem>> {
+    const { data } = await http.get('/users/leaderboard', { params: { sort, page, page_size: pageSize } })
     return data
   },
   async getForumTopic(id: number): Promise<ForumTopic | null> {

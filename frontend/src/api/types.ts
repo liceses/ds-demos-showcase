@@ -831,6 +831,31 @@ export interface FollowOut {
   following_count: number
 }
 
+/** 用户声望榜行（GET /users/leaderboard，仅 active 用户；与后端 UserLeaderboardOut 对齐） */
+export interface UserLeaderboardItem {
+  id: number
+  username: string
+  bio: string
+  reputation: number
+  received_likes: number
+  received_thanks: number
+  demo_count: number
+  topic_count: number
+  reply_count: number
+  follower_count: number
+}
+
+/** 公开用户信息（GET /users/{u} 与 followers/following 名单行） */
+export interface UserPublic {
+  id: number
+  username: string
+  role: string
+  status: string
+  bio: string
+  created_at: string
+  demo_count: number
+}
+
 export interface ForumTopicCard {
   id: number
   title: string

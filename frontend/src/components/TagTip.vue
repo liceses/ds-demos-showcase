@@ -22,9 +22,10 @@ const props = defineProps<{
 const store = useTagsStore()
 const open = ref(false)
 
-// 缓存式加载：已加载零请求；未加载借既有 listTagKeys 单例（与 UploadView/TagPicker 共享同一份）
+// 按需加载：调用方直传 description 时零额外请求（三处消费端均已直传）；
+// 未直传时才借既有 listTagKeys 单例兜底（与 UploadView/TagPicker 共享同一份缓存）
 onMounted(() => {
-  void store.load()
+  if (!props.description) void store.load()
 })
 
 const desc = computed(() => {

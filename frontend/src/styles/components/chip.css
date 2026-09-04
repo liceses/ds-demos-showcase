@@ -13,10 +13,13 @@
   text-decoration: none;
   transition: transform var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease), color var(--b-dur) var(--b-ease);
 }
-.tag-chip:hover {
-  transform: translate(-2px, -2px);
-  background: var(--yellow);
-  color: var(--on-accent, #000); /* 小面积原饱和+黑字（面积×饱和度） */
+/* R6：hover 抬起仅 hover 设备（触屏无粘滞 hover）；色变保持瞬切语义（R7 剥离随 P2-3） */
+@media (hover: hover) {
+  .tag-chip:hover {
+    transform: translate(-2px, -2px);
+    background: var(--yellow);
+    color: var(--on-accent, #000); /* 小面积原饱和+黑字（面积×饱和度） */
+  }
 }
 .tag-chip.active {
   background: var(--ink);

@@ -22,13 +22,36 @@
   outline: 4px solid var(--ink);
   outline-offset: 2px;
 }
-.btn:hover {
-  transform: translate(4px, 4px);
-  box-shadow: none;
+/* R6 交互物理（04 §2.2，手感灰度·原语族先行）：
+   hover=增影+抬起（无影按钮从无到有 4px 档；变体 8px 档抬起即表观增影，影不缩）；
+   active=压平进表面——位移=同档阴影偏移、阴影清零、0ms 瞬时，叠 --tilt-press 微倾。
+   hover 包 @media(hover:hover)（触屏 hover 不生效防粘滞）；触屏反馈由 :active 承担。 */
+@media (hover: hover) {
+  .btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--b-shadow);
+  }
+  /* 变体已有 --shadow-lg（8px 档）基影：hover 保持原档，抬起 -2px 即表观 10px 增影 */
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-outline:hover,
+  .btn-dark:hover,
+  .btn-danger:hover {
+    box-shadow: var(--shadow-lg);
+  }
 }
+/* 法则 01/R2：压平位移 = 同档阴影偏移；变体基影 8px 档 → 压平 8px */
 .btn:active {
-  transform: translate(6px, 6px);
+  transform: translate(4px, 4px) rotate(var(--tilt-press));
   box-shadow: none;
+  transition-duration: 0ms;
+}
+.btn-primary:active,
+.btn-secondary:active,
+.btn-outline:active,
+.btn-dark:active,
+.btn-danger:active {
+  transform: translate(8px, 8px) rotate(var(--tilt-press));
 }
 .btn:disabled {
   opacity: 0.5;

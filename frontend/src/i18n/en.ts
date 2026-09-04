@@ -497,6 +497,12 @@ export const en = {
     openExternal: 'Open in external browser',
     tapToPlay: 'Tap to play',
     playHint: 'Tap to play preview',
+    barFullscreen: 'Fullscreen',
+    barExitFs: 'Exit fullscreen',
+    barRestart: 'Replay',
+    barExternal: 'External',
+    barRate: 'Rate',
+    barDiscuss: 'Discuss',
   },
 
   tagtip: {

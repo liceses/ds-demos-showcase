@@ -17,7 +17,6 @@ import QuickComments from '../components/QuickComments.vue'
 import { parseDate, currentLocale } from '../utils/time'
 import { tagLabel } from '../utils/funMode'
 import { t } from '../i18n'
-
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -97,6 +96,90 @@ function openExternal() {
 watch([mountPreview, previewArmed], ([m, armed]) => {
   if (m && armed) startPreviewLoading()
 })
+
+// ---------- M1-B 移动动作条（03 §6.1 移动线框）：≤720 底部固定 5 键 ----------
+// 全屏=Fullscreen API；iOS（元素级 requestFullscreen 缺席/被拒）降级为固定定位层
+// （z 在 topbar 之上、toast 之下）；重开=重建 iframe（key 变更）+ 回加载态；
+// ★评分=滚到信息卡评分组并闪一次；讨论=展开 #dv-comments 并滚过去。
+const nativeFs = ref(false)
+const fakeFs = ref(false)
+const fsActive = computed(() => nativeFs.value || fakeFs.value)
+function onFsChange() {
+  nativeFs.value = !!document.fullscreenElement
+}
+function onFsKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && fakeFs.value) fakeFs.value = false
+}
+onMounted(() => {
+  document.addEventListener('fullscreenchange', onFsChange)
+  document.addEventListener('keydown', onFsKey)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', onFsChange)
+  document.removeEventListener('keydown', onFsKey)
+  if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+})
+// 动作条是 fixed，只遮「main 里的内容」垫不住 App 级 footer（footer 在 route-page 之外，
+// App.vue 红线不可动）→ 页脚抬升用 body padding 精确挂载/卸载（组件卸载即还原，无样式泄漏）
+const MQL_BAR = '(max-width: 720px)'
+const mqlBar = window.matchMedia(MQL_BAR)
+function syncBodyPad() {
+  document.body.style.paddingBottom = mqlBar.matches ? 'calc(60px + env(safe-area-inset-bottom, 0px))' : ''
+}
+onMounted(() => {
+  mqlBar.addEventListener('change', syncBodyPad)
+  syncBodyPad()
+})
+onBeforeUnmount(() => {
+  mqlBar.removeEventListener('change', syncBodyPad)
+  document.body.style.paddingBottom = ''
+})
+async function toggleFullscreen() {
+  if (fsActive.value) {
+    fakeFs.value = false
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => undefined)
+    return
+  }
+  const el = stageEl.value
+  if (el && el.requestFullscreen) {
+    try {
+      await el.requestFullscreen()
+      return
+    } catch {
+      /* 元素级全屏被拒（iOS Safari 等）→ 走固定定位层 */
+    }
+  }
+  fakeFs.value = true
+}
+// 重开：与 M0-B 三态衔接——重建 iframe 强制走一遍 loading（march 边框）→ready/error
+function restartPreview() {
+  previewKey.value += 1
+  previewArmed.value = true
+  mountPreview.value = true
+  startPreviewLoading()
+}
+// ★评分：评分住在信息卡里（收起先展开），滚过去再闪一下（给分动作有可感回应 03 §6.1）
+const ratingFlash = ref(false)
+let flashTimer: ReturnType<typeof setTimeout> | null = null
+function scrollToRating() {
+  if (!factsOpen.value) toggleFacts(true)
+  void nextTick(() => {
+    document.getElementById('dv-rating')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    ratingFlash.value = true
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => (ratingFlash.value = false), 1200)
+  })
+}
+// 讨论：展开评论区 disclosure 并滚过去（showArchive 同款机制）
+function openDiscussion() {
+  void nextTick(() => {
+    const el = document.getElementById('dv-comments')
+    if (el) {
+      el.setAttribute('open', '')
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
 
 // 侧滑预览：图谱的边不该以"离开本页"为代价（否则没人点，图谱就白建了）
 const peekTarget = ref<{ kind: 'model' | 'task' | 'demo'; slug: string } | null>(null)
@@ -304,7 +387,11 @@ onMounted(load)
     <!-- v2 重设计第 1 期：作品本体（左，sticky）+ 事实卡（右）。
          依据：详情页第一任务是"让它跑起来"，评分是社区唯一信号源必须常驻（Demo页重设计.md §3） -->
     <div class="dv-shell" :class="{ 'facts-collapsed': !factsOpen }">
-      <div class="dv-stage" ref="stageEl">
+      <div class="dv-stage" ref="stageEl" :class="{ 'dv-stage--fs': fakeFs }">
+        <!-- 全屏退出把手：Fullscreen API 与固定定位层两条路共用（fixed 层里它是唯一回得来的门） -->
+        <button v-if="fsActive" class="dv-fs-exit" type="button" @click="toggleFullscreen">
+          {{ t('demo.barExitFs', '退出全屏') }}
+        </button>
         <!-- iframe 懒挂载：预览进视口才加载，移动端/长页面不必为一块看不见的区域付渲染与流量 -->
         <!-- M0-B 预览三态：触屏默认海报点击播放；桌面进视口自动挂载（既有懒挂载逻辑不变） -->
         <template v-if="demo.demo_type === 'web'">
@@ -404,8 +491,8 @@ onMounted(load)
             <span class="dv-cell"><b>{{ demo.comment_count }}</b>{{ t('demo.discussions', '讨论') }}</span>
           </div>
 
-          <!-- 评分常驻：玩完顺手就能给分，不必回头找入口 -->
-          <div class="dv-group dv-rate">
+          <!-- 评分常驻：玩完顺手就能给分，不必回头找入口；M1-B 动作条 ★评分 的滚动锚 -->
+          <div id="dv-rating" class="dv-group dv-rate" :class="{ 'dv-rate--flash': ratingFlash }">
             <RatingWidget :slug="demo.slug" layout="rows" :dist-max="34" />
           </div>
 
@@ -634,6 +721,31 @@ onMounted(load)
     </section>
 
     <PeekDrawer :target="peekTarget" @close="peekTarget = null" @navigate="peekNavigate" />
+
+    <!-- M1-B 移动动作条（03 §6.1 移动线框）：≤720 底部固定；5 键全 ≥44px；主动作(全屏)居中；
+         safe-area 垫底；仅 web 型（zip/link 站立卡自带各自 CTA，动作条只服务可玩预览） -->
+    <nav v-if="demo.demo_type === 'web'" class="dv-mbar" aria-label="预览动作">
+      <button class="dv-mbar-btn" type="button" @click="restartPreview">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10a6 6 0 1 1-2.2-4.6" fill="none" stroke="currentColor" stroke-width="2" /><path d="M16 2v4h-4" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+        <span>{{ t('demo.barRestart', '重开') }}</span>
+      </button>
+      <button class="dv-mbar-btn" type="button" @click="scrollToRating">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L2.2 8.2l5.4-.8z" fill="currentColor" /></svg>
+        <span>{{ t('demo.barRate', '评分') }}</span>
+      </button>
+      <button class="dv-mbar-btn dv-mbar-main" type="button" :aria-pressed="fsActive" @click="toggleFullscreen">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+        <span>{{ t('demo.barFullscreen', '全屏') }}</span>
+      </button>
+      <button class="dv-mbar-btn" type="button" @click="openExternal">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4H4v12h12v-4" fill="none" stroke="currentColor" stroke-width="2" /><path d="M11 3h6v6M17 3l-8 8" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+        <span>{{ t('demo.barExternal', '外部打开') }}</span>
+      </button>
+      <button class="dv-mbar-btn" type="button" @click="openDiscussion">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v9H9l-4 3.5V13H3z" fill="none" stroke="currentColor" stroke-width="2" /></svg>
+        <span>{{ t('demo.barDiscuss', '讨论') }}</span>
+      </button>
+    </nav>
   </template>
   </div>
 </template>
@@ -769,6 +881,130 @@ onMounted(load)
   .pv-play {
     animation: none;
     transition: none;
+  }
+}
+
+/* ============================================================
+   M1-B 移动动作条（03 §6.1 移动线框）——styles/ 冻结令：全 scoped。
+   桌面 display:none（纯 CSS 门控，不依赖 JS 视口判断）；≤720 五键网格。
+   ============================================================ */
+.dv-mbar {
+  display: none;
+}
+@media (max-width: 720px) {
+  .dv-mbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60; /* 与 dv-rail 同段位：peek(z80)/toast(z1100) 仍在之上 */
+    border-top: var(--border-w, 4px) solid var(--ink, #000);
+    background: var(--paper, #fff);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* 页脚不被遮的垫底走 body padding（脚本挂载/卸载，见 syncBodyPad——footer 在 App.vue，红线不可动） */
+}
+.dv-mbar-btn {
+  min-height: 56px; /* ≥44px 触达底线（图标+标签留白后仍超线） */
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  background: none;
+  border: none;
+  border-right: 2px solid var(--ink, #000);
+  color: var(--ink, #000);
+  font-family: var(--font-body, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+.dv-mbar-btn:last-child {
+  border-right: none;
+}
+.dv-mbar-btn svg {
+  width: 20px;
+  height: 20px;
+}
+@media (hover: hover) {
+  .dv-mbar-btn:hover {
+    background: var(--paper-deep, #f2eee6);
+  }
+}
+.dv-mbar-btn:active {
+  transform: translate(2px, 2px);
+  transition-duration: 0ms; /* 法则 01：按压位移瞬时化 */
+}
+/* 主动作（全屏）居中且物理地位最高：反色章（双主题自动：--ink/--paper 互换即反色） */
+.dv-mbar-main {
+  background: var(--ink, #000);
+  color: var(--paper, #fff);
+}
+@media (hover: hover) {
+  .dv-mbar-main:hover {
+    background: var(--ink, #000);
+  }
+}
+
+/* iOS 降级全屏层：固定定位盖住顶栏（z 1050：topbar 1000 之上、toast 1100 之下）；
+   Fullscreen API 路径由浏览器接管，无需此类 */
+.dv-stage--fs {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  max-height: none;
+  overflow: auto;
+  background: var(--paper, #fff);
+  padding: 8px;
+}
+.dv-stage--fs iframe {
+  max-height: calc(100vh - 16px);
+}
+.dv-fs-exit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  min-height: 44px; /* 触达底线 */
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--paper, #fff);
+  color: var(--ink, #000);
+  border: var(--border-w, 4px) solid var(--ink, #000);
+  box-shadow: 4px 4px 0 0 var(--ink, #000);
+  cursor: pointer;
+}
+.dv-fs-exit:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  transition-duration: 0ms;
+}
+
+/* ★评分滚达闪档：黄底一闪（峰终：给分入口有可感回应）；reduced-motion 退场 */
+.dv-rate--flash {
+  animation: dv-rate-flash 0.6s ease both;
+}
+@keyframes dv-rate-flash {
+  0% {
+    background: var(--yellow, #ffd93d);
+  }
+  100% {
+    background: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv-rate--flash {
+    animation: none;
+  }
+  .dv-mbar-btn:active,
+  .dv-fs-exit:active {
+    transform: none;
   }
 }
 </style>

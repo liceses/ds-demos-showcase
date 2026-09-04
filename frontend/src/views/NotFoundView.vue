@@ -102,6 +102,10 @@ onMounted(async () => {
           <span class="nf-card-arrow" aria-hidden="true">→</span>
         </RouterLink>
       </div>
+      <!-- M1-fix-10：「关于」迁出顶栏后的低频去处之一（footer/首页条带/404 地图三路） -->
+      <p class="nf-about-row">
+        <RouterLink class="nf-about" to="/about">{{ t('app.nav.about', '关于本站') }} →</RouterLink>
+      </p>
     </div>
   </section>
   </div>
@@ -168,6 +172,22 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+}
+/* 「关于」低频文字链（M1-fix-10）：地图下缘静默一行，不与四入口卡争位 */
+.nf-about-row {
+  margin: 12px 0 0;
+  text-align: center;
+}
+.nf-about {
+  color: var(--ink-soft, #555);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 12px;
+}
+.nf-about:hover {
+  color: var(--ink, #000);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 @media (min-width: 720.02px) {
   .nf-grid {

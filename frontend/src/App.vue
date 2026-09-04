@@ -132,13 +132,14 @@ onMounted(() => {
         <span v-else class="brand-name">AI 全民<br />制作人</span>
       </RouterLink>
 
+      <!-- M1-fix-10 减法裁决：topnav 信息项 6→4（作品库/探索/排行榜/论坛）——
+           品牌 logo=回首页（首页项删除）；「关于」移出顶栏（去处=footer/首页条带 05/404 站点地图，
+           顶栏只留高频项，stylekit 静默导航同理）；移动抽屉仍 6 项全量（抽屉是菜单，空间管够） -->
       <nav class="topnav topnav-desktop">
-        <RouterLink class="nav-link" to="/">{{ t('app.nav.home', '首页') }}</RouterLink>
         <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
         <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
         <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
         <RouterLink class="nav-link" to="/forum">{{ t('app.nav.forum', '论坛') }}</RouterLink>
-        <RouterLink class="nav-link nav-about" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
       </nav>
 
       <div class="topnav topnav-desktop">
@@ -148,19 +149,7 @@ onMounted(() => {
         <button class="btn btn-sm btn-outline" type="button" :title="lang === 'en' ? '切换到中文' : 'Switch to English'" @click="switchLang">
           {{ lang === 'en' ? '中文' : 'EN' }}
         </button>
-        <!-- GitHub 仓库（05 §5.1 件 2）：工具件收进 header 右缘，token 单色不引品牌色，外链新窗 -->
-        <a
-          class="gh-link"
-          href="https://github.com/liceses/ds-demos-showcase"
-          target="_blank"
-          rel="noopener"
-          :title="t('app.github', 'GitHub 仓库')"
-          :aria-label="t('app.github', 'GitHub 仓库')"
-        >
-          <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" fill="currentColor">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-          </svg>
-        </a>
+        <!-- M1-fix-10：GitHub 图标链移出 header → footer（仓库链接是页脚惯例，右缘工具区只留主题/语言/铃铛+用户菜单+CTA） -->
         <template v-if="auth.isLoggedIn()">
           <NotificationBell />
           <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径 -->
@@ -275,6 +264,15 @@ onMounted(() => {
 
     <template v-if="!route.meta.forum">
       <footer class="footer container">
+        <!-- M1-fix-10 减法去处：关于/GitHub 从顶栏迁入页脚（低频件+仓库链接是页脚惯例；
+             forum 双皮壳页无 footer——仓库链在该壳缺席，回执记录） -->
+        <div class="footer-links">
+          <RouterLink class="footer-link" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
+          <span class="footer-links-div" aria-hidden="true"></span>
+          <a class="footer-link" href="https://github.com/liceses/ds-demos-showcase" target="_blank" rel="noopener" :title="t('app.github', 'GitHub 仓库')">
+            GitHub <span class="footer-ext" aria-hidden="true">↗</span>
+          </a>
+        </div>
         <div class="mono">{{ titleBase }} · {{ t('app.footerTail', 'AI 网页 Demo 作品集') }}</div>
         <div class="mono">{{ t('app.footerDisclaimer', '时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明') }}</div>
       </footer>
@@ -368,15 +366,7 @@ onMounted(() => {
 .topbar .topnav.topnav-desktop:not(nav) {
   gap: 10px; /* 右簇（功能钮）8→10：边框件之间留一线 */
 }
-/* 收纳断点决策（t36）：扩间距后内容宽≈954px（未登录）/≈994px（登录），滚动条 47px
-   → 换行临界 ≈1041vw；取 1120 为收纳线=留 107px 安全余量，覆盖 1024 设备 110% 缩放
-   （有效宽 1126 恰在临界上方）。「关于」语义去处：登录态→用户菜单（本提交新增项）、
-   未登录→抽屉/footer/首页条带/hero 关于链多路可找；全宽 ≥1121 恢复 6 项完整语义。 */
-@media (max-width: 1120px) {
-  .topbar nav.topnav .nav-about {
-    display: none;
-  }
-}
+
 /* 弹层登场（编排类豁免口径，R7 白名单内） */
 .user-menu-pop-enter-active {
   transition: opacity 150ms ease, transform 150ms ease;
@@ -421,27 +411,35 @@ onMounted(() => {
   text-decoration-thickness: 3px;
   text-underline-offset: 6px;
 }
-/* GitHub 图标链（05 §5.1 件 2）：token 单色，hover = ink 实底反色（btn-dark 词汇） */
-.gh-link {
-  display: inline-flex;
+
+
+/* ---- M1-fix-10 header 减法（用户二次裁决：不是间距是数量）----
+   顶栏信息项 6→4（作品库/探索/排行榜/论坛）：品牌 logo=回首页、「关于」迁 footer、
+   GitHub 迁 footer；间距节奏（gap 14/10+CTA 24）保留。「关于」去处三路：
+   footer 链接行 + 首页条带 05 + 404 站点地图——顶栏不再承担低频项。 */
+.footer-links {
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 30px;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.footer-link {
+  color: var(--ink-soft, #555);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+}
+.footer-link:hover {
   color: var(--ink, #000);
-  border: 2px solid transparent;
-  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
-.gh-link:hover {
+.footer-links-div {
+  width: 2px;
+  height: 14px;
   background: var(--ink, #000);
-  color: var(--paper, #fff);
 }
-.gh-link:active {
-  transform: translate(1px, 1px);
-}
-@media (prefers-reduced-motion: reduce) {
-  .gh-link {
-    transition: none;
-  }
-}
-</style>
+.footer-ext {
+  font-size: 11px;
+}</style>

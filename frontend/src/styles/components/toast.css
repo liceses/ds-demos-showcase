@@ -16,7 +16,7 @@
   padding: 10px 12px;
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: var(--sh-off-lg) 0 0 var(--ink); /* R2 单源（原 6px 6px；rgba(0,0,0,1)≡#000000，墨黑下自动翻暖白影） */
   font-size: 13px;
 }
 .toast-item.toast-success { background: var(--teal); color: var(--on-accent, #000); }

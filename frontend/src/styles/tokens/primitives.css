@@ -25,6 +25,16 @@
   --sh-off-lg: 6px 6px;
   --sh-off-xl: 8px 8px;
 
+  /* R1/R2 响应式（50% 律，@720 收敛点与 pages/_mobile-legacy 断点一致，无双跳）：
+     移动档边框减半、位移档减半——压平位移 translate(var(--sh-off-*)) 同源自动同步；
+     --sh-off-sm 已是下限保持不变 */
+  @media (max-width: 720px) {
+    --border-w-md: 2px;
+    --sh-off-md: 2px 2px;
+    --sh-off-lg: 3px 3px;
+    --sh-off-xl: 4px 4px;
+  }
+
   /* ---------- L1 色板原子 · 纸系（--p-*，默认主题；04 §2.1 玩乐谱系基因） ---------- */
   --p-red: #ff6b6b;
   --p-teal: #4ecdc4;

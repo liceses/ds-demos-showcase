@@ -40,9 +40,9 @@
     box-shadow: var(--shadow-lg);
   }
 }
-/* 法则 01/R2：压平位移 = 同档阴影偏移；变体基影 8px 档 → 压平 8px */
+/* 法则 01/R2：压平位移 = 同档阴影偏移（--sh-off 单源，@720 减半自动同步）；变体基影 8px 档 → 压平 xl */
 .btn:active {
-  transform: translate(4px, 4px) rotate(var(--tilt-press));
+  transform: translate(var(--sh-off-md)) rotate(var(--tilt-press));
   box-shadow: none;
   transition-duration: 0ms;
 }
@@ -51,7 +51,7 @@
 .btn-outline:active,
 .btn-dark:active,
 .btn-danger:active {
-  transform: translate(8px, 8px) rotate(var(--tilt-press));
+  transform: translate(var(--sh-off-xl)) rotate(var(--tilt-press));
 }
 .btn:disabled {
   opacity: 0.5;

@@ -24,6 +24,6 @@
 .tab.active {
   background: var(--ink);
   color: var(--paper);
-  box-shadow: 4px 4px 0 0 var(--yellow);
+  box-shadow: var(--sh-off-md) 0 0 var(--yellow); /* R2 单源（原 4px 4px） */
 }
 

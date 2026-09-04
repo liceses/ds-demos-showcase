@@ -16,7 +16,7 @@
 .modal-card {
   width: min(440px, calc(100% - 48px));
   padding: 24px;
-  box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 10px 10px 0 0 var(--ink); /* 弹层专属 10px 档（非标准三档，stamp-hard 登场配重，字面保留）；rgba(0,0,0,1)→var(--ink) 墨黑下翻暖白 */
 }
 .modal-title {
   font-size: 22px;

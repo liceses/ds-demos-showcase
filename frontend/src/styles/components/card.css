@@ -24,7 +24,7 @@
 }
 .card-hover:hover {
   transform: translate(-2px, -2px) rotate(0deg);
-  box-shadow: 12px 12px 0 0 var(--red);
+  box-shadow: 12px 12px 0 0 var(--red); /* hover 增影顶格档 12px（非标准三档，字面保留随手感灰度二批定档；档位外不强行收编） */
 }
 .card-flat {
   box-shadow: none;

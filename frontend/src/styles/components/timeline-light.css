@@ -10,7 +10,7 @@
   gap: 10px;
   background: var(--paper);
   border: 2px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: var(--sh-off-md) 0 var(--ink); /* R2 单源（原 4px 4px 0） */
   padding: 12px 14px;
 }
 .timeline-body {

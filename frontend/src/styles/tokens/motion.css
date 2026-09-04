@@ -24,12 +24,12 @@
 .tag-chip {
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
-/* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移 */
-.ac-card:active { transform: translate(4px, 4px); box-shadow: none; }
+/* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移（--sh-off 单源，@720 自动减半；uw-type 3px 非档位字面暂留） */
+.ac-card:active { transform: translate(var(--sh-off-md)); box-shadow: none; }
 .uw-type:active { transform: translate(3px, 3px); box-shadow: none; }
 .dv-rail:active,
 .dv-collapse:active,
-.uw-edit:active { transform: translate(2px, 2px); box-shadow: none; }
+.uw-edit:active { transform: translate(var(--sh-off-sm)); box-shadow: none; }
 /* 法则 04：卡片 hover 阴影变大并换彩色，背景硬切（无渐变、无淡入） */
 .ac-card:hover { transform: translate(-2px, -2px); box-shadow: var(--b-shadow-hot); }
 .ac-card.hot:hover { box-shadow: 8px 8px 0 0 var(--teal); }

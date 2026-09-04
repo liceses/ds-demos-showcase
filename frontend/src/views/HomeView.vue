@@ -497,6 +497,70 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* ============================================================
+   M1-fix-9 公告横幅样式恢复（t35）：标记/类名未动，样式块在 M1-H2 hero
+   重写 HomeView 样式段时被整段带失（git 考古：235d857 有 .ann-banner 块，
+   cde64ee 起消失）。按 05 §5 横幅规格+三律恢复：h≈44 纯色填充+单影一刀
+   （原版透明底+border-b 收进三律口径），点击开弹层行为不变。
+   ============================================================ */
+.ann-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border: none;
+  background: var(--paper-deep, #f2eee6);
+  box-shadow: var(--shadow-black, 6px 6px 0 0 var(--ink, #000));
+  color: var(--ink, #000);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-heading, sans-serif);
+}
+.ann-banner-stamp {
+  flex: none;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  background: var(--yellow, #ffe66d);
+  color: var(--on-accent, #000);
+  border: 2px solid var(--ink, #000);
+  transform: rotate(var(--tilt-deco, -1.5deg)); /* R8 白名单：印章装饰 */
+  white-space: nowrap;
+}
+.ann-banner-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 14px;
+}
+.ann-banner-unread {
+  flex: none;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 8px;
+  background: var(--yellow, #ffe66d);
+  color: var(--on-accent, #000);
+  border: 2px solid var(--ink, #000);
+  white-space: nowrap;
+}
+.ann-banner-all {
+  flex: none;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.ann-banner:hover .ann-banner-all {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/* ============================================================
    M1-H2 hero 双列 + 数字条 + CTA 行 + 站点导航条带（05 §5.1/§2.1 定稿；组件级样式，style.css 冻结令生效中）
    ============================================================ */
 .hero-v2 {

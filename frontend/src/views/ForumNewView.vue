@@ -14,8 +14,10 @@ const route = useRoute()
 const ui = useUiStore()
 
 const prefillDemo = ref(typeof route.query.demo === 'string' ? route.query.demo : '')
-const title = ref('')
-const category = ref('交流')
+// M1-A 空态出口「去论坛求助」：作品库分面词经 ?title= 预填标题（03 §4.5-3，把求助的起手式铺平）
+const prefillTitle = ref(typeof route.query.title === 'string' ? route.query.title : '')
+const title = ref(prefillTitle.value)
+const category = ref(prefillTitle.value ? '求助' : '交流')
 if (prefillDemo.value) category.value = 'demo'
 const tagsPicked = ref<{ key: string; value: string; description?: string }[]>([])
 const content = ref('')

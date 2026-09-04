@@ -160,10 +160,12 @@ onMounted(() => {
              display:contents 保桌面 flex 布局逐字节不变（子项仍直接参与 space-between/gap）。 -->
         <template v-if="auth.isLoggedIn()">
           <span class="auth-cluster">
-            <NotificationBell />
-            <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径 -->
+            <!-- T9 反馈③：铃铛并入 btn-sm 描边族（用例级 class 合并——TabBar/forum 壳的 .notif-bell 旧档不受影响） -->
+            <NotificationBell class="btn btn-sm btn-outline" />
+            <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径；
+                 T9 反馈③：trigger 并入 btn-sm 描边族（同盒法规，裸字形态废除） -->
             <div ref="userMenuRoot" class="user-menu">
-              <button class="user-menu-trigger" type="button" :aria-expanded="userMenuOpen" @click="toggleUserMenu">
+              <button class="user-menu-trigger btn btn-sm btn-outline" type="button" :aria-expanded="userMenuOpen" @click="toggleUserMenu">
                 {{ username }}
                 <span v-if="auth.isAdmin() && adminQueueTotal > 0" class="user-menu-dot" aria-hidden="true"></span>
                 <span class="user-menu-caret" aria-hidden="true">▾</span>
@@ -287,17 +289,26 @@ onMounted(() => {
 .user-menu {
   position: relative;
 }
+/* T9 反馈③：右簇统一 btn-sm 描边族——铃铛/trigger 的盒法规收敛（scoped 压过全局 .notif-bell
+   2px 纸底旧档；该旧档仍服务 TabBar/forum 壳用例，不删）。CTA=btn-primary 红底同盒法规（同高同描边，
+   只以色/底区分主次）无需改。统一后右簇=同边框律/同 padding/同影档/同 hover（抬起+影），只字色与图标异。 */
+.topbar .notif-bell {
+  padding: 7px 13px;
+  border: var(--border-w, 3px) solid var(--ink, #000);
+  background: var(--wash-yellow, #ffe66d);
+  box-shadow: var(--shadow-lg, 6px 6px 0 0 #000);
+}
+@media (hover: hover) {
+  .topbar .notif-bell:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-lg, 6px 6px 0 0 #000);
+  }
+}
 .user-menu-trigger {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: none;
-  border: none;
-  padding: 4px 2px;
   cursor: pointer;
-  font: inherit;
-  font-weight: 900;
-  color: var(--ink, #000);
 }
 .user-menu-caret {
   font-size: 10px;

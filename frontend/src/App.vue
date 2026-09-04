@@ -12,11 +12,11 @@ import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
 import ForumHeader from './components/ForumHeader.vue'
 import NotificationBell from './components/NotificationBell.vue'
+import AppTabBar from './components/AppTabBar.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
 const username = computed(() => auth.user?.username ?? '')
-const mobileOpen = ref(false)
 const keepAlivePages = ['HomeView', 'DemosView', 'TagListView', 'LeaderboardView', 'ForumListView', 'ModelsView', 'TasksView', 'ExploreView']
 // 保留页按 name 做 key（同页返回复用实例）；其他页按 fullPath（参数变化强制重挂载）
 // key 只用 path，不用 fullPath：
@@ -33,7 +33,6 @@ const funOn = funEffective
 watch(
   () => route.fullPath,
   () => {
-    mobileOpen.value = false
     adminExempt.value = route.path.startsWith('/admin')
   },
   { immediate: true }, // 直接以 /admin 打开时也要立即生效
@@ -46,15 +45,6 @@ onMounted(() => {
     .then((info) => applyServerFunMode(!!info.display?.fun_mode))
     .catch(() => undefined)
 })
-
-const menuItems = [
-  { to: '/', key: 'home', label: '首页' },
-  { to: '/demos', key: 'demos', label: '作品库' },
-  { to: '/tags', key: 'explore', label: '探索' },
-  { to: '/leaderboard', key: 'leaderboard', label: '排行榜' },
-  { to: '/forum', key: 'forum', label: '论坛' },
-  { to: '/about', key: 'about', label: '关于本站' },
-]
 
 // 用户菜单（03 §2.4）：admin 从顶栏移入下拉，「管理工作台」徽章 = 待办合计，
 // 数字走 adminQueues 单一口径（useQueues().totalMust，与后台侧栏/概览台同源，不自算）
@@ -134,7 +124,8 @@ onMounted(() => {
 
       <!-- M1-fix-10 减法裁决：topnav 信息项 6→4（作品库/探索/排行榜/论坛）——
            品牌 logo=回首页（首页项删除）；「关于」移出顶栏（去处=footer/首页条带 05/404 站点地图，
-           顶栏只留高频项，stylekit 静默导航同理）；移动抽屉仍 6 项全量（抽屉是菜单，空间管够） -->
+           顶栏只留高频项，stylekit 静默导航同理）；M2-1：移动抽屉退役（03 §10.2 TabBar 新基线，
+           探索/排行榜/关于由首页入口+条带+footer 承接，双移动导航=认知冗余） -->
       <nav class="topnav topnav-desktop">
         <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
         <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
@@ -142,7 +133,11 @@ onMounted(() => {
         <RouterLink class="nav-link" to="/forum">{{ t('app.nav.forum', '论坛') }}</RouterLink>
       </nav>
 
-      <div class="topnav topnav-desktop">
+      <!-- M2-1 右簇降级修正：工具簇不再整体隐藏（topnav-desktop 会连主题/语言一起藏掉，
+           违反「<720 顶栏只留品牌+主题/语言」）——改用 topnav-tools 常显，子项各自降级：
+           auth-cluster（App.vue scoped @720 隐藏）+ CTA（topnav-desktop 类，全局 @720 隐藏）；
+           桌面 .topnav 基础 flex + scoped gap10 与原逐字节等价。 -->
+      <div class="topnav topnav-tools">
         <button class="btn btn-sm btn-outline" type="button" :title="themeTitle" @click="cycleTheme">
           {{ themeNow === 'ink' ? '纸' : '墨' }}
         </button>
@@ -150,93 +145,45 @@ onMounted(() => {
           {{ lang === 'en' ? '中文' : 'EN' }}
         </button>
         <!-- M1-fix-10：GitHub 图标链移出 header → footer（仓库链接是页脚惯例，右缘工具区只留主题/语言/铃铛+用户菜单+CTA） -->
+        <!-- M2-1 顶栏移动降级（任务书）：<720 只留品牌+主题/语言——auth 簇与 CTA 收起：
+             铃铛/用户菜单/登录注册 → 「我的」Tab 内聚；CTA → TabBar 中央 FAB。
+             display:contents 保桌面 flex 布局逐字节不变（子项仍直接参与 space-between/gap）。 -->
         <template v-if="auth.isLoggedIn()">
-          <NotificationBell />
-          <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径 -->
-          <div ref="userMenuRoot" class="user-menu">
-            <button class="user-menu-trigger" type="button" :aria-expanded="userMenuOpen" @click="toggleUserMenu">
-              {{ username }}
-              <span v-if="auth.isAdmin() && adminQueueTotal > 0" class="user-menu-dot" aria-hidden="true"></span>
-              <span class="user-menu-caret" aria-hidden="true">▾</span>
-            </button>
-            <Transition name="user-menu-pop">
-              <div v-if="userMenuOpen" class="user-menu-panel">
-                <RouterLink class="user-menu-item" :to="`/user/${username}`">{{ t('app.menu.profile', '个人主页') }}</RouterLink>
-                <RouterLink v-if="auth.isAdmin()" class="user-menu-item" to="/admin">
-                  {{ t('app.nav.workbench', '管理工作台') }}
-                  <span v-if="adminQueueTotal > 0" class="user-menu-badge">{{ adminQueueTotal }}</span>
-                </RouterLink>
-                <!-- t36 收纳去处：窄桌面（≤1120）顶栏「关于」收进用户菜单（键复用 app.nav.about） -->
-                <RouterLink class="user-menu-item" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
-                <button class="user-menu-item user-menu-quit" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
-              </div>
-            </Transition>
-          </div>
+          <span class="auth-cluster">
+            <NotificationBell />
+            <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径 -->
+            <div ref="userMenuRoot" class="user-menu">
+              <button class="user-menu-trigger" type="button" :aria-expanded="userMenuOpen" @click="toggleUserMenu">
+                {{ username }}
+                <span v-if="auth.isAdmin() && adminQueueTotal > 0" class="user-menu-dot" aria-hidden="true"></span>
+                <span class="user-menu-caret" aria-hidden="true">▾</span>
+              </button>
+              <Transition name="user-menu-pop">
+                <div v-if="userMenuOpen" class="user-menu-panel">
+                  <!-- M2-1 顺手修：en 词表里该词条在 app.profile（原键 app.menu.profile 走查中永远回落中文） -->
+                  <RouterLink class="user-menu-item" :to="`/user/${username}`">{{ t('app.profile', '个人主页') }}</RouterLink>
+                  <RouterLink v-if="auth.isAdmin()" class="user-menu-item" to="/admin">
+                    {{ t('app.nav.workbench', '管理工作台') }}
+                    <span v-if="adminQueueTotal > 0" class="user-menu-badge">{{ adminQueueTotal }}</span>
+                  </RouterLink>
+                  <!-- t36 收纳去处：窄桌面（≤1120）顶栏「关于」收进用户菜单（键复用 app.nav.about） -->
+                  <RouterLink class="user-menu-item" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
+                  <button class="user-menu-item user-menu-quit" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
+                </div>
+              </Transition>
+            </div>
+          </span>
         </template>
         <template v-else>
-          <RouterLink class="nav-link" to="/login">{{ t('app.nav.login', '登录') }}</RouterLink>
-          <RouterLink class="nav-link" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
+          <span class="auth-cluster">
+            <RouterLink class="nav-link" to="/login">{{ t('app.nav.login', '登录') }}</RouterLink>
+            <RouterLink class="nav-link" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
+          </span>
         </template>
-        <!-- 上传 Demo 升为主 CTA（03 §2.4：单一主动作，不与信息项竞争；URL /upload 不变） -->
-        <RouterLink class="btn btn-sm btn-primary topnav-cta" to="/upload">{{ t('app.nav.upload', '上传 Demo') }}</RouterLink>
+        <!-- 上传 Demo 升为主 CTA（03 §2.4：单一主动作，不与信息项竞争；URL /upload 不变）；移动端由 TabBar FAB 承接 -->
+        <RouterLink class="btn btn-sm btn-primary topnav-cta topnav-desktop" to="/upload">{{ t('app.nav.upload', '上传 Demo') }}</RouterLink>
       </div>
-
-      <button
-        class="mobile-nav-toggle"
-        type="button"
-        :aria-expanded="mobileOpen"
-        aria-label="打开菜单"
-        @click="mobileOpen = !mobileOpen"
-      >
-        <span></span><span></span><span></span>
-      </button>
     </header>
-
-    <!-- 移动端抽屉 -->
-    <Transition name="mobile-drawer">
-      <div v-if="mobileOpen" class="mobile-drawer" @click.self="mobileOpen = false">
-        <div class="mobile-drawer-inner">
-          <div class="mobile-drawer-head">
-            <span class="mode-rail-stamp">{{ t('app.menu', '菜单') }}</span>
-            <button class="mobile-drawer-close" type="button" @click="mobileOpen = false">X</button>
-          </div>
-          <nav class="mobile-drawer-nav">
-            <RouterLink
-              v-for="m in menuItems"
-              :key="m.to"
-              class="mobile-drawer-link"
-              :class="{ active: route.path === m.to }"
-              :to="m.to"
-            >
-              {{ t('app.nav.' + m.key, m.label) }}
-              <span class="mobile-drawer-arrow">→</span>
-            </RouterLink>
-          </nav>
-          <div class="mobile-drawer-foot">
-            <!-- 上传 CTA：抽屉内也保持主按钮地位（03 §2.4 同步移动端） -->
-            <RouterLink class="btn btn-primary btn-block" to="/upload">{{ t('app.nav.upload', '上传 Demo') }} →</RouterLink>
-            <RouterLink v-if="auth.isAdmin()" class="btn btn-outline btn-block" to="/admin">
-              {{ t('app.nav.workbench', '管理工作台') }}
-              <span v-if="adminQueueTotal > 0" class="user-menu-badge">{{ adminQueueTotal }}</span>
-            </RouterLink>
-            <button class="btn btn-outline btn-block" type="button" :title="themeTitle" @click="cycleTheme">
-              {{ themeNow === 'ink' ? t('app.theme.toPaper', '换纸白') : t('app.theme.toInk', '换墨黑') }}
-            </button>
-            <button class="btn btn-outline btn-block" type="button" @click="switchLang">
-              {{ lang === 'en' ? '中文' : 'EN' }}
-            </button>
-            <template v-if="auth.isLoggedIn()">
-              <RouterLink class="btn btn-outline btn-block" :to="`/user/${username}`">{{ username }}</RouterLink>
-              <button class="btn btn-dark btn-block" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
-            </template>
-            <template v-else>
-              <RouterLink class="btn btn-outline btn-block" to="/login">{{ t('app.nav.login', '登录') }}</RouterLink>
-              <RouterLink class="btn btn-primary btn-block" to="/register">{{ t('app.nav.register', '注册') }}</RouterLink>
-            </template>
-          </div>
-        </div>
-      </div>
-    </Transition>
     </template>
 
     <ForumHeader v-if="route.meta.forum" />
@@ -278,12 +225,32 @@ onMounted(() => {
       </footer>
     </template>
 
+    <!-- M2-1 移动 TabBar（03 §10.2）：非 forum 双皮壳壳层挂载；<720 渲染，桌面零渲染 -->
+    <AppTabBar v-if="!route.meta.forum" />
+
     <ConfirmHost />
     <ToastHost />
   </div>
 </template>
 
 <style scoped>
+/* ---- M2-1 移动 TabBar 壳层配合（03 §10.2 + 任务书降级裁决）----
+   <720 顶栏只留品牌+主题/语言：auth 簇（铃铛/用户菜单/登录注册）display:none 收进
+   「我的」Tab 内聚，CTA 隐藏（topnav-desktop 类）由中央 FAB 承接；
+   桌面 display:contents——子项照旧直接参与 .topnav 的 flex/gap，布局逐字节不变。 */
+.auth-cluster {
+  display: contents;
+}
+@media (max-width: 720px) {
+  .auth-cluster {
+    display: none;
+  }
+  /* 固定底栏让位：footer 尾部不被 TabBar 遮挡（栏高 56 + safe-area；forum 壳无 TabBar 不让位） */
+  .app-shell:not(.forum-shell) {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+}
+
 /* 用户菜单（M1-1，03 §2.4）：样式组件级（style.css 冻结令生效中，令牌经 var() 引用全局既有值并带回落） */
 .user-menu {
   position: relative;
@@ -363,8 +330,8 @@ onMounted(() => {
 .topbar nav.topnav {
   gap: 14px; /* 导航簇 8→14：文字间距 32→38px，静默文字链需要呼吸感 */
 }
-.topbar .topnav.topnav-desktop:not(nav) {
-  gap: 10px; /* 右簇（功能钮）8→10：边框件之间留一线 */
+.topbar .topnav.topnav-tools {
+  gap: 10px; /* 右簇（功能钮）8→10：边框件之间留一线（原 topnav-desktop 选择器随 M2-1 右簇改名而更新） */
 }
 
 /* 弹层登场（编排类豁免口径，R7 白名单内） */

@@ -8,9 +8,6 @@
   .topnav-desktop {
     display: none;
   }
-  .mobile-nav-toggle {
-    display: flex;
-  }
   .topbar {
     flex-direction: row;
     align-items: center;

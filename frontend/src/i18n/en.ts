@@ -20,7 +20,15 @@ export const en = {
       register: 'Sign up',
       logout: 'Log out',
     },
-    menu: 'Menu',
+    // M2-1 移动 TabBar（03 §10.2）：Tab 位标签独立成节（社区≠论坛/作品≠作品库的短标签口径）
+    tabbar: {
+      label: 'Bottom navigation',
+      home: 'Home',
+      works: 'Works',
+      community: 'Community',
+      me: 'Me',
+      login: 'Log in',
+    },
     profile: 'Profile',
     github: 'GitHub repository',
     close: 'X',
@@ -309,6 +317,7 @@ export const en = {
   notifications: {
     eyebrow: 'Notifications',
     title: 'Notification center',
+    tab: 'Notifications',
     all: 'All',
     unread: 'Unread',
     markAll: 'Mark all read',

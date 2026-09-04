@@ -612,7 +612,8 @@ onBeforeUnmount(() => {
   background: var(--ink, #000);
   flex: none;
 }
-/* 数字条（05 §2.1）：mono tabular-nums + 竖分隔线；第四段=实时在线（站点活着信号） */
+/* 数字条（05 §2.1）：mono tabular-nums + 竖分隔线；第四段=实时在线（站点活着信号）
+   T9 用户反馈：数字条对齐 tagline 档（.sub 15px/400）——原 .hn b 20px/900 过大，『要和打字机轮换的那个一样小』 */
 .hero-numstrip {
   display: flex;
   align-items: center;
@@ -623,11 +624,11 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
 }
 .hero-numstrip .hn {
-  font-size: 13px;
+  font-size: 15px;
 }
 .hero-numstrip .hn b {
-  font-size: 20px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 400;
   margin-right: 4px;
 }
 .hn-div {

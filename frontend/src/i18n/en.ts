@@ -279,6 +279,14 @@ export const en = {
     followingBtn: 'Following',
     theirDemos: 'Their demos',
     noDemos: 'No demos published yet',
+    fl: {
+      subFollowers: 'People following {u}',
+      subFollowing: 'People {u} follows',
+      mutual: 'Mutual',
+      loading: 'Loading list…',
+      emptyFollowers: 'No followers yet',
+      emptyFollowing: 'Not following anyone yet',
+    },
   },
 
   public: {
@@ -417,6 +425,13 @@ export const en = {
     delMsg: 'Delete “{title}”? This cannot be undone — local files and OSS objects will be removed.',
     delConfirm: 'Delete',
     deleted: 'Demo deleted',
+    previewLoading: 'Loading preview…',
+    previewFailed: 'Preview failed to load',
+    previewFailHint: 'Possible causes: preview domain blocked / large file timeout / cross-origin restrictions',
+    retry: 'Retry',
+    openExternal: 'Open in external browser',
+    tapToPlay: 'Tap to play',
+    playHint: 'Tap to play preview',
   },
 
   tagtip: {

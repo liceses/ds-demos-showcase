@@ -42,6 +42,7 @@ import type {
   UpdateDemoPayload,
   User,
   UserLeaderboardItem,
+  UserPublic,
   RecognitionInput,
   RecognitionItem,
   RatingStats,
@@ -256,11 +257,11 @@ const realApi = {
     const { data } = await http.post(`/users/${userId}/follow`)
     return data
   },
-  async listFollowers(username: string): Promise<Array<{ id: number; username: string }>> {
+  async listFollowers(username: string): Promise<UserPublic[]> {
     const { data } = await http.get(`/users/${encodeURIComponent(username)}/followers`)
     return data
   },
-  async listFollowing(username: string): Promise<Array<{ id: number; username: string }>> {
+  async listFollowing(username: string): Promise<UserPublic[]> {
     const { data } = await http.get(`/users/${encodeURIComponent(username)}/following`)
     return data
   },

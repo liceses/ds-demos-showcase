@@ -62,8 +62,8 @@ onMounted(async () => {
         <span class="mini-stat"><b>{{ profile?.reputation ?? 0 }}</b> {{ t('user.reputation', '声望') }}</span>
         <span class="mini-stat"><b>{{ profile?.topic_count ?? 0 }}</b> {{ t('user.topics', '主题') }}</span>
         <span class="mini-stat"><b>{{ profile?.reply_count ?? 0 }}</b> {{ t('user.replies', '回复') }}</span>
-        <span class="mini-stat"><b>{{ profile?.follower_count ?? 0 }}</b> {{ t('user.followers', '粉丝') }}</span>
-        <span class="mini-stat"><b>{{ profile?.following_count ?? 0 }}</b> {{ t('user.following', '关注') }}</span>
+        <span class="mini-stat"><b>{{ profile?.follower_count ?? 0 }}</b> <RouterLink :to="`/user/${username}/followers`">{{ t('user.followers', '粉丝') }}</RouterLink></span>
+        <span class="mini-stat"><b>{{ profile?.following_count ?? 0 }}</b> <RouterLink :to="`/user/${username}/following`">{{ t('user.following', '关注') }}</RouterLink></span>
         <span class="mini-stat"><b>{{ user.role }}</b> {{ t('user.role', '角色') }}</span>
         <span class="mini-stat"><b>{{ parseDate(user.created_at).toLocaleDateString(currentLocale()) }}</b> {{ t('user.joined', '加入') }}</span>
         <RouterLink v-if="isSelf" class="btn btn-sm btn-primary" to="/settings">{{ t('settings.eyebrow', '账户设置') }}</RouterLink>

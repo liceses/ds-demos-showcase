@@ -42,6 +42,7 @@ import type {
   UpdateDemoPayload,
   User,
   UserLeaderboardItem,
+  UserPublic,
   RecognitionInput,
   RecognitionItem,
   RatingStats,
@@ -141,6 +142,19 @@ const passwordOf: Record<string, string> = {
   admin: 'admin123',
   tester: 'password',
   alice: 'password',
+}
+
+/** users[] 行 → UserPublic（与后端 _user_public 同形：demo_count 按 mock demo 实时数） */
+function toUserPublic(u: User): UserPublic {
+  return {
+    id: u.id,
+    username: u.username,
+    role: u.role,
+    status: u.status,
+    bio: u.bio || '',
+    created_at: u.created_at,
+    demo_count: demos.filter((d) => d.author === u.username).length,
+  }
 }
 
 let currentUser: User | null = null
@@ -1933,13 +1947,15 @@ export const mockApi = {
     await delay()
     return { following: true, followers_count: 3, following_count: 1 }
   },
-  async listFollowers(_username: string): Promise<Array<{ id: number; username: string }>> {
+  async listFollowers(username: string): Promise<UserPublic[]> {
     await delay()
-    return [{ id: 1, username: 'admin' }, { id: 3, username: 'alice' }]
+    const ids = username === 'alice' ? [1, 2] : [1, 3]
+    return ids.map((id) => toUserPublic(users.find((u) => u.id === id)!))
   },
-  async listFollowing(_username: string): Promise<Array<{ id: number; username: string }>> {
+  async listFollowing(username: string): Promise<UserPublic[]> {
     await delay()
-    return [{ id: 1, username: 'admin' }]
+    const ids = username === 'admin' ? [2, 3] : [1]
+    return ids.map((id) => toUserPublic(users.find((u) => u.id === id)!))
   },
 
   async adminReviewForumTopic(id: number, action: 'approve' | 'reject'): Promise<ForumTopic> {

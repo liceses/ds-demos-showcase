@@ -26,6 +26,9 @@ const router = createRouter({
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { title: '登录' } },
     { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { title: '注册' } },
     { path: '/user/:username', name: 'user', component: () => import('../views/UserView.vue'), props: true, meta: { title: '用户' } },
+    // M0 名单页：与 /user/:u 同语义公开可看（路由段数不同，无参数吞并冲突）
+    { path: '/user/:username/followers', name: 'user-followers', component: () => import('../views/FollowListView.vue'), props: (route) => ({ username: String(route.params.username), mode: 'followers' as const }), meta: { title: '粉丝' } },
+    { path: '/user/:username/following', name: 'user-following', component: () => import('../views/FollowListView.vue'), props: (route) => ({ username: String(route.params.username), mode: 'following' as const }), meta: { title: '关注' } },
     { path: '/author/public', name: 'public-author', component: () => import('../views/PublicView.vue'), meta: { title: '公开用户' } },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '账户设置', requiresAuth: true } },
     { path: '/notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知', requiresAuth: true } },

@@ -4,6 +4,7 @@
    硬边 / 无圆角 / 纯黑 4px 边框 / 硬偏移彩色阴影 / 轻旋转 / 高饱和强调色
    ============================================================ */
 
+@import './tokens/primitives.css';
 @import './tokens/semantic.css';
 @import './tokens/motion.css';
 @import './base/reset.css';

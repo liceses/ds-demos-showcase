@@ -1,27 +1,39 @@
+/* ============================================================
+   tokens/semantic.css —— L2 语义角色层（P1-2 重构：现 :root 直值下沉引用 L1）
+   铁律：存量名零改名；逐 token 保值（每个 var() 绑定的原子值与原字面值逐字节等价，
+   见 tokens/primitives.css 档位对照注释）。主题切换 = 本层角色换绑原子（themes/ink.css）。
+   ============================================================ */
+
 :root {
-  --ink: #000000;
-  --ink-soft: #555555; /* P0-1 断 token 修复：次级文字（此前未定义却 ~40 处引用，靠继承碰运气；对 --paper 对比度 7.5:1） */
-  --paper: #ffffff;
-  --paper-deep: #f2eee6; /* P0-1 断 token 修复：沉降底（此前未定义却 ~25 处引用，三套 fallback 色并一） */
+  /* 纸面与墨（角色名跨主题不变，值随主题换绑——04 §3.1 四层模型） */
+  --ink: var(--p-ink);
+  --ink-soft: var(--p-ink-soft); /* P0-1 断 token 修复：次级文字（此前未定义却 ~40 处引用，靠继承碰运气；对 --paper 对比度 7.5:1） */
+  --paper: var(--p-paper);
+  --paper-deep: var(--p-paper-deep); /* P0-1 断 token 修复：沉降底（此前未定义却 ~25 处引用，三套 fallback 色并一） */
 
-  --red: #ff6b6b;
-  --teal: #4ecdc4;
-  --yellow: #ffe66d;
-  --mint: #95e1d3;
-  --coral: #f38181;
+  /* 强调色（别名桥：存量 68+ 引用保持原名，值绑 L1 纸系原子；themes/ink.css 换绑墨系） */
+  --red: var(--p-red);
+  --teal: var(--p-teal);
+  --yellow: var(--p-yellow);
+  --mint: var(--p-mint);
+  --coral: var(--p-coral);
 
-  --font-heading: "Inter", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-body: "JetBrains Mono", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", ui-monospace, monospace;
+  /* 字体（L1 原子别名；--font-mono 指向 --font-body 的 JBM 栈，源头单一） */
+  --font-heading: var(--font-sans);
+  --font-body: var(--font-code);
   --font-mono: var(--font-body); /* P0-1 断 token 修复：等宽别名（此前未定义却 10 处引用，font-family 静默失效）；别名指向 --font-body 的 JBM 栈，源头单一 */
 
-  --border-w: 4px;
+  /* 边框宽度（50% 律锚点：移动档减半见 pages/_mobile-legacy.css 覆盖，P2 断点收敛） */
+  --border-w: var(--border-w-md);
 
-  --shadow-black: 6px 6px 0px 0px rgba(0, 0, 0, 1);
-  --shadow-lg: 8px 8px 0px 0px rgba(0, 0, 0, 1);
-  --shadow-teal: 8px 8px 0px 0px rgba(78, 205, 196, 1);
-  --shadow-red: 8px 8px 0px 0px rgba(255, 107, 107, 1);
-  --shadow-yellow: 8px 8px 0px 0px rgba(255, 230, 109, 1);
-  --shadow-black-sm: 2px 2px 0 0 var(--ink); /* P0-1 断 token 修复：小号硬影（此前未定义，L4908 一处引用带临时 fallback） */
+  /* 硬影（L1 位移原子组合；色绑语义角色——rgba 字面值与对应十六进制逐值等价（rgba(0,0,0,1)≡#000000 等），
+     保值成立；墨黑主题下 --ink 翻暖白 → 影自动变「暗房白墨」，彩色影随 --teal 等换绑 reference 谱系） */
+  --shadow-black: var(--sh-off-lg) 0px 0px var(--ink);
+  --shadow-lg: var(--sh-off-xl) 0px 0px var(--ink);
+  --shadow-teal: var(--sh-off-xl) 0px 0px var(--teal);
+  --shadow-red: var(--sh-off-xl) 0px 0px var(--red);
+  --shadow-yellow: var(--sh-off-xl) 0px 0px var(--yellow);
+  --shadow-black-sm: var(--sh-off-sm) 0 0 var(--ink); /* P0-1 断 token 修复：小号硬影（此前未定义，L4908 一处引用带临时 fallback） */
 
   color-scheme: light;
   font-family: var(--font-body);
@@ -32,4 +44,3 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-

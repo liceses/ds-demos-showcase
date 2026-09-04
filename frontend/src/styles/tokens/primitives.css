@@ -1,0 +1,46 @@
+/* ============================================================
+   tokens/primitives.css —— L1 原子层（04 §3.1/§3.2，P1-2 落位）
+   主题常量 + 按主题分组的色板原子（--p-* 纸系 / --k-* 墨系，照 preview 样板）
+   + 字体栈原子 + 形状/位移原子（50% 律锚点）。
+   本层只定义原子，不做语义；语义角色在 semantic.css 引用本层。
+   主题切换 = semantic 角色换绑原子（themes/ink.css），原子本身不动。
+   ============================================================ */
+
+:root {
+  /* ---------- L1 字体原子（跨主题不变） ---------- */
+  --font-sans: "Inter", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-code: "JetBrains Mono", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", ui-monospace, monospace;
+
+  /* ---------- L1 形状/位移原子（50% 律：移动端减半，@720 收敛点断 P2） ----------
+     档位对照存量实体值（逐 token 保值）：
+     --shadow-black-sm=2px 2px → sm；--b-shadow=4px 4px → md；
+     --shadow-black=6px 6px → lg；--shadow-lg 族=8px 8px → xl */
+  --border-w-md: 4px;
+  --border-w-sm: 2px;
+  --sh-off-sm: 2px 2px;
+  --sh-off-md: 4px 4px;
+  --sh-off-lg: 6px 6px;
+  --sh-off-xl: 8px 8px;
+
+  /* ---------- L1 色板原子 · 纸系（--p-*，默认主题；04 §2.1 玩乐谱系基因） ---------- */
+  --p-red: #ff6b6b;
+  --p-teal: #4ecdc4;
+  --p-yellow: #ffe66d;
+  --p-mint: #95e1d3;
+  --p-coral: #f38181;
+  --p-paper: #ffffff;
+  --p-paper-deep: #f2eee6;
+  --p-ink: #000000;
+  --p-ink-soft: #555555;
+
+  /* ---------- L1 色板原子 · 墨系（--k-*，暗房白墨印刷；04 §3.2 reference 谱系） ---------- */
+  --k-ink: #141414; /* 墨黑纸面 */
+  --k-ink-2: #1d1d1d; /* 沉降面 */
+  --k-ink-3: #262626; /* 抬升面 */
+  --k-warm-white: #f5f2ea; /* 暖白墨（对 --k-ink 15.07:1，影/线/字同源） */
+  --k-red: #ff006e; /* 荧光玫红 */
+  --k-yellow: #ccff00; /* 酸性黄绿 */
+  --k-cyan: #00d9ff; /* 电光青 */
+  --k-orange: #ff9500; /* 信号橙 */
+  --k-ink-soft: #b8b2a4; /* 暖灰次级（对 --k-ink ≈ 8.3:1，AA 余量） */
+}

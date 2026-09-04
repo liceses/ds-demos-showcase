@@ -203,7 +203,7 @@
   font-weight: 800;
   color: var(--ink);
   cursor: pointer;
-  transition: right var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease);
+  transition: right var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease); /* R7：background 剥离 */
 }
 .forum-peek:hover {
   right: -14px;

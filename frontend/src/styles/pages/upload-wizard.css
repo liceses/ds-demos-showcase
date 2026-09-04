@@ -19,7 +19,7 @@
   cursor: pointer;
   font: inherit;
   color: var(--ink);
-  transition: background var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+  transition: transform var(--b-dur) var(--b-ease); /* R7：background 剥离 */
 }
 .uw-step:hover { background: var(--paper-deep, #f2eee6); }
 .uw-step.active {

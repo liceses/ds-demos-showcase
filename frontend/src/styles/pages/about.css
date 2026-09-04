@@ -8,7 +8,7 @@
   margin: 0 auto 0 0;
 }
 .home-title-link h1 {
-  transition: transform var(--b-dur) var(--b-ease), text-decoration-color var(--b-dur) var(--b-ease);
+  transition: transform var(--b-dur) var(--b-ease); /* R7：text-decoration-color 剥离 */
 }
 .home-title-link:hover h1 {
   transform: translateY(-3px);
@@ -399,7 +399,7 @@
   justify-content: center;
   font-weight: 900;
   font-size: 13px;
-  transition: left var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease), color var(--b-dur) var(--b-ease);
+  transition: left var(--b-dur) var(--b-ease); /* R7：background/color 剥离 */
   pointer-events: none;
 }
 .mode-rail-knob.prompt {

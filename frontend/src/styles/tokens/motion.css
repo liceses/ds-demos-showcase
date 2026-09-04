@@ -12,7 +12,7 @@
   --b-shadow-lg: 8px 8px 0 0 var(--ink);
   --b-shadow-hot: 8px 8px 0 0 var(--red); /* 法则 04 的彩色阴影 */
 }
-/* 统一收口：我此前散落的 200ms/ease/贝塞尔回弹全部改走令牌 */
+/* 统一收口：R7 色切剥离（P2-3）——transition 白名单只留 transform/box-shadow，颜色属性一律 0ms 硬切 */
 .ac-card,
 .uw-step,
 .uw-type,
@@ -22,8 +22,7 @@
 .uw-aside-toggle,
 .btn,
 .tag-chip {
-  transition: background var(--b-dur) var(--b-ease), border-color var(--b-dur) var(--b-ease),
-    box-shadow var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 /* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移 */
 .ac-card:active { transform: translate(4px, 4px); box-shadow: none; }

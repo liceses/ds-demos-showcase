@@ -278,7 +278,7 @@
   text-underline-offset: 4px;
   text-decoration-skip-ink: none;
   cursor: pointer;
-  transition: background var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+  transition: transform var(--b-dur) var(--b-ease); /* R7：background 剥离 */
 }
 .hero-ann-link:hover {
   background: var(--yellow);

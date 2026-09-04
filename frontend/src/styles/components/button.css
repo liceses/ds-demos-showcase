@@ -15,7 +15,7 @@
   color: var(--ink);
   cursor: pointer;
   text-decoration: none;
-  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease), color var(--b-dur) var(--b-ease);
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease); /* R7：颜色属性剥离——色变 0ms 硬切 */
   user-select: none;
 }
 .btn:focus-visible {

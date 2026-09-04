@@ -53,7 +53,7 @@
   text-decoration: none;
   padding: 8px 12px;
   border: 3px solid transparent;
-  transition: transform var(--b-dur) var(--b-ease), border-color var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease);
+  transition: transform var(--b-dur) var(--b-ease); /* R7：border-color/background 剥离——换色 0ms 硬切 */
 }
 .nav-link:hover,
 .nav-link.router-link-active {

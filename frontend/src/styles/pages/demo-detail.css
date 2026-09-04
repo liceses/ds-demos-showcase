@@ -153,18 +153,20 @@
   font-family: var(--font-mono);
   font-size: 13px;
 }
-/* 三种"比较"形态各异：同形即同类是这页原来最大的信息事故 */
+/* 三种"比较"形态各异：同形即同类是这页原来最大的信息事故。
+   P2-9 wash 收尾（t17 账本）：深青 #0f766e+白 / 深红 #a4001d+白 → 原饱和 wash 底 + --on-accent 黑字
+   （04「面积×饱和度」纪律；对比 13.99:1 / 7.57:1 全 AA；墨黑下随 --wash-* 换绑暗橄榄） */
 .dv-cmp-tag {
   padding: 1px 7px;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.08em;
-  color: var(--paper);
-  background: var(--ink);
+  color: var(--on-accent, #000);
+  background: var(--paper-deep);
 }
-.dv-cmp-repro .dv-cmp-tag { background: #0f766e; }
-.dv-cmp-task .dv-cmp-tag { background: var(--err); }
-.dv-cmp-random .dv-cmp-tag { background: var(--ink-soft); }
+.dv-cmp-repro .dv-cmp-tag { background: var(--wash-teal); }
+.dv-cmp-task .dv-cmp-tag { background: var(--wash-red); }
+.dv-cmp-random .dv-cmp-tag { background: var(--ink-soft); color: var(--paper); } /* 中性灰不属彩底纪律，保持白字 7.46:1 */
 .dv-cmp-random { opacity: 0.94; }
 /* 评分组件原本按整宽排版（星标与元信息并排），塞进右栏会溢出。
    正解：窄栏改纵向弹性 + 让 meta 可收缩。

@@ -3,9 +3,14 @@
 // en.ts 按 key 覆盖英文；en 缺 key 时安全回落中文，**绝不上屏 key 本身**。
 // 与 funMode 同机制：响应式 ref 驱动，keepAlive 页面切语言自动重渲染。
 // 边界：只翻 UI 固定文案；UGC（标题/简介/帖子）、标签值、slug 一律不翻。
+//
+// en.ts 动态加载（04 §5.3）：词表 1153 行不再被 funMode 引用链拖进主链路——
+// 中文用户零词表成本；英文用户独立 chunk 可缓存。t() 维持同步签名：
+// enDict 未就绪时回落中文（机制本就「缺 key 安全回落中文」，天然优雅降级）；
+// enLoadedTick 是词表就绪的反应式扳机——t() 在渲染期读它，词表异步到达后正在
+// 显示的回落文案会被重新渲染成英文（否则动态导入的非响应式变量不会触发更新）。
 
 import { ref } from 'vue'
-import { en } from './en'
 
 export type Lang = 'zh' | 'en'
 
@@ -26,15 +31,36 @@ export const lang = ref<Lang>(
   detectNav(),
 )
 
+// ---- en 词表懒加载 ----
+let enDict: Record<string, unknown> | null = null
+let enLoading: Promise<Record<string, unknown>> | null = null
+const enLoadedTick = ref(0) // 就绪扳机（见文件头注释）
+
+export function loadEn(): Promise<Record<string, unknown>> {
+  if (!enLoading) {
+    enLoading = import('./en').then((m) => {
+      enDict = m.en as Record<string, unknown>
+      enLoadedTick.value++
+      return enDict
+    })
+  }
+  return enLoading
+}
+
 /** 手动切换（顶栏开关等）：持久化 + 清除标签页覆盖（显式选择优先于 ?lang） */
 export function setLang(l: Lang) {
   lang.value = l
   localStorage.setItem(LS_KEY, l)
   sessionStorage.removeItem(SS_KEY)
+  if (l === 'en') void loadEn()
 }
 
+// 初始语言即英文：立刻起加载（main.ts 会在挂载前 await，避免英文用户看到中文闪帧）
+if (lang.value === 'en') void loadEn()
+
 function lookup(key: string): unknown {
-  let node: unknown = en
+  void enLoadedTick.value // 建立反应式依赖：词表就绪后触发回落文案重渲染
+  let node: unknown = enDict
   for (const part of key.split('.')) {
     if (node == null || typeof node !== 'object') return undefined
     node = (node as Record<string, unknown>)[part]
@@ -51,6 +77,10 @@ function interpolate(s: string, vars?: Record<string, string | number>): string 
 export function t(key: string, zhDefault: string, vars?: Record<string, string | number>): string {
   if (lang.value === 'zh') return interpolate(zhDefault, vars)
   const v = lookup(key)
+  // 覆盖率哨兵（dev-only）：词表已就绪但该 key 无 EN 词条 → 控制台点名，回落中文不上屏 key
+  if (import.meta.env.DEV && enDict && typeof v !== 'string') {
+    console.warn(`[i18n] EN 缺 key: ${key}（回落中文原文）`)
+  }
   return interpolate(typeof v === 'string' ? v : zhDefault, vars)
 }
 

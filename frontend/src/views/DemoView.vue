@@ -7,6 +7,7 @@ import { useUiStore } from '../stores/ui'
 import type { DemoDetail, DemoSummary, SamePromptResult, SessionLog, TaskDetail } from '../api/types'
 import IframePreview from '../components/IframePreview.vue'
 import PeekDrawer from '../components/PeekDrawer.vue'
+import CopyButton from '../components/CopyButton.vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import DemoCard from '../components/DemoCard.vue'
@@ -443,7 +444,9 @@ onMounted(load)
         <p style="line-height: 1.8">{{ demo.description }}</p>
         <template v-if="demo.prompt">
           <h2 class="dv-h2" style="margin-top: 22px">{{ t('demo.promptTitle', '第一轮提示词') }}</h2>
-          <div class="card card-mint dv-prompt">
+          <div class="card card-mint dv-prompt" style="position: relative">
+            <!-- t21 追加：提示词一键复制（复制 stamp 语汇） -->
+            <CopyButton :text="demo.prompt" style="position: absolute; top: 10px; right: 10px" />
             <p class="dv-prompt-text">{{ demo.prompt }}</p>
           </div>
           <!-- 这里不再放"有了它才能互相对照"那句话：那是上传页用来劝作者填字段的说明，
@@ -544,8 +547,10 @@ onMounted(load)
         <span class="dv-cmp-tag mono">PROMPT =</span>
         <span class="mini-stat"><b>{{ samePrompt.items.length }}</b> {{ t('demo.samePromptN', '个对照') }}</span>
       </div>
-      <div class="card card-mint same-prompt-quote">
+      <div class="card card-mint same-prompt-quote" style="position: relative">
         <span class="same-prompt-label mono">PROMPT · {{ t('demo.samePromptHint', '同一句提示词，不同模型的回答') }}</span>
+        <!-- t21 追加：PROMPT= 复现块一键复制（与①区同款 CopyButton） -->
+        <CopyButton :text="samePrompt.prompt" style="position: absolute; top: 10px; right: 10px" />
         <p class="same-prompt-text">{{ samePrompt.prompt }}</p>
       </div>
       <div class="waterfall" style="margin-top: 14px">

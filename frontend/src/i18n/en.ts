@@ -453,6 +453,11 @@ export const en = {
     sampleLow: 'Low sample',
   },
 
+  copy: {
+    copy: 'Copy',
+    done: 'Copied',
+  },
+
   common: {
     loading: 'Loading…',
     search: 'Search',

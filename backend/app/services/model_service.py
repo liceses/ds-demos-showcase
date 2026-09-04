@@ -280,16 +280,19 @@ def sync_demo_models(db: Session, demo: Demo, fallback_unspecified: bool = False
         model = get_or_create_unspecified(db)
         db.add(DemoModel(demo_id=demo.id, model_id=model.id))
         return
+    # 防重必须**在本次运行内自记**：SessionLocal 是 autoflush=False，"先查再插"
+    # 看不到本事务里刚 db.add 的行 —— 同一 demo 挂两种写法（dsv4-flash / DSV4-Flash）
+    # 经 normalize 落到同一 Model 实体时，同一 (demo, model) 会被插两遍，
+    # 等到 flush 才炸 UNIQUE（与迁移脚本踩到的是同一个坑，真实语料已验证）。
+    # 上方已 delete 掉该 demo 的全部旧链接，这里只需对本次运行去重。
+    seen_models: set[int] = set()
     for v, group in pairs:
         # group 必须当 vendor 传下去：族节点 <vendor>-unknown 的 resolution 判定依赖它
         model, _created = get_or_create_model(db, v, vendor=group)
-        link = (
-            db.query(DemoModel)
-            .filter(DemoModel.demo_id == demo.id, DemoModel.model_id == model.id)
-            .first()
-        )
-        if link is None:
-            db.add(DemoModel(demo_id=demo.id, model_id=model.id))
+        if model.id in seen_models:
+            continue
+        seen_models.add(model.id)
+        db.add(DemoModel(demo_id=demo.id, model_id=model.id))
 
 
 def set_demo_prompt(db: Session, demo: Demo) -> None:

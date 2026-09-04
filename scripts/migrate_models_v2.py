@@ -52,22 +52,31 @@ def main() -> None:
             stats["models_created" if created else "models_existing"] += 1
 
         # 2) demo 的 model 标签 → demo_models
+        # 防重必须**在脚本内自记**：SessionLocal 是 autoflush=False，
+        # "先查库再插入"看不到本运行中未提交的新增行；而且两种写法（dsv4-flash 与
+        # DSV4-Flash）经 normalize 会落到同一个 Model 实体 —— 同一 (demo, model)
+        # 会被插两遍，等到下一步任何 flush 才炸 UNIQUE（真实 prod 语料已踩到）。
+        # 解法：预加载全部已有链接 + 按**解析后的 model_id** 去重。
         demos = db.query(Demo).all()
+        seen_links: set[tuple[int, int]] = set(
+            db.query(DemoModel.demo_id, DemoModel.model_id).all()
+        )
         for d in demos:
+            # 一个 demo 可能挂多个模型标签，且两种写法可能归并为同一实体：
+            # 按解析后的实体去重，而不是按标签值遍历
+            resolved: dict[int, int] = {}
             for dt in d.tag_associations:
                 if dt.tag.key != "model":
                     continue
                 m, _created = model_service.get_or_create_model(db, dt.tag.value, status="active")
-                link = (
-                    db.query(DemoModel)
-                    .filter(DemoModel.demo_id == d.id, DemoModel.model_id == m.id)
-                    .first()
-                )
-                if link is None:
-                    db.add(DemoModel(demo_id=d.id, model_id=m.id))
-                    stats["links_added"] += 1
-                else:
+                resolved.setdefault(m.id, m)
+            for m in resolved.values():
+                if (d.id, m.id) in seen_links:
                     stats["links_existing"] += 1
+                    continue
+                db.add(DemoModel(demo_id=d.id, model_id=m.id))
+                seen_links.add((d.id, m.id))
+                stats["links_added"] += 1
 
         # 3) prompts 回填（规范化去重；prompts_created 按表行数差值统计）
         from app.models import Prompt

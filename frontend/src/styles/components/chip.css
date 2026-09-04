@@ -16,6 +16,7 @@
 .tag-chip:hover {
   transform: translate(-2px, -2px);
   background: var(--yellow);
+  color: var(--on-accent, #000); /* 小面积原饱和+黑字（面积×饱和度） */
 }
 .tag-chip.active {
   background: var(--ink);
@@ -27,6 +28,8 @@
 }
 .tag-chip.teal {
   background: var(--teal);
+  color: var(--on-accent, #000); /* 小面积原饱和+黑字 */
+  color: var(--on-accent, #000); /* 小面积原饱和+黑字 */
 }
 .tag-chip.yellow {
   background: var(--yellow);

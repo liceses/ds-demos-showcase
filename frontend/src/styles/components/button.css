@@ -43,13 +43,13 @@
   transform: rotate(-1deg);
 }
 .btn-secondary {
-  background: var(--teal);
+  background: var(--wash-teal);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
   transform: rotate(1deg);
 }
 .btn-outline {
-  background: var(--yellow);
+  background: var(--wash-yellow);
   color: var(--ink);
   box-shadow: var(--shadow-lg);
 }

@@ -19,9 +19,9 @@
   transform: translate(-2px, -2px);
   box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
 }
-.ann-card-manual { background: var(--yellow); }
-.ann-card-auto { background: var(--teal); }
-.ann-card-demo { background: var(--red); color: var(--on-accent, #000); }
+.ann-card-manual { background: var(--wash-yellow); }
+.ann-card-auto { background: var(--wash-teal); }
+.ann-card-demo { background: var(--wash-red); color: var(--ink); }
 .ann-card-update { background: var(--ink); color: var(--paper); }
 .ann-stamp {
   flex-shrink: 0;

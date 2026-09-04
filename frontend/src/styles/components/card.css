@@ -14,12 +14,12 @@
   transform: rotate(-1deg);
 }
 .card-sunny {
-  background: var(--yellow);
+  background: var(--wash-yellow);
   box-shadow: var(--shadow-lg);
   transform: rotate(2deg);
 }
 .card-mint {
-  background: var(--mint);
+  background: var(--wash-mint);
   box-shadow: var(--shadow-lg);
 }
 .card-hover:hover {

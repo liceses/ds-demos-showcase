@@ -11,6 +11,13 @@
   --paper: var(--p-paper);
   --paper-deep: var(--p-paper-deep); /* P0-1 断 token 修复：沉降底（此前未定义却 ~25 处引用，三套 fallback 色并一） */
   --err: var(--p-err); /* t16 验收入册：错误角色（t13 M0 修复引入 var(--err) 10 处，此前 token 层缺定义全走 fallback——墨黑下深红 1.6:1 真盲区） */
+  /* 大面积填充角色（t16 P1-fix-2：用户实测「亮底刺眼」——面积×饱和度纪律的角色化。
+     小面积强调沿用 --red/--teal/--yellow/--mint 原饱和；大面积填充（按钮次级/输入框/大卡/notice/公告卡）
+     一律绑 wash 角色：纸白=原值零漂移，墨黑=暗房同色相 wash+--ink 暖白字。 */
+  --wash-red: var(--p-red-wash);
+  --wash-teal: var(--p-teal-wash);
+  --wash-yellow: var(--p-yellow-wash);
+  --wash-mint: var(--p-mint-wash);
 
   /* 强调色（别名桥：存量 68+ 引用保持原名，值绑 L1 纸系原子；themes/ink.css 换绑墨系） */
   --red: var(--p-red);

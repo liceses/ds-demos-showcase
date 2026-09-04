@@ -19,7 +19,7 @@
   box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
   font-size: 13px;
 }
-.toast-item.toast-success { background: var(--teal); }
+.toast-item.toast-success { background: var(--teal); color: var(--on-accent, #000); }
 .toast-item.toast-error { background: var(--red); color: var(--on-accent, #000); }
 .toast-item.toast-info { background: var(--yellow); }
 .toast-label {

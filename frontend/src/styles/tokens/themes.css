@@ -31,6 +31,11 @@ html.theme-switching *::after {
   --mint: var(--k-orange);
   --coral: var(--k-red);
   --err: var(--k-err); /* t16：错误色墨黑提亮（#ff8a8a，对 --k-ink 8.12:1） */
+  /* 大面积填充换绑暗 wash（t16 P1-fix-2：用户「太瞎眼」裁决；字配 --ink 暖白全 AA） */
+  --wash-red: var(--k-red-wash);
+  --wash-teal: var(--k-teal-wash);
+  --wash-yellow: var(--k-yellow-wash);
+  --wash-mint: var(--k-mint-wash);
 
   color-scheme: dark;
 }
@@ -43,5 +48,9 @@ html.theme-switching *::after {
   --ink: #000000;
   --ink-soft: #555555;
   --err: #a4001d; /* 孤岛锚定：牛皮纸上墨系亮红 1.87:1 不可读，保持纸系深红 */
+  --wash-red: #ff6b6b; /* 孤岛锚定：牛皮纸上暗 wash 反而脏，大面积填充保持纸系原值 */
+  --wash-teal: #4ecdc4;
+  --wash-yellow: #ffe66d;
+  --wash-mint: #95e1d3;
   color-scheme: light;
 }

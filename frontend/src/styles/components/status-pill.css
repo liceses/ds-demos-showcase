@@ -12,6 +12,7 @@
 }
 .status-pending {
   background: var(--yellow);
+  color: var(--on-accent, #000);
 }
 .status-rejected {
   background: var(--red);

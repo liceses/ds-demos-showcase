@@ -172,6 +172,10 @@ function countLabel(key: string, n: number): string {
   if (key === 'upload') return t('home.count.uploads7d', '近 7 天 {n}', { n })
   return String(n)
 }
+// 数字槽稳定性：content 未到位时胶囊先渲染（占位「···」），到位后填数——
+// 槽位恒渲染 + min-width，消除 site-info 返回瞬间的胶囊宽度跳变（CLS）；
+// 失败路径同样保持槽位（空槽），宽度全程不变。rank 恒无计数 → 连槽位一起隐藏。
+const contentLoaded = ref(false)
 
 // 论坛斜角入口
 const router = useRouter()
@@ -204,6 +208,7 @@ onMounted(async () => {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    contentLoaded.value = true
   }
 })
 
@@ -241,7 +246,12 @@ onBeforeUnmount(() => {
       <RouterLink v-for="e in entries" :key="e.to" class="entry-capsule" :to="e.to">
         <span class="entry-capsule-stamp" aria-hidden="true">{{ e.stamp }}</span>
         <span class="entry-capsule-title">{{ t('home.entries.' + e.key + '.title', e.title) }}</span>
-        <span v-if="entryCounts[e.key] != null" class="entry-capsule-count">{{ countLabel(e.key, entryCounts[e.key] as number) }}</span>
+        <!-- M0 验收修复：数字槽恒渲染（rank 除外）——占位「···」+ 固定 min-width，
+             消除 site-info 到位瞬间的胶囊宽度跳变（CLS）；失败路径槽位保持空、宽度不变 -->
+        <span v-if="e.key !== 'rank'" class="entry-capsule-count" :class="{ pending: entryCounts[e.key] == null }">
+          <template v-if="entryCounts[e.key] != null">{{ countLabel(e.key, entryCounts[e.key] as number) }}</template>
+          <template v-else-if="!contentLoaded">···</template>
+        </span>
       </RouterLink>
       <button class="entry-capsule" type="button" @click="scrollToAnnouncements">
         <span class="entry-capsule-stamp" aria-hidden="true">看</span>
@@ -358,6 +368,7 @@ onBeforeUnmount(() => {
   height: 26px;
   flex: none;
   background: var(--yellow, #ffe66d);
+  color: var(--on-accent, #000); /* 小面积章+黑字（t16 用户反馈） */
   border: 2px solid var(--ink, #000);
   font-family: var(--font-heading, sans-serif);
   font-weight: 900;
@@ -375,6 +386,14 @@ onBeforeUnmount(() => {
   border: 2px solid var(--ink, #000);
   background: var(--paper-deep, #f2eee6);
   white-space: nowrap;
+  /* 固定槽位：容纳最宽数字文案（「1,204 件作品」），首帧即占位，数字到位不推挤兄弟胶囊 */
+  min-width: 92px;
+  text-align: right;
+  box-sizing: border-box;
+}
+.entry-capsule-count.pending {
+  color: var(--ink-faint, #767676);
+  font-weight: 500;
 }
 /* 移动端：2×2 大目标（03 §3.2）+ 50% 律（边框/阴影减半，R1/R2 令牌化前的手工口径） */
 @media (max-width: 719px) {

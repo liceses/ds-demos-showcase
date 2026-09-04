@@ -36,7 +36,7 @@
   font-family: var(--font-heading);
   font-weight: 900;
   font-size: 56px;
-  color: var(--on-accent, #000);
+  color: var(--ink); /* 封面占位=大面积，wash 底配暖白字（t16 P1-fix-2） */
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 1);
 }
 .demo-card-body {
@@ -74,9 +74,11 @@
 }
 .stat-yellow {
   background: var(--yellow);
+  color: var(--on-accent, #000);
 }
 .stat-teal {
   background: var(--teal);
+  color: var(--on-accent, #000);
 }
 .stat-red {
   background: var(--red);

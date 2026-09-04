@@ -4,7 +4,7 @@
   padding: 12px 14px;
   border: var(--border-w) solid var(--ink);
   border-radius: 0;
-  background: var(--yellow);
+  background: var(--wash-yellow);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 14px;
@@ -83,7 +83,7 @@ label.field .hint {
   flex-wrap: wrap;
 }
 .tag-key-head code {
-  background: var(--yellow);
+  background: var(--wash-yellow);
   padding: 1px 5px;
   font-size: 11px;
 }

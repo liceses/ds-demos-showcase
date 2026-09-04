@@ -6,17 +6,17 @@
   margin-bottom: 18px;
 }
 .notice-warn {
-  background: var(--yellow);
+  background: var(--wash-yellow);
   box-shadow: var(--shadow-black);
 }
 .notice-info {
-  background: var(--mint);
+  background: var(--wash-mint);
 }
 .notice-error {
   background: var(--red);
   color: var(--on-accent, #000);
 }
 .notice-success {
-  background: var(--teal);
+  background: var(--wash-teal);
 }
 

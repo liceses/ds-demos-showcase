@@ -10,7 +10,6 @@ import { useAuthStore } from '../stores/auth'
 import { useQueues } from '../composables/adminQueues'
 import { timeAgo } from '../utils/time'
 import DemoCard from '../components/DemoCard.vue'
-import AnnouncementBlock from '../components/AnnouncementBlock.vue'
 import AnnouncementModal from '../components/AnnouncementModal.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 
@@ -148,11 +147,7 @@ const grayTagUrl = computed(() => `/tag/model/ds-unknown`)
 // 灰测专区折叠条（03 §3.2：默认收起，折叠时不加载卡片图）
 const grayOpen = ref(false)
 
-// 分组：项目公告 = 带 demo_slug（新发布 / 作品更新）；系统公告 = 无 demo_slug（手动 / 站点更新）
-const projectAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug != null))
-const systemAnnouncements = computed(() => announcements.value.filter((a) => a.demo_slug == null))
-
-// 公告未读徽章（M1-2 侧栏）：水位线机制见 utils/announcement；tick 驱动响应式重算
+// 公告未读徽章（M1-H1 横幅）：水位线机制见 utils/announcement；tick 驱动响应式重算
 const annReadTick = ref(0)
 const annUnread = computed(() => {
   void annReadTick.value
@@ -440,20 +435,11 @@ onBeforeUnmount(() => {
     </div>
 
     <aside class="hub-side">
-      <!-- 公告贴纸墙（过渡态：M1-H3 侧栏解体时撤下，05 §5.1 裁决横幅接管） -->
-      <section v-if="announcements.length" class="side-card">
+      <!-- 论坛热帖 Top3（既有接口：GET /forum/topics?sort=hot）；
+           M1-H3 去盒化：无边框无影，11px 大写字距小标题+行列表（05 §2.1/§5 侧栏解体） -->
+      <section v-if="hotTopics.length" class="side-block">
         <div class="side-head">
-          <span class="side-title">{{ t('home.side.ann', '公告') }}</span>
-          <span v-if="annUnread > 0" class="side-unread">{{ t('home.side.unread', '{n} 条未读', { n: annUnread }) }}</span>
-        </div>
-        <AnnouncementBlock v-if="projectAnnouncements.length" :title="t('home.ann.project', '项目公告')" :items="projectAnnouncements" @open="onAnnOpened" />
-        <AnnouncementBlock v-if="systemAnnouncements.length" :title="t('home.ann.system', '系统公告')" :items="systemAnnouncements" @open="onAnnOpened" />
-      </section>
-
-      <!-- 论坛热帖 Top3（既有接口：GET /forum/topics?sort=hot） -->
-      <section v-if="hotTopics.length" class="side-card">
-        <div class="side-head">
-          <span class="side-title">{{ t('home.side.hot', '论坛热帖') }}</span>
+          <span class="side-kicker">{{ t('home.side.hot', '论坛热帖') }}</span>
           <RouterLink class="side-more" to="/forum">{{ t('home.side.hotMore', '进讨论区 →') }}</RouterLink>
         </div>
         <RouterLink v-for="tp in hotTopics" :key="tp.id" class="side-row" :to="`/forum/topic/${tp.id}`">
@@ -462,10 +448,10 @@ onBeforeUnmount(() => {
         </RouterLink>
       </section>
 
-      <!-- 榜单速览：神作 Top5 / 声望 Top5（既有接口，链到 /leaderboard 对应 tab） -->
-      <section v-if="godTop.length || repTop.length" class="side-card">
+      <!-- 榜单速览：神作 Top5 / 声望 Top5（既有接口，链到 /leaderboard 对应 tab）；去盒化同上 -->
+      <section v-if="godTop.length || repTop.length" class="side-block">
         <div class="side-head">
-          <span class="side-title">{{ t('home.side.board', '榜单速览') }}</span>
+          <span class="side-kicker">{{ t('home.side.board', '榜单速览') }}</span>
           <RouterLink class="side-more" to="/leaderboard">{{ t('home.side.boardMore', '全部榜单 →') }}</RouterLink>
         </div>
         <template v-if="godTop.length">
@@ -488,17 +474,7 @@ onBeforeUnmount(() => {
         </template>
       </section>
 
-      <!-- 实时在线迷你（既有接口 GET /stats/live，10s 轮询照 About 模式） -->
-      <section class="side-card">
-        <div class="side-head">
-          <span class="side-title">{{ t('home.side.live', '实时在线') }}</span>
-          <span class="live-badge"><span class="live-dot"></span>LIVE</span>
-        </div>
-        <div class="side-live">
-          <span class="side-live-num mono"><b>{{ live?.online ?? '—' }}</b> {{ t('home.side.online', '在线') }}</span>
-          <span class="side-live-num mono"><b>{{ live?.today ?? '—' }}</b> {{ t('home.side.today', '今日') }}</span>
-        </div>
-      </section>
+      <!-- 实时在线：已并入 hero 数字条第四段（M1-H3 侧栏解体，05 §5.1 裁决） -->
 
       <!-- 管理员过渡速览卡（03 §2.4：M0 一次性，M2 移除；计数走 adminQueues 单一口径） -->
       <RouterLink v-if="auth.isAdmin()" to="/admin" class="side-card side-admin">
@@ -851,7 +827,22 @@ onBeforeUnmount(() => {
   box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
   padding: 14px;
 }
-.side-head {
+/* M1-H3 侧栏解体（05 §2.1/§5）：热帖/榜单去盒化——无边框无影，组间 2px 实线分割，
+   11px 大写字距小标题（编辑式条目语汇）；管理员过渡卡保留盒形态 */
+.side-block {
+  padding: 4px 0;
+}
+.side-block + .side-block {
+  border-top: 2px solid var(--ink, #000);
+  padding-top: 12px;
+}
+.side-kicker {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink, #000);
+}.side-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -863,14 +854,7 @@ onBeforeUnmount(() => {
   font-weight: 900;
   font-size: 15px;
 }
-.side-unread {
-  font-size: 11px;
-  font-weight: 900;
-  padding: 2px 6px;
-  background: var(--red, #ff6b6b);
-  color: var(--on-accent, #000);
-  border: 2px solid var(--ink, #000);
-}
+
 .side-more {
   font-size: 12px;
   color: var(--ink, #000);
@@ -921,17 +905,7 @@ onBeforeUnmount(() => {
   flex: none;
   font-size: 11px;
 }
-.side-live {
-  display: flex;
-  gap: 12px;
-}
-.side-live-num {
-  font-size: 12px;
-}
-.side-live-num b {
-  font-size: 20px;
-  margin-right: 4px;
-}
+
 /* 管理员速览卡（过渡件） */
 .side-admin-total {
   margin: 0 0 8px;

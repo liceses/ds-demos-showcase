@@ -53,7 +53,49 @@ function attachPreviewObserver() {
 watch(stageEl, (el) => {
   if (el) attachPreviewObserver()
 })
-onBeforeUnmount(() => io?.disconnect())
+onBeforeUnmount(() => {
+  io?.disconnect()
+  if (previewTimer) clearTimeout(previewTimer)
+})
+
+// ---------- M0-B 预览三态（02 D / 03 §6.1 修补①） ----------
+// loading（海报+march 边框覆盖层）→ ready（IframePreview @load）；
+// 失败兜底：跨源 iframe 无法探测 HTTP 错误（浏览器对错误页也触发 load 的反例之外，
+// 被墙/CORS/大文件超时表现为「一直不 load」）→ 15s 未就绪按失败处理，给重试+外部打开。
+const previewState = ref<'loading' | 'ready' | 'error'>('loading')
+const previewKey = ref(0)
+// 触屏默认点击播放（03 §10.4：海报 ▶ 才挂 iframe，省流量省电）；桌面保持自动
+const isTouch = matchMedia('(hover: none)').matches || window.innerWidth < 720
+const previewArmed = ref(!isTouch)
+let previewTimer: ReturnType<typeof setTimeout> | null = null
+
+function startPreviewLoading() {
+  previewState.value = 'loading'
+  if (previewTimer) clearTimeout(previewTimer)
+  previewTimer = setTimeout(() => {
+    if (previewState.value === 'loading') previewState.value = 'error'
+  }, 15000)
+}
+function armPreview() {
+  if (previewArmed.value) return
+  previewArmed.value = true
+}
+function onPreviewLoaded() {
+  if (previewTimer) clearTimeout(previewTimer)
+  previewState.value = 'ready'
+}
+function retryPreview() {
+  previewKey.value += 1 // key 变更强制重建 iframe
+  startPreviewLoading()
+}
+function openExternal() {
+  if (!demo.value) return
+  const url = demo.value.preview_url ?? `/preview/${demo.value.slug}/index.html`
+  window.open(url, '_blank', 'noopener')
+}
+watch([mountPreview, previewArmed], ([m, armed]) => {
+  if (m && armed) startPreviewLoading()
+})
 
 // 侧滑预览：图谱的边不该以"离开本页"为代价（否则没人点，图谱就白建了）
 const peekTarget = ref<{ kind: 'model' | 'task' | 'demo'; slug: string } | null>(null)
@@ -255,12 +297,49 @@ onMounted(load)
     <div class="dv-shell" :class="{ 'facts-collapsed': !factsOpen }">
       <div class="dv-stage" ref="stageEl">
         <!-- iframe 懒挂载：预览进视口才加载，移动端/长页面不必为一块看不见的区域付渲染与流量 -->
-        <template v-if="demo.demo_type === 'web' && mountPreview">
-          <IframePreview
-            :srcdoc="demo.previewHtml"
-            :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
-            :title="demo.title"
-          />
+        <!-- M0-B 预览三态：触屏默认海报点击播放；桌面进视口自动挂载（既有懒挂载逻辑不变） -->
+        <template v-if="demo.demo_type === 'web'">
+          <div
+            v-if="!previewArmed"
+            class="pv-poster"
+            role="button"
+            tabindex="0"
+            :aria-label="t('demo.playHint', '点击播放预览')"
+            @click="armPreview"
+            @keydown.enter="armPreview"
+          >
+            <img v-if="demo.cover_url" :src="demo.cover_url" :alt="demo.title" loading="lazy" decoding="async" />
+            <div v-else class="pv-poster-fallback" aria-hidden="true">{{ demo.title[0] }}</div>
+            <span class="pv-play" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="22" height="22"><path d="M4 2l10 6-10 6V2z" fill="currentColor" /></svg>
+            </span>
+            <span class="pv-poster-label">{{ t('demo.tapToPlay', '点击播放') }}</span>
+          </div>
+          <template v-else-if="mountPreview">
+            <IframePreview
+              :key="previewKey"
+              :srcdoc="demo.previewHtml"
+              :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
+              :title="demo.title"
+              @loaded="onPreviewLoaded"
+            />
+            <!-- 加载中：march 边框覆盖层（stamp-in 微档出场；@load 或 15s 超时切换） -->
+            <div v-if="previewState === 'loading'" class="pv-overlay pv-loading">
+              <div class="pv-loading-inner">
+                <span class="pv-march" aria-hidden="true"></span>
+                <p>{{ t('demo.previewLoading', '加载预览…') }}</p>
+              </div>
+            </div>
+            <!-- 失败兜底：错误文案 + 重试 + 外部打开 -->
+            <div v-else-if="previewState === 'error'" class="pv-overlay pv-fail">
+              <p class="pv-fail-title">{{ t('demo.previewFailed', '预览加载失败') }}</p>
+              <p class="pv-fail-hint">{{ t('demo.previewFailHint', '可能原因：预览域被墙 / 大文件超时 / 跨源限制') }}</p>
+              <div class="filter-row" style="margin: 0">
+                <button class="btn btn-sm" type="button" @click="retryPreview">{{ t('demo.retry', '重试') }}</button>
+                <button class="btn btn-sm btn-dark" type="button" @click="openExternal">{{ t('demo.openExternal', '在外部浏览器打开') }}</button>
+              </div>
+            </div>
+          </template>
         </template>
         <template v-else-if="demo.demo_type === 'zip'">
           <div class="card card-mint dv-standin">
@@ -542,3 +621,136 @@ onMounted(load)
     <PeekDrawer :target="peekTarget" @close="peekTarget = null" @navigate="peekNavigate" />
   </template>
 </template>
+
+<style scoped>
+/* ============================================================
+   M0-B 预览三态（组件级样式；全局 style.css 冻结到 P1 拆迁——
+   令牌引用全局 --b-dur/--b-ease/--b-stamp-in 与既有语义 token，
+   b-march 关键帧本地定义（名随 preview 样板，Vue scoped 自动哈希））
+   ============================================================ */
+.dv-stage {
+  /* 覆盖层（loading/error）的定位锚 */
+  position: relative;
+}
+/* 触屏点击播放海报 */
+.pv-poster {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border: 4px solid var(--ink, #000);
+  background: var(--paper-deep, #f2eee6);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+.pv-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pv-poster-fallback {
+  font-family: var(--font-heading, sans-serif);
+  font-weight: 900;
+  font-size: 56px;
+  text-transform: uppercase;
+}
+.pv-play {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  background: var(--paper, #fff);
+  border: 4px solid var(--ink, #000);
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  color: var(--ink, #000);
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)),
+    box-shadow var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
+}
+/* 法则 01：按压位移 = 阴影偏移，阴影清零（hover 设备给轻抬起） */
+@media (hover: hover) {
+  .pv-poster:hover .pv-play {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  }
+}
+.pv-poster:active .pv-play {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+  transition-duration: 0ms;
+}
+.pv-poster-label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-family: var(--font-body, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--paper, #fff);
+  border: 2px solid var(--ink, #000);
+  padding: 2px 8px;
+}
+/* 覆盖层骨架：stamp-in 微档出场（复用全局 b-stamp-in 关键帧与令牌） */
+.pv-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background: var(--paper, #fff);
+  animation: b-stamp-in var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)) both;
+}
+.pv-loading-inner {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 16px 20px;
+  border: 4px solid var(--ink, #000);
+  background: var(--paper, #fff);
+  font-family: var(--font-body, monospace);
+  font-size: 12px;
+}
+/* 蚂蚁线（b-march 语汇，照 preview 样板；关键帧本地定义） */
+.pv-march {
+  display: block;
+  width: 120px;
+  height: 4px;
+  animation: b-march 0.6s linear infinite;
+  background-image: repeating-linear-gradient(90deg, var(--ink, #000) 0 8px, transparent 8px 16px);
+  background-size: 32px 4px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+}
+@keyframes b-march {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 32px 0;
+  }
+}
+/* 失败兜底卡 */
+.pv-fail {
+  border-left: 6px solid var(--err, #a4001d);
+}
+.pv-fail-title {
+  font-family: var(--font-heading, sans-serif);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+.pv-fail-hint {
+  font-size: 12px;
+  color: var(--ink-soft, #555);
+  margin: 4px 0 10px;
+  max-width: 40ch;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-overlay,
+  .pv-play {
+    animation: none;
+    transition: none;
+  }
+}
+</style>

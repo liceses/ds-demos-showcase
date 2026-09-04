@@ -8,6 +8,9 @@ const props = defineProps<{
   title?: string
 }>()
 
+// M0-B：向宿主透传 iframe @load（DemoView 预览三态的 ready 信号；跨源加载失败浏览器不触发 error，超时兜底在宿主侧）
+const emit = defineEmits<{ loaded: [] }>()
+
 const ui = useUiStore()
 
 const frame = ref<HTMLIFrameElement | null>(null)
@@ -178,6 +181,7 @@ onBeforeUnmount(() => {
       allow="fullscreen"
       loading="eager"
       @dblclick="toggleIframeFullscreen"
+      @load="emit('loaded')"
     ></iframe>
     <div class="preview-hint mono">
       {{ webFullscreen ? '按 G / ESC 退出网页全屏' : '按 F 全屏 · 按 G 网页全屏 · ESC 退出' }}

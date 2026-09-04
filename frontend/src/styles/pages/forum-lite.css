@@ -56,21 +56,24 @@
   gap: 0;
 }
 
-/* 按钮轻量化：默认阴影减小，hover 位移减小 */
+/* 按钮轻量化：论坛壳内默认阴影减档（3px）；R6 物理与主站同构（P2-2b 页面级跟进） */
 .btn-primary,
 .btn-secondary,
 .btn-outline,
 .btn-dark,
 .btn-danger {
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink); /* rgba(0,0,0,1)→var(--ink)，墨黑下自动翻暖白 */
 }
-.btn:hover {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+@media (hover: hover) {
+  .btn:hover {
+    transform: translate(-1px, -1px); /* R6：抬起增影（3px 基影保持，表观 4px）；原压平翻转废止 */
+    box-shadow: 3px 3px 0 0 var(--ink);
+  }
 }
 .btn:active {
-  transform: translate(3px, 3px);
+  transform: translate(3px, 3px) rotate(var(--tilt-press)); /* 法则 01/R2：压平位移=同档偏移 + 微倾 + 0ms */
   box-shadow: none;
+  transition-duration: 0ms;
 }
 
 /* TagGroupBox */

@@ -11,7 +11,7 @@ import type { AdminStats } from '../api/types'
 
 const route = useRoute()
 const router = useRouter()
-const ALL_TABS: TabKey[] = ['console', 'review', 'inbox', 'clusters', 'refine', 'inspection', 'attribution', 'merge', 'aliases', 'demos', 'announcements', 'tags', 'tagreq', 'forum', 'users', 'stats', 'audit', 'settings', 'sponsors']
+const ALL_TABS: TabKey[] = ['console', 'entities', 'review', 'inbox', 'clusters', 'refine', 'inspection', 'attribution', 'merge', 'aliases', 'demos', 'announcements', 'tags', 'tagreq', 'forum', 'users', 'stats', 'audit', 'settings', 'sponsors']
 const initialTab = (ALL_TABS as string[]).includes(String(route.query.tab)) ? (String(route.query.tab) as TabKey) : 'console'
 const tab = ref<TabKey>(initialTab)
 // 同路径换 ?tab= 不再触发重挂（pageKey 已改为 path），所以必须自己监听
@@ -24,13 +24,15 @@ const { queues, refresh: refreshQueues } = useQueues()
 // 后台信息架构（重设计第 1 期）：按「对象 × 动作」分组，不再按加面板的时间顺序分组。
 // 队列徽章计数统一取自 adminQueues 的单一描述符 —— 侧栏、概览台共用一份，杜绝口径漂移。
 type TabKey =
-  | 'console' | 'review' | 'inbox' | 'clusters' | 'refine' | 'inspection' | 'attribution'
+  | 'console' | 'entities' | 'review' | 'inbox' | 'clusters' | 'refine' | 'inspection' | 'attribution'
   | 'merge' | 'aliases' | 'demos' | 'announcements' | 'tags' | 'tagreq'
   | 'forum' | 'users' | 'stats' | 'audit' | 'settings' | 'sponsors'
 
 // 面板懒加载（04 §5.2）：除概览台外全部惰性组件表——后台按 tab 按需拉取，
 // 概览台是默认落地页，随壳加载避免二次瀑布；相邻 tab 的 prefetch（requestIdleCallback）留给 P3。
 const sections: Record<TabKey, Component> = {
+  // M3-2 实体总表（06 §A3.1 知识中心新面板）：Model/Task/Tag 三类统一列表+实体详情（详情查询串 ?type=&id= 由面板内自取）
+  entities: defineAsyncComponent(() => import('../components/admin/AdminEntitiesSection.vue')),
   console: AdminConsoleSection,
   review: defineAsyncComponent(() => import('../components/admin/AdminReviewSection.vue')),
   inbox: defineAsyncComponent(() => import('../components/admin/AdminInboxSection.vue')),
@@ -71,6 +73,7 @@ const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
   {
     label: '知识中心',
     tabs: [
+      { key: 'entities', label: '实体总表' },
       { key: 'inbox', label: '知识候选', q: 'inbox' },
       { key: 'clusters', label: '题目候选', q: 'clusters' },
       { key: 'merge', label: '合并向导' },

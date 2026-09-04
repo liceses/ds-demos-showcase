@@ -638,6 +638,16 @@ const realApi = {
     const { data } = await http.put(`/admin/models/${encodeURIComponent(String(ident))}`, payload)
     return data
   },
+  /** M3-3 直改权：Model 状态跃迁（candidate/active/unverified/deprecated，理由必填走审计）——既有端点 PUT /admin/models/{ident}/status */
+  async setModelStatus(ident: string | number, payload: { status: string; reason?: string }): Promise<{ id: number; slug: string; status: string }> {
+    const { data } = await http.put(`/admin/models/${encodeURIComponent(String(ident))}/status`, payload)
+    return data
+  },
+  /** M3-3 直改权：Task 题面字段直改（title/description/category/status）——既有端点 PUT /admin/tasks/{ident}（服务端落 update 审计） */
+  async updateTask(ident: string | number, payload: { title?: string; description?: string; category?: string | null; status?: string }): Promise<{ id: number; slug: string; title: string; status: string }> {
+    const { data } = await http.put(`/admin/tasks/${encodeURIComponent(String(ident))}`, payload)
+    return data
+  },
   async getMergeHistory(): Promise<{ items: MergeHistoryItem[] }> {
     const { data } = await http.get('/admin/models/merge-history')
     return data

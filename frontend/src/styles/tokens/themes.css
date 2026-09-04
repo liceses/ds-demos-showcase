@@ -1,0 +1,45 @@
+/* ============================================================
+   tokens/themes.css —— 主题层（04 §3.2/§3.3；P1-3 首版墨黑）
+   机制：html[data-theme="paper" | "ink"]；semantic 角色换绑 L1 原子，原子不动。
+   暖白影决断：影/线/字同源 --ink（--k-warm-white，对 #141414 15.07:1）——
+   semantic 硬影已绑 var(--ink)/var(--teal) 等，本层换绑即自动翻白墨。
+   墨黑底色口径：04 §3.2 canonical #141414/#1d1d1d/#262626（任务书占位 #0d0d0d 系
+   以本文档为准，偏差已在任务 output 注明）。
+   hc（高对比）留 P2；牛皮纸论坛孤岛在本层锚定。
+   ============================================================ */
+
+/* 主题切换硬切闸（04 §2.3：换肤是离散事件，禁止过渡期间混色） */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
+/* ---------- 墨黑主题（暗房白墨印刷） ---------- */
+[data-theme='ink'] {
+  /* 纸面三档：#141414 / #1d1d1d / #262626（04 §3.2 canonical） */
+  --paper: var(--k-ink);
+  --paper-deep: var(--k-ink-2);
+  /* 墨 = 暖白（15.07:1）；次级暖灰 ≈8.3:1 AA 余量 */
+  --ink: var(--k-warm-white);
+  --ink-soft: var(--k-ink-soft);
+
+  /* 强调色换绑 reference 谱系（04 §3.2 仲裁：墨黑主题用参考站荧光系） */
+  --red: var(--k-red);
+  --teal: var(--k-cyan);
+  --yellow: var(--k-yellow);
+  --mint: var(--k-orange);
+  --coral: var(--k-red);
+
+  color-scheme: dark;
+}
+
+/* ---------- 牛皮纸论坛孤岛（03 §3.2 仲裁：论坛保持纸墨打印质感，不随墨黑翻面） ----------
+   暖白墨落在牛皮纸上 ≈1.1:1 不可读——结构色局部锚定回纸系原子 */
+[data-theme='ink'] .forum-shell {
+  --paper: #fffdf7;
+  --paper-deep: #f2e8d5;
+  --ink: #000000;
+  --ink-soft: #555555;
+  color-scheme: light;
+}

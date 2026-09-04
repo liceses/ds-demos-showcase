@@ -6,6 +6,7 @@
 
 @import './tokens/primitives.css';
 @import './tokens/semantic.css';
+@import './tokens/themes.css';
 @import './tokens/motion.css';
 @import './base/reset.css';
 @import './layouts/container.css';

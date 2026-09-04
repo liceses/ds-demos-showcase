@@ -6,6 +6,7 @@ import { api } from './api'
 import { isMock } from './api'
 import { lang, setLang, t } from './i18n'
 import { adminExempt, applyServerFunMode, funEffective, titleBase } from './utils/funMode'
+import { applyThemePreviewFromUrl, getEffectiveTheme, initTheme, setTheme } from './utils/theme'
 import ConfirmHost from './components/ConfirmHost.vue'
 import ToastHost from './components/ToastHost.vue'
 import ForumHeader from './components/ForumHeader.vue'
@@ -59,6 +60,23 @@ const switchLang = () => setLang(lang.value === 'en' ? 'zh' : 'en')
 watchEffect(() => {
   document.documentElement.lang = lang.value === 'en' ? 'en' : 'zh-CN'
 })
+
+// 主题（04 §3.5/03 §11.3 仲裁版）：接管 FOUC + ?theme= 预览；按钮 paper↔ink 循环（语言按钮同规格）
+const themeNow = ref<ReturnType<typeof getEffectiveTheme>>(getEffectiveTheme())
+const themeTitle = computed(() =>
+  themeNow.value === 'ink'
+    ? t('app.theme.toPaper', '当前墨黑，点击换纸白')
+    : t('app.theme.toInk', '当前纸白，点击换墨黑'),
+)
+function cycleTheme() {
+  setTheme(themeNow.value, { cycle: true })
+  themeNow.value = getEffectiveTheme()
+}
+onMounted(() => {
+  initTheme()
+  applyThemePreviewFromUrl()
+  themeNow.value = getEffectiveTheme()
+})
 </script>
 
 <template>
@@ -84,6 +102,9 @@ watchEffect(() => {
       </nav>
 
       <div class="topnav topnav-desktop">
+        <button class="btn btn-sm btn-outline" type="button" :title="themeTitle" @click="cycleTheme">
+          {{ themeNow === 'ink' ? '纸' : '墨' }}
+        </button>
         <button class="btn btn-sm btn-outline" type="button" :title="lang === 'en' ? '切换到中文' : 'Switch to English'" @click="switchLang">
           {{ lang === 'en' ? '中文' : 'EN' }}
         </button>
@@ -133,6 +154,9 @@ watchEffect(() => {
             </RouterLink>
           </nav>
           <div class="mobile-drawer-foot">
+            <button class="btn btn-outline btn-block" type="button" :title="themeTitle" @click="cycleTheme">
+              {{ themeNow === 'ink' ? t('app.theme.toPaper', '换纸白') : t('app.theme.toInk', '换墨黑') }}
+            </button>
             <button class="btn btn-outline btn-block" type="button" @click="switchLang">
               {{ lang === 'en' ? '中文' : 'EN' }}
             </button>

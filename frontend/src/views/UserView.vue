@@ -6,6 +6,7 @@ import type { DemoSummary, User, UserProfile } from '../api/types'
 import { useAuthStore } from '../stores/auth'
 import { useNotificationsStore } from '../stores/notifications'
 import { useQueues } from '../composables/adminQueues'
+import { openSearch } from '../composables/useSearch'
 import DemoCard from '../components/DemoCard.vue'
 import { t } from '../i18n'
 
@@ -73,6 +74,9 @@ onMounted(async () => {
         <span class="mini-stat"><b>{{ user.role }}</b> {{ t('user.role', '角色') }}</span>
         <span class="mini-stat"><b>{{ parseDate(user.created_at).toLocaleDateString(currentLocale()) }}</b> {{ t('user.joined', '加入') }}</span>
         <RouterLink v-if="isSelf" class="btn btn-sm btn-primary" to="/settings">{{ t('settings.eyebrow', '账户设置') }}</RouterLink>
+        <!-- M2-3 移动搜索入口（任务书二选一，记录：TabBar 无搜索键 + 顶栏 ⌕ 桌面限定 → 移动从「我的」内聚页进；
+             覆盖层挂在 App 根，此处 openSearch() 全路由可达） -->
+        <button v-if="isSelf" class="btn btn-sm btn-outline" type="button" @click="openSearch()">{{ t('search.open', '搜索') }}</button>
         <!-- M2-1 「我的」内聚（03 §10.2）：TabBar 我的位页内承接——通知（未读红点镜像，
              notifications store 单一口径，与铃铛/TabBar 同源）/ 工作台（admin，徽章=待办合计同源 adminQueues）/ 退出 -->
         <RouterLink v-if="isSelf" class="btn btn-sm btn-outline self-notif" to="/notifications">

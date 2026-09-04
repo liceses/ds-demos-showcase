@@ -353,6 +353,31 @@ export const en = {
     },
   },
 
+  // M2-3 全局搜索覆盖层（03 §12.1）：三域并行 Top5 + ⇅/↵/Esc + 诚实空态；⌕/​/​/⌘K 入口
+  search: {
+    title: 'Global search',
+    placeholder: 'Search works / models / tasks…',
+    closeTip: 'Close (Esc)',
+    searching: 'Searching…',
+    allFailed: 'Search request failed — network or service temporarily unavailable',
+    retry: 'Retry',
+    resultCount: '{n} results',
+    groupDemos: 'Works',
+    groupModels: 'Models',
+    groupTasks: 'Tasks',
+    groupFailed: 'This domain failed',
+    worksN: '{n} works',
+    empty: 'No matches for “{q}”',
+    emptyHint: 'Try a shorter keyword, or continue from the exits below.',
+    allInDemos: 'All results for “{q}” in Works →',
+    clear: 'Clear and search again',
+    idleHint: 'Type to search works / models / tasks at once (top 5 each)',
+    footIdle: '↑↓ to select, ↵ to open',
+    hintKeys: '↑↓ select · ↵ open · Esc close',
+    openTip: 'Global search (press /)',
+    open: 'Search',
+  },
+
   notFound: {
     sub: 'This page does not exist — it may have been moved or removed.',
     back: 'Back to home',

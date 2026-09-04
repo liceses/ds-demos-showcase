@@ -13,6 +13,8 @@ import ToastHost from './components/ToastHost.vue'
 import ForumHeader from './components/ForumHeader.vue'
 import NotificationBell from './components/NotificationBell.vue'
 import AppTabBar from './components/AppTabBar.vue'
+import SearchOverlay from './components/SearchOverlay.vue'
+import { openSearch } from './composables/useSearch'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -138,6 +140,14 @@ onMounted(() => {
            auth-cluster（App.vue scoped @720 隐藏）+ CTA（topnav-desktop 类，全局 @720 隐藏）；
            桌面 .topnav 基础 flex + scoped gap10 与原逐字节等价。 -->
       <div class="topnav topnav-tools">
+        <!-- M2-3 全局搜索入口（03 §12.1）：桌面顶栏 ⌕ 图标钮（/ 快捷键与 ⌘K 由覆盖层组件自持监听）；
+             <720 隐藏（M2-1 裁决「顶栏只留品牌+主题/语言」）——移动入口=「我的」内聚页（UserView isSelf 工具排，二选一已记录） -->
+        <button class="btn btn-sm btn-outline search-trigger" type="button" :aria-label="t('search.title', '全局搜索')" :title="t('search.openTip', '全局搜索（快捷键 /）')" @click="openSearch">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6" />
+            <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+          </svg>
+        </button>
         <button class="btn btn-sm btn-outline" type="button" :title="themeTitle" @click="cycleTheme">
           {{ themeNow === 'ink' ? '纸' : '墨' }}
         </button>
@@ -230,6 +240,8 @@ onMounted(() => {
 
     <ConfirmHost />
     <ToastHost />
+    <!-- M2-3 全局搜索覆盖层（03 §12.1）：App 根一次挂载 + 组件内 Teleport to body——全路由可用（含 forum 双皮壳） -->
+    <SearchOverlay />
   </div>
 </template>
 
@@ -240,6 +252,12 @@ onMounted(() => {
    桌面 display:contents——子项照旧直接参与 .topnav 的 flex/gap，布局逐字节不变。 */
 .auth-cluster {
   display: contents;
+}
+/* M2-3：⌕ 桌面限定（<720 顶栏只留品牌+主题/语言，M2-1 裁决）——移动入口在「我的」内聚页 */
+@media (max-width: 720px) {
+  .search-trigger {
+    display: none;
+  }
 }
 @media (max-width: 720px) {
   .auth-cluster {

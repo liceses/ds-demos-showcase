@@ -43,6 +43,11 @@ export const en = {
       enter: 'Enter →',
       view: 'View →',
     },
+    count: {
+      demos: '{n} demos',
+      tagValues: '{n} tag values',
+      uploads7d: '{n} in 7d',
+    },
     featured: 'Featured',
     shuffle: 'Shuffle',
     shuffling: 'Shuffling…',

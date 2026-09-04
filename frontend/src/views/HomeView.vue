@@ -3,7 +3,7 @@ defineOptions({ name: 'HomeView' })
 import { computed, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
-import type { Announcement, DemoSummary } from '../api/types'
+import type { Announcement, DemoSummary, SiteInfo } from '../api/types'
 import { funEffective } from '../utils/funMode'
 import { t, tArr, lang } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
@@ -157,6 +157,22 @@ const entries = [
   { to: '/upload', stamp: '投', cls: 'upload', key: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
 ]
 
+// M0-D 入口胶囊实时数字：数据源 = 既有 getSiteInfo（60s 缓存，零新增请求）；
+// 计数缺失时隐藏数字不占位（排行榜无现成计数 → 恒隐藏）
+const content = ref<SiteInfo['content'] | null>(null)
+const entryCounts = computed<Record<string, number | null>>(() => ({
+  lib: content.value ? content.value.demos_total : null,
+  explore: content.value ? content.value.tags.values : null,
+  rank: null,
+  upload: content.value ? content.value.uploads_last_7d : null,
+}))
+function countLabel(key: string, n: number): string {
+  if (key === 'lib') return t('home.count.demos', '{n} 件作品', { n })
+  if (key === 'explore') return t('home.count.tagValues', '{n} 标签值', { n })
+  if (key === 'upload') return t('home.count.uploads7d', '近 7 天 {n}', { n })
+  return String(n)
+}
+
 // 论坛斜角入口
 const router = useRouter()
 const forumEntering = ref(false)
@@ -179,6 +195,7 @@ onMounted(async () => {
     ])
     grayTest.value = g.items
     // 计数器走 /meta/site-info（60s 缓存），替代原来的 tag-keys 全量拉取
+    content.value = info.content
     totalTags.value = info.content.tags.values
     totalDemos.value = info.content.demos_total
     announcements.value = a
@@ -217,26 +234,18 @@ onBeforeUnmount(() => {
     </div>
   </section>
 
-  <!-- 入口大厅 -->
+  <!-- M0-D 入口大厅改胶囊行（03 §3.2：入口卡降为胶囊，老用户不再被反复教导航）；
+       实时数字来自 site-info（缺失即隐藏不占位）；样式组件级（全局 style.css 冻结） -->
   <section class="section" style="padding-top: 8px">
-    <div class="entry-grid">
-      <RouterLink
-        v-for="e in entries"
-        :key="e.to"
-        class="card card-default entry-card"
-        :class="'entry-' + e.cls"
-        :to="e.to"
-      >
-        <span class="entry-stamp">{{ e.stamp }}</span>
-        <h2>{{ t('home.entries.' + e.key + '.title', e.title) }}</h2>
-        <p class="muted">{{ t('home.entries.' + e.key + '.desc', e.desc) }}</p>
-        <span class="entry-arrow">{{ t('home.entries.enter', '进入 →') }}</span>
+    <div class="entry-caps-row">
+      <RouterLink v-for="e in entries" :key="e.to" class="entry-capsule" :to="e.to">
+        <span class="entry-capsule-stamp" aria-hidden="true">{{ e.stamp }}</span>
+        <span class="entry-capsule-title">{{ t('home.entries.' + e.key + '.title', e.title) }}</span>
+        <span v-if="entryCounts[e.key] != null" class="entry-capsule-count">{{ countLabel(e.key, entryCounts[e.key] as number) }}</span>
       </RouterLink>
-      <button class="card card-default entry-card entry-ann" type="button" @click="scrollToAnnouncements">
-        <span class="entry-stamp">看</span>
-        <h2>{{ t('home.entries.ann.title', '站点公告') }}</h2>
-        <p class="muted">{{ t('home.entries.ann.desc', '项目公告 / 系统公告 · 最新动态') }}</p>
-        <span class="entry-arrow">{{ t('home.entries.view', '查看 →') }}</span>
+      <button class="entry-capsule" type="button" @click="scrollToAnnouncements">
+        <span class="entry-capsule-stamp" aria-hidden="true">看</span>
+        <span class="entry-capsule-title">{{ t('home.entries.ann.title', '站点公告') }}</span>
       </button>
     </div>
   </section>
@@ -299,3 +308,97 @@ onBeforeUnmount(() => {
     </div>
   </Transition>
 </template>
+
+<style scoped>
+/* ============================================================
+   M0-D 入口胶囊（组件级样式；全局 style.css 冻结——令牌经 var() 引用全局既有值并带回落，
+   P1 拆迁后并入 tokens 体系）
+   ============================================================ */
+.entry-caps-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.entry-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px; /* 03 §10.1-2 触达底线 */
+  padding: 8px 14px;
+  border: 4px solid var(--ink, #000);
+  background: var(--paper, #fff);
+  color: var(--ink, #000);
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  font-family: var(--font-heading, sans-serif);
+  font-weight: 800;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transform: rotate(0deg); /* R8 静止零倾斜 */
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)),
+    box-shadow var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
+}
+/* R6：hover 增影抬起（hover 设备限定）；R7：只动 transform/box-shadow */
+@media (hover: hover) {
+  .entry-capsule:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  }
+}
+/* 法则 01：按压位移 = 阴影偏移，阴影清零，瞬间生效 */
+.entry-capsule:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+  transition-duration: 0ms;
+}
+.entry-capsule-stamp {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  background: var(--yellow, #ffe66d);
+  border: 2px solid var(--ink, #000);
+  font-family: var(--font-heading, sans-serif);
+  font-weight: 900;
+  font-size: 13px;
+  transform: rotate(var(--tilt-deco, -1.5deg)); /* R8 白名单：印章装饰常驻倾斜 */
+}
+.entry-capsule-title {
+  line-height: 1.2;
+}
+.entry-capsule-count {
+  font-family: var(--font-body, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border: 2px solid var(--ink, #000);
+  background: var(--paper-deep, #f2eee6);
+  white-space: nowrap;
+}
+/* 移动端：2×2 大目标（03 §3.2）+ 50% 律（边框/阴影减半，R1/R2 令牌化前的手工口径） */
+@media (max-width: 719px) {
+  .entry-caps-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .entry-capsule {
+    border-width: 2px;
+    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+    justify-content: flex-start;
+  }
+  @media (hover: hover) {
+    .entry-capsule:hover {
+      box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+    }
+  }
+  .entry-capsule:active {
+    transform: translate(2px, 2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entry-capsule {
+    transition: none;
+  }
+}
+</style>

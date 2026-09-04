@@ -72,6 +72,10 @@ function cycleTheme() {
   setTheme(themeNow.value, { cycle: true })
   themeNow.value = getEffectiveTheme()
 }
+
+// P2-1 转场例外名（03 §12.6）：forum 双皮壳（自带 forum-takeover 登场）/ upload remountOnQuery
+// （query 即身份，向导步进不重播转场）→ page-cut 空名 = 零类定义硬切。
+const pageTransitionName = computed(() => (route.meta.forum || route.meta.remountOnQuery ? 'page-cut' : 'page'))
 onMounted(() => {
   initTheme()
   applyThemePreviewFromUrl()
@@ -185,9 +189,15 @@ onMounted(() => {
 
     <main class="container" :class="{ 'forum-container': route.meta.forum }" style="flex: 1">
       <RouterView v-slot="{ Component }">
-        <KeepAlive :include="keepAlivePages">
-          <component :is="Component" :key="pageKey" />
-        </KeepAlive>
+        <!-- P2-1 页面转场（04 §2.3.1 可抄范式）：Transition 必须包在 KeepAlive 外层，
+             mode="out-in" = 旧页 0ms 硬切消失（.page-leave-active transition:none）+ 新页 stamp-lite 250ms 登场；
+             KeepAlive 命中复用不重播 enter、重新插入时播（符合「转场=页面级登场」语义）；
+             scrollBehavior 协同：savedPosition/top:0 在新页插入时生效（leave 0ms 无延迟），入场动画叠加不抢滚动。 -->
+        <Transition :name="pageTransitionName" mode="out-in">
+          <KeepAlive :include="keepAlivePages">
+            <component :is="Component" :key="pageKey" />
+          </KeepAlive>
+        </Transition>
       </RouterView>
     </main>
 

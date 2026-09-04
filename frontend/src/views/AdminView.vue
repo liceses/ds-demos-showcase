@@ -60,30 +60,45 @@ interface AdminTab {
   q?: QueueKey
 }
 
+// M3-1 侧栏重排（06 §A3.1/A4 映射表）：7 组→4 组（总览/知识中心/运营/站点），18 面板零改动搬家——
+//   知识中心=实体生命周期域（候选收编 inbox/clusters/merge/aliases/tags/tagreq）；
+//   运营=队列+内容+社区治理（review/refine/inspection/attribution/demos/forum/users）；
+//   站点=audit/settings/sponsors/announcements（公告自「内容」迁入）；
+//   归属工作台按 A4#7 队列面留运营（跃迁操作面 P4 进 Model 详情）；
+//   实体总表（M3-2 新面板）落知识中心组首位，面板总数 18→19。
 const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
   { label: '总览', tabs: [{ key: 'console', label: '概览台' }] },
   {
-    label: '队列（待办）',
+    label: '知识中心',
     tabs: [
-      { key: 'review', label: '审核队列', q: 'review' },
       { key: 'inbox', label: '知识候选', q: 'inbox' },
       { key: 'clusters', label: '题目候选', q: 'clusters' },
+      { key: 'merge', label: '合并向导' },
+      { key: 'aliases', label: '别名中心' },
+      { key: 'tags', label: '标签词表', q: 'wordlist' },
+      { key: 'tagreq', label: '固定值申请' },
+    ],
+  },
+  {
+    label: '运营',
+    tabs: [
+      { key: 'review', label: '审核队列', q: 'review' },
       { key: 'refine', label: '类型细分', q: 'refine' },
       { key: 'inspection', label: '巡检' },
       { key: 'attribution', label: '归属工作台', q: 'attribution' },
+      { key: 'demos', label: 'Demo 管理' },
+      { key: 'forum', label: '论坛管理' },
+      { key: 'users', label: '用户管理' },
     ],
   },
-  { label: '实体', tabs: [{ key: 'merge', label: '合并向导' }, { key: 'aliases', label: '别名中心' }] },
-  { label: '内容', tabs: [{ key: 'demos', label: 'Demo 管理' }, { key: 'announcements', label: '公告管理' }] },
-  { label: '词表', tabs: [{ key: 'tags', label: '标签词表', q: 'wordlist' }, { key: 'tagreq', label: '固定值申请' }] },
-  { label: '社区', tabs: [{ key: 'forum', label: '论坛管理' }, { key: 'users', label: '用户管理' }] },
   {
-    label: '站点与度量',
+    label: '站点',
     tabs: [
       // 「体检指标」已并入概览台（两处讲同一批数必然漂移）；?tab=stats 仍可直达，只是不再占一个入口
       { key: 'audit', label: '审计日志' },
       { key: 'settings', label: '站点设置' },
       { key: 'sponsors', label: '赞助/致谢' },
+      { key: 'announcements', label: '公告管理' },
     ],
   },
 ]

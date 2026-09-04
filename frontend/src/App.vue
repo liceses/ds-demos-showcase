@@ -124,19 +124,16 @@ onMounted(() => {
         <span v-else class="brand-name">AI 全民<br />制作人</span>
       </RouterLink>
 
-      <!-- M1-fix-10 减法裁决：topnav 信息项 6→4（作品库/探索/排行榜/论坛）——
-           品牌 logo=回首页（首页项删除）；「关于」移出顶栏（去处=footer/首页条带 05/404 站点地图，
-           顶栏只留高频项，stylekit 静默导航同理）；M2-1：移动抽屉退役（03 §10.2 TabBar 新基线，
-           探索/排行榜/关于由首页入口+条带+footer 承接，双移动导航=认知冗余） -->
       <!-- T7 v3（用户二轮反馈①③）：论坛出顶栏（首页纸条+footer+404 地图+TabBar 社区承接），
            ⌕ 占论坛原槽位（SearchOverlay openSearch 复用——/ 与 ⌘K 仍由覆盖层自持）；
-           「关于」回栏（06 v2 报头导航序：作品库/探索/排行榜/⌕/关于；搜索钮=导航中唯一带框件，
-           06 §P2 形态分工「功能件带框、导航件裸字」） -->
+           「关于」回栏（06 v2 报头导航序：作品库/探索/排行榜/⌕/关于）。
+           T9 反馈②：⌕ 去卡片化——与相邻 nav-link 同形态（裸图标链，hover=现有静默语汇：变色+3px 下划线），
+           去 btn-outline 边框卡片感（06 §P2 的『唯一带框件』分工被用户实测否决） -->
       <nav class="topnav topnav-desktop">
         <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
         <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
         <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
-        <button class="btn btn-sm btn-outline topnav-search" type="button" :aria-label="t('search.title', '全局搜索')" :title="t('search.openTip', '全局搜索（快捷键 /）')" @click="openSearch">
+        <button class="nav-link topnav-search" type="button" :aria-label="t('search.title', '全局搜索')" :title="t('search.openTip', '全局搜索（快捷键 /）')" @click="openSearch">
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
             <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6" />
             <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
@@ -412,6 +409,20 @@ onMounted(() => {
   text-decoration: underline;
   text-decoration-thickness: 3px;
   text-underline-offset: 6px;
+}
+/* T9 反馈②：⌕ 裸图标链——图标块状对齐；hover/焦点=3px 墨条下划（图标无文本，
+   text-decoration 不生效，借 nav-link 既有 3px 透明底边框翻色=同语汇的图标形态） */
+.topbar .nav-link.topnav-search {
+  display: inline-flex;
+  align-items: center;
+}
+.topbar .nav-link.topnav-search svg {
+  display: block;
+}
+.topbar .nav-link.topnav-search:hover,
+.topbar .nav-link.topnav-search:focus-visible {
+  border-bottom-color: var(--ink, #000);
+  text-decoration: none;
 }
 
 

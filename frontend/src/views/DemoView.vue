@@ -387,7 +387,11 @@ onMounted(load)
     <!-- v2 重设计第 1 期：作品本体（左，sticky）+ 事实卡（右）。
          依据：详情页第一任务是"让它跑起来"，评分是社区唯一信号源必须常驻（Demo页重设计.md §3） -->
     <div class="dv-shell" :class="{ 'facts-collapsed': !factsOpen }">
-      <div class="dv-stage" ref="stageEl" :class="{ 'dv-stage--fs': fakeFs }">
+      <!-- M1-fix-8 修法 A（05 §3.1）：row1 包装层收窄 sticky 容纳块——
+           dv-stage 的 sticky 约束块从 dv-shell（跨 row1+row2）变为 row1 包装层，
+           滚到 dv-story 时预览被自然推出视口（标准释放），几何上不再与 row2 重叠 -->
+      <div class="dv-row-preview">
+        <div class="dv-stage" ref="stageEl" :class="{ 'dv-stage--fs': fakeFs }">
         <!-- 全屏退出把手：Fullscreen API 与固定定位层两条路共用（fixed 层里它是唯一回得来的门） -->
         <button v-if="fsActive" class="dv-fs-exit" type="button" @click="toggleFullscreen">
           {{ t('demo.barExitFs', '退出全屏') }}
@@ -452,7 +456,8 @@ onMounted(load)
             <a class="btn btn-primary" :href="demo.external_url ?? undefined" target="_blank" rel="noopener">{{ t('demo.openLink', '打开链接 →') }}</a>
           </div>
         </template>
-      </div>
+        </div><!-- /dv-stage -->
+      </div><!-- /dv-row-preview（sticky 容纳块=row1，M1-fix-8） -->
 
       <!-- 收起/展开带动效：状态变化必须"看得见地发生"，否则用户以为按钮坏了 -->
       <Transition name="dv-panel" mode="out-in">
@@ -621,13 +626,14 @@ onMounted(load)
       </p>
     </section>
 
-    <!-- ③ 讨论：收成一行标题（带条数），点开才占版面 —— 没人在读时不该吃掉半屏 -->
+    <!-- ④ 讨论（M1-fix-8 05 §3.2）：交互件不是阅读件——常开（发言零门槛），可手动收起；
+         进页每次回到常开（默认偏好不持久化）。③时间线/②会话日志保持折叠（渐进披露语义保留） -->
     <section class="section dv-archive">
-      <details id="dv-comments" class="dv-disclose">
+      <details id="dv-comments" class="dv-disclose" open>
         <summary>
           <b>{{ t('demo.tabDiscussion', '讨论') }}</b>
           <span class="dv-disclose-n">{{ demo.comment_count }}</span>
-          <span class="dv-disclose-hint">{{ t('demo.commentsHint', '点开看评论并发言') }}</span>
+          <span class="dv-disclose-hint">{{ t('demo.commentsOpenHint', '输入框常开——看完就能评') }}</span>
           <RouterLink class="btn btn-sm btn-outline dv-summary-cta" :to="`/forum?demo=${demo.slug}`" @click.stop>{{ t('demo.discuss', '讨论 →') }}</RouterLink>
         </summary>
         <div class="dv-disclose-body">
@@ -1006,5 +1012,22 @@ onMounted(load)
   .dv-fs-exit:active {
     transform: none;
   }
+}
+
+/* ============================================================
+   M1-fix-8（05 §3.1 修法 A）：row1 包装层 = sticky 容纳块收窄。
+   dv-stage 的 sticky 约束块从 dv-shell（跨 row1+row2，全局 demo-detail.css
+   未动）变为本包装层——滚到 dv-story 时预览被自然推出视口（标准释放），
+   几何上不再与 row2 重叠；dv-story 的显式 grid-row:2 与 facts 跨行不受影响。
+   ============================================================ */
+.dv-row-preview {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+/* 顺带收敛（05 §3.1）：窄主列下 68vh 偏高——预览不超过首屏视口（topbar 78 + 余量），
+   释放点可预期；≤1024 全局 62vh 更小，此上限只在桌面大列生效 */
+.dv-stage {
+  max-height: calc(100vh - 96px);
 }
 </style>

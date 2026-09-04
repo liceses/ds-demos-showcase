@@ -107,6 +107,20 @@ async function submit() {
 onMounted(load)
 </script>
 
+<style scoped>
+/* M1-fix-8（05 §3.2）：0 条紧凑空态——单行 flex，虚线上缘与列表节奏一致，不再用 empty-box 占高 */
+.qc-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 2px;
+  border-top: 2px dashed rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+}
+</style>
+
 <template>
   <div>
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('quick.loading', '加载讨论…') }}</div>
@@ -142,7 +156,12 @@ onMounted(load)
           </div>
           <MarkdownRenderer :content="r.content" />
         </div>
-        <div v-if="!replies.length" class="empty-box">{{ t('quick.empty', '还没有评论，来抢沙发') }}</div>
+        <!-- M1-fix-8（05 §3.2）：0 条紧凑空态——一行不占高，「抢首楼」直达论坛预填发帖
+             （/forum/new?demo= 既有机制：自动挂 demo 分类+关联作品） -->
+        <div v-if="!replies.length" class="qc-empty">
+          <span class="muted">{{ t('quick.emptyCompact', '还没有评论——第一层楼还空着') }}</span>
+          <RouterLink class="btn btn-sm btn-outline" :to="`/forum/new?demo=${slug}`">{{ t('quick.grabFirst', '抢首楼 →') }}</RouterLink>
+        </div>
         <button
           v-if="replies.length < total"
           class="btn btn-outline btn-block"

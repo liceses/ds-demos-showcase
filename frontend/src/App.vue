@@ -138,7 +138,7 @@ onMounted(() => {
         <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
         <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
         <RouterLink class="nav-link" to="/forum">{{ t('app.nav.forum', '论坛') }}</RouterLink>
-        <RouterLink class="nav-link" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
+        <RouterLink class="nav-link nav-about" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
       </nav>
 
       <div class="topnav topnav-desktop">
@@ -177,6 +177,8 @@ onMounted(() => {
                   {{ t('app.nav.workbench', '管理工作台') }}
                   <span v-if="adminQueueTotal > 0" class="user-menu-badge">{{ adminQueueTotal }}</span>
                 </RouterLink>
+                <!-- t36 收纳去处：窄桌面（≤1120）顶栏「关于」收进用户菜单（键复用 app.nav.about） -->
+                <RouterLink class="user-menu-item" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
                 <button class="user-menu-item user-menu-quit" type="button" @click="auth.logout()">{{ t('app.nav.logout', '退出') }}</button>
               </div>
             </Transition>
@@ -355,7 +357,25 @@ onMounted(() => {
   font-weight: 900;
 }
 .topnav-cta {
-  margin-left: 2px;
+  margin-left: 14px; /* t36 实测：CTA 与认证簇仅隔 2px——转化主件脱离按钮堆，独立成组 */
+}
+/* ---- M1-fix-10 topnav 间距重排（t36 CDP 实测驱动）----
+   实况：容器 1280 有 356px 余量但簇内全挤——nav 簇 gap 8px（文字间距 32px）、
+   右簇 gap 8px、CTA 距注册 2px。修法=簇内呼吸，不动 space-between 的簇间分配。 */
+.topbar nav.topnav {
+  gap: 14px; /* 导航簇 8→14：文字间距 32→38px，静默文字链需要呼吸感 */
+}
+.topbar .topnav.topnav-desktop:not(nav) {
+  gap: 10px; /* 右簇（功能钮）8→10：边框件之间留一线 */
+}
+/* 收纳断点决策（t36）：扩间距后内容宽≈954px（未登录）/≈994px（登录），滚动条 47px
+   → 换行临界 ≈1041vw；取 1120 为收纳线=留 107px 安全余量，覆盖 1024 设备 110% 缩放
+   （有效宽 1126 恰在临界上方）。「关于」语义去处：登录态→用户菜单（本提交新增项）、
+   未登录→抽屉/footer/首页条带/hero 关于链多路可找；全宽 ≥1121 恢复 6 项完整语义。 */
+@media (max-width: 1120px) {
+  .topbar nav.topnav .nav-about {
+    display: none;
+  }
 }
 /* 弹层登场（编排类豁免口径，R7 白名单内） */
 .user-menu-pop-enter-active {

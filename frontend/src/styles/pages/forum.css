@@ -241,7 +241,9 @@
   .forum-peek {
     right: 10px;
     top: auto;
-    bottom: 16px;
+    /* T9 微适配（唯一偏离原件处）：原件 bottom:16px 预表 M2-1 TabBar——
+       抬到 TabBar(56px+safe-area) 上方 12px，防遮挡；桌面档逐字未动 */
+    bottom: calc(56px + env(safe-area-inset-bottom) + 12px);
     transform: rotate(-3deg);
     padding: 8px 14px;
     box-shadow: 3px 3px 0 0 var(--ink);
@@ -249,6 +251,13 @@
   .forum-peek:hover {
     right: 10px;
     transform: rotate(-3deg) translateY(-2px);
+  }
+}
+/* T9 微适配：12.4 reduce 运动退场（接管=页面级转场，随 site 律退场；原件先于该律） */
+@media (prefers-reduced-motion: reduce) {
+  .forum-takeover-enter-active,
+  .forum-takeover-leave-active {
+    transition: none;
   }
 }
 

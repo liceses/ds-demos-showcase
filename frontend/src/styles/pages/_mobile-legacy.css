@@ -219,6 +219,7 @@
 }
 .tag-pane-key:hover {
   background: var(--yellow);
+  color: var(--on-accent, #000); /* hover 亮底必须换字色（t17 用户实测：标签 hover 黑底黑字近亲=亮底亮字） */
 }
 .tag-pane-key.active {
   background: var(--ink);
@@ -226,7 +227,7 @@
 }
 .tag-pane-key.active code {
   background: var(--yellow);
-  color: var(--ink);
+  color: var(--on-accent, #000);
 }
 .tag-pane-key-label {
   min-width: 0;
@@ -237,6 +238,7 @@
 .tag-pane-key-label code {
   background: var(--yellow);
   border: 2px solid var(--ink);
+  color: var(--on-accent, #000);
   padding: 0 3px;
   font-size: 10px;
 }

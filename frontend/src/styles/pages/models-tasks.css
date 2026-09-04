@@ -65,10 +65,10 @@
 .model-hero-head { display: flex; align-items: flex-start; gap: 18px; }
 
 /* 实体状态徽章 */
-.mode-badge.badge-canary { background: var(--yellow); }
+.mode-badge.badge-canary { background: var(--yellow); color: var(--on-accent, #000); }
 .mode-badge.badge-candidate { background: var(--paper); }
-.mode-badge.badge-deprecated { background: var(--coral); }
-.mode-badge.badge-active { background: var(--mint); }
+.mode-badge.badge-deprecated { background: var(--coral); color: var(--on-accent, #000); }
+.mode-badge.badge-active { background: var(--mint); color: var(--on-accent, #000); }
 
 /* 题目对比行（小倍数）：每模型一行 */
 .compare-list { display: flex; flex-direction: column; gap: 14px; }
@@ -93,9 +93,9 @@
   background: var(--paper);
   flex: none;
 }
-.compare-row.rank-1 .compare-rank, .compare-rank.rank-1 { background: var(--yellow); }
+.compare-row.rank-1 .compare-rank, .compare-rank.rank-1 { background: var(--yellow); color: var(--on-accent, #000); }
 .compare-rank.rank-2 { background: var(--paper); }
-.compare-rank.rank-3 { background: var(--mint); }
+.compare-rank.rank-3 { background: var(--mint); color: var(--on-accent, #000); }
 .compare-model {
   display: inline-flex;
   align-items: center;
@@ -164,6 +164,7 @@
   border: 2px solid var(--ink);
   padding: 1px 8px;
   background: var(--mint);
+  color: var(--on-accent, #000);
   flex: none;
 }
 
@@ -213,6 +214,7 @@
   border: 2px solid var(--ink);
   padding: 2px 8px;
   background: var(--yellow);
+  color: var(--on-accent, #000);
   flex: none;
 }
 .task-line-cta {

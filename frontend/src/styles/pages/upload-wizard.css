@@ -23,7 +23,7 @@
 }
 .uw-step:hover { background: var(--paper-deep, #f2eee6); }
 .uw-step.active {
-  background: var(--yellow);
+  background: var(--wash-yellow); /* 选中步骤条：大面积，墨黑下暗橄榄+暖白（t17 上传向导深扫） */
   box-shadow: var(--shadow-black, 3px 3px 0 rgba(0, 0, 0, 0.25));
   transform: translate(-1px, -1px);
 }
@@ -39,6 +39,7 @@
   font-weight: 900;
 }
 .uw-step.ok .uw-step-n { background: var(--teal); }
+.uw-step.ok .uw-step-n { background: var(--teal); color: var(--on-accent, #000); } /* 完成数字章：青底黑字（原白字双主题 1.9/1.7） */
 .uw-step-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .uw-step-body b { font-family: var(--font-heading); font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
 .uw-step-hint { font-size: 11px; color: var(--ink-soft); }
@@ -275,7 +276,7 @@
   cursor: pointer;
   color: var(--ink-soft);
 }
-.uw-aside-toggle[aria-pressed='true'] { background: var(--yellow); color: var(--ink); }
+.uw-aside-toggle[aria-pressed='true'] { background: var(--yellow); color: var(--on-accent, #000); }
 .uw-stamp {
   padding: 2px 8px;
   font-family: var(--font-heading);

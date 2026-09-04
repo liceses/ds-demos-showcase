@@ -16,8 +16,8 @@
   border: 2px solid var(--ink);
   background: var(--paper);
 }
-.cluster-badge.cb-exact { background: var(--teal); }
-.cluster-badge.cb-similar { background: var(--yellow); }
+.cluster-badge.cb-exact { background: var(--teal); color: var(--on-accent, #000); }
+.cluster-badge.cb-similar { background: var(--yellow); color: var(--on-accent, #000); }
 .cluster-badge.cb-info { background: var(--paper-deep, #e8e4dc); color: var(--ink-soft); }
 .cluster-covered-tag {
   margin-left: auto;

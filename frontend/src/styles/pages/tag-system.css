@@ -2,6 +2,7 @@
 .tag-chip.mode-fixed {
   background: var(--paper);
 }
+.tag-chip.mode-fixed:hover { background: var(--ink); color: var(--paper); } /* t17 用户实测修复：mode-fixed 底被类钉死后 .tag-chip:hover 只换字不换底 → 墨黑下黑底黑字；hover 改走反色章（墨底暖白/纸白底黑字，双主题自动） */
 .tag-chip.mode-open {
   background: var(--yellow);
   color: var(--on-accent, #000); /* 小面积原饱和+黑字（t16 追加轮全站扫描） */

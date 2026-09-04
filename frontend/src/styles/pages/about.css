@@ -120,6 +120,7 @@
 /* 评分迷你徽标（DemoCard） */
 .stat-mint {
   background: var(--mint);
+  color: var(--on-accent, #000); /* 评分迷你徽标：薄荷底黑字（t17 全站扫描） */
 }
 
 /* 首页入口：排行榜 */

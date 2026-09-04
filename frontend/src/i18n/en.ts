@@ -438,6 +438,10 @@ export const en = {
     show: 'Show tag description',
   },
 
+  card: {
+    sampleLow: 'Low sample',
+  },
+
   common: {
     loading: 'Loading…',
     search: 'Search',
@@ -857,6 +861,7 @@ export const en = {
   entityPicker: {
     ph: 'Search by name / brief…',
     works: '{n} works',
+    replies: 'replies',
     none: 'No matching entity',
   },
 
@@ -908,6 +913,13 @@ export const en = {
   },
   admin: {
     navSearch: 'Search panels…',
+    ann: {
+      topic: 'Linked topic',
+      pickTopic: '+ Link a forum topic',
+      remove: 'Remove',
+      change: 'Change',
+      searchTopic: 'Search topic title…',
+    },
     tags: {
       searchValue: 'Search value or description…',
       capped: 'Showing the top {n} by usage — type a keyword to see all',

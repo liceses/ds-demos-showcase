@@ -4,6 +4,8 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { AdminUser } from '../../api/types'
+import PaginationBar from '../PaginationBar.vue'
+import { useLocalPagination } from '../../composables/useLocalPagination'
 
 const ui = useUiStore()
 const users = ref<AdminUser[]>([])
@@ -19,6 +21,9 @@ const filtered = computed(() => {
   if (q) items = items.filter((u) => u.username.toLowerCase().includes(q))
   return items
 })
+
+// 客户端分页（M0-3，02 G 决策人点名项）：/admin/users 后端为全量返回，分页在过滤结果上切页（照 AdminDemosSection 模式）
+const { page, total, pages, paged, setPage, pageSize } = useLocalPagination<AdminUser>(() => filtered.value, 8)
 
 async function loadUsers() {
   try {
@@ -93,7 +98,7 @@ onMounted(loadUsers)
           <tr><th>用户名</th><th>角色</th><th>状态</th><th>Demo 数</th><th>操作</th></tr>
         </thead>
         <tbody>
-          <tr v-for="u in filtered" :key="u.id">
+          <tr v-for="u in paged" :key="u.id">
             <td>{{ u.username }}</td>
             <td>{{ u.role }}</td>
             <td><span class="status-pill" :class="`status-${u.status}`">{{ u.status }}</span></td>
@@ -108,5 +113,7 @@ onMounted(loadUsers)
         </tbody>
       </table>
     </div>
+
+    <PaginationBar v-if="pages > 1" :page="page" :total="total" :page-size="pageSize" @change="setPage" />
   </div>
 </template>

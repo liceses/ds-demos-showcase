@@ -5,7 +5,9 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { Announcement } from '../../api/types'
 import MarkdownEditor from '../MarkdownEditor.vue'
+import EntityPicker from './EntityPicker.vue'
 import { parseDate } from '../../utils/time'
+import { t } from '../../i18n'
 
 function toLocalInput(iso: string): string {
   const d = parseDate(iso)
@@ -16,15 +18,41 @@ function toLocalInput(iso: string): string {
 const ui = useUiStore()
 
 const announcements = ref<Announcement[]>([])
-const newAnn = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
+const newAnn = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '', topic_id: null as number | null })
 const annError = ref('')
 const annOk = ref('')
+// 关联主题（M0-3）：EntityPicker 选论坛主题；保存后前台公告卡自动「去讨论」（展示侧 AnnouncementBlock 已就绪）
+const newTopicLabel = ref('')
+const newPicking = ref(false)
+const editTopicLabel = ref('')
+const editPicking = ref(false)
+
+function onPickNew(p: { id: number; label: string }) {
+  newAnn.value.topic_id = p.id
+  newTopicLabel.value = p.label
+  newPicking.value = false
+}
+function onClearNew() {
+  newAnn.value.topic_id = null
+  newTopicLabel.value = ''
+  newPicking.value = false
+}
+function onPickEdit(p: { id: number; label: string }) {
+  editAnnForm.value.topic_id = p.id
+  editTopicLabel.value = p.label
+  editPicking.value = false
+}
+function onClearEdit() {
+  editAnnForm.value.topic_id = null
+  editTopicLabel.value = ''
+  editPicking.value = false
+}
 
 const annTypeLabel: Record<string, string> = { manual: '手动公告', auto: '新发布', update: '站点更新', demo_update: '作品更新' }
 
 const annFilter = ref<'all' | 'manual' | 'auto' | 'demo_update' | 'update'>('all')
 const editingAnn = ref<Announcement | null>(null)
-const editAnnForm = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '' })
+const editAnnForm = ref({ title: '', content: '', pinned: false, status: 'published' as 'draft' | 'published' | 'offline', category: 'general', published_at: '', expires_at: '', topic_id: null as number | null })
 
 const filteredAnnouncements = computed(() =>
   annFilter.value === 'all' ? announcements.value : announcements.value.filter((a) => a.type === annFilter.value),
@@ -47,7 +75,15 @@ async function loadAnnouncements() {
 
 function startEditAnn(a: Announcement) {
   editingAnn.value = a
-  editAnnForm.value = { title: a.title, content: a.content, pinned: !!a.pinned, status: a.status || 'published', category: a.category || 'general', published_at: a.published_at ? toLocalInput(a.published_at) : '', expires_at: a.expires_at ? toLocalInput(a.expires_at) : '' }
+  editAnnForm.value = { title: a.title, content: a.content, pinned: !!a.pinned, status: a.status || 'published', category: a.category || 'general', published_at: a.published_at ? toLocalInput(a.published_at) : '', expires_at: a.expires_at ? toLocalInput(a.expires_at) : '', topic_id: a.topic_id ?? null }
+  editTopicLabel.value = ''
+  editPicking.value = false
+  if (a.topic_id) {
+    // 回显主题标题；主题已删时退化为 #id（后端公告对失效 topic 置 null 的清理由删除侧负责）
+    void api.getForumTopic(a.topic_id).then((tp) => {
+      editTopicLabel.value = tp?.title || `#${a.topic_id}`
+    })
+  }
 }
 
 function cancelEditAnn() {
@@ -69,6 +105,7 @@ async function saveEditAnn() {
       category: editAnnForm.value.category.trim() || 'general',
       published_at: editAnnForm.value.published_at ? new Date(editAnnForm.value.published_at).toISOString() : null,
       expires_at: editAnnForm.value.expires_at ? new Date(editAnnForm.value.expires_at).toISOString() : null,
+      topic_id: editAnnForm.value.topic_id,
     })
     ui.toast('公告已更新', 'success')
     editingAnn.value = null
@@ -94,9 +131,12 @@ async function createAnnouncement() {
       category: newAnn.value.category.trim() || 'general',
       published_at: newAnn.value.published_at ? new Date(newAnn.value.published_at).toISOString() : null,
       expires_at: newAnn.value.expires_at ? new Date(newAnn.value.expires_at).toISOString() : null,
+      topic_id: newAnn.value.topic_id,
     })
     ui.toast('公告已发布', 'success')
-    newAnn.value = { title: '', content: '', pinned: false, status: 'published', category: 'general', published_at: '', expires_at: '' }
+    newAnn.value = { title: '', content: '', pinned: false, status: 'published', category: 'general', published_at: '', expires_at: '', topic_id: null }
+    newTopicLabel.value = ''
+    newPicking.value = false
     await loadAnnouncements()
   } catch (e) {
     annError.value = (e as Error).message
@@ -152,6 +192,23 @@ onMounted(loadAnnouncements)
             <label class="field" style="margin: 0">发布时间 <input v-model="editAnnForm.published_at" class="input" type="datetime-local" /></label>
             <label class="field" style="margin: 0">过期时间 <input v-model="editAnnForm.expires_at" class="input" type="datetime-local" /></label>
           </div>
+          <!-- 关联主题（M0-3）：公告卡「去讨论」入口的数据源 -->
+          <div class="filter-row" style="margin: 0; align-items: center; flex-wrap: wrap">
+            <span class="field" style="margin: 0; font-weight: 900">{{ t('admin.ann.topic', '关联主题') }}</span>
+            <template v-if="editAnnForm.topic_id">
+              <span class="tag-chip active mono">#{{ editAnnForm.topic_id }} {{ editTopicLabel }}</span>
+              <button class="btn btn-sm btn-outline" type="button" @click="onClearEdit">{{ t('admin.ann.remove', '移除') }}</button>
+              <button class="btn btn-sm btn-dark" type="button" @click="editPicking = !editPicking">{{ t('admin.ann.change', '更换') }}</button>
+            </template>
+            <button v-else class="btn btn-sm btn-secondary" type="button" @click="editPicking = !editPicking">{{ t('admin.ann.pickTopic', '+ 关联论坛主题') }}</button>
+          </div>
+          <EntityPicker
+            v-if="editPicking"
+            kind="topics"
+            :selected-id="editAnnForm.topic_id"
+            :placeholder="t('admin.ann.searchTopic', '搜索主题标题…')"
+            @pick="onPickEdit"
+          />
           <div class="filter-row" style="margin-bottom: 0">
             <button class="btn btn-primary" type="button" @click="saveEditAnn">保存修改</button>
             <button class="btn btn-sm btn-dark" type="button" @click="cancelEditAnn">取消</button>
@@ -181,6 +238,23 @@ onMounted(loadAnnouncements)
             <label class="field" style="margin: 0">发布时间 <input v-model="newAnn.published_at" class="input" type="datetime-local" /></label>
             <label class="field" style="margin: 0">过期时间 <input v-model="newAnn.expires_at" class="input" type="datetime-local" /></label>
           </div>
+          <!-- 关联主题（M0-3）：公告卡「去讨论」入口的数据源 -->
+          <div class="filter-row" style="margin: 0; align-items: center; flex-wrap: wrap">
+            <span class="field" style="margin: 0; font-weight: 900">{{ t('admin.ann.topic', '关联主题') }}</span>
+            <template v-if="newAnn.topic_id">
+              <span class="tag-chip active mono">#{{ newAnn.topic_id }} {{ newTopicLabel }}</span>
+              <button class="btn btn-sm btn-outline" type="button" @click="onClearNew">{{ t('admin.ann.remove', '移除') }}</button>
+              <button class="btn btn-sm btn-dark" type="button" @click="newPicking = !newPicking">{{ t('admin.ann.change', '更换') }}</button>
+            </template>
+            <button v-else class="btn btn-sm btn-secondary" type="button" @click="newPicking = !newPicking">{{ t('admin.ann.pickTopic', '+ 关联论坛主题') }}</button>
+          </div>
+          <EntityPicker
+            v-if="newPicking"
+            kind="topics"
+            :selected-id="newAnn.topic_id"
+            :placeholder="t('admin.ann.searchTopic', '搜索主题标题…')"
+            @pick="onPickNew"
+          />
           <div class="filter-row" style="margin-bottom: 0">
             <button class="btn btn-primary" type="button" @click="createAnnouncement">发布公告</button>
             <span v-if="annError" class="notice notice-error" style="margin: 0">{{ annError }}</span>

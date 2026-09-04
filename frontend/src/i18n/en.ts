@@ -312,6 +312,18 @@ export const en = {
     errShort: 'New password must be at least 8 characters',
     errMismatch: 'New passwords do not match',
     ok: 'Password changed — use the new one next time you sign in',
+    // M2-4 外观与主题节（03 §11.3）：三选项卡片+即时预览；系统卡实时生效值
+    appearanceTitle: 'Appearance & theme',
+    appearanceDesc:
+      'Changes apply instantly and are saved on this device. “Follow system” follows your device’s light/dark preference.',
+    themeSystem: 'Follow system',
+    themeSystemDesc: 'Switches with your device’s light/dark preference — default for first visits',
+    themePaper: 'Paper white',
+    themePaperDesc: 'Default light theme — black ink on white paper',
+    themeInk: 'Ink black',
+    themeInkDesc: 'Night theme — warm-white ink on near-black paper',
+    effPaper: 'Now active: Paper white',
+    effInk: 'Now active: Ink black',
   },
 
   notifications: {

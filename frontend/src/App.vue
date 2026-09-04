@@ -148,6 +148,19 @@ onMounted(() => {
         <button class="btn btn-sm btn-outline" type="button" :title="lang === 'en' ? '切换到中文' : 'Switch to English'" @click="switchLang">
           {{ lang === 'en' ? '中文' : 'EN' }}
         </button>
+        <!-- GitHub 仓库（05 §5.1 件 2）：工具件收进 header 右缘，token 单色不引品牌色，外链新窗 -->
+        <a
+          class="gh-link"
+          href="https://github.com/liceses/ds-demos-showcase"
+          target="_blank"
+          rel="noopener"
+          :title="t('app.github', 'GitHub 仓库')"
+          :aria-label="t('app.github', 'GitHub 仓库')"
+        >
+          <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+          </svg>
+        </a>
         <template v-if="auth.isLoggedIn()">
           <NotificationBell />
           <!-- 用户菜单（03 §2.4）：admin 从顶栏移入下拉；徽章合计走 adminQueues 单一口径 -->
@@ -360,6 +373,54 @@ onMounted(() => {
 }
 @media (prefers-reduced-motion: reduce) {
   .user-menu-pop-enter-active {
+    transition: none;
+  }
+}
+
+/* ---- M1-H1 header 静默化（05 §2.1/§5）：覆盖全局 nav-link 的荧光黄框 → 静默文字链 ----
+   muted→ink 色阶；当前页 = ink + 3px 实线下划；边框只留给功能件（CTA/主题/铃铛）。 */
+.topbar .nav-link {
+  border-color: transparent;
+  background: none;
+  color: var(--ink-soft, #555);
+}
+.topbar .nav-link:hover {
+  color: var(--ink, #000);
+  border-color: transparent;
+  background: none;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+/* exact-active：避免「/」链接在全站都被 inclusive 匹配点亮（首页只在本页亮） */
+.topbar .nav-link.router-link-exact-active {
+  color: var(--ink, #000);
+  border-color: transparent;
+  background: none;
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+/* GitHub 图标链（05 §5.1 件 2）：token 单色，hover = ink 实底反色（btn-dark 词汇） */
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  color: var(--ink, #000);
+  border: 2px solid transparent;
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
+}
+.gh-link:hover {
+  background: var(--ink, #000);
+  color: var(--paper, #fff);
+}
+.gh-link:active {
+  transform: translate(1px, 1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gh-link {
     transition: none;
   }
 }

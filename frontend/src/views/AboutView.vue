@@ -114,8 +114,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- 赞助榜 -->
-      <div class="section-head" style="margin-top: 28px">
+      <!-- 赞助榜（锚点 /about#sponsors：首页 CTA「支持维护」的目标位，05 §5.1 件 3） -->
+      <div id="sponsors" class="section-head" style="margin-top: 28px">
         <h2 class="section-title">{{ t('about.sponsors', '赞助榜') }}</h2>
         <span v-if="sponsors?.total_amount" class="mini-stat"><b>{{ sponsors.total_amount }}</b> {{ t('about.cumulative', '累计') }}</span>
       </div>

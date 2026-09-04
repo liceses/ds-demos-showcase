@@ -22,6 +22,7 @@ export const en = {
     },
     menu: 'Menu',
     profile: 'Profile',
+    github: 'GitHub repository',
     close: 'X',
     mockNotice: 'Mock mode: showing built-in placeholder data, backend not connected. Set VITE_USE_MOCK=false to switch to the real API.',
     theme: { toPaper: 'Ink theme — tap for paper', toInk: 'Paper theme — tap for ink' },
@@ -73,6 +74,7 @@ export const en = {
     },
     side: {
       ann: 'Announcements',
+      annAll: 'All',
       unread: '{n} unread',
       hot: 'Forum buzz',
       hotMore: 'Open forum →',
@@ -389,6 +391,8 @@ export const en = {
     sending: 'Sending…',
     send: 'Send',
     empty: 'No comments yet — grab the first seat',
+    emptyCompact: 'No comments yet — the first floor is still empty',
+    grabFirst: 'Grab the first floor →',
     loadMore: 'Load more',
   },
 
@@ -479,6 +483,7 @@ export const en = {
     pickSession: 'Pick a file to read',
     timelineHint: 'versions and update notes',
     commentsHint: 'open to read the thread and post',
+    commentsOpenHint: 'Composer stays open — comment as you go',
     nextModel: 'More work by this model',
     nextTask: 'Other answers to this brief',
     nextPrompt: 'Works from the same prompt',

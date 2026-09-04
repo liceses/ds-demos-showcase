@@ -4,13 +4,14 @@ import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref }
 import { api } from '../api'
 import type { Announcement, DemoSummary, ForumTopic, LiveStats, SiteInfo, UserLeaderboardItem } from '../api/types'
 import { funEffective } from '../utils/funMode'
-import { annUnreadCount, markAnnouncementsRead } from '../utils/announcement'
+import { annLabel, annUnreadCount, markAnnouncementsRead } from '../utils/announcement'
 import { t, tArr, lang } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useQueues } from '../composables/adminQueues'
 import { timeAgo } from '../utils/time'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementBlock from '../components/AnnouncementBlock.vue'
+import AnnouncementModal from '../components/AnnouncementModal.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 
 // 整活模式：大标题/灰测区文案随全站开关切换
@@ -162,10 +163,14 @@ function onAnnOpened() {
   annReadTick.value++
 }
 
-// 公告入口锚点（hero「查看公告→」与入口胶囊「看公告」都滚到侧栏公告卡）
-const annSide = ref<HTMLElement | null>(null)
-function scrollToAnnouncements() {
-  annSide.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+// 公告横幅直驱（05 §5.1 件 1）：横幅=公告唯一一级面（最新一条+未读章），点击开 AnnouncementModal
+// （弹层形态升级为全部公告列表归 t33；本步只做直驱+未读机制复用）。锚点滚动语义废止——
+// 「查看公告→」与胶囊「看公告」统一改开弹层（05 §5.1：目标 DOM 不复存在，无死锚）。
+const bannerAnn = ref<Announcement | null>(null)
+const latestAnn = computed(() => announcements.value[0] ?? null)
+function openAnnouncements() {
+  bannerAnn.value = latestAnn.value
+  if (latestAnn.value) onAnnOpened()
 }
 
 const entries = [
@@ -298,7 +303,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">
+  <!-- M1-H1 公告横幅（05 §5.1 件 1）：公告唯一一级面 = 最新一条+未读黄章；点击开弹层（形态升级归 t33） -->
+  <button v-if="latestAnn" class="ann-banner" type="button" @click="openAnnouncements">
+    <span class="ann-banner-stamp">{{ annLabel(latestAnn.type) }}</span>
+    <span class="ann-banner-title">{{ latestAnn.title }}</span>
+    <span v-if="annUnread > 0" class="ann-banner-unread">● {{ t('home.side.unread', '{n} 条未读', { n: annUnread }) }}</span>
+    <span class="ann-banner-all">{{ t('home.side.annAll', '全部') }} →</span>
+  </button>
+  <AnnouncementModal :ann="bannerAnn" @close="bannerAnn = null" />
+
+  <section class="page-hero">
     <span class="eyebrow">{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
     <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
       <!-- 注意：<br> 必须写在模板字面量里；{{ }} 插值会转义 HTML，把 <br> 当纯文本显示出来 -->
@@ -310,7 +325,7 @@ onBeforeUnmount(() => {
     </RouterLink>
     <p class="sub">
       <span class="tagline">{{ tagline }}</span><span class="tagline-cursor">|</span>
-      <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="scrollToAnnouncements">{{ t('home.viewAnn', '查看公告 →') }}</a>
+      <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="openAnnouncements">{{ t('home.viewAnn', '查看公告 →') }}</a>
     </p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ totalDemos }}</b> {{ t('home.demos', 'Demo') }}</span>
@@ -333,7 +348,7 @@ onBeforeUnmount(() => {
           <template v-else-if="!contentLoaded">···</template>
         </span>
       </RouterLink>
-      <button class="entry-capsule" type="button" @click="scrollToAnnouncements">
+      <button class="entry-capsule" type="button" @click="openAnnouncements">
         <span class="entry-capsule-stamp" aria-hidden="true">看</span>
         <span class="entry-capsule-title">{{ t('home.entries.ann.title', '站点公告') }}</span>
       </button>
@@ -414,8 +429,8 @@ onBeforeUnmount(() => {
     </div>
 
     <aside class="hub-side">
-      <!-- 公告贴纸墙（03 §3.2：从页尾升到侧栏；未读徽章 + 去讨论互链，展示侧 AnnouncementBlock 已就绪） -->
-      <section v-if="announcements.length" ref="annSide" class="side-card">
+      <!-- 公告贴纸墙（过渡态：M1-H3 侧栏解体时撤下，05 §5.1 裁决横幅接管） -->
+      <section v-if="announcements.length" class="side-card">
         <div class="side-head">
           <span class="side-title">{{ t('home.side.ann', '公告') }}</span>
           <span v-if="annUnread > 0" class="side-unread">{{ t('home.side.unread', '{n} 条未读', { n: annUnread }) }}</span>
@@ -606,6 +621,64 @@ onBeforeUnmount(() => {
   .entry-capsule {
     transition: none;
   }
+}
+
+/* M1-H1 公告横幅（05 §5.1 件 1）：hero 顶 h≈44 border-b 2px，最新一条+未读黄章；点击开弹层 */
+.ann-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 2px solid var(--ink, #000);
+  background: none;
+  color: var(--ink, #000);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-heading, sans-serif);
+}
+.ann-banner-stamp {
+  flex: none;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  background: var(--yellow, #ffe66d);
+  color: var(--on-accent, #000);
+  border: 2px solid var(--ink, #000);
+  transform: rotate(var(--tilt-deco, -1.5deg)); /* R8 白名单：印章装饰 */
+  white-space: nowrap;
+}
+.ann-banner-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 14px;
+}
+.ann-banner-unread {
+  flex: none;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 8px;
+  background: var(--yellow, #ffe66d);
+  color: var(--on-accent, #000);
+  border: 2px solid var(--ink, #000);
+  white-space: nowrap;
+}
+.ann-banner-all {
+  flex: none;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.ann-banner:hover .ann-banner-all {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 /* ============================================================

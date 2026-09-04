@@ -105,6 +105,14 @@ function peekNavigate(path: string) {
   void router.push(path)
 }
 
+// t22：审核状态章对外隐藏（游客无信息量）——作者本人/admin 可见。
+// is_author = 服务端判定（真后端）；username 匹配为 mock 兜底（mock 的 is_author 恒 false）
+const showStatusChip = computed(() => {
+  const d = demo.value
+  if (!d) return false
+  return !!d.is_author || auth.isAdmin() || (auth.isLoggedIn() && auth.user?.username === d.author)
+})
+
 // ④ 继续逛：把图谱的三条边变成明确的下一步，而不是被动陈列的区块
 const browseNext = computed(() => {
   const d = demo.value
@@ -363,7 +371,8 @@ onMounted(load)
       <Transition name="dv-panel" mode="out-in">
         <aside v-if="factsOpen" key="facts" class="dv-facts">
           <div class="dv-facts-head">
-            <span class="eyebrow">{{ demo.status || 'approved' }}</span>
+            <!-- t22：审核状态章只对作者本人/admin 可见（对外无信息量）；is_author=服务端判定，username 匹配为 mock 兜底 -->
+            <span v-if="showStatusChip" class="eyebrow">{{ demo.status || 'approved' }}</span>
             <button
               class="dv-collapse"
               type="button"
@@ -435,29 +444,29 @@ onMounted(load)
           <span class="dv-rail-title">{{ demo.title }}</span>
         </button>
       </Transition>
-    </div>
 
-    <!-- ① 它是什么：从 tab 里提出来（描述与提示词是理解作品的主路径，不该藏在第二个标签页） -->
-    <section class="section dv-story">
-      <div class="card card-default dv-desc-card">
-        <h2 class="dv-h2">{{ t('demo.descTitle', '描述') }}</h2>
-        <p style="line-height: 1.8">{{ demo.description }}</p>
-        <template v-if="demo.prompt">
-          <h2 class="dv-h2" style="margin-top: 22px">{{ t('demo.promptTitle', '第一轮提示词') }}</h2>
-          <div class="card card-mint dv-prompt" style="position: relative">
-            <!-- t21 追加：提示词一键复制（复制 stamp 语汇） -->
-            <CopyButton :text="demo.prompt" style="position: absolute; top: 10px; right: 10px" />
-            <p class="dv-prompt-text">{{ demo.prompt }}</p>
-          </div>
-          <!-- 这里不再放"有了它才能互相对照"那句话：那是上传页用来劝作者填字段的说明，
-               本页提示词就在眼前、下方紧接「严格复现」，重复一遍只是噪音 -->
-        </template>
-        <template v-if="demo.video_url">
-          <h2 class="dv-h2" style="margin-top: 22px">{{ t('demo.videoTitle', '介绍视频') }}</h2>
-          <a class="btn btn-sm btn-outline" :href="demo.video_url" target="_blank" rel="noopener">{{ t('demo.watchVideo', '观看介绍视频 ↗') }}</a>
-        </template>
-      </div>
-    </section>
+      <!-- t22 版式定稿：①它是什么移入主列第二行（dv-story）——与预览同列同宽、行间距 24px 呼吸（不再粘） -->
+      <section class="section dv-story">
+        <div class="card card-default dv-desc-card">
+          <h2 class="dv-h2">{{ t('demo.descTitle', '描述') }}</h2>
+          <p style="line-height: 1.8">{{ demo.description }}</p>
+          <template v-if="demo.prompt">
+            <h2 class="dv-h2" style="margin-top: 22px">{{ t('demo.promptTitle', '第一轮提示词') }}</h2>
+            <div class="card card-mint dv-prompt" style="position: relative">
+              <!-- t21 追加：提示词一键复制（复制 stamp 语汇） -->
+              <CopyButton :text="demo.prompt" style="position: absolute; top: 10px; right: 10px" />
+              <p class="dv-prompt-text">{{ demo.prompt }}</p>
+            </div>
+            <!-- 这里不再放"有了它才能互相对照"那句话：那是上传页用来劝作者填字段的说明，
+                 本页提示词就在眼前、下方紧接「严格复现」，重复一遍只是噪音 -->
+          </template>
+          <template v-if="demo.video_url">
+            <h2 class="dv-h2" style="margin-top: 22px">{{ t('demo.videoTitle', '介绍视频') }}</h2>
+            <a class="btn btn-sm btn-outline" :href="demo.video_url" target="_blank" rel="noopener">{{ t('demo.watchVideo', '观看介绍视频 ↗') }}</a>
+          </template>
+        </div>
+      </section>
+    </div>
 
 
     <!-- ② 怎么做出来的：本站最独特的证据（真实生成过程），原来藏在第三个 tab 里。
@@ -636,8 +645,10 @@ onMounted(load)
    b-march 关键帧本地定义（名随 preview 样板，Vue scoped 自动哈希））
    ============================================================ */
 .dv-stage {
-  /* 覆盖层（loading/error）的定位锚 */
-  position: relative;
+  /* t22 修正：此处原设 position:relative 作覆盖层（pv-overlay）定位锚——
+     但 scoped 特异度(0,1,1)压过全局 .dv-stage{position:sticky}(0,1,0)，静默废掉 sticky
+     并让 top:78 以 relative 语义把预览下推 78px（与描述卡重叠 -46px 的根源）。
+     sticky 本身即定位上下文（positioned），覆盖层锚定由全局 sticky 提供——此处不再覆写。 */
 }
 /* 触屏点击播放海报 */
 .pv-poster {

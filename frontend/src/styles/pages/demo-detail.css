@@ -1,23 +1,32 @@
 /* ---------- v2 Demo 详情页重设计 第 1 期：作品本体（sticky）+ 事实卡 ----------
-   t21 外挂形态改版（用户生产实测）：主列恒全宽——
-   ① 预览与描述卡同宽（此前 grid 分列 830 vs 描述卡 1280 不同宽）
-   ② 信息卡外挂：fixed 停靠视口右缘，展开/收起零主列位移（原 grid 列宽切换 = 382px 推挤/CLS 源）
-   ③ 信息卡浮于右缘留白区，与版心内描述卡彻底分离（强投影 + 不在流内） */
+   t22 版式定稿（captain 仲裁，替代 t21 浮层）：双区稳定栅格——
+   主列（预览+描述纵排，呼吸间距 24px）+ 右侧**常驻侧边栏槽**（380px 恒宽，收起/展开都在槽内发生）：
+   ① 侧栏是真栅格成员（不再覆盖预览右缘——t21 浮层盖 320px 的取舍作废）
+   ② 主列零位移（槽位常驻=无推挤；三子元素显式 placement，Transition 空档也不跳）
+   ③ 与描述卡天然分离（同列纵排 + 行间距 24px，不再粘） */
 .dv-shell {
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
+  align-items: start;
   margin-bottom: 8px;
 }
-.dv-stage { position: sticky; top: 78px; min-width: 0; }
+.dv-stage {
+  grid-column: 1;
+  grid-row: 1;
+  position: sticky;
+  top: 78px;
+  min-width: 0;
+}
 .dv-stage iframe { max-height: calc(100vh - 120px); }
 .dv-standin { padding: 32px; text-align: center; }
 .dv-standin h2 { margin-bottom: 10px; }
 .dv-standin p { margin-bottom: 18px; }
 .dv-facts {
-  position: fixed; /* 外挂：停靠视口右缘留白带，不占版心栅格 */
+  grid-column: 2;
+  grid-row: 1 / span 2; /* 槽贯穿主列两行：信息卡 sticky 跟随预览+描述全程 */
+  position: sticky;
   top: 86px;
-  right: 12px;
-  z-index: 60; /* drawer 段位（--z-nav 40 之上、modal/toast 之下） */
-  width: min(380px, 27vw);
   max-height: calc(100vh - 110px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -27,7 +36,14 @@
   padding: 14px 16px 16px;
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
-  box-shadow: 10px 10px 0 0 var(--ink); /* 浮层强投影：与页面内容的物理分离 */
+  box-shadow: 6px 6px 0 0 var(--ink); /* 槽内卡片投影（非浮层强投影） */
+}
+/* ①它是什么（描述）：主列第二行——预览同列同宽、行间距 24px 呼吸（不再粘）。
+   显式 placement：Transition 换装空档（aside 短暂缺席）也不重排 */
+.dv-story {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
 }
 /* 分组：身份 / 热度 / 评分 / 词表 / 动作 / 档案摘要 —— 用分隔线代替大间距，
    窄栏里间距会失控，线才是稳定的阅读节奏 */
@@ -219,8 +235,8 @@
 }
 .dv-facts .rating-dist-col { flex: 1; }
 .dv-facts .rating-dist-bar { width: 100%; max-width: 24px; }
-/* 信息卡可收起：预览是主角的时候它整宽，右侧只留一条"回得来"的轨。
-   t21：rail 同改 fixed 外挂（贴视口右缘），主列零位移；收起入口常在 */
+/* 信息卡可收起：槽位常驻——收起时槽内显示横向窄轨把手（满槽宽、~48px 高），
+   展开时同一槽位换装完整信息卡（Transition out-in + 显式 placement=零重排） */
 .dv-facts-head { display: flex; align-items: center; gap: 10px; }
 .dv-facts-head .eyebrow { flex: 1; }
 .dv-collapse {
@@ -236,22 +252,25 @@
 }
 .dv-collapse:hover { background: var(--yellow); color: var(--on-accent, #000); }
 .dv-rail {
-  position: fixed;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-self: start;
+  align-self: start;
+  position: sticky;
   top: 86px;
-  right: 12px;
-  z-index: 60;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 10px 4px;
+  gap: 10px;
+  padding: 8px 12px;
   font: inherit;
   color: var(--ink);
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
   box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
   cursor: pointer;
-  max-height: calc(100vh - 110px);
 }
 .dv-rail:hover { background: var(--yellow); }
 .dv-rail-label {
@@ -269,36 +288,33 @@
   border: 2px solid var(--ink);
 }
 .dv-rail-title {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  /* t22：槽内横条形态——标题横排省略（原竖排 writing-mode 随浮层/竖轨形态废止） */
+  writing-mode: horizontal-tb;
   font-size: 11px;
   color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-height: 40vh;
+  flex: 1;
+  min-width: 0;
 }
 @media (max-width: 1024px) {
+  /* 窄屏：侧栏槽退回文档流（flex 纵排 + order 语义），栅格成员全部归位 */
+  .dv-shell { display: flex; flex-direction: column; }
+  .dv-shell > * { grid-column: auto; grid-row: auto; }
   /* 窄屏收起后仍要能恢复（藏掉入口＝自造的死角），轨改成横向按钮 */
   .dv-rail {
     position: static;
+    justify-self: auto;
+    align-self: auto;
     flex-direction: row;
     justify-content: flex-start;
     gap: 10px;
     padding: 8px 12px;
-    max-height: none;
   }
   .dv-rail-title { writing-mode: horizontal-tb; max-height: none; flex: 1; }
-  /* 与事实卡同理：恢复入口要出现在预览之前，而不是滚完预览才找得到 */
-  .dv-rail { order: -1; }
-}
-
-@media (max-width: 1024px) {
-  /* 窄屏：外挂形态退回文档流（fixed 停靠会盖满小屏）——标题/信息卡先于预览（order -1 既有语义） */
-  .dv-shell { display: flex; flex-direction: column; }
   .dv-facts {
     position: static;
-    width: auto;
     max-height: none;
     overflow: visible;
     box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
@@ -306,8 +322,8 @@
   /* 窄屏：预览先走 sticky 反而挡住正文，退回普通流 */
   .dv-stage { position: static; }
   .dv-stage iframe { max-height: 62vh; }
-  /* 手机上"这是什么"比"立刻玩"更重要：标题不该被 62vh 的预览挤出首屏
-     （实测标题落在 718px，视口 844px —— 等于看不见作品叫什么） */
+  /* 手机上"这是什么"比"立刻玩"更重要：标题/信息卡先于预览（order -1 既有语义） */
+  .dv-rail,
   .dv-facts { order: -1; }
 }
 

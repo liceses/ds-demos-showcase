@@ -168,22 +168,22 @@ function openAnnouncements() {
   onAnnOpened()
 }
 
+// T7 v3（用户二轮反馈）：条带 04 论坛槽位由「论坛纸条」接管（模板 site-strip 端）——
+// entries 去论坛、关于重编号 05→04（纯视觉编号，无外链语义）；论坛唯一入口=纸条
 const entries = [
   { to: '/demos', key: 'lib', no: '01', label: '作品库' },
   { to: '/tags', key: 'explore', no: '02', label: '探索' },
   { to: '/leaderboard', key: 'rank', no: '03', label: '排行榜' },
-  { to: '/forum', key: 'forum', no: '04', label: '论坛' },
-  { to: '/about', key: 'about', no: '05', label: '关于本站' },
+  { to: '/about', key: 'about', no: '04', label: '关于本站' },
 ]
 
 // M0-D 实时数字（05 §5 数字条与条带计数共用）：数据源 = 既有 getSiteInfo（60s 缓存，零新增请求）；
-// 排行榜无现成计数 → 不显数字；论坛/关于同理（计数缺位即不渲染槽）
+// 排行榜无现成计数 → 不显数字；关于同理（计数缺位即不渲染槽）；论坛计数归纸条（模板直读 content）
 const content = ref<SiteInfo['content'] | null>(null)
 const entryCounts = computed<Record<string, number | null>>(() => ({
   lib: content.value ? content.value.demos_total : null,
   explore: content.value ? content.value.tags.values : null,
   rank: null,
-  forum: null,
   about: null,
 }))
 
@@ -361,6 +361,17 @@ onBeforeUnmount(() => {
         <span class="strip-no mono">{{ e.no }}</span>
         <span class="strip-name">{{ t('home.strip.' + e.key, e.label) }}</span>
         <span v-if="entryCounts[e.key] != null" class="strip-count mono">{{ entryCounts[e.key] }}</span>
+      </RouterLink>
+      <!-- T7 论坛纸条（用户二轮反馈②：论坛入口恢复纸条形态、常驻——占条带端，首页论坛唯一入口）。
+           前提核验（如实记录）：M1-H2(cde64ee) 实际移除的是入口胶囊行与热帖侧栏改版，牛皮纸纸条在本仓库
+           全部历史与 00-06 文档零命中——本件为按用户描述新建，非字面恢复。
+           形态：牛皮纸=--paper-forum/--text-forum（forum.css :root 全局令牌，论坛孤岛身份跨主题恒定）+
+           rotate(var(--tilt-deco))（motion.css 装饰白名单：静止装饰变换，reduce 下保留，03 §12.4 精度注）；
+           计数=SiteInfo.content.forum_topics（既有 getSiteInfo，零新增请求；诚实口径=论坛主题总数，
+           热帖 Top3 列表仍在本页侧栏） -->
+      <RouterLink class="forum-note" to="/forum">
+        <span class="forum-note-name">{{ t('forum.title', '讨论区') }}</span>
+        <span v-if="content" class="forum-note-count mono">{{ content.forum_topics }}</span>
       </RouterLink>
     </nav>
   </section>
@@ -742,6 +753,45 @@ onBeforeUnmount(() => {
 .strip-item:active {
   transform: translate(1px, 1px);
 }
+/* T7 论坛纸条（条带端常驻件）：牛皮纸身份用论坛孤岛令牌（--paper-forum/--text-forum 跨主题恒定，
+   表示论坛固定观感而非当前主题 token——语义钉死，非 R4 逃逸）；tilt-deco=装饰白名单
+   （03 §12.5 微交互词汇表 --tilt-deco -1.5deg：印章/徽章/ann-pin 同族）；hover 抬起不丢倾斜
+   （纸条钉在条带上的物理），:active 压平；375 横滚条内去倾斜=横条按钮（任务书） */
+.forum-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  margin-left: 14px;
+  padding: 10px 16px;
+  background: var(--paper-forum, #f2e8d5);
+  color: var(--text-forum, #6b5d43);
+  border: 2px solid var(--text-forum, #6b5d43);
+  box-shadow: 3px 3px 0 0 var(--text-forum, #6b5d43);
+  text-decoration: none;
+  font-family: var(--font-heading, sans-serif);
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  transform: rotate(var(--tilt-deco, -1.5deg));
+  transition:
+    transform var(--b-dur) var(--b-ease),
+    box-shadow var(--b-dur) var(--b-ease);
+}
+.forum-note-count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+  .forum-note:hover {
+    transform: translate(-2px, -2px) rotate(var(--tilt-deco, -1.5deg));
+    box-shadow: 5px 5px 0 0 var(--text-forum, #6b5d43);
+  }
+}
+.forum-note:active {
+  transform: translate(0, 0) rotate(var(--tilt-deco, -1.5deg));
+  box-shadow: none;
+}
 /* 移动 375（05 §5.1）：hero 单列、条带横滚、CTA 全宽 */
 @media (max-width: 719px) {
   .hub-hero {
@@ -767,6 +817,18 @@ onBeforeUnmount(() => {
   .site-strip {
     overflow-x: auto;
     flex-wrap: nowrap;
+  }
+  /* T7 纸条 375：横滚条内去倾斜=横条按钮（任务书；-2px 位移在窄容器内会顶出裁切线） */
+  .forum-note {
+    transform: none;
+  }
+  @media (hover: hover) {
+    .forum-note:hover {
+      transform: translate(-2px, -2px); /* 抬起保留、倾斜不再叠加（基准已是 0） */
+    }
+  }
+  .forum-note:active {
+    transform: translate(0, 0);
   }
   .page-hero .huge {
     margin-top: 8px; /* t20 375 目验：eyebrow 章阴影压标题首行，分离一档 */

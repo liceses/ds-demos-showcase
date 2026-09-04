@@ -128,11 +128,21 @@ onMounted(() => {
            品牌 logo=回首页（首页项删除）；「关于」移出顶栏（去处=footer/首页条带 05/404 站点地图，
            顶栏只留高频项，stylekit 静默导航同理）；M2-1：移动抽屉退役（03 §10.2 TabBar 新基线，
            探索/排行榜/关于由首页入口+条带+footer 承接，双移动导航=认知冗余） -->
+      <!-- T7 v3（用户二轮反馈①③）：论坛出顶栏（首页纸条+footer+404 地图+TabBar 社区承接），
+           ⌕ 占论坛原槽位（SearchOverlay openSearch 复用——/ 与 ⌘K 仍由覆盖层自持）；
+           「关于」回栏（06 v2 报头导航序：作品库/探索/排行榜/⌕/关于；搜索钮=导航中唯一带框件，
+           06 §P2 形态分工「功能件带框、导航件裸字」） -->
       <nav class="topnav topnav-desktop">
         <RouterLink class="nav-link" to="/demos">{{ t('app.nav.demos', '作品库') }}</RouterLink>
         <RouterLink class="nav-link" to="/tags">{{ t('app.nav.explore', '探索') }}</RouterLink>
         <RouterLink class="nav-link" to="/leaderboard">{{ t('app.nav.leaderboard', '排行榜') }}</RouterLink>
-        <RouterLink class="nav-link" to="/forum">{{ t('app.nav.forum', '论坛') }}</RouterLink>
+        <button class="btn btn-sm btn-outline topnav-search" type="button" :aria-label="t('search.title', '全局搜索')" :title="t('search.openTip', '全局搜索（快捷键 /）')" @click="openSearch">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6" />
+            <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+          </svg>
+        </button>
+        <RouterLink class="nav-link" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
       </nav>
 
       <!-- M2-1 右簇降级修正：工具簇不再整体隐藏（topnav-desktop 会连主题/语言一起藏掉，
@@ -140,14 +150,7 @@ onMounted(() => {
            auth-cluster（App.vue scoped @720 隐藏）+ CTA（topnav-desktop 类，全局 @720 隐藏）；
            桌面 .topnav 基础 flex + scoped gap10 与原逐字节等价。 -->
       <div class="topnav topnav-tools">
-        <!-- M2-3 全局搜索入口（03 §12.1）：桌面顶栏 ⌕ 图标钮（/ 快捷键与 ⌘K 由覆盖层组件自持监听）；
-             <720 隐藏（M2-1 裁决「顶栏只留品牌+主题/语言」）——移动入口=「我的」内聚页（UserView isSelf 工具排，二选一已记录） -->
-        <button class="btn btn-sm btn-outline search-trigger" type="button" :aria-label="t('search.title', '全局搜索')" :title="t('search.openTip', '全局搜索（快捷键 /）')" @click="openSearch">
-          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6" />
-            <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
-          </svg>
-        </button>
+        <!-- T7 v3：工具簇 ⌕ 撤销（迁 nav 位，别留双入口）——右簇瘦身=主题/语言/铃铛+用户菜单+CTA -->
         <button class="btn btn-sm btn-outline" type="button" :title="themeTitle" @click="cycleTheme">
           {{ themeNow === 'ink' ? '纸' : '墨' }}
         </button>
@@ -226,6 +229,9 @@ onMounted(() => {
         <div class="footer-links">
           <RouterLink class="footer-link" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
           <span class="footer-links-div" aria-hidden="true"></span>
+          <!-- T7 v3：论坛出顶栏后的 footer 承接（可达性集=footer+论坛直链+404 地图+首页纸条） -->
+          <RouterLink class="footer-link" to="/forum">{{ t('app.nav.forum', '论坛') }}</RouterLink>
+          <span class="footer-links-div" aria-hidden="true"></span>
           <a class="footer-link" href="https://github.com/liceses/ds-demos-showcase" target="_blank" rel="noopener" :title="t('app.github', 'GitHub 仓库')">
             GitHub <span class="footer-ext" aria-hidden="true">↗</span>
           </a>
@@ -253,11 +259,22 @@ onMounted(() => {
 .auth-cluster {
   display: contents;
 }
-/* M2-3：⌕ 桌面限定（<720 顶栏只留品牌+主题/语言，M2-1 裁决）——移动入口在「我的」内聚页 */
-@media (max-width: 720px) {
-  .search-trigger {
-    display: none;
-  }
+/* T7 v3 三段对称栅格：[1fr auto 1fr]=品牌|中导航|右簇——中导航几何居中（CDP 验收偏差 ≤8px）。
+   scoped display:grid 特异性压过全局 .topbar 的 flex；<720 中列（topnav-desktop 全局隐藏）塌缩 0 宽
+   =品牌/右簇 1fr 两端，移动降级（M2-1 基线）不变；全局媒体规则里的 flex-direction 随 display:grid 失效无害 */
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+.topbar > .brand {
+  justify-self: start;
+}
+.topbar > nav.topnav-desktop {
+  justify-self: center;
+}
+.topbar > .topnav-tools {
+  justify-self: end;
 }
 @media (max-width: 720px) {
   .auth-cluster {

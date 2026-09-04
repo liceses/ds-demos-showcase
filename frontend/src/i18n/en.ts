@@ -843,6 +843,13 @@ export const en = {
     draft: 'Draft',
     published: 'Published',
     offline: 'Offline',
+    allTitle: 'All announcements',
+    pinnedGroup: 'Pinned',
+    generalGroup: 'Notices',
+    close: 'Close',
+    pinBadge: 'Pinned',
+    discuss: 'Discuss →',
+    viewDemo: 'See the work →',
   },
 
   // ---------- v2 实体：模型页 / 题目页（B2） ----------

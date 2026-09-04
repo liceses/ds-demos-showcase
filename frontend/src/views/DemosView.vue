@@ -902,14 +902,16 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 
 .facet-panel {
-  border: var(--border-w, 4px) solid var(--ink, #000);
+  /* 三律 1 无边框（05 §5.2）：去 4px 边框与 8px 双向影——纯色填充直接着地，
+     唯一视觉边界=外部投影一刀（--shadow-black 单源硬影） */
+  border: none;
   background: var(--paper, #fff);
-  box-shadow: 8px 8px 0 0 var(--ink, #000);
+  box-shadow: var(--shadow-black, 6px 0 0 var(--ink, #000));
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
-/* 浮层：顶栏之下、TagTip(z60) 之上的 drawer 段位 */
+/* 浮层：顶栏之下、TagTip(z60) 之上的 drawer 段位；入场=b-stamp-drop 350ms 落下回弹一次（关闭 0ms 对称） */
 .facet-panel--overlay {
   position: fixed;
   top: 78px;
@@ -919,9 +921,9 @@ onBeforeUnmount(() => observer?.disconnect())
   z-index: 45;
   overflow-y: auto;
   overscroll-behavior: contain;
-  animation: b-stamp-in var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)) both;
+  animation: b-stamp-drop var(--b-dur-stage, 350ms) var(--b-ease-stamp, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
-/* 移动 bottom-sheet：贴底上收，安全区垫底 */
+/* 移动 bottom-sheet：贴底上收，安全区垫底；入场=贴边方向镜像落下（从下方 24px 升起同帧谱） */
 .facet-panel--sheet {
   position: fixed;
   left: 0;
@@ -932,16 +934,24 @@ onBeforeUnmount(() => observer?.disconnect())
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  animation: b-stamp-in var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)) both;
+  animation: fp-drop-up var(--b-dur-stage, 350ms) var(--b-ease-stamp, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
-/* 钉住=栅格成员常驻侧栏：sticky 跟随，随列内滚动 */
+/* b-stamp-drop 的贴边镜像（bottom-sheet 专用，帧谱同 05 §5.2：升起→overshoot→回弹→落定） */
+@keyframes fp-drop-up {
+  0% { transform: translateY(24px); opacity: 0; }
+  58% { transform: translateY(-3px); opacity: 1; }
+  80% { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
+/* 钉住=栅格成员常驻侧栏：sticky 跟随，随列内滚动。
+   入场保持 0ms 硬切（t22/t23 裁决优先：列宽变化不补间——钉住是栅格成员不是弹层，
+   与「三态同 drop」的字面分歧记录给 t34 走查仲裁） */
 .facet-panel--pinned {
   position: sticky;
   top: 78px;
   max-height: calc(100vh - 96px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  box-shadow: 6px 6px 0 0 var(--ink, #000);
   align-self: start;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1038,9 +1048,10 @@ onBeforeUnmount(() => observer?.disconnect())
   font-size: 12px;
 }
 
-/* 组（手风琴）：头=44px 触达线；组间注=组头右侧的 OR 微文案 */
+/* 组（手风琴）：三律 2 实线分割（05 §5.2）——组间 2px 实线 divider，节奏靠线不靠盒；
+   头=44px 触达线 + 11px 大写字距小标题；组间注=组头右侧的 OR 微文案 */
 .fp-group {
-  border-top: 2px dashed rgba(0, 0, 0, 0.18);
+  border-top: 2px solid var(--ink, #000);
 }
 .fp-group:first-of-type {
   border-top: none;
@@ -1078,7 +1089,9 @@ span.fp-group-head {
 }
 .fp-group-name {
   font-weight: 900;
-  font-size: 13px;
+  font-size: 11px; /* 三律 2：组头=11px 大写字距小标题（05 §5.2） */
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .fp-group-code {
   font-size: 10px;

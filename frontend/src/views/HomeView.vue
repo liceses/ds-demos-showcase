@@ -159,13 +159,13 @@ function onAnnOpened() {
 }
 
 // 公告横幅直驱（05 §5.1 件 1）：横幅=公告唯一一级面（最新一条+未读章），点击开 AnnouncementModal
-// （弹层形态升级为全部公告列表归 t33；本步只做直驱+未读机制复用）。锚点滚动语义废止——
+// （t33 已升级弹层形态=全部公告两组列表；本视图只传 list+开合布尔）。锚点滚动语义废止——
 // 「查看公告→」与胶囊「看公告」统一改开弹层（05 §5.1：目标 DOM 不复存在，无死锚）。
-const bannerAnn = ref<Announcement | null>(null)
+const bannerOpen = ref(false)
 const latestAnn = computed(() => announcements.value[0] ?? null)
 function openAnnouncements() {
-  bannerAnn.value = latestAnn.value
-  if (latestAnn.value) onAnnOpened()
+  bannerOpen.value = true
+  onAnnOpened()
 }
 
 const entries = [
@@ -302,7 +302,7 @@ onBeforeUnmount(() => {
     <span v-if="annUnread > 0" class="ann-banner-unread">● {{ t('home.side.unread', '{n} 条未读', { n: annUnread }) }}</span>
     <span class="ann-banner-all">{{ t('home.side.annAll', '全部') }} →</span>
   </button>
-  <AnnouncementModal :ann="bannerAnn" @close="bannerAnn = null" />
+  <AnnouncementModal :open="bannerOpen" :list="announcements" @close="bannerOpen = false" />
 
   <!-- M1-H2 hero 双列（05 §5.1 定稿：不对称 0.88fr/1.12fr；左=文字塔+数字条+CTA 行，右=精选主件） -->
   <section class="page-hero hero-v2">

@@ -81,6 +81,17 @@
   0% { opacity: 0; transform: translateY(8px) scale(1.02); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* 抽屉/弹层编排入场（05 §5.2 帧谱）：落下→一次 overshoot→回弹→落定（stamp 家族·位移维度）。
+   红线注记：「无弹簧」约束交互过渡层（150ms hover/active）；stamp 家族是编排登场层——
+   b-stamp-in 的 60% 帧过冲（scale）即回弹同构先例，本帧谱把该语法移植到 translateY，
+   单次过冲无持续振荡（非 elastic spring）；用法：
+   animation: b-stamp-drop var(--b-dur-stage) var(--b-ease-stamp) both; 关闭 0ms 硬切对称 */
+@keyframes b-stamp-drop {
+  0% { transform: translateY(-14px); opacity: 0; } /* 从上方 14px 落下 */
+  58% { transform: translateY(3px); opacity: 1; }  /* 越过落点（overshoot） */
+  80% { transform: translateY(-1px); }             /* 一次回弹 */
+  100% { transform: translateY(0); }               /* 落定 */
+}
 @keyframes b-rise-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }

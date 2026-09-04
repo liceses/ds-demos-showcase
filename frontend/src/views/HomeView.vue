@@ -174,31 +174,28 @@ function openAnnouncements() {
 }
 
 const entries = [
-  { to: '/demos', stamp: '逛', cls: 'lib', key: 'lib', title: '作品库', desc: '搜索 · 筛选 · 全部作品' },
-  { to: '/tags', stamp: '探', cls: 'tags', key: 'explore', title: '探索', desc: '模型 / 题目 / 标签 三个入口' },
-  { to: '/leaderboard', stamp: '榜', cls: 'rank', key: 'rank', title: '排行榜', desc: '神作 / 鬼作 / 评分口碑榜' },
-  { to: '/upload', stamp: '投', cls: 'upload', key: 'upload', title: '投稿作品', desc: '上传你的 AI 网页 Demo' },
+  { to: '/demos', key: 'lib', no: '01', label: '作品库' },
+  { to: '/tags', key: 'explore', no: '02', label: '探索' },
+  { to: '/leaderboard', key: 'rank', no: '03', label: '排行榜' },
+  { to: '/forum', key: 'forum', no: '04', label: '论坛' },
+  { to: '/about', key: 'about', no: '05', label: '关于本站' },
 ]
 
-// M0-D 入口胶囊实时数字：数据源 = 既有 getSiteInfo（60s 缓存，零新增请求）；
-// 计数缺失时隐藏数字不占位（排行榜无现成计数 → 恒隐藏）
+// M0-D 实时数字（05 §5 数字条与条带计数共用）：数据源 = 既有 getSiteInfo（60s 缓存，零新增请求）；
+// 排行榜无现成计数 → 不显数字；论坛/关于同理（计数缺位即不渲染槽）
 const content = ref<SiteInfo['content'] | null>(null)
 const entryCounts = computed<Record<string, number | null>>(() => ({
   lib: content.value ? content.value.demos_total : null,
   explore: content.value ? content.value.tags.values : null,
   rank: null,
-  upload: content.value ? content.value.uploads_last_7d : null,
+  forum: null,
+  about: null,
 }))
-function countLabel(key: string, n: number): string {
-  if (key === 'lib') return t('home.count.demos', '{n} 件作品', { n })
-  if (key === 'explore') return t('home.count.tagValues', '{n} 标签值', { n })
-  if (key === 'upload') return t('home.count.uploads7d', '近 7 天 {n}', { n })
-  return String(n)
-}
-// 数字槽稳定性：content 未到位时胶囊先渲染（占位「···」），到位后填数——
-// 槽位恒渲染 + min-width，消除 site-info 返回瞬间的胶囊宽度跳变（CLS）；
-// 失败路径同样保持槽位（空槽），宽度全程不变。rank 恒无计数 → 连槽位一起隐藏。
-const contentLoaded = ref(false)
+
+// hero 右列精选主件（05 §2.1/§5.1：与下方精选同池去重——6 件取 1 放大、余 5 进网格；
+// 静态版=首件大卡，轮播动态化 P3）
+const featuredHero = computed(() => featured.value[0] ?? null)
+const featuredGrid = computed(() => featured.value.slice(1))
 
 // ---- 侧栏数据源（全部既有接口，零后端改动）----
 // 论坛热帖 Top3：GET /forum/topics?sort=hot
@@ -270,7 +267,6 @@ onMounted(async () => {
     error.value = (e as Error).message
   } finally {
     loading.value = false
-    contentLoaded.value = true
   }
   // 侧栏三路轻量并发（热帖/双榜）；失败静默——侧栏是增强不是关键路径
   api
@@ -313,57 +309,72 @@ onBeforeUnmount(() => {
   </button>
   <AnnouncementModal :ann="bannerAnn" @close="bannerAnn = null" />
 
-  <section class="page-hero">
-    <span class="eyebrow">{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
-    <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
-      <!-- 注意：<br> 必须写在模板字面量里；{{ }} 插值会转义 HTML，把 <br> 当纯文本显示出来 -->
-      <h1 v-if="funOn && lang === 'en'" class="huge">astra canary<br />collection</h1>
-      <h1 v-else-if="funOn" class="huge">astra 灰测<br />作品收集</h1>
-      <h1 v-else-if="lang === 'en'" class="huge">AI Demo<br />Makers</h1>
-      <h1 v-else class="huge">AI 全民<br />制作人</h1>
-      <span class="home-title-hint">{{ t('home.aboutHint', '关于本站 →') }}</span>
-    </RouterLink>
-    <p class="sub">
-      <span class="tagline">{{ tagline }}</span><span class="tagline-cursor">|</span>
-      <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="openAnnouncements">{{ t('home.viewAnn', '查看公告 →') }}</a>
-    </p>
-    <div class="filter-row" style="margin-top: 16px">
-      <span class="tag-stat"><b>{{ totalDemos }}</b> {{ t('home.demos', 'Demo') }}</span>
-      <span class="tag-stat"><b>{{ totalTags }}</b> {{ t('home.tags', '标签值') }}</span>
-      <RouterLink class="btn btn-sm btn-primary" to="/upload">{{ t('home.submit', '投稿 →') }}</RouterLink>
+  <!-- M1-H2 hero 双列（05 §5.1 定稿：不对称 0.88fr/1.12fr；左=文字塔+数字条+CTA 行，右=精选主件） -->
+  <section class="page-hero hero-v2">
+    <div class="hub-hero">
+      <div class="hub-hero-left">
+        <span class="eyebrow hero-eyebrow"><span class="hero-eyebrow-line" aria-hidden="true"></span>{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
+        <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
+          <!-- 注意：<br> 必须写在模板字面量里；{{ }} 插值会转义 HTML，把 <br> 当纯文本显示出来 -->
+          <h1 v-if="funOn && lang === 'en'" class="huge">astra canary<br />collection</h1>
+          <h1 v-else-if="funOn" class="huge">astra 灰测<br />作品收集</h1>
+          <h1 v-else-if="lang === 'en'" class="huge">AI Demo<br />Makers</h1>
+          <h1 v-else class="huge">AI 全民<br />制作人</h1>
+          <span class="home-title-hint">{{ t('home.aboutHint', '关于本站 →') }}</span>
+        </RouterLink>
+        <p class="sub">
+          <span class="tagline">{{ tagline }}</span><span class="tagline-cursor">|</span>
+          <a v-if="announcements.length" class="hero-ann-link" href="#" @click.prevent="openAnnouncements">{{ t('home.viewAnn', '查看公告 →') }}</a>
+        </p>
+        <!-- 数字条（05 §2.1：mono tabular-nums + 竖分隔线；第四段=实时在线，站点活着信号） -->
+        <div class="hero-numstrip mono">
+          <span class="hn"><b>{{ totalDemos }}</b> {{ t('home.demos', 'Demo') }}</span>
+          <span class="hn-div" aria-hidden="true"></span>
+          <span class="hn"><b>{{ totalTags }}</b> {{ t('home.tags', '标签值') }}</span>
+          <span class="hn-div" aria-hidden="true"></span>
+          <span class="hn"><b>{{ content?.uploads_last_7d ?? '—' }}</b> {{ t('home.strip.up7d', '近 7 天') }}</span>
+          <span class="hn-div" aria-hidden="true"></span>
+          <span class="hn"><b>{{ live?.online ?? '—' }}</b> {{ t('home.side.online', '在线') }}</span>
+        </div>
+        <!-- CTA 行三档（05 §5.1 件 3）：实底唯一强件=投稿；描边=支持维护；文字链=agent-guide -->
+        <div class="hero-cta-row">
+          <RouterLink class="btn btn-primary hero-cta-main" to="/upload">{{ t('home.submit', '投稿作品 →') }}</RouterLink>
+          <RouterLink class="btn btn-outline" to="/about#sponsors">{{ t('home.support', '支持维护') }}</RouterLink>
+          <a class="hero-guide" href="/api/v1/meta/agent-guide" target="_blank" rel="noopener">
+            {{ t('home.agentGuide', 'AI 自动上传指南') }} →
+          </a>
+        </div>
+      </div>
+      <!-- 精选主件（右列视觉门面）：静态首件大卡；轮播动态化 P3 -->
+      <div class="hub-hero-right">
+        <RouterLink v-if="featuredHero" class="hero-feature" :to="`/demo/${featuredHero.slug}`">
+          <img v-if="featuredHero.cover_url" class="hero-feature-img" :src="featuredHero.cover_url" :alt="featuredHero.title" loading="eager" />
+          <div v-else class="hero-feature-ph"><span>{{ featuredHero.title }}</span></div>
+          <div class="hero-feature-meta">
+            <span class="hero-feature-title">{{ featuredHero.title }}</span>
+            <span class="mono hero-feature-author">{{ featuredHero.author }}</span>
+            <span v-if="featuredHero.rating_avg != null" class="mono hero-feature-score">★{{ Number(featuredHero.rating_avg).toFixed(1) }}</span>
+          </div>
+        </RouterLink>
+      </div>
     </div>
-  </section>
 
-  <!-- M0-D 入口大厅改胶囊行（03 §3.2：入口卡降为胶囊，老用户不再被反复教导航）；
-       实时数字来自 site-info（缺失即隐藏不占位）；样式组件级（全局 style.css 冻结） -->
-  <section class="section" style="padding-top: 8px">
-    <div class="entry-caps-row">
-      <RouterLink v-for="e in entries" :key="e.to" class="entry-capsule" :to="e.to">
-        <span class="entry-capsule-stamp" aria-hidden="true">{{ e.stamp }}</span>
-        <span class="entry-capsule-title">{{ t('home.entries.' + e.key + '.title', e.title) }}</span>
-        <!-- M0 验收修复：数字槽恒渲染（rank 除外）——占位「···」+ 固定 min-width，
-             消除 site-info 到位瞬间的胶囊宽度跳变（CLS）；失败路径槽位保持空、宽度不变 -->
-        <span v-if="e.key !== 'rank'" class="entry-capsule-count" :class="{ pending: entryCounts[e.key] == null }">
-          <template v-if="entryCounts[e.key] != null">{{ countLabel(e.key, entryCounts[e.key] as number) }}</template>
-          <template v-else-if="!contentLoaded">···</template>
-        </span>
+    <!-- M1-H2 站点导航条带（05 §2.1/§5）：01-05 编号+名称+计数，border-r 分隔，hover 反色=反色章语汇；
+         替换旧入口胶囊行（上传已升 header CTA、公告已升横幅） -->
+    <nav class="site-strip" :aria-label="t('home.strip.label', '站点导航')">
+      <RouterLink v-for="e in entries" :key="e.to" class="strip-item" :to="e.to">
+        <span class="strip-no mono">{{ e.no }}</span>
+        <span class="strip-name">{{ t('home.strip.' + e.key, e.label) }}</span>
+        <span v-if="entryCounts[e.key] != null" class="strip-count mono">{{ entryCounts[e.key] }}</span>
       </RouterLink>
-      <button class="entry-capsule" type="button" @click="openAnnouncements">
-        <span class="entry-capsule-stamp" aria-hidden="true">看</span>
-        <span class="entry-capsule-title">{{ t('home.entries.ann.title', '站点公告') }}</span>
-      </button>
-    </div>
+    </nav>
   </section>
-
-  <p class="muted" style="text-align: center; padding: 0 16px 8px">
-    {{ t('home.agentHintPrefix', 'AI 自动上传：读取') }} <a href="/api/v1/meta/agent-guide" target="_blank" rel="noopener" class="hero-ann-link"><code>/api/v1/meta/agent-guide</code></a> {{ t('home.agentHintSuffix', '后即可发布') }}
-  </p>
 
   <!-- M1-2 首页枢纽（03 §3.2）：主列 2/3 + 侧栏 1/3（sticky）；
        回访者 10 秒看到：新东西（精选/续流）、社区在聊什么（热帖）、可信度信号（榜单/在线/公告） -->
   <div class="hub-grid">
     <div class="hub-main">
-      <!-- 精选展示 -->
+      <!-- 精选展示（hero 主件已取 featured[0]，网格展示其余 5 件——同池去重，05 §2.1） -->
       <section class="section hub-block" style="padding-top: 0">
         <div class="section-head">
           <h2 class="section-title">{{ t('home.featured', '精选作品') }}</h2>
@@ -378,8 +389,8 @@ onBeforeUnmount(() => {
         <p class="muted caliber-line">{{ t('home.shuffleCaliber', '换池口径：已上架作品全量随机，60 秒内同一批') }}</p>
         <div v-if="error" class="notice notice-error">{{ error }}</div>
         <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('home.loading', '加载精选…') }}</div>
-        <div v-else-if="!featured.length" class="empty-box">{{ t('home.empty', '还没有 Demo，来投第一篇稿吧。') }}</div>
-        <MasonryGrid v-else :cols="3" :items="featured" :item-key="(d: unknown) => (d as DemoSummary).slug">
+        <div v-else-if="!featuredGrid.length" class="empty-box">{{ t('home.empty', '还没有 Demo，来投第一篇稿吧。') }}</div>
+        <MasonryGrid v-else :cols="3" :items="featuredGrid" :item-key="(d: unknown) => (d as DemoSummary).slug">
           <template #default="{ item }">
             <DemoCard :demo="item as DemoSummary" />
           </template>
@@ -510,177 +521,225 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* ============================================================
-   M0-D 入口胶囊（组件级样式；全局 style.css 冻结——令牌经 var() 引用全局既有值并带回落，
-   P1 拆迁后并入 tokens 体系）
+   M1-H2 hero 双列 + 数字条 + CTA 行 + 站点导航条带（05 §5.1/§2.1 定稿；组件级样式，style.css 冻结令生效中）
    ============================================================ */
-.entry-caps-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+.hero-v2 {
+  border-bottom: 2px solid var(--ink, #000);
 }
-.entry-capsule {
+.hub-hero {
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr; /* 05 §5.1 不对称双列：右列=视觉主件占气场 */
+  gap: 32px;
+  align-items: end;
+}
+.hub-hero-left,
+.hub-hero-right {
+  min-width: 0;
+}
+/* 短线章（05 §2.1：eyebrow 加 32px 短线，编辑感锚点） */
+.hero-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px; /* 03 §10.1-2 触达底线 */
-  padding: 8px 14px;
-  border: 4px solid var(--ink, #000);
-  background: var(--paper, #fff);
-  color: var(--ink, #000);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
-  font-family: var(--font-heading, sans-serif);
-  font-weight: 800;
-  font-size: 14px;
+}
+.hero-eyebrow-line {
+  display: inline-block;
+  width: 32px;
+  height: 4px;
+  background: var(--ink, #000);
+  flex: none;
+}
+/* 数字条（05 §2.1）：mono tabular-nums + 竖分隔线；第四段=实时在线（站点活着信号） */
+.hero-numstrip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 10px 0;
+  font-variant-numeric: tabular-nums;
+}
+.hero-numstrip .hn {
+  font-size: 13px;
+}
+.hero-numstrip .hn b {
+  font-size: 20px;
+  font-weight: 900;
+  margin-right: 4px;
+}
+.hn-div {
+  width: 2px;
+  align-self: stretch;
+  background: var(--ink, #000);
+}
+/* CTA 行三档（05 §5.1 件 3）：实底唯一强件=投稿 / 描边=支持维护 / 文字链=agent-guide */
+.hero-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.hero-cta-main {
+  font-size: 15px;
+  padding: 12px 22px;
+}
+.hero-guide {
+  font-size: 12px;
+  color: var(--ink-soft, #555);
   text-decoration: none;
-  cursor: pointer;
-  transform: rotate(0deg); /* R8 静止零倾斜 */
+  font-weight: 700;
+}
+.hero-guide:hover {
+  color: var(--ink, #000);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+/* 右列精选主件：静态首件大卡（封面 16:10+标题+作者+分），轮播动态化 P3 */
+.hero-feature {
+  display: block;
+  text-decoration: none;
+  color: var(--ink, #000);
+  border: var(--border-w, 4px) solid var(--ink, #000);
+  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  background: var(--paper, #fff);
   transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)),
     box-shadow var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
 }
-/* R6：hover 增影抬起（hover 设备限定）；R7：只动 transform/box-shadow */
-@media (hover: hover) {
-  .entry-capsule:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
-  }
-}
-/* 法则 01：按压位移 = 阴影偏移，阴影清零，瞬间生效 */
-.entry-capsule:active {
-  transform: translate(4px, 4px);
-  box-shadow: none;
-  transition-duration: 0ms;
-}
-.entry-capsule-stamp {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  flex: none;
-  background: var(--yellow, #ffe66d);
-  color: var(--on-accent, #000); /* 小面积章+黑字（t16 用户反馈） */
-  border: 2px solid var(--ink, #000);
-  font-family: var(--font-heading, sans-serif);
-  font-weight: 900;
-  font-size: 13px;
-  transform: rotate(var(--tilt-deco, -1.5deg)); /* R8 白名单：印章装饰常驻倾斜 */
-}
-.entry-capsule-title {
-  line-height: 1.2;
-}
-.entry-capsule-count {
-  font-family: var(--font-body, monospace);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border: 2px solid var(--ink, #000);
-  background: var(--paper-deep, #f2eee6);
-  white-space: nowrap;
-  /* 固定槽位：容纳最宽数字文案（「1,204 件作品」），首帧即占位，数字到位不推挤兄弟胶囊 */
-  min-width: 92px;
-  text-align: right;
-  box-sizing: border-box;
-}
-.entry-capsule-count.pending {
-  color: var(--ink-faint, #767676);
-  font-weight: 500;
-}
-/* 移动端：2×2 大目标（03 §3.2）+ 50% 律（边框/阴影减半，R1/R2 令牌化前的手工口径） */
-@media (max-width: 719px) {
-  .entry-caps-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); /* t20：min-content 撑破 1fr 列（375 溢出 396）→ 可收缩列 */
-  }
-  .entry-capsule {
-    border-width: 2px;
-    box-shadow: 3px 3px 0 0 var(--ink);
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 6px 8px;
-  }
-  .entry-capsule-title {
-    font-size: 12px;
-  }
-  .entry-capsule-count {
-    min-width: 64px; /* 50% 律：槽位减半（92→64），「3 件作品」级短文案够住 */
-    font-size: 10px;
-    padding: 2px 4px;
-  }
-  .page-hero .huge {
-    margin-top: 8px; /* t20 375 目验：eyebrow 章阴影压标题首行，分离一档 */
-  }
-  @media (hover: hover) {
-    .entry-capsule:hover {
-      box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
-    }
-  }
-  .entry-capsule:active {
-    transform: translate(2px, 2px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .entry-capsule {
-    transition: none;
-  }
-}
-
-/* M1-H1 公告横幅（05 §5.1 件 1）：hero 顶 h≈44 border-b 2px，最新一条+未读黄章；点击开弹层 */
-.ann-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.hero-feature-img {
+  display: block;
   width: 100%;
-  min-height: 44px;
-  padding: 8px 0;
-  border: none;
-  border-bottom: 2px solid var(--ink, #000);
-  background: none;
-  color: var(--ink, #000);
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font-heading, sans-serif);
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
 }
-.ann-banner-stamp {
-  flex: none;
-  font-size: 11px;
+.hero-feature-ph {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  background: var(--paper-deep, #f2eee6);
   font-weight: 900;
-  padding: 3px 8px;
-  background: var(--yellow, #ffe66d);
-  color: var(--on-accent, #000);
-  border: 2px solid var(--ink, #000);
-  transform: rotate(var(--tilt-deco, -1.5deg)); /* R8 白名单：印章装饰 */
-  white-space: nowrap;
+  padding: 16px;
+  text-align: center;
 }
-.ann-banner-title {
+.hero-feature-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.hero-feature-title {
+  font-weight: 900;
+  font-size: 16px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 800;
-  font-size: 14px;
 }
-.ann-banner-unread {
-  flex: none;
+.hero-feature-author {
   font-size: 11px;
+}
+.hero-feature-score {
+  flex: none;
   font-weight: 900;
   padding: 2px 8px;
-  background: var(--yellow, #ffe66d);
-  color: var(--on-accent, #000);
   border: 2px solid var(--ink, #000);
+  background: var(--mint, #95e1d3);
+  color: var(--on-accent, #000);
+}
+@media (hover: hover) {
+  .hero-feature:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
+  }
+}
+.hero-feature:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+  transition-duration: 0ms;
+}
+/* 站点导航条带（05 §2.1）：01-05 编号+名称+计数，border-r 2px 分隔，hover 反色=ink 底 paper 字（btn-dark 词汇） */
+.site-strip {
+  display: flex;
+  margin-top: 28px;
+  border-top: 2px solid var(--ink, #000);
+  overflow-x: auto;
+}
+.strip-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 18px;
+  text-decoration: none;
+  color: var(--ink, #000);
+  border-right: 2px solid var(--ink, #000);
+  font-family: var(--font-heading, sans-serif);
+  font-weight: 800;
+  font-size: 14px;
   white-space: nowrap;
 }
-.ann-banner-all {
-  flex: none;
-  font-size: 12px;
-  font-weight: 900;
-  white-space: nowrap;
+.strip-item:first-child {
+  padding-left: 0;
 }
-.ann-banner:hover .ann-banner-all {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
+.strip-no {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft, #555);
 }
-
+.strip-count {
+  font-size: 11px;
+  font-weight: 700;
+}
+@media (hover: hover) {
+  .strip-item:hover {
+    background: var(--ink, #000);
+    color: var(--paper, #fff);
+  }
+  .strip-item:hover .strip-no {
+    color: var(--paper, #fff);
+  }
+}
+.strip-item:active {
+  transform: translate(1px, 1px);
+}
+/* 移动 375（05 §5.1）：hero 单列、条带横滚、CTA 全宽 */
+@media (max-width: 719px) {
+  .hub-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .hub-hero-right {
+    order: 3; /* 线框顺序：章→标题→tagline→数字条→CTA→轮播主件 */
+  }
+  .hero-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hero-cta-row .btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .hero-cta-main {
+    min-height: 56px; /* 移动主 CTA 56px（05 §5.1 件 3） */
+  }
+  .hero-numstrip,
+  .site-strip {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .page-hero .huge {
+    margin-top: 8px; /* t20 375 目验：eyebrow 章阴影压标题首行，分离一档 */
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-feature {
+    transition: none;
+  }
+  .hero-feature:active {
+    transform: none;
+  }
+}
 /* ============================================================
    M1-2 首页枢纽：主列 + sticky 侧栏（组件级样式；全局 style.css 冻结令生效中）
    ============================================================ */

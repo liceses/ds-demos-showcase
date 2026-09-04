@@ -1,0 +1,64 @@
+/* ---------- 顶栏 ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 0;
+  border-bottom: var(--border-w) solid var(--ink);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.brand-mark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+}
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  bottom: -6px;
+  width: 11px;
+  height: 11px;
+  background: var(--red);
+  border: 2px solid var(--ink);
+}
+.brand-name {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nav-link {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 8px 12px;
+  border: 3px solid transparent;
+  transition: transform var(--b-dur) var(--b-ease), border-color var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease);
+}
+.nav-link:hover,
+.nav-link.router-link-active {
+  border-color: var(--ink);
+  background: var(--yellow);
+  transform: rotate(-1deg);
+}
+

@@ -1,0 +1,27 @@
+/* ---------- Tab ---------- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.tab {
+  padding: 10px 18px;
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease), color var(--b-dur) var(--b-ease);
+}
+.tab:hover {
+  transform: translate(-2px, -2px);
+}
+.tab.active {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 4px 4px 0 0 var(--yellow);
+}
+

@@ -1,0 +1,30 @@
+/* ---------- 页面头部 ---------- */
+.page-hero {
+  padding: 48px 0 36px;
+}
+.page-hero .title {
+  margin-top: 16px;
+}
+.page-hero .sub {
+  max-width: 640px;
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* ---------- 区块 ---------- */
+.section {
+  padding: 40px 0;
+}
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.section-title {
+  font-size: 26px;
+}
+

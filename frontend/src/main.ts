@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import './style.css'
+import './styles/index.css'
 import { isAstraSite } from './astra/scope'
 
 // 双域名分叉（docs/astra橱窗分离.md）：

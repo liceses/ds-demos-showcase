@@ -1,0 +1,10 @@
+/* ---------- iframe 预览 ---------- */
+.preview-frame {
+  width: 100%;
+  height: 62vh;
+  min-height: 420px;
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  display: block;
+}
+

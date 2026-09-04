@@ -1,0 +1,33 @@
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--paper);
+  border: var(--border-w) solid var(--ink);
+  position: relative;
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+}
+.card-default {
+  box-shadow: var(--shadow-teal);
+  transform: rotate(1deg);
+}
+.card-coral {
+  box-shadow: var(--shadow-red);
+  transform: rotate(-1deg);
+}
+.card-sunny {
+  background: var(--yellow);
+  box-shadow: var(--shadow-lg);
+  transform: rotate(2deg);
+}
+.card-mint {
+  background: var(--mint);
+  box-shadow: var(--shadow-lg);
+}
+.card-hover:hover {
+  transform: translate(-2px, -2px) rotate(0deg);
+  box-shadow: 12px 12px 0 0 var(--red);
+}
+.card-flat {
+  box-shadow: none;
+  transform: none;
+}
+

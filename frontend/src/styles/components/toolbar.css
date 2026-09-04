@@ -1,0 +1,32 @@
+/* ---------- 工具条（搜索 / 过滤） ---------- */
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.search-box {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+.search-box .input {
+  padding-right: 44px;
+}
+.search-box .search-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 900;
+  pointer-events: none;
+}
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+}
+

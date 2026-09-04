@@ -1,0 +1,31 @@
+/* ---------- v2 B4：体检面板与审计浏览 ---------- */
+.kpi { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; }
+.cov-bar {
+  display: block;
+  height: 14px;
+  border: 2px solid var(--ink);
+}
+.cov-bar.cov-hi { background: var(--mint); }
+.cov-bar.cov-mid { background: var(--yellow); }
+.cov-bar.cov-low { background: var(--red); }
+.audit-time { font-size: 11px; white-space: nowrap; }
+.audit-reason { overflow-wrap: anywhere; }
+.audit-diff-row td { background: var(--paper-deep, #f2eee6); }
+.audit-diff {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.audit-diff pre {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+}
+

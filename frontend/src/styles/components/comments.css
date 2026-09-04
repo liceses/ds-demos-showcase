@@ -1,0 +1,29 @@
+/* ---------- 评论 ---------- */
+.comment-box {
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  box-shadow: var(--shadow-black);
+  margin-bottom: 18px;
+}
+.comment-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 3px solid var(--ink);
+  background: var(--yellow);
+  font-size: 12px;
+  font-weight: 700;
+}
+.comment-body {
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.comment-children {
+  margin-left: 22px;
+  padding-left: 14px;
+  border-left: 4px solid var(--ink);
+}
+

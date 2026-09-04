@@ -1,0 +1,139 @@
+/* ---------- 响应式 ---------- */
+@media (max-width: 720px) {
+  .huge {
+    font-size: 40px;
+  }
+  .page-hero {
+    padding: 28px 0 22px;
+  }
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .preview-frame {
+    height: 50vh;
+    min-height: 300px;
+  }
+  .comment-children {
+    margin-left: 8px;
+    padding-left: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.status-active {
+  background: var(--mint);
+}
+.status-suspended {
+  background: var(--yellow);
+}
+.status-deleted {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* 防止列表替换时浏览器滚动锚点导致页面跳动 */
+.waterfall {
+  overflow-anchor: none;
+}
+
+/* Tab 切换动效 */
+.tab-pane-enter-active {
+  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+}
+.tab-pane-leave-active {
+  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+}
+.tab-pane-enter-from {
+  opacity: 0;
+  transform: translateX(18px) rotate(0.6deg);
+}
+.tab-pane-leave-to {
+  opacity: 0;
+  transform: translateX(-14px) rotate(-0.4deg);
+}
+.tab.active {
+  animation: tab-pop 0.22s ease;
+}
+/* 原为 0.94→1.04→1 的**回弹**（弹性落位），新野兽派法则 03 禁止；
+   改成参考站 brutal-stamp 的"盖章落位"：从大压到位、硬停，不回弹。 */
+@keyframes tab-pop {
+  0% { transform: scale(1.14) rotate(-1.5deg); }
+  70% { transform: scale(0.985) rotate(0.4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* 整页路由切换动效 */
+.page-enter-active {
+  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+}
+.page-leave-active {
+  transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* iframe 预览容器与全屏按钮 */
+.preview-shell {
+  position: relative;
+}
+.preview-shell .preview-frame {
+  transition: height var(--b-dur) var(--b-ease);
+}
+.preview-fullscreen-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+}
+
+/* 预览提示与默认高度（追加覆盖） */
+.preview-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+  letter-spacing: 0.04em;
+}
+.preview-frame {
+  height: 68vh;
+}
+
+/* 网页全屏：iframe 撑满整个网页视口 */
+.preview-shell.web-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+.preview-shell.web-fullscreen .preview-frame {
+  flex: 1;
+  width: 100%;
+  height: 100% !important;
+  border: var(--border-w) solid var(--ink);
+}
+.preview-shell.web-fullscreen .preview-hint {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  margin: 0;
+  padding: 4px 10px;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  z-index: 1;
+}
+

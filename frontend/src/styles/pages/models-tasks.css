@@ -1,0 +1,231 @@
+/* ---------- v2 实体原语：EntityStamp / ModelChips / 模型页 / 题目对比 ---------- */
+
+.entity-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-w) solid var(--ink);
+  font-family: var(--font-heading);
+  font-weight: 900;
+  color: var(--ink);
+  /* 统一纸白底：有品牌图标时让原版颜色自己说话，无图标时字母章不靠底色装身份 */
+  background: var(--paper);
+  flex: none;
+  box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+}
+.entity-stamp.stamp-sm { width: 22px; height: 22px; font-size: 12px; border-width: 2px; box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1); }
+.entity-stamp.stamp-md { width: 32px; height: 32px; font-size: 16px; }
+.entity-stamp.stamp-lg { width: 64px; height: 64px; font-size: 32px; box-shadow: var(--shadow-black); }
+/* 厂商配色 class 已移除：原先按厂商名哈希挑色（不是品牌色、改名即换色），
+   现在印章统一纸白底 + 原版品牌图标。 */
+/* 厂商图标：留白边距，避免贴边糊成一坨；加载失败自动退回字母章 */
+.stamp-logo {
+  display: block;
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.entity-stamp.has-logo { font-size: 0; }
+
+.model-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+}
+.model-chip:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1); text-decoration: none; color: var(--ink); }
+.model-chip:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px 0px rgba(0, 0, 0, 1); }
+.chips-md .model-chip { font-size: 15px; padding: 5px 12px 5px 6px; border-width: var(--border-w); }
+/* 厂商配色 class 已移除（见 EntityStamp 处说明） */
+.model-chip-more {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  border: 2px solid var(--ink);
+  padding: 2px 6px;
+  background: var(--paper);
+}
+
+.model-hero-head { display: flex; align-items: flex-start; gap: 18px; }
+
+/* 实体状态徽章 */
+.mode-badge.badge-canary { background: var(--yellow); }
+.mode-badge.badge-candidate { background: var(--paper); }
+.mode-badge.badge-deprecated { background: var(--coral); }
+.mode-badge.badge-active { background: var(--mint); }
+
+/* 题目对比行（小倍数）：每模型一行 */
+.compare-list { display: flex; flex-direction: column; gap: 14px; }
+.compare-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  flex-wrap: wrap;
+}
+.compare-row:hover { transform: translate(-2px, -2px); box-shadow: var(--shadow-black); }
+.compare-rank {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 20px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  flex: none;
+}
+.compare-row.rank-1 .compare-rank, .compare-rank.rank-1 { background: var(--yellow); }
+.compare-rank.rank-2 { background: var(--paper); }
+.compare-rank.rank-3 { background: var(--mint); }
+.compare-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 16px;
+  min-width: 140px;
+}
+.compare-model:hover { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 4px; }
+.compare-stats { display: flex; gap: 8px; }
+.compare-best {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 3px solid var(--teal);
+  margin-left: auto;
+}
+.compare-best:hover { text-decoration: none; background: var(--yellow); }
+@media (max-width: 720px) {
+  .compare-best { margin-left: 0; }
+  .model-hero-head { flex-direction: row; }
+}
+
+/* ---------- v2 模型页行为档案（§11）：档案卡片 / 分布行 / 热门任务行 ---------- */
+
+.archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 4px;
+}
+.archive-card { padding: 18px 20px; }
+.archive-title {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 16px;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid var(--teal);
+  display: inline-block;
+}
+.dist-rows { display: flex; flex-direction: column; gap: 6px; }
+.dist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dist-name {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 2px solid var(--paper);
+}
+.dist-name:hover { border-bottom-color: var(--teal); text-decoration: none; }
+.dist-count {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 13px;
+  border: 2px solid var(--ink);
+  padding: 1px 8px;
+  background: var(--mint);
+  flex: none;
+}
+
+.task-lines { display: flex; flex-direction: column; gap: 10px; }
+.task-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 13px 18px;
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+}
+/* 题面单独占一行（换行 + order 保证 CTA 仍在首行右侧） */
+.task-line-desc {
+  flex: 1 0 100%;
+  order: 4;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-row-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--paper);
+  background: var(--ink);
+  vertical-align: 1px;
+}
+.task-line:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px 0px rgba(0, 0, 0, 1); text-decoration: none; color: var(--ink); }
+.task-line-title {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 16px;
+}
+.task-line-count {
+  font-family: var(--font-body);
+  font-size: 13px;
+  border: 2px solid var(--ink);
+  padding: 2px 8px;
+  background: var(--yellow);
+  flex: none;
+}
+.task-line-cta {
+  margin-left: auto;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  border-bottom: 3px solid var(--teal);
+  flex: none;
+}
+@media (max-width: 640px) {
+  .task-line { flex-wrap: wrap; gap: 8px; }
+  .task-line-cta { margin-left: 0; }
+}
+

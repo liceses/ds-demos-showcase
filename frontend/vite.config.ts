@@ -9,6 +9,22 @@ const API_TARGET = process.env.VITE_DEV_API_TARGET || 'http://localhost:8000'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  // build 段（04 §5.1 最小必要配置）：目标 es2020；生产关 sourcemap；300KB 阈值；
+  // manualChunks 两桶：markdown 库（marked+dompurify，懒加载页才用）与 app 其余 vendor 合桶减请求
+  build: {
+    target: 'es2020',
+    sourcemap: false,
+    chunkSizeWarningLimit: 300,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('marked') || id.includes('dompurify')) return 'vendor-markdown'
+          return 'vendor-app'
+        },
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

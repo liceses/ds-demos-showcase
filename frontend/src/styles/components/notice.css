@@ -1,0 +1,22 @@
+/* ---------- 提示条 ---------- */
+.notice {
+  padding: 12px 14px;
+  border: var(--border-w) solid var(--ink);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.notice-warn {
+  background: var(--yellow);
+  box-shadow: var(--shadow-black);
+}
+.notice-info {
+  background: var(--mint);
+}
+.notice-error {
+  background: var(--red);
+  color: white;
+}
+.notice-success {
+  background: var(--teal);
+}
+

@@ -1,0 +1,23 @@
+/* ---------- 上传页挂题块（第 6 条：作者能主动选题） ---------- */
+.uw-task {
+  padding: 12px 14px;
+  border: 2px solid var(--ink);
+  border-left: 6px solid var(--teal);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.uw-task-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.uw-task-head b { font-family: var(--font-heading); font-size: 14px; text-transform: uppercase; letter-spacing: 0.03em; }
+.uw-suggest { display: flex; flex-direction: column; gap: 6px; }
+.uw-sim {
+  font-style: normal;
+  font-size: 10px;
+  margin-left: 5px;
+  padding: 0 4px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.uw-task-search { display: flex; flex-direction: column; gap: 8px; }
+

@@ -1,0 +1,13 @@
+/* ---------- 页脚 ---------- */
+.footer {
+  margin-top: auto;
+  border-top: var(--border-w) solid var(--ink);
+  padding: 28px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+

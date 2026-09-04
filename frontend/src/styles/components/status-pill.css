@@ -1,0 +1,28 @@
+/* ---------- 状态标签 ---------- */
+.status-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 3px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.status-approved {
+  background: var(--mint);
+}
+.status-pending {
+  background: var(--yellow);
+}
+.status-rejected {
+  background: var(--red);
+  color: white;
+}
+.status-processing {
+  background: var(--teal);
+}
+.status-failed,
+.status-deleting {
+  background: var(--ink);
+  color: var(--paper);
+}
+

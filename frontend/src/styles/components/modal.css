@@ -1,0 +1,31 @@
+/* ---------- 确认弹窗 ---------- */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  animation: modal-fade 0.16s ease;
+}
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal-card {
+  width: min(440px, calc(100% - 48px));
+  padding: 24px;
+  box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
+}
+.modal-title {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.modal-message {
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 20px;
+  overflow-wrap: anywhere;
+}
+

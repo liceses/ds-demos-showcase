@@ -1,0 +1,22 @@
+/* ---------- 法则 01 补齐：此前只有 hover、没有 active crush 的原语 ---------- */
+.tag-chip:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+.tab:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+.mode-badge:active,
+.uw-item:active {
+  transform: translate(2px, 2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tag-chip:active,
+  .tab:active,
+  .mode-badge:active,
+  .uw-item:active {
+    transform: none;
+  }
+}
+

@@ -1,0 +1,73 @@
+/* ---------- 首页入口大厅 ---------- */
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+.entry-card {
+  display: block;
+  position: relative;
+  min-height: 150px;
+  padding: 22px 18px 18px;
+  text-decoration: none;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+}
+.entry-card:hover {
+  transform: translate(-2px, -2px) rotate(0deg);
+  box-shadow: 12px 12px 0 0 var(--red);
+}
+.entry-card h2 {
+  margin: 18px 0 6px;
+  font-size: 22px;
+}
+.entry-card p {
+  margin: 0;
+}
+.entry-stamp {
+  position: absolute;
+  top: -14px;
+  left: -8px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 3px solid var(--ink);
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 800;
+  transform: rotate(-6deg);
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.entry-arrow {
+  display: inline-block;
+  margin-top: 14px;
+  font-weight: 700;
+  border-bottom: 3px solid var(--ink);
+}
+.entry-card.entry-lib { border-top: 8px solid var(--teal); }
+.entry-card.entry-tags { border-top: 8px solid var(--yellow); }
+.entry-card.entry-upload { border-top: 8px solid var(--red); }
+.entry-card.entry-ann { border-top: 8px solid var(--mint); }
+.entry-card.entry-tags .entry-stamp { background: var(--yellow); color: var(--ink); }
+.entry-card.entry-upload .entry-stamp { background: var(--red); color: #fff; }
+.entry-card.entry-ann .entry-stamp { background: var(--mint); color: var(--ink); }
+
+/* 上传页标签分组提示条 */
+.tag-key-hint {
+  margin: -4px 0 10px;
+  padding: 5px 10px;
+  border: 2px solid var(--ink);
+  border-left: 6px solid var(--mint);
+  background: var(--paper);
+  font-size: 12px;
+}
+.tag-key-hint code {
+  background: var(--mint);
+  border: 2px solid var(--ink);
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+

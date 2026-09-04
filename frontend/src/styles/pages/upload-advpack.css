@@ -1,0 +1,32 @@
+/* ---------- §4.2 上传建议包 ---------- */
+.pack-card {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--mint);
+  background: var(--paper);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.pack-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.pack-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--mint);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  transition: transform var(--b-dur) var(--b-ease);
+}
+.pack-chip:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
+.pack-key {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.pack-chip .count { font-weight: 900; }
+

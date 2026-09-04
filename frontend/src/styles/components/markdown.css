@@ -1,0 +1,59 @@
+/* ---------- Markdown / 会话日志 ---------- */
+.markdown-body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin: 18px 0 10px;
+}
+.markdown-body p {
+  margin: 0 0 12px;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 22px;
+  margin: 0 0 12px;
+}
+.markdown-body code {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 1px 6px;
+  font-size: 12px;
+}
+.markdown-body pre {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 14px;
+  border: 3px solid var(--ink);
+  overflow-x: auto;
+}
+.markdown-body pre code {
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+.markdown-body blockquote {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 3px solid var(--ink);
+  background: var(--mint);
+}
+.markdown-body a {
+  color: var(--ink);
+  font-weight: 700;
+}
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 0 0 12px;
+  width: 100%;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 3px solid var(--ink);
+  padding: 6px 10px;
+  text-align: left;
+}
+

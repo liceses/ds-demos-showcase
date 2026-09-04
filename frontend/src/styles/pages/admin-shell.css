@@ -1,0 +1,126 @@
+/* ---------- 后台壳层：左侧两级导航 + 概览台 ---------- */
+.admin-shell {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+/* 侧栏比视口高（16 项 + 搜索），sticky 时它自己不会滚 → 必须内部滚动，
+   否则最后几项要等整页滚到底才看得见（实测反馈） */
+.ad-nav {
+  position: sticky;
+  top: 78px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+.ad-nav::-webkit-scrollbar { width: 8px; }
+.ad-nav::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.25); }
+.ad-nav-search { margin-bottom: 10px; font-size: 13px; }
+.ad-nav-select { display: none; width: 100%; margin-bottom: 10px; }
+.ad-nav-list { display: flex; flex-direction: column; gap: 14px; }
+.ad-nav-group { display: flex; flex-direction: column; gap: 2px; }
+.ad-nav-label {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 6px 8px 2px;
+}
+.ad-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 9px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.ad-nav-item:hover { background: var(--paper-deep, #f2eee6); border-color: var(--ink); }
+.ad-nav-item.active { background: var(--yellow); border-color: var(--ink); font-weight: 800; }
+.ad-nav-text { flex: 1; }
+.ad-nav-link { color: inherit; text-decoration: none; flex: 1; }
+.ad-nav-badge {
+  min-width: 22px;
+  padding: 0 5px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: #a4001d;
+  border: 2px solid var(--ink);
+}
+.ad-nav-item.active .ad-nav-badge { background: var(--ink); color: var(--paper); }
+.ad-main { min-width: 0; max-width: 1180px; }
+
+.ac-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+}
+.ac-total { font-family: var(--font-heading); font-size: 34px; font-weight: 900; line-height: 1; }
+.ac-hero-label { font-size: 12px; color: var(--ink-soft); margin-left: 6px; }
+.ac-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.ac-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  cursor: pointer;
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+}
+.ac-card:hover { transform: translate(-2px, -2px); box-shadow: var(--shadow-black, 3px 3px 0 rgba(0, 0, 0, 0.25)); }
+.ac-card.hot { border-left-width: 9px; border-left-color: #a4001d; }
+.ac-num { font-family: var(--font-heading); font-size: 26px; font-weight: 900; line-height: 1; }
+.ac-label { font-size: 13px; font-weight: 800; }
+.ac-why { font-size: 11px; color: var(--ink-soft); line-height: 1.45; }
+.ac-cov {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.ac-cov b { font-family: var(--font-heading); font-size: 15px; }
+.ac-cov.bad { background: #ffd9de; }
+.ac-audit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.ac-audit li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ac-actor { font-weight: 900; }
+.ac-time { font-size: 11px; color: var(--ink-soft); min-width: 92px; }
+.ac-act { padding: 0 6px; background: var(--ink); color: var(--paper); font-size: 11px; }
+.ac-act.warn { background: #a4001d; }
+
+@media (max-width: 900px) {
+  .admin-shell { grid-template-columns: minmax(0, 1fr); }
+  .ad-nav { position: static; }
+  .ad-nav-list { display: none; }
+  .ad-nav-select { display: block; }
+  .ad-nav-search { display: none; }
+}
+

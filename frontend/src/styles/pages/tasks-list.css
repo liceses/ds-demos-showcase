@@ -1,0 +1,49 @@
+/* ---------- v2 B3′：题目列表页 ---------- */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+}
+.task-row:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-black);
+}
+.task-row-main { flex: 1; min-width: 0; }
+.task-row-title {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+.task-row-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.task-row-desc {
+  margin: 6px 0 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.task-row-stats { display: flex; gap: 8px; flex: none; }
+.task-row-cta {
+  flex: none;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  border-bottom: 3px solid var(--teal);
+}
+@media (max-width: 720px) {
+  .task-row { flex-wrap: wrap; }
+  .task-row-cta { margin-left: auto; }
+}
+

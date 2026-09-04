@@ -1,0 +1,29 @@
+/* ---------- 表格 ---------- */
+.table-wrap {
+  overflow-x: auto;
+  border: var(--border-w) solid var(--ink);
+}
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.data th,
+table.data td {
+  border: 3px solid var(--ink);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+table.data th {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+table.data tr.inconsistent td {
+  background: var(--red);
+  color: white;
+}
+

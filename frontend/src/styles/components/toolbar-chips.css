@@ -1,0 +1,13 @@
+/* ---------- 工具条小标签 ---------- */
+.mini-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.mini-stat b {
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  padding: 1px 7px;
+}
+

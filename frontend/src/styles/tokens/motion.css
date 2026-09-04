@@ -1,0 +1,61 @@
+/* ============================================================
+   v2 新野兽派动效令牌（依据 stylekit.top/styles/neo-brutalist 四法则）
+   法则 01 Physical Crushing：active 位移 = 阴影偏移，阴影清零
+   法则 02 Brutal Snap：背景硬切，禁止 opacity 淡入
+   法则 03 Zero Rounding Easing：一律 150ms ease-out，禁止弹性回弹
+   法则 04 Heavy Focus：hover 阴影变大 + 换彩色
+   ============================================================ */
+:root {
+  --b-dur: 150ms;
+  --b-ease: cubic-bezier(0, 0, 0.2, 1); /* ease-out，无 overshoot */
+  --b-shadow: 4px 4px 0 0 var(--ink);
+  --b-shadow-lg: 8px 8px 0 0 var(--ink);
+  --b-shadow-hot: 8px 8px 0 0 var(--red); /* 法则 04 的彩色阴影 */
+}
+/* 统一收口：我此前散落的 200ms/ease/贝塞尔回弹全部改走令牌 */
+.ac-card,
+.uw-step,
+.uw-type,
+.dv-rail,
+.dv-collapse,
+.uw-edit,
+.uw-aside-toggle,
+.btn,
+.tag-chip {
+  transition: background var(--b-dur) var(--b-ease), border-color var(--b-dur) var(--b-ease),
+    box-shadow var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);
+}
+/* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移 */
+.ac-card:active { transform: translate(4px, 4px); box-shadow: none; }
+.uw-type:active { transform: translate(3px, 3px); box-shadow: none; }
+.dv-rail:active,
+.dv-collapse:active,
+.uw-edit:active { transform: translate(2px, 2px); box-shadow: none; }
+/* 法则 04：卡片 hover 阴影变大并换彩色，背景硬切（无渐变、无淡入） */
+.ac-card:hover { transform: translate(-2px, -2px); box-shadow: var(--b-shadow-hot); }
+.ac-card.hot:hover { box-shadow: 8px 8px 0 0 var(--teal); }
+.uw-type:hover { transform: translate(-2px, -2px); box-shadow: var(--b-shadow-lg); }
+.uw-step:hover { transform: none; background: var(--yellow); }
+/* 法则 02：面板出现/消失不做 opacity 淡入 —— 用"盖章"落位（缩放+微旋转后硬停） */
+@keyframes b-stamp-in {
+  0% { transform: scale(1.06) rotate(-1.2deg); }
+  60% { transform: scale(0.985) rotate(0.4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.dv-panel-enter-active { animation: b-stamp-in var(--b-dur) var(--b-ease) both; transition: none; }
+.dv-panel-leave-active { transition: none; }
+.dv-panel-enter-from,
+.dv-panel-leave-to { opacity: 1; transform: none; }
+/* 展开区块同样去掉淡入，改硬切 + 位移 */
+.dv-disclose[open] .dv-disclose-body { animation: b-disclose-in var(--b-dur) var(--b-ease) both; }
+@keyframes b-disclose-in {
+  from { transform: translateY(-6px); }
+  to { transform: none; }
+}
+.rd-track i { transition: width var(--b-dur) var(--b-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .ac-card, .uw-step, .uw-type, .dv-rail, .dv-collapse, .uw-edit, .uw-aside-toggle, .btn, .tag-chip { transition: none; }
+  .dv-panel-enter-active, .dv-disclose[open] .dv-disclose-body { animation: none; }
+  .ac-card:active, .uw-type:active, .dv-rail:active { transform: none; }
+}
+

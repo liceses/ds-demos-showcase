@@ -1,0 +1,53 @@
+/* ---------- 评分卡（窄栏）美学：数字与星标同行，全部左对齐 ---------- */
+/* 关键手法：.rating-meta 用 display:contents，让 avg/sub/图表 直接成为卡片的网格项。
+   不这么做的话"大数字"被关在第二格里，只能落在星标下面，中间空出一块 —— 看着就是坏的。 */
+.dv-facts .rating-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 12px 14px;
+  border-width: 2px;
+  border-left-width: 6px;
+  box-shadow: none;
+  min-width: 0;
+}
+.dv-facts .rating-stars { grid-column: 2; grid-row: 1; padding: 3px 6px; }
+.dv-facts .rating-star { font-size: 14px; }
+.dv-facts .rating-meta { display: contents; }
+.dv-facts .rating-avg {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+  text-align: left; /* 覆盖先前居中 */
+  font-size: 12px;
+}
+.dv-facts .rating-avg b {
+  font-family: var(--font-heading);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 0.9;
+}
+.dv-facts .rating-sub {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* 覆盖我先前误加的居中 */
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.dv-facts .rd-rows { grid-column: 1 / -1; grid-row: 3; gap: 4px; padding-top: 2px; }
+.dv-facts .rating-legend { grid-column: 1 / -1; grid-row: 4; text-align: left; font-size: 10px; letter-spacing: 0.02em; }
+.dv-facts .rating-anon-hint { grid-column: 1 / -1; grid-row: 5; font-size: 10px; line-height: 1.5; }
+.dv-facts .rd-n { width: 12px; text-align: center; font-weight: 900; color: var(--ink); }
+/* 色阶 1 红 → 5 青绿。原先 5 分用纯黑：整张卡最重的元素成了一个数据条，
+   而且黑是本站的结构色（边框/文字），"黑=最棒"与结构色混在一起读起来是死色。 */
+.dv-facts .rd-track i.dist-5 { background: var(--teal); }
+.dv-facts .rd-track i.dist-4 { background: var(--mint); }
+

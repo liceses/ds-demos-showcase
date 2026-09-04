@@ -1,0 +1,79 @@
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 22px;
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease), color var(--b-dur) var(--b-ease);
+  user-select: none;
+}
+.btn:focus-visible {
+  outline: 4px solid var(--ink);
+  outline-offset: 2px;
+}
+.btn:hover {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+.btn:active {
+  transform: translate(6px, 6px);
+  box-shadow: none;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-primary {
+  background: var(--red);
+  color: white;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(-1deg);
+}
+.btn-secondary {
+  background: var(--teal);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  transform: rotate(1deg);
+}
+.btn-outline {
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+.btn-dark {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-lg);
+}
+.btn-danger {
+  background: #b3001b;
+  color: white;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(1deg);
+}
+.btn-lg {
+  padding: 16px 30px;
+  font-size: 16px;
+}
+.btn-sm {
+  padding: 7px 13px;
+  font-size: 12px;
+}
+.btn-block {
+  display: flex;
+  width: 100%;
+}
+

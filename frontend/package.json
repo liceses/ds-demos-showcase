@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "npm run clean && vue-tsc -b && vite build",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "clean": "node -e \"const fs=require('fs'),p='dist';const w=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=d+'/'+e.name;e.isDirectory()&&!e.isSymbolicLink()?w(f):fs.unlinkSync(f)}fs.rmdirSync(d)};fs.existsSync(p)&&w(p);console.log('dist cleaned')\""

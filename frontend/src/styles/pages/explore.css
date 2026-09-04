@@ -1,0 +1,53 @@
+/* ---------- v2 D3：探索页 ---------- */
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.explore-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+}
+.explore-cell:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-black);
+}
+.explore-cell-main { min-width: 0; }
+.explore-cell-name {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 15px;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.explore-cell-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.explore-fold {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--mint);
+  border: 2px solid var(--ink);
+  text-decoration: none;
+  color: var(--ink);
+}
+.explore-fold:hover { background: var(--yellow); }
+.explore-labels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.explore-label-block {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 12px 14px;
+}
+

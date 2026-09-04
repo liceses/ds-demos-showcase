@@ -1,0 +1,6 @@
+/* ---------- 通用容器 ---------- */
+.container {
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
+}
+

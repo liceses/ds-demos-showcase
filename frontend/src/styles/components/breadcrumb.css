@@ -1,0 +1,17 @@
+/* ---------- 面包屑 ---------- */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.breadcrumb a {
+  text-decoration: none;
+  font-weight: 700;
+}
+.breadcrumb .sep {
+  font-weight: 900;
+}
+

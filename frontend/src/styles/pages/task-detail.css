@@ -1,0 +1,68 @@
+/* ---------- 题目页：题面块 + 证据表（链条视图 方案 A） ---------- */
+.brief-card { padding: 14px 18px 16px; border-left: 8px solid var(--teal); }
+.brief-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.brief-tag {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 2px 8px;
+}
+.brief-head .uw-edit { margin-left: auto; }
+.brief-text { margin: 0; font-size: 14px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.brief-text.mono { font-family: var(--font-mono); font-size: 13px; }
+.brief-caveat {
+  margin: 10px 0 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #ffe3e8;
+  border-left: 5px solid #a4001d;
+}
+.brief-caveat b { color: #a4001d; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.chain-table { table-layout: fixed; }
+.chain-table th:nth-child(1) { width: 18%; }
+.chain-table th:nth-child(2) { width: 30%; }
+.chain-table th:nth-child(3) { width: 13%; }
+.chain-table th:nth-child(4) { width: 26%; }
+.chain-table th:nth-child(5) { width: 13%; }
+.chain-model {
+  display: inline-block;
+  margin: 0 6px 4px 0;
+  padding: 1px 7px;
+  font-size: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+.chain-model:hover { background: var(--yellow); }
+.chain-yes {
+  display: inline-block;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--paper);
+  background: var(--teal);
+  border: 2px solid var(--ink);
+}
+.chain-no {
+  display: inline-block;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: #a4001d;
+  border: 2px solid var(--ink);
+}
+.chain-excerpt {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.chain-gen { font-size: 12px; white-space: nowrap; }
+.chain-work { font-weight: 700; overflow-wrap: anywhere; }
+

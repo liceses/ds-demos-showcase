@@ -1,0 +1,293 @@
+/* ---------- v2 Demo 详情页重设计 第 1 期：作品本体（sticky）+ 事实卡 ---------- */
+.dv-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.85fr);
+  gap: 22px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+.dv-stage { position: sticky; top: 78px; min-width: 0; }
+.dv-stage iframe { max-height: calc(100vh - 120px); }
+.dv-standin { padding: 32px; text-align: center; }
+.dv-standin h2 { margin-bottom: 10px; }
+.dv-standin p { margin-bottom: 18px; }
+.dv-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 14px 16px 16px;
+  background: var(--paper);
+  border: var(--border-w) solid var(--ink);
+  box-shadow: var(--shadow-black, 4px 4px 0 rgba(0, 0, 0, 1));
+}
+/* 分组：身份 / 热度 / 评分 / 词表 / 动作 / 档案摘要 —— 用分隔线代替大间距，
+   窄栏里间距会失控，线才是稳定的阅读节奏 */
+.dv-group { padding: 12px 0; border-bottom: 2px dashed rgba(0, 0, 0, 0.18); }
+.dv-group:first-of-type { padding-top: 6px; }
+.dv-group:last-of-type { border-bottom: none; padding-bottom: 0; }
+.dv-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+.dv-byline { display: flex; flex-wrap: wrap; margin-bottom: 8px; }
+.dv-by { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.dv-by a { font-weight: 800; }
+.dv-meter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dv-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  background: var(--paper-deep, #f2eee6);
+  border: 2px solid var(--ink);
+  text-transform: uppercase;
+}
+.dv-cell b { font-family: var(--font-heading); color: var(--ink); font-size: 16px; line-height: 1; }
+.dv-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.dv-actions { display: flex; flex-direction: column; gap: 8px; }
+.dv-action-main { width: 100%; }
+.dv-action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.dv-action-row .btn { flex: 1; justify-content: center; }
+.dv-updates {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: var(--paper-deep, #f2eee6);
+  border-left: 5px solid var(--teal);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* 收起/展开动效的**唯一定义**在文件末尾的「新野兽派动效令牌」层里
+   （法则 02：不做 opacity 淡入，改盖章落位）。此处不留第二份 —— 两份定义必然漂移。 */
+/* RatingWidget 自带 .section 外边距，塞进卡片分组里要归零 */
+.dv-facts .rating-section { padding: 0; margin: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .dv-panel-enter-active,
+  .dv-panel-leave-active { transition: none; }
+  .dv-panel-enter-from,
+  .dv-panel-leave-to { transform: none; opacity: 1; }
+  .dv-rail:hover { transform: none; }
+}
+/* ② 过程档案：原生 details，收起时只占一行，展开即读（不再需要 tab 跳转） */
+.dv-archive { padding-top: 8px; }
+/* 两个 disclosure 并排：收起时各占一行，展开时各占半宽 —— 比竖着堆两屏更省地方 */
+.dv-disclose-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; align-items: start; }
+.dv-summary-cta { margin-left: auto; }
+.dv-archive-empty { font-size: 13px; }
+.dv-disclose {
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  margin-bottom: 10px;
+}
+.dv-disclose summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-heading);
+  letter-spacing: 0.03em;
+}
+.dv-disclose summary::-webkit-details-marker { display: none; }
+.dv-disclose summary::before { content: '▸'; font-weight: 900; transition: transform var(--b-dur) var(--b-ease); }
+.dv-disclose[open] summary::before { transform: rotate(90deg); }
+.dv-disclose summary:hover { background: var(--paper-deep, #f2eee6); }
+.dv-disclose-n {
+  min-width: 22px;
+  padding: 0 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--paper);
+  background: var(--ink);
+}
+.dv-disclose-hint { font-size: 11px; color: var(--ink-soft); }
+.dv-disclose-body { padding: 12px 14px 14px; border-top: 2px dashed rgba(0, 0, 0, 0.18); }
+.dv-disclose[open] .dv-disclose-body { animation: dv-disclose-in 180ms ease; }
+@keyframes dv-disclose-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv-disclose summary::before { transition: none; }
+  .dv-disclose[open] .dv-disclose-body { animation: none; }
+}
+/* 横条分布：窄栏里唯一能同时读出"长短 + 票数"的编码 */
+.rd-rows { display: flex; flex-direction: column; gap: 3px; padding-top: 4px; }
+.rd-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) 26px; align-items: center; gap: 7px; }
+.rd-n, .rd-c { font-size: 11px; color: var(--ink-soft); }
+.rd-c { text-align: right; font-weight: 700; color: var(--ink); }
+.rd-track { display: block; height: 9px; background: var(--paper-deep, #eee9e0); border: 1px solid rgba(0, 0, 0, 0.35); }
+.rd-track i { display: block; height: 100%; background: var(--ink); transition: width var(--b-dur) var(--b-ease); }
+.rd-track i.dist-1 { background: var(--red); }
+.rd-track i.dist-2 { background: var(--paper); }
+.rd-track i.dist-3 { background: var(--yellow); }
+.rd-track i.dist-4 { background: var(--teal); }
+@media (prefers-reduced-motion: reduce) { .rd-track i { transition: none; } }
+.dv-story { padding-top: 8px; }
+.dv-desc-card { padding: 22px; }
+.dv-h2 {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 12px;
+}
+.dv-prompt { padding: 16px; border-left: 4px solid var(--ink); }
+.dv-prompt-text {
+  margin: 0;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+/* 三种"比较"形态各异：同形即同类是这页原来最大的信息事故 */
+.dv-cmp-tag {
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--paper);
+  background: var(--ink);
+}
+.dv-cmp-repro .dv-cmp-tag { background: #0f766e; }
+.dv-cmp-task .dv-cmp-tag { background: #a4001d; }
+.dv-cmp-random .dv-cmp-tag { background: var(--ink-soft); }
+.dv-cmp-random { opacity: 0.94; }
+/* 评分组件原本按整宽排版（星标与元信息并排），塞进右栏会溢出。
+   正解：窄栏改纵向弹性 + 让 meta 可收缩。
+   上一版我写成 display:block，等于把它的弹性布局整个拆掉 —— 分布图因此被压坏（决策人指出）。 */
+.dv-facts .rating-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 12px;
+  border-width: 2px;
+  border-left-width: 6px;
+  box-shadow: none;
+  min-width: 0;
+}
+.dv-facts .rating-stars { align-self: flex-start; }
+/* 原样式给 .rating-meta 设了 align-items:center —— 纵向 flex 下子元素会缩到内容宽，
+   分布图因此被压成 46px。窄栏里必须 stretch，柱形才有地方长开。 */
+.dv-facts .rating-meta { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.dv-facts .rating-avg,
+.dv-facts .rating-sub,
+.dv-facts .rating-legend { text-align: center; }
+/* .rating-sub 在原样式里是 flex，text-align 管不住它 —— 得用 justify-content */
+.dv-facts .rating-sub { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.dv-facts .rating-avg { font-size: 14px; }
+.dv-facts .rating-legend,
+.dv-facts .rating-anon-hint {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.5;
+}
+/* 分布图是"分数分布"唯一的可视化：给它基线 + 等分列，柱高保持比例 */
+.dv-facts .rating-dist {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding-top: 5px;
+  margin-top: 2px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.25);
+}
+.dv-facts .rating-dist-col { flex: 1; }
+.dv-facts .rating-dist-bar { width: 100%; max-width: 24px; }
+/* 信息卡可收起：预览是主角的时候让它整宽，右侧只留一条"回得来"的轨 */
+.dv-facts-head { display: flex; align-items: center; gap: 10px; }
+.dv-facts-head .eyebrow { flex: 1; }
+.dv-collapse {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  background: transparent;
+  border: 2px solid var(--ink);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.dv-collapse:hover { background: var(--yellow); color: var(--ink); }
+.dv-shell.facts-collapsed { grid-template-columns: minmax(0, 1fr) 46px; }
+.dv-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border-w) solid var(--ink);
+  box-shadow: var(--shadow-black, 4px 4px 0 rgba(0, 0, 0, 1));
+  cursor: pointer;
+  position: sticky;
+  top: 78px;
+  max-height: calc(100vh - 100px);
+}
+.dv-rail:hover { background: var(--yellow); }
+.dv-rail-label {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.dv-rail-score {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 900;
+  padding: 1px 6px;
+  background: var(--mint);
+  border: 2px solid var(--ink);
+}
+.dv-rail-title {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-height: 40vh;
+}
+@media (max-width: 1024px) {
+  /* 窄屏收起后仍要能恢复（藏掉入口＝自造的死角），轨改成横向按钮 */
+  .dv-shell.facts-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .dv-rail {
+    position: static;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    max-height: none;
+  }
+  .dv-rail-title { writing-mode: horizontal-tb; max-height: none; flex: 1; }
+  /* 与事实卡同理：恢复入口要出现在预览之前，而不是滚完预览才找得到 */
+  .dv-rail { order: -1; }
+}
+
+@media (max-width: 1024px) {
+  .dv-shell { grid-template-columns: minmax(0, 1fr); }
+  /* 窄屏：预览先走 sticky 反而挡住正文，退回普通流 */
+  .dv-stage { position: static; }
+  .dv-stage iframe { max-height: 62vh; }
+  /* 手机上"这是什么"比"立刻玩"更重要：标题不该被 62vh 的预览挤出首屏
+     （实测标题落在 718px，视口 844px —— 等于看不见作品叫什么） */
+  .dv-facts { order: -1; }
+}
+

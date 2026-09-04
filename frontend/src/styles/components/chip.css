@@ -1,0 +1,38 @@
+/* ---------- 标签 ---------- */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform var(--b-dur) var(--b-ease), background var(--b-dur) var(--b-ease), color var(--b-dur) var(--b-ease);
+}
+.tag-chip:hover {
+  transform: translate(-2px, -2px);
+  background: var(--yellow);
+}
+.tag-chip.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+.tag-chip.red {
+  background: var(--red);
+  color: white;
+}
+.tag-chip.teal {
+  background: var(--teal);
+}
+.tag-chip.yellow {
+  background: var(--yellow);
+}
+.tag-chip .count {
+  font-size: 10px;
+  opacity: 0.7;
+}
+

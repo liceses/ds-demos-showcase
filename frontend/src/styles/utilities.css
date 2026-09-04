@@ -1,0 +1,43 @@
+/* ---------- 文字工具 ---------- */
+.mono {
+  font-family: var(--font-body);
+}
+.uppercase {
+  text-transform: uppercase;
+}
+.eyebrow {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  background: var(--yellow);
+  border: var(--border-w) solid var(--ink);
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  transform: rotate(-1deg);
+}
+.fun-underline {
+  text-decoration: underline;
+  text-decoration-color: var(--yellow);
+  text-decoration-thickness: 6px;
+  text-underline-offset: 6px;
+  text-decoration-skip-ink: none;
+}
+.huge {
+  font-size: clamp(44px, 8vw, 120px);
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+.muted {
+  color: #444444;
+  font-size: 14px;
+}
+.strike {
+  text-decoration: line-through;
+  text-decoration-thickness: 4px;
+}
+

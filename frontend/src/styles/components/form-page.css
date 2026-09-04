@@ -1,0 +1,11 @@
+/* ---------- 表单页 ---------- */
+.auth-card {
+  max-width: 440px;
+  margin: 0 auto;
+}
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+

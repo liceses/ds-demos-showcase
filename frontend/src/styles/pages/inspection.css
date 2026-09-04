@@ -1,0 +1,26 @@
+/* ---------- v2 B4：治理巡检 ---------- */
+.inspect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.inspect-row { padding: 14px 18px; }
+.inspect-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.inspect-count {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1;
+  padding: 2px 8px;
+  background: var(--ink);
+  color: var(--paper);
+}
+.inspect-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+

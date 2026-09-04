@@ -1,0 +1,101 @@
+/* ---------- 论坛轻量版 ---------- */
+:root {
+  --paper-forum: #f7f0e3;
+}
+.forum-topbar-inner,
+.forum-hero-inner,
+.forum-section,
+.forum-container {
+  max-width: 1280px;
+}
+.forum-topbar-inner,
+.forum-hero-inner,
+.forum-section {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.forum-side {
+  width: 280px;
+}
+/* 主题卡轻量化：细边、无常驻阴影、hover 才浮起 */
+.forum-topic-card {
+  border: 2px solid var(--ink);
+  box-shadow: none;
+  margin-bottom: 8px;
+}
+.forum-topic-card:hover {
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+}
+.forum-side-card {
+  border: 2px solid var(--ink);
+  box-shadow: none;
+}
+/* 回复/评论时间线化：不用每个都套大黑框 */
+.forum-reply {
+  border: 1px solid var(--ink);
+  box-shadow: none;
+  margin-bottom: 8px;
+}
+.forum-reply:hover {
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.quick-comment-input {
+  border: 2px solid var(--ink);
+  box-shadow: none;
+}
+.quick-comment {
+  border: none;
+  border-bottom: 1px solid #d8cfc0;
+  background: transparent;
+  padding: 10px 0;
+}
+.quick-comment:last-child {
+  border-bottom: none;
+}
+.quick-comment-list {
+  gap: 0;
+}
+
+/* 按钮轻量化：默认阴影减小，hover 位移减小 */
+.btn-primary,
+.btn-secondary,
+.btn-outline,
+.btn-dark,
+.btn-danger {
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.btn:hover {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+.btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+/* TagGroupBox */
+.tag-group-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tag-merge-craft {
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 14px;
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+}
+.tag-merge-plus,
+.tag-merge-eq {
+  font-weight: 900;
+  font-size: 18px;
+  padding: 0 4px;
+}
+.group-card-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px solid var(--ink);
+}
+

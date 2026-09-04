@@ -38,7 +38,7 @@
   font-size: 13px;
   font-weight: 800;
   transform: rotate(-6deg);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 .entry-arrow {
   display: inline-block;

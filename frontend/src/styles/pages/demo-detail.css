@@ -18,7 +18,7 @@
   padding: 14px 16px 16px;
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
-  box-shadow: var(--shadow-black, 4px 4px 0 rgba(0, 0, 0, 1));
+  box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
 }
 /* 分组：身份 / 热度 / 评分 / 词表 / 动作 / 档案摘要 —— 用分隔线代替大间距，
    窄栏里间距会失控，线才是稳定的阅读节奏 */
@@ -236,7 +236,7 @@
   color: var(--ink);
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
-  box-shadow: var(--shadow-black, 4px 4px 0 rgba(0, 0, 0, 1));
+  box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
   cursor: pointer;
   position: sticky;
   top: 78px;

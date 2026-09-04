@@ -324,7 +324,7 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('app.nav.demos', '作品库') }}</span>
     <h1 class="huge">{{ t('app.nav.demos', '作品库') }}</h1>
     <p class="sub">{{ t('demos.sub', '搜索、筛选、浏览全部 AI 网页 Demo —— 支持按标签与热度检索。') }}</p>
@@ -506,4 +506,5 @@ onBeforeUnmount(() => observer?.disconnect())
       <template v-else-if="!hasMore">{{ t('demos.allLoaded', '已加载全部 {n} 个 Demo', { n: total }) }}</template>
     </div>
   </section>
+  </div>
 </template>

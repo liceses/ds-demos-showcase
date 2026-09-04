@@ -10,14 +10,14 @@
   gap: 12px;
   padding: 14px 16px;
   border: var(--border-w) solid var(--ink);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 6px 6px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .ann-card:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 10px 10px 0 0 var(--ink);
 }
 .ann-card-manual { background: var(--wash-yellow); }
 .ann-card-auto { background: var(--wash-teal); }
@@ -34,7 +34,7 @@
   border: 3px solid var(--ink);
   background: var(--paper);
   /* R8：eyebrow 静止零倾斜（原 rotate(-2deg) 清零） */
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 .ann-card-demo .ann-stamp,
 .ann-card-update .ann-stamp {
@@ -131,7 +131,7 @@
 .ann-block {
   border: var(--border-w) solid var(--ink);
   background: var(--paper);
-  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 8px 8px 0 0 var(--ink);
   padding: 18px;
 }
 .ann-block-head {
@@ -157,14 +157,14 @@
   gap: 10px;
   padding: 10px 12px;
   border: 3px solid var(--ink);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .ann-item:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 6px 6px 0 0 var(--ink);
 }
 .ann-item .ann-title {
   font-size: 13px;
@@ -219,7 +219,7 @@
   max-width: min(560px, 100%);
   padding: 8px 12px;
   border: 3px solid var(--ink);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   font-size: 13px;
   line-height: 1.4;
   text-decoration: none;
@@ -231,7 +231,7 @@
 }
 .ann-tip:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 6px 6px 0 0 var(--ink);
 }
 .ann-tip .ann-stamp {
   flex-shrink: 0;
@@ -291,7 +291,7 @@
   display: inline-block;
   margin-top: 10px;
   border: var(--border-w) solid var(--ink);
-  box-shadow: 5px 5px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 5px 5px 0 0 var(--ink);
   background: var(--paper);
   padding: 4px;
 }
@@ -313,7 +313,7 @@
   font-weight: 700;
   text-transform: uppercase;
   transform: rotate(2deg);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 
 /* ============================================================

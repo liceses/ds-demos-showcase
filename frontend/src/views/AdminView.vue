@@ -171,7 +171,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="page-hero">
+
+  <div>  <section class="page-hero">
     <span class="eyebrow">管理后台</span>
     <h1 class="huge">管理</h1>
   </section>
@@ -239,4 +240,5 @@ onMounted(() => {
       </div><!-- /ad-main -->
     </div><!-- /admin-shell -->
   </section>
+  </div>
 </template>

@@ -77,7 +77,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('user.eyebrow', '用户主页') }}</span>
     <h1 class="huge">{{ mode === 'followers' ? t('user.followers', '粉丝') : t('user.following', '关注') }}</h1>
     <p class="sub">
@@ -118,4 +118,5 @@ onMounted(async () => {
 
     <PaginationBar v-if="pages > 1" :page="page" :total="total" :page-size="pageSize" @change="setPage" />
   </section>
+  </div>
 </template>

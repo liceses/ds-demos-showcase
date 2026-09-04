@@ -43,7 +43,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <LoadingRow v-if="loading" :text="t('tags.loading', '加载标签…')" />
+  <div class="route-page">  <LoadingRow v-if="loading" :text="t('tags.loading', '加载标签…')" />
   <EmptyBox v-else-if="error" :text="error" />
 
   <template v-else-if="tag">
@@ -121,4 +121,5 @@ onMounted(async () => {
       </MasonryGrid>
     </section>
   </template>
+  </div>
 </template>

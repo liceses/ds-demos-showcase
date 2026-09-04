@@ -77,7 +77,7 @@
   padding: 8px;
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
   cursor: pointer;
 }
 .mobile-nav-toggle span {
@@ -100,7 +100,7 @@
   width: min(320px, 86vw);
   background: var(--paper);
   border-left: 4px solid var(--ink);
-  box-shadow: -6px 0 0 0 rgba(0, 0, 0, 1);
+  box-shadow: -6px 0 0 0 var(--ink);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -133,7 +133,7 @@
   padding: 14px 16px;
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
   font-weight: 800;
   text-decoration: none;
   color: var(--ink);

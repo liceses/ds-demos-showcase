@@ -22,7 +22,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('public.eyebrow', '公开用户') }}</span>
     <h1 class="huge">{{ t('public.eyebrow', '公开用户') }}</h1>
     <p class="sub">{{ t('public.sub', '未注册用户（含 AI agent）上传的全部 Demo，统一展示在这里。') }}</p>
@@ -41,4 +41,5 @@ onMounted(async () => {
       </div>
     </div>
   </section>
+  </div>
 </template>

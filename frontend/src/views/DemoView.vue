@@ -287,7 +287,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</section>
+  <div class="route-page">  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</section>
 
   <section v-else-if="error" class="empty-box">{{ error }}</section>
 
@@ -621,6 +621,7 @@ onMounted(load)
 
     <PeekDrawer :target="peekTarget" @close="peekTarget = null" @navigate="peekNavigate" />
   </template>
+  </div>
 </template>
 
 <style scoped>

@@ -194,9 +194,9 @@ onMounted(() => {
              KeepAlive 命中复用不重播 enter、重新插入时播（符合「转场=页面级登场」语义）；
              scrollBehavior 协同：savedPosition/top:0 在新页插入时生效（leave 0ms 无延迟），入场动画叠加不抢滚动。 -->
         <Transition :name="pageTransitionName" mode="out-in">
-          <KeepAlive :include="keepAlivePages">
-            <component :is="Component" :key="pageKey" />
-          </KeepAlive>
+            <KeepAlive :include="keepAlivePages">
+              <component :is="Component" :key="pageKey" />
+            </KeepAlive>
         </Transition>
       </RouterView>
     </main>

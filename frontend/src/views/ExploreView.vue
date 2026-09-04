@@ -56,7 +56,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('explore.eyebrow', '探索') }}</span>
     <h1 class="huge" style="margin-top: 14px">{{ t('explore.title', '探索') }}</h1>
     <p class="sub">{{ t('explore.sub', '按模型看它做过什么，按题目看同一句话不同模型的回答，按标签看题材分布。') }}</p>
@@ -133,4 +133,5 @@ onMounted(load)
       <EmptyBox v-if="!data.models.items.length && !data.tasks.length" :text="t('explore.emptyAll', '还没有可探索的内容')" />
     </template>
   </section>
+  </div>
 </template>

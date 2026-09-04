@@ -42,7 +42,7 @@ async function submitPassword() {
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('settings.eyebrow', '账户设置') }}</span>
     <h1 class="huge">{{ t('settings.title', '设置') }}</h1>
     <p class="sub">{{ t('settings.sub', '修改你的登录密码。密码修改后，下次登录请使用新密码。') }}</p>
@@ -72,4 +72,5 @@ async function submitPassword() {
       </form>
     </div>
   </section>
+  </div>
 </template>

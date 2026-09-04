@@ -37,7 +37,7 @@
   font-weight: 900;
   font-size: 56px;
   color: var(--ink); /* 封面占位=大面积，wash 底配暖白字（t16 P1-fix-2） */
-  text-shadow: 3px 3px 0 rgba(0, 0, 0, 1);
+  text-shadow: 3px 3px 0 var(--ink);
 }
 .demo-card-body {
   padding: 14px 16px 16px;

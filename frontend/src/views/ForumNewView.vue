@@ -60,7 +60,7 @@ async function submit() {
 </script>
 
 <template>
-  <section class="forum-hero">
+  <div class="route-page">  <section class="forum-hero">
     <div class="forum-hero-inner">
       <h1 class="forum-title">{{ t('forum.newPost', '发帖') }}</h1>
       <p class="forum-sub">{{ t('forumNew.sub', '用 Markdown 写正文，可关联 Demo 或贴内部链接。') }}</p>
@@ -98,4 +98,5 @@ async function submit() {
       </div>
     </div>
   </section>
+  </div>
 </template>

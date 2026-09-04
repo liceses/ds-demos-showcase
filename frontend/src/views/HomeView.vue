@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
     <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
       <!-- 注意：<br> 必须写在模板字面量里；{{ }} 插值会转义 HTML，把 <br> 当纯文本显示出来 -->
@@ -317,6 +317,7 @@ onBeforeUnmount(() => {
       <span class="forum-takeover-brand">讨论区</span>
     </div>
   </Transition>
+  </div>
 </template>
 
 <style scoped>
@@ -399,12 +400,25 @@ onBeforeUnmount(() => {
 @media (max-width: 719px) {
   .entry-caps-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); /* t20：min-content 撑破 1fr 列（375 溢出 396）→ 可收缩列 */
   }
   .entry-capsule {
     border-width: 2px;
-    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+    box-shadow: 3px 3px 0 0 var(--ink);
     justify-content: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  .entry-capsule-title {
+    font-size: 12px;
+  }
+  .entry-capsule-count {
+    min-width: 64px; /* 50% 律：槽位减半（92→64），「3 件作品」级短文案够住 */
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  .page-hero .huge {
+    margin-top: 8px; /* t20 375 目验：eyebrow 章阴影压标题首行，分离一档 */
   }
   @media (hover: hover) {
     .entry-capsule:hover {

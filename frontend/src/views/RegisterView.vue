@@ -33,7 +33,7 @@ async function submit() {
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('auth.eyebrow', '账户') }}</span>
     <h1 class="huge">{{ t('auth.register', '注册') }}</h1>
   </section>
@@ -64,4 +64,5 @@ async function submit() {
       </form>
     </div>
   </section>
+  </div>
 </template>

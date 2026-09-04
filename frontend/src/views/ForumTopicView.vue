@@ -158,7 +158,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="forum-section">
+  <div class="route-page">  <section class="forum-section">
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('forum.loading', '加载主题…') }}</div>
 
@@ -287,4 +287,5 @@ onMounted(load)
       </div>
     </template>
   </section>
+  </div>
 </template>

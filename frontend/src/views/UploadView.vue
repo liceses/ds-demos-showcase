@@ -888,7 +888,7 @@ async function submit() {
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ editSlug ? t('upload.editEyebrow', '编辑 Demo') : t('app.nav.upload', '上传 Demo') }}</span>
     <h1 class="huge">{{ editSlug ? demoTitle || t('upload.edit', '编辑') : t('upload.new', '上传') }}</h1>
     <p class="sub">
@@ -1383,4 +1383,5 @@ async function submit() {
       </Teleport>
     </div>
   </section>
+  </div>
 </template>

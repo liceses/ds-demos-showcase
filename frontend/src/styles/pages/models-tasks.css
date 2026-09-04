@@ -11,9 +11,9 @@
   /* 统一纸白底：有品牌图标时让原版颜色自己说话，无图标时字母章不靠底色装身份 */
   background: var(--paper);
   flex: none;
-  box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0px 0px var(--ink);
 }
-.entity-stamp.stamp-sm { width: 22px; height: 22px; font-size: 12px; border-width: 2px; box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1); }
+.entity-stamp.stamp-sm { width: 22px; height: 22px; font-size: 12px; border-width: 2px; box-shadow: 2px 2px 0px 0px var(--ink); }
 .entity-stamp.stamp-md { width: 32px; height: 32px; font-size: 16px; }
 .entity-stamp.stamp-lg { width: 64px; height: 64px; font-size: 32px; box-shadow: var(--shadow-black); }
 /* 厂商配色 class 已移除：原先按厂商名哈希挑色（不是品牌色、改名即换色），
@@ -46,11 +46,11 @@
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 13px;
-  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0px 0px var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
-.model-chip:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1); text-decoration: none; color: var(--ink); }
-.model-chip:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px 0px rgba(0, 0, 0, 1); }
+.model-chip:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0px 0px var(--ink); text-decoration: none; color: var(--ink); }
+.model-chip:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px 0px var(--ink); }
 .chips-md .model-chip { font-size: 15px; padding: 5px 12px 5px 6px; border-width: var(--border-w); }
 /* 厂商配色 class 已移除（见 EntityStamp 处说明） */
 .model-chip-more {
@@ -179,7 +179,7 @@
   background: var(--paper);
   color: var(--ink);
   text-decoration: none;
-  box-shadow: 3px 3px 0px 0px rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0px 0px var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 /* 题面单独占一行（换行 + order 保证 CTA 仍在首行右侧） */
@@ -202,7 +202,7 @@
   background: var(--ink);
   vertical-align: 1px;
 }
-.task-line:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px 0px rgba(0, 0, 0, 1); text-decoration: none; color: var(--ink); }
+.task-line:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0px 0px var(--ink); text-decoration: none; color: var(--ink); }
 .task-line-title {
   font-family: var(--font-heading);
   font-weight: 900;

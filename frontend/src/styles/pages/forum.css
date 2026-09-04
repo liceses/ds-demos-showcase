@@ -100,14 +100,14 @@
   padding: 14px 16px;
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .forum-topic-card:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 6px 6px 0 0 var(--ink);
 }
 .forum-topic-title {
   font-size: 16px;
@@ -197,7 +197,7 @@
   padding: 12px 80px 12px 16px;
   border: 3px solid var(--ink);
   background: var(--paper-forum);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 800;
@@ -244,7 +244,7 @@
     bottom: 16px;
     transform: rotate(-3deg);
     padding: 8px 14px;
-    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+    box-shadow: 3px 3px 0 0 var(--ink);
   }
   .forum-peek:hover {
     right: 10px;
@@ -261,14 +261,14 @@
   padding: 12px 14px;
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .forum-demo-card:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 6px 6px 0 0 var(--ink);
 }
 .forum-demo-cover {
   width: 120px;
@@ -316,12 +316,12 @@
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
 .forum-demo-chip:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 .forum-demo-chip-cover {
   width: 34px;

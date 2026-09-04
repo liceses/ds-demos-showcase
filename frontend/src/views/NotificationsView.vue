@@ -45,7 +45,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('notifications.eyebrow', '通知') }}</span>
     <h1 class="huge">{{ t('notifications.title', '通知中心') }}</h1>
   </section>
@@ -82,4 +82,5 @@ onMounted(load)
       </button>
     </div>
   </section>
+  </div>
 </template>

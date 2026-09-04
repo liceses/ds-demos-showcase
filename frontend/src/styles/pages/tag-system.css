@@ -29,7 +29,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   transform: rotate(-2deg);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
 }
 .mode-badge-fixed {
   background: var(--paper);
@@ -64,7 +64,7 @@
   position: relative;
   background: var(--yellow);
   border: 4px solid var(--ink);
-  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 8px 8px 0 0 var(--ink);
     /* R8：面板文字承载静止零倾斜（原 rotate(-1deg) 清零） */
   padding: 22px 18px 4px;
   margin: 6px 6px 14px;
@@ -83,7 +83,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   transform: rotate(-6deg);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
   z-index: 2;
 }
 .tag-panel-head {
@@ -161,7 +161,7 @@
   padding: 8px 12px;
   border: 3px solid var(--ink);
   background: var(--wash-yellow); /* 大面积已选条：墨黑下暗橄榄+暖白（t16 用户反馈） */
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 700;
@@ -173,7 +173,7 @@
 }
 .tag-drawer-bar:hover {
   transform: translate(-1px, -1px); /* R6：hover 抬起不倾斜（原 rotate(-0.5deg) 清零） */
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 6px 6px 0 0 var(--ink);
 }
 .tag-drawer-stamp {
   background: var(--ink);
@@ -241,7 +241,7 @@
   overflow-y: auto;
   background: var(--yellow);
   border: 4px solid var(--ink);
-  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 8px 8px 0 0 var(--ink);
     /* R8：面板静止零倾斜（原 rotate(1deg) 清零） */
   padding: 14px 16px 4px;
   align-self: stretch;
@@ -439,7 +439,7 @@
   overflow-y: auto;
   background: var(--yellow);
   border: 4px solid var(--ink);
-  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 8px 8px 0 0 var(--ink);
   padding: 16px;
 }
 .tag-modal-head {

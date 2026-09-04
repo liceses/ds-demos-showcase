@@ -12,7 +12,7 @@
   padding: 10px 12px;
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
 }
 .fl-avatar {
   width: 40px;

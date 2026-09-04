@@ -28,7 +28,7 @@
   font-size: 12px;
   font-weight: 800;
   transform: rotate(-3deg);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 .home-title-link:hover .home-title-hint {
   display: inline-block;
@@ -85,7 +85,7 @@
   border: 3px solid var(--ink);
   background: var(--paper);
   margin-bottom: 10px;
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
   flex-wrap: wrap;
 }
 .sponsor-row.rank-1 { border-top: 8px solid var(--yellow); }
@@ -185,7 +185,7 @@
   transform: none;
   background: var(--paper);
   border-left: 10px solid var(--teal);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
 }
 .rating-stars {
   display: flex;
@@ -193,7 +193,7 @@
   padding: 4px 8px;
   background: var(--yellow);
   border: 3px solid var(--ink);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
   flex-shrink: 0;
 }
 .rating-card .rating-star {
@@ -203,7 +203,7 @@
 }
 .rating-star:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
 }
 .rating-meta {
   display: flex;
@@ -254,7 +254,7 @@
 .prompt-card {
   background: var(--paper);
   border: 3px solid var(--ink);
-  box-shadow: 5px 5px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 5px 5px 0 0 var(--ink);
   transform: none;
   overflow: hidden;
 }
@@ -265,7 +265,7 @@
   background: var(--yellow);
   border: 3px solid var(--ink);
   border-left: 8px solid var(--teal);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
 }
 .prompt-block.expanded {
   background: var(--mint);
@@ -361,7 +361,7 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   transform: rotate(-3deg);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
   flex-shrink: 0;
 }
 .mode-rail {
@@ -371,7 +371,7 @@
   height: 40px;
   border: 4px solid var(--ink);
   background: var(--paper);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -415,7 +415,7 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   transform: rotate(2deg);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
   flex-shrink: 0;
 }
 
@@ -444,7 +444,7 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   transform: rotate(2deg);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 2px 2px 0 0 var(--ink);
 }
 .live-dot {
   display: inline-block;

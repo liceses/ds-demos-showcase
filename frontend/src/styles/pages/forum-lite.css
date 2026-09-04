@@ -24,7 +24,7 @@
   margin-bottom: 8px;
 }
 .forum-topic-card:hover {
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 4px 4px 0 0 var(--ink);
 }
 .forum-side-card {
   border: 2px solid var(--ink);
@@ -37,7 +37,7 @@
   margin-bottom: 8px;
 }
 .forum-reply:hover {
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 .quick-comment-input {
   border: 2px solid var(--ink);
@@ -86,7 +86,7 @@
   border: 3px solid var(--ink);
   background: var(--paper);
   padding: 14px;
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 .tag-merge-plus,
 .tag-merge-eq {

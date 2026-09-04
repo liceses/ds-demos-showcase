@@ -64,7 +64,7 @@ const chainStat = computed(() => {
 </script>
 
 <template>
-  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('tasks.loading', '加载题目…') }}</section>
+  <div class="route-page">  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('tasks.loading', '加载题目…') }}</section>
 
   <section v-else-if="error" class="empty-box">{{ error }}</section>
 
@@ -199,4 +199,5 @@ const chainStat = computed(() => {
       {{ t('tasks.since', '收录') }} {{ parseDate(task.created_at).toLocaleDateString(currentLocale()) }}
     </p>
   </template>
+  </div>
 </template>

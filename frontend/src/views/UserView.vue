@@ -49,7 +49,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('user.loading', '加载用户…') }}</section>
+  <div class="route-page">  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('user.loading', '加载用户…') }}</section>
   <section v-else-if="error" class="empty-box">{{ error }}</section>
 
   <template v-else-if="user">
@@ -88,4 +88,5 @@ onMounted(async () => {
       </div>
     </section>
   </template>
+  </div>
 </template>

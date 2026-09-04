@@ -117,7 +117,7 @@ watch(
 </script>
 
 <template>
-  <section class="forum-hero">
+  <div class="route-page">  <section class="forum-hero">
     <div class="forum-hero-inner">
       <h1 class="forum-title">{{ t('forum.title', '讨论区') }}</h1>
       <p class="forum-sub">{{ t('forum.sub', '作品、提示词、技术交流——都在这里。') }}</p>
@@ -237,4 +237,5 @@ watch(
       </aside>
     </div>
   </section>
+  </div>
 </template>

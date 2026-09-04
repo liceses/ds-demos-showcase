@@ -56,7 +56,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero">
     <span class="eyebrow">{{ t('models.eyebrow', '模型图鉴') }}</span>
     <h1 class="huge" style="margin-top: 14px">{{ t('models.title', '模型') }}</h1>
     <p class="sub">{{ t('models.sub', '每个模型在这一年里真正做过什么 —— 从作品反推它的行为，不给综合分。') }}</p>
@@ -130,4 +130,5 @@ onMounted(load)
       @change="(p) => { page = p; load() }"
     />
   </section>
+  </div>
 </template>

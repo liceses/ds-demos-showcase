@@ -96,7 +96,7 @@ watch(() => route.params.slug, load, { immediate: true })
 </script>
 
 <template>
-  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('models.loading', '加载模型…') }}</section>
+  <div class="route-page">  <section v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('models.loading', '加载模型…') }}</section>
 
   <!-- 错误态必须给出口：只有一行红字等于把用户困在死路上（截图里就出现过裸 "Not Found"） -->
   <section v-else-if="error" class="empty-box">
@@ -232,4 +232,5 @@ watch(() => route.params.slug, load, { immediate: true })
       {{ t('models.since', '收录') }} {{ parseDate(model.created_at).toLocaleDateString(currentLocale()) }}
     </p>
   </template>
+  </div>
 </template>

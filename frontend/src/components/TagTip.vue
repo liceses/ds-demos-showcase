@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useTagsStore } from '../stores/tags'
 import { t } from '../i18n'
 
@@ -11,6 +11,10 @@ import { t } from '../i18n'
  *   触屏：无 hover 语义，chip 内出现「i」小触点（span[role=button]，click.stop 不干扰父 chip 行为）。
  * - 无介绍时只渲染插槽本体（不加点、不占位）。
  * - 样式组件级（scoped），不动全局 style.css（P1 拆迁前冻结）。
+ * - t13 验收修订：①触点键盘可达（tabindex+Enter/Space/Escape，Escape 同时失焦——
+ *   否则 :focus-within 让卡片关不掉）②aria-expanded 暴露开合态 ③文档级点击外关闭
+ *   ④触点 44px 隐形命中区（视觉 14px 不变）⑤hover/focus 显示规则门控 hover 设备
+ *   （防触屏 sticky-focus 误弹卡，触屏只认显式 i 触点）。
  */
 const props = defineProps<{
   tagKey: string
@@ -21,12 +25,15 @@ const props = defineProps<{
 
 const store = useTagsStore()
 const open = ref(false)
+const rootEl = ref<HTMLElement | null>(null)
 
 // 按需加载：调用方直传 description 时零额外请求（三处消费端均已直传）；
 // 未直传时才借既有 listTagKeys 单例兜底（与 UploadView/TagPicker 共享同一份缓存）
 onMounted(() => {
   if (!props.description) void store.load()
+  document.addEventListener('click', onDocClick)
 })
+onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 const desc = computed(() => {
   if (props.description && props.description.trim()) return props.description.trim()
@@ -41,21 +48,33 @@ const has = computed(() => desc.value.length > 0)
 function toggle() {
   open.value = !open.value
 }
+// 点外即关（i 触点自身 click 已 stop，不会误关）
+function onDocClick(e: MouseEvent) {
+  if (!open.value) return
+  if (rootEl.value && !rootEl.value.contains(e.target as Node)) open.value = false
+}
+// Escape 关闭并失焦：否则焦点仍在触点上，:focus-within 会让卡片「关不掉」
+function closeAndBlur(e: KeyboardEvent) {
+  open.value = false
+  ;(e.currentTarget as HTMLElement | null)?.blur?.()
+}
 </script>
 
 <template>
   <slot v-if="!has" />
-  <span v-else class="tag-tip" :class="{ open }">
+  <span v-else ref="rootEl" class="tag-tip" :class="{ open }">
     <slot />
     <span
       class="tag-tip-dot"
       role="button"
       tabindex="0"
+      :aria-expanded="open"
       :aria-label="t('tagtip.show', '查看标签介绍')"
       @click.stop.prevent="toggle"
       @mousedown.stop
       @keydown.enter.stop.prevent="toggle"
       @keydown.space.stop.prevent="toggle"
+      @keydown.escape.stop.prevent="closeAndBlur"
     >i</span>
     <span class="tag-tip-card" role="tooltip">{{ desc }}</span>
   </span>
@@ -73,6 +92,7 @@ function toggle() {
 }
 @media (hover: none) {
   .tag-tip-dot {
+    position: relative; /* 44px 隐形命中区（t13 触达线）：视觉 14px 不变，命中区外扩至 ≈44px */
     display: inline-grid;
     place-items: center;
     width: 14px;
@@ -85,6 +105,11 @@ function toggle() {
     opacity: 0.72;
     vertical-align: middle;
     flex: none;
+  }
+  .tag-tip-dot::after {
+    content: '';
+    position: absolute;
+    inset: -15px; /* 14px 视觉 + 两侧外扩 15px ≈ 44px 命中区 */
   }
 }
 .tag-tip-card {
@@ -108,8 +133,14 @@ function toggle() {
   white-space: normal;
   display: none;
 }
-.tag-tip:hover .tag-tip-card,
-.tag-tip:focus-within .tag-tip-card,
+/* 悬停/聚焦显示仅限 hover 设备：触屏 sticky-focus 会误弹卡，触屏只认显式 i 触点（.open） */
+@media (hover: hover) {
+  .tag-tip:hover .tag-tip-card,
+  .tag-tip:focus-within .tag-tip-card {
+    display: block;
+    animation: tt-in var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)) both;
+  }
+}
 .tag-tip.open .tag-tip-card {
   display: block;
   animation: tt-in var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)) both;

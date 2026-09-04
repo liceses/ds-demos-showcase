@@ -142,6 +142,19 @@ onBeforeUnmount(() => {
       </div>
       <div v-else class="empty-box">{{ t('about.noThanks', '暂无致谢') }}</div>
 
+      <!-- M0 验收补项：声望怎么算（/about#reputation——榜单声望榜的说明锚点，03 §5.2 透明化口径） -->
+      <div id="reputation" class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.repTitle', '声望怎么算') }}</h2>
+      </div>
+      <div class="card card-default" style="padding: 20px; max-width: 640px">
+        <p style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repAgg', '声望是用户档案的聚合统计：综合你发布的作品、获赞与收到感谢、发起的主题、回复、被关注等社区活动，由后端按 profile 聚合口径计算。') }}</p>
+        <p class="muted" style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repHonest', '我们不展示精确公式与实时分解：权重由后端算法决定，且可能随版本调整——给一个看起来精确的假公式，比诚实解释更误导。') }}</p>
+        <p class="muted" style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repNote', '想涨声望：发布作品、被点赞/感谢、参与讨论、被关注。声望是社区展示与激励，不是权限凭证。') }}</p>
+        <div class="filter-row" style="margin-top: 12px; gap: 8px; flex-wrap: wrap">
+          <RouterLink class="btn btn-sm btn-outline" to="/leaderboard?tab=users">{{ t('about.repBoard', '查看声望榜 →') }}</RouterLink>
+        </div>
+      </div>
+
       <!-- 杂项 -->
       <div class="section-head" style="margin-top: 28px">
         <h2 class="section-title">{{ t('about.about', '关于') }}</h2>

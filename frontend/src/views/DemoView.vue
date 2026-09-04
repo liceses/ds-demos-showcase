@@ -307,6 +307,7 @@ onMounted(load)
             :aria-label="t('demo.playHint', '点击播放预览')"
             @click="armPreview"
             @keydown.enter="armPreview"
+            @keydown.space.prevent="armPreview"
           >
             <img v-if="demo.cover_url" :src="demo.cover_url" :alt="demo.title" loading="lazy" decoding="async" />
             <div v-else class="pv-poster-fallback" aria-hidden="true">{{ demo.title[0] }}</div>
@@ -323,15 +324,15 @@ onMounted(load)
               :title="demo.title"
               @loaded="onPreviewLoaded"
             />
-            <!-- 加载中：march 边框覆盖层（stamp-in 微档出场；@load 或 15s 超时切换） -->
-            <div v-if="previewState === 'loading'" class="pv-overlay pv-loading">
+            <!-- 加载中：march 边框覆盖层（stamp-in 微档出场；@load 或 15s 超时切换）；role=status 静默通报 -->
+            <div v-if="previewState === 'loading'" class="pv-overlay pv-loading" role="status">
               <div class="pv-loading-inner">
                 <span class="pv-march" aria-hidden="true"></span>
                 <p>{{ t('demo.previewLoading', '加载预览…') }}</p>
               </div>
             </div>
-            <!-- 失败兜底：错误文案 + 重试 + 外部打开 -->
-            <div v-else-if="previewState === 'error'" class="pv-overlay pv-fail">
+            <!-- 失败兜底：错误文案 + 重试 + 外部打开；role=alert 即时通报（SR 用户不漏听失败） -->
+            <div v-else-if="previewState === 'error'" class="pv-overlay pv-fail" role="alert">
               <p class="pv-fail-title">{{ t('demo.previewFailed', '预览加载失败') }}</p>
               <p class="pv-fail-hint">{{ t('demo.previewFailHint', '可能原因：预览域被墙 / 大文件超时 / 跨源限制') }}</p>
               <div class="filter-row" style="margin: 0">

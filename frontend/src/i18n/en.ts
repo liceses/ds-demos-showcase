@@ -368,6 +368,7 @@ export const en = {
   search: {
     title: 'Global search',
     placeholder: 'Search works / models / tasks…',
+    placeholderScope: 'Search works / models / tasks…',
     closeTip: 'Close (Esc)',
     searching: 'Searching…',
     allFailed: 'Search request failed — network or service temporarily unavailable',

@@ -7,11 +7,11 @@
 //     Model 别名增/删 ← POST/DELETE /admin/models/{ident}/aliases
 //     Task title/description/category/status ← PUT /admin/tasks/{ident}（update 审计；status 限 candidate/active/merged/hidden）
 //     Tag value 分组 ← PUT /tags/admin/values/{tag_id}/group
+//     Tag description/group ← PATCH /admin/entities/tag/{id}（M3-B1 白名单直改，落 update 审计）
+//     Tag status 跃迁 ← PUT /admin/entities/tag/{id}/status（T3·M5-B2 已落地；candidate/active/deprecated）
 //   ⏳无端点→输入框置灰+「需后端 PATCH 端点」标注（红线：假动作比没动作更坏，不给假保存）：
-//     Tag value description / value 本体改名（=微合并）/ Tag 状态机（现库无状态字段）/ Task canonical prompt / Task 状态理由入参 / Task 状态 deprecated 档
+//     Tag value 本体改名（=微合并）/ Task canonical prompt / Task 状态 deprecated 档
 //   🔗非本面板直改→深链：Model slug（仅合并流程内改=06 A2.2 受限）、合并（向导）、resolution（归属工作台）。
-// 【后端协作清单】①PATCH /admin/entities/{type}/{id} 字段直改（覆盖 Tag value description/改名、Task canonical prompt）
-//                ②Task 状态 pattern 扩 deprecated（06 A3.3 落点）③Tag 状态字段+跃迁端点 ④merge_task 端点（UI 已给禁用态不放假按钮）
 defineOptions({ name: 'AdminEntityDetailSection' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -38,7 +38,7 @@ const loading = ref(false)
 const error = ref('')
 const model = ref<ModelDetail | null>(null)
 const task = ref<AdminTaskDetail | null>(null)
-const tagRow = ref<{ keyLabel: string; value: { id?: number; value: string; description: string; demo_count: number; group?: string | null } } | null>(null)
+const tagRow = ref<{ keyLabel: string; value: { id?: number; value: string; description: string; demo_count: number; group?: string | null; status?: string } } | null>(null)
 const audit = ref<AuditEntry[]>([])
 const works = ref<Array<{ slug: string; title: string; rating_avg?: number | null; status?: string; id?: number }>>([])
 
@@ -75,12 +75,14 @@ const statusZh: Record<string, string> = {
 }
 
 const entityName = computed(() => (props.type === 'model' ? model.value?.name : props.type === 'task' ? task.value?.title : tagRow.value?.value.value) || props.id)
-const entityStatus = computed(() => (props.type === 'model' ? model.value?.status : props.type === 'task' ? task.value?.status : null) || null)
+const entityStatus = computed(() => (props.type === 'model' ? model.value?.status : props.type === 'task' ? task.value?.status : (tagRow.value?.value.status || 'active')) || null)
 const demoTotal = computed(() => (props.type === 'task' ? task.value?.demos.length : props.type === 'model' ? model.value?.demo_count : tagRow.value?.value.demo_count) ?? null)
 /** Task 状态可选档（后端 TaskUpdateIn pattern 现值；deprecated 缺=协作项） */
 const taskStatuses = ['candidate', 'active', 'merged', 'hidden'] as const
 /** Model 状态可选档（ModelStatusIn pattern 全量） */
 const modelStatuses = ['candidate', 'active', 'unverified', 'deprecated'] as const
+/** T3·M5-B2 Tag 状态可选档（TagStatusIn pattern；三态 machine=06 §A3.3 落点） */
+const tagStatuses = ['candidate', 'active', 'deprecated'] as const
 
 function goTab(tab: string) {
   void router.replace({ query: { tab } })
@@ -109,7 +111,9 @@ async function load() {
       audit.value = a.items
       works.value = (task.value.demos || []).map((d) => ({ ...d }))
     } else {
-      const keys = await api.listTagKeys()
+      // T3·M5-B2：管理端全量词表（含 deprecated + status）——公开词表剔 deprecated，
+      // 否则详情页打不开已废弃标签、复活操作断链
+      const keys = await api.adminListTagKeys()
       const k = keys.find((x: TagKeyInfo) => x.key === props.tagKey)
       const v = k?.values.find((x) => String(x.id ?? '') === props.id)
       if (!v) throw new Error(t('admin.kc.tagNotFound', '标签值不存在或已被移除'))
@@ -227,6 +231,9 @@ async function doTransition() {
     } else if (props.type === 'task' && task.value) {
       // M3-B5 解锁：TaskUpdateIn.reason 入参已落地（协作项②闭环）——跃迁理由随 update 审计
       await api.updateTask(task.value.slug, { status: target, reason: transReason.value.trim() || undefined })
+    } else if (props.type === 'tag' && tagRow.value?.value.id) {
+      // T3·M5-B2 解锁：PUT /admin/entities/tag/{id}/status——独立端点+status_set 审计（协作项③闭环）
+      await api.setTagStatus(tagRow.value.value.id, { status: target, reason: transReason.value.trim() || undefined })
     }
     ui.toast(t('admin.kc.transDone', '状态已跃迁并落审计'), 'success')
     transOpen.value = false
@@ -437,7 +444,7 @@ onMounted(load)
               </div>
               <div class="kc-field">
                 <span class="kc-k">{{ t('admin.kc.fStatus', '状态') }}</span>
-                <span v-if="entityStatus" class="cluster-badge cb-exact">{{ statusZh[entityStatus] || entityStatus }}</span>
+                <span v-if="entityStatus" class="cluster-badge" :class="entityStatus === 'active' ? 'cb-exact' : 'cb-fuzzy'">{{ statusZh[entityStatus] || entityStatus }}</span>
                 <span v-else class="kc-pending" :title="t('admin.kc.noStatusTip', 'Tag 现库无状态字段——需后端加字段+端点（协作清单#3）')">{{ t('admin.kc.noStatus', '无状态字段（待后端）') }}</span>
               </div>
               <template v-if="props.type === 'model'">
@@ -596,7 +603,36 @@ onMounted(load)
           </div>
         </template>
         <template v-else>
-          <span class="kc-pending">{{ t('admin.kc.tagNoLifecycle', 'Tag 现库无状态字段/跃迁端点——状态机待后端（协作清单#3），不提供假跃迁。') }}</span>
+          <!-- T3·M5-B2：Tag 状态机条解锁（置灰解除——协作项③闭环：列+独立端点+读口过滤齐备） -->
+          <div class="kc-states">
+            <template v-for="(s, i) in tagStatuses" :key="s">
+              <span class="kc-state" :class="{ on: entityStatus === s }">{{ statusZh[s] }}</span>
+              <span v-if="i < tagStatuses.length - 1" class="kc-state-line" aria-hidden="true">—</span>
+            </template>
+          </div>
+          <div v-if="!transOpen" class="kc-rel-row">
+            <button type="button" class="btn btn-sm btn-primary" @click="openTransition">{{ t('admin.kc.transition', '状态跃迁…') }}</button>
+            <span class="hint">{{ t('admin.kc.transTagNote', '可选档=candidate/active/deprecated（独立端点 PUT /admin/entities/tag/{id}/status）；理由必填，落 status_set 审计。') }}</span>
+          </div>
+          <div v-else class="kc-trans">
+            <label class="kc-field"><span class="kc-k">{{ t('admin.kc.transTo', '跃迁到') }}</span>
+              <select v-model="transStatus" class="input" style="max-width: 180px">
+                <option v-for="s in tagStatuses" :key="s" :value="s" :disabled="s === entityStatus">{{ statusZh[s] }}{{ s === entityStatus ? '（当前）' : '' }}</option>
+              </select>
+            </label>
+            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（必填）') }}</span><textarea
+              v-model="transReason"
+              class="input"
+              rows="2"
+              style="max-width: 420px"
+              :placeholder="t('admin.kc.transReasonPh', '跃迁理由——写入审计时间线')"
+            ></textarea></label>
+            <div class="kc-field kc-wide">
+              <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
+              <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="transOpen = false">{{ t('common.cancel', '取消') }}</button>
+              <span class="hint">{{ t('admin.kc.transTagImpact', '影响面：该标签关联作品 {n} 件；废弃后公开词表/详情/作品卡同步隐去（可复活）。', { n: demoTotal ?? 0 }) }}</span>
+            </div>
+          </div>
         </template>
       </section>
 

@@ -879,6 +879,12 @@ export const mockApi = {
     for (const k of out) for (const v of k.values) if (v.id == null) v.id = n++
     return out
   },
+  // T3·M5-B2：管理端词表全量（mock 与公开词表同数据，逐值补 status 默认 active）
+  async adminListTagKeys(): Promise<TagKeyInfo[]> {
+    const out = await this.listTagKeys()
+    for (const k of out) for (const v of k.values) if (!v.status) v.status = 'active'
+    return out
+  },
   async createTagKey(payload: { key: string; mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
     await delay(200)
     if (tagKeys.some((k) => k.key === payload.key)) throw new Error('标签键已存在')
@@ -1576,6 +1582,18 @@ export const mockApi = {
     if (payload.category !== undefined) k.category = payload.category
     if (payload.status) k.status = payload.status
     return { id: k.id, slug: k.slug, title: k.title, status: k.status }
+  },
+  // T3·M5-B2 Tag 状态跃迁（mock 内存态：按 value.id 定位并写回词表 status）
+  async setTagStatus(tagId: number, payload: { status: string; reason?: string }): Promise<{ id: number; key: string; value: string; status: string }> {
+    await delay(200)
+    for (const k of tagKeys) for (const v of k.values) {
+      if (v.id === tagId) {
+        if (v.status === payload.status) throw new Error('该标签已是 ' + payload.status + ' 状态')
+        v.status = payload.status
+        return { id: tagId, key: k.key, value: v.value, status: v.status }
+      }
+    }
+    throw new Error('标签值不存在')
   },
   // M3-B3 直改权/挂摘/批量（与真实端点同形状；mock 内存态）
   async getAdminTaskDetail(ident: string): Promise<{ id: number; slug: string; title: string; description: string; category: string | null; status: string; merged_into_id: number | null; created_at: string; demos: { id: number; slug: string; title: string; status: string }[] }> {

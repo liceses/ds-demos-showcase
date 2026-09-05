@@ -35,6 +35,8 @@ export interface TagKeyValue {
   description: string
   demo_count: number
   group?: string | null
+  /** T3·M5-B2：Tag 状态机字段 candidate|active|deprecated（词表/徽章读同字段） */
+  status?: string
 }
 
 export interface TagKeyInfo {

@@ -152,7 +152,7 @@ const rows = computed<Row[]>(() => {
       key: r.key,
       name: r.value.value,
       sub: r.keyLabel,
-      status: null, // Tag 无状态字段（06 A3.3 现库实况）——待后端协作项
+      status: r.value.status || 'active', // T3·M5-B2：状态机字段已落地（徽章展示）
       demoCount: r.value.demo_count,
       updatedAt: null,
     }))
@@ -171,7 +171,9 @@ async function load() {
       tasks.value = res.items
       statusCounts.value = res.status_counts || {}
     } else {
-      const keys = await api.listTagKeys()
+      // T3·M5-B2：Tag 词表读口拆分——管理端用全量词表（含 deprecated + status），
+      // 否则置废弃后从总表消失、复活入口断链；公开词表(listTagKeys)仍剔 deprecated
+      const keys = await api.adminListTagKeys()
       tagRows.value = keys.flatMap((k: TagKeyInfo) => k.values.map((v) => ({ key: k.key, keyLabel: k.label || k.key, value: v })))
       statusCounts.value = {}
     }

@@ -160,6 +160,11 @@ const realApi = {
     const { data } = await http.get('/tags/tag-keys')
     return data
   },
+  /** T3·M5-B2：管理端词表全量（含 deprecated + status 徽章）——知识中心总表/详情导航数据源 */
+  async adminListTagKeys(): Promise<TagKeyInfo[]> {
+    const { data } = await http.get('/tags/admin/tag-keys')
+    return data
+  },
   async createTagKey(payload: { key: string; mode: 'fixed' | 'open' | 'int'; label: string; description?: string; sort?: number }): Promise<TagKeyInfo> {
     const { data } = await http.post('/tags/admin/tag-keys', payload)
     return data
@@ -643,6 +648,11 @@ const realApi = {
   /** M3-3 直改权：Model 状态跃迁（candidate/active/unverified/deprecated，理由必填走审计）——既有端点 PUT /admin/models/{ident}/status */
   async setModelStatus(ident: string | number, payload: { status: string; reason?: string }): Promise<{ id: number; slug: string; status: string }> {
     const { data } = await http.put(`/admin/models/${encodeURIComponent(String(ident))}/status`, payload)
+    return data
+  },
+  /** T3·M5-B2 直改权：Tag 状态跃迁（candidate/active/deprecated，理由必填走审计）——独立端点 PUT /admin/entities/tag/{id}/status（不并入 PATCH） */
+  async setTagStatus(tagId: number, payload: { status: string; reason?: string }): Promise<{ id: number; key: string; value: string; status: string }> {
+    const { data } = await http.put(`/admin/entities/tag/${tagId}/status`, payload)
     return data
   },
   /** M3-3 直改权：Task 题面字段直改（title/description/category/status）——既有端点 PUT /admin/tasks/{ident}（服务端落 update 审计） */

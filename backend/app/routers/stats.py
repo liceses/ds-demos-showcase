@@ -15,9 +15,10 @@ from ..services import visits
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
-# 页面打点限流：每 IP 每分钟最多 30 次（防 bot 刷 PV）
+# 页面打点限流：每 IP 每分钟最多 120 次（T3·M5-B3，07 §3.3-4 用户裁决 30→120——
+# 快速浏览 30+ 页/分会被 429 静默吞 PV；120=「限流不该成为常态」档）
 _visit_hits: dict[str, list[float]] = defaultdict(list)
-_VISIT_RATE = 30  # 次/分钟/IP
+_VISIT_RATE = 120  # 次/分钟/IP
 
 
 def _visit_rate_limit(request: Request) -> None:

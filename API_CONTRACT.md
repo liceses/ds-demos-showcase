@@ -1395,3 +1395,36 @@ Esc 关闭 ✓   遮罩关闭 ✓   ◱ 打开预览 ✓   「在本页打开」
 `按模型对比` 每行的"最好作品"实测都指向同一件 5 模型联合作品 —— 逻辑没错（它是含该模型的最高分），
 但"最好作品"会被读成"这个模型自己最好的答案"。改为 **「含此模型的最高分：」**。
 
+## 31. M3 实体管理端点全集（知识中心 P4 后端，t11，2026-09-05）
+
+> 全部 `require_admin`。写操作全走 service 层 + audit_log（v2 制度）；契约只增不改——本节全部为**新增**端点/字段，既有端点零变更。
+
+### 31.1 实体字段直改（M3-B1）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| PATCH | `/admin/entities/{type}/{id}` | 统一字段直改。**白名单逐实体**：`model={name, vendor, description}`（方案文档所写 display_name/group 在库中实为 name/vendor）、`task={title, description, category, status, reason}`、`tag={description, group}`（tag 的 `{id}` 为数值 id）。请求体=**扁平 JSON**：键=白名单字段，`"reason"` 键为审计元数据（落 audit 的 reason）。拒绝语义：白名单外字段 → **422**（诚实拒绝，不静默忽略）；非字符串值 → 422；空/null 补丁 → 422（无字段变化不产生假审计行）。Model 改名沿用 PUT 语义：**旧名自动转别名**。响应 `{type, id, slug, updated:[字段]}`（tag 另回 `key/value`） |
+
+> 配套：`GET /admin/audit` 的 `entity_type` 过滤白名单扩为 `model|task|tag|suggestion`（+tag——Tag PATCH 起落 update 审计，此前 tag 变更不落审计），响应 `entity_types` 同步 +tag（前端审计下拉数据源）。
+
+### 31.2 Task↔Demo 归属管理（M3-B2）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/admin/tasks` | 直建题（管理员=治理边界直建合法，不经候选队列，create+attach 双审计）。`{title, description?, category?, status?, demo_ids?, demo_slugs?}`——**slug 先解析后建题（fail-fast）**：未知 slug 整批 404，不留已建好的空题。响应 `{id, slug, title, status, attached}` |
+| GET | `/admin/tasks/{id 或 slug}` | **新增**：管理端题目详情，**任何状态**（含 merged/hidden）+ 归属作品全量列表 `demos:[{id, slug, title, status}]`（含 pending/rejected——公开 `GET /tasks/{slug}` 只出 approved 且 merged/hidden 直接 404；管理员管理归属必须看全量）。挂载摘除 UI 的数据源 |
+| POST | `/admin/tasks/{id}/demos` | 挂题（attach 审计）。请求体 `{demo_ids?, demo_slugs?}` **至少给一种**（都空 → 422）；demo_slugs 未知 slug → 整批 404（不静默半挂）。响应 `{task_id, attached}` |
+| DELETE | `/admin/tasks/{id}/demos/slug/{demo_slug}` | **新增**：按 slug 摘题（detach 审计）。slug 不存在 → 404；不在该题下 → 404（幂等语义） |
+
+### 31.3 合并与批量审核（M3-B3）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/admin/tasks/{id}/merge` | **既有端点，契约不变，本节补文档**：`{target_id, dry_run, reason?}`。`dry_run=true` 只返回影响面预览 `{source, target, affected_demos, dry_run}` 不写库；执行=demo 的 task 关系批量改指+源标 `merged`（单事务+审计）。**注意 `dry_run` 缺省 false（既有已发布契约，按「契约只增不改」不改动）**——前端必须两步走：先 dry_run 预览影响面 → 确认后显式 `dry_run:false` 执行（t12 合并 UI 照此接线） |
+| POST | `/admin/suggestions/batch-review` | **新增**：收件箱批量审核 `{action: approve\|reject, ids:[...]}`（1~500 条）。事务内逐条独立走 `suggestion_service.review`（每条独立提交+独立审计）——单条 404/409 **不拖垮整批**，逐条回执 `results:[{id, ok, error?}]` + 汇总 `{action, ok, failed}`（t4 前端限速循环的直接升级，失败列表可直接重试） |
+
+### 31.4 Tag 状态字段（M3-B4）——只出方案，未实施
+
+Tag 表无 status 列。迁移方案（增量列 + 跃迁端点草案）已随 t11 output 提交，**实施需用户确认迁移风险**后再动（SQLite 单文件，先备份再改；不给假跃迁按钮）。
+
+### 31.5 实测记录（2026-09-05，uvicorn 冒烟 + curl 逐端点）
+
+PATCH model by slug/by id → 200（`updated` 回执）· 白名单外字段/空补丁 → 422 · PATCH tag → 200 + 审计落账（before/after 快照齐全）· 直建题带 demo_slugs → 201 `attached:1` · 挂题 → 200 · 管理端详情 → 200（merged 态可见 + demos 全量）· 摘题 → 204 / 重复摘 → 404 · merge dry_run → 200 预览不写库、执行 → 200 `merged:true` · batch-review → `{ok:2, failed:1}` 逐条回执。后端 pytest 全量 **127 绿**（含 test_entity_admin_v1 七测试）。
+

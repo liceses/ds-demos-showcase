@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run clean && vue-tsc -b && vite build",
+    "build": "npm run clean && vue-tsc -b && vite build",
+    "lint:css": "stylelint \"src/styles/**/*.css\"",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "clean": "node -e \"const fs=require('fs'),p='dist';const w=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=d+'/'+e.name;e.isDirectory()&&!e.isSymbolicLink()?w(f):fs.unlinkSync(f)}fs.rmdirSync(d)};fs.existsSync(p)&&w(p);console.log('dist cleaned')\""
@@ -25,6 +27,7 @@
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
+    "stylelint": "17.15.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vue-tsc": "^3.3.8"

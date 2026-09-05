@@ -222,7 +222,7 @@
 .uw-count.good { background: var(--mint); }
 .uw-count.bad { background: var(--red); color: var(--on-accent, #000); }
 .uw-label-row { display: flex; align-items: center; gap: 8px; }
-.uw-field-bad { border-color: var(--red) !important; box-shadow: inset 0 0 0 1px var(--red); }
+.uw-field-bad { border-color: var(--red) !important; outline: 1px solid var(--red); outline-offset: -1px; }
 .uw-edit {
   font: inherit;
   font-size: 11px;

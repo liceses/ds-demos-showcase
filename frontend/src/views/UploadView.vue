@@ -13,6 +13,7 @@ import { tagLabel } from '../utils/funMode'
 import { useUploadDraft } from '../composables/useUploadDraft'
 import { useTaskMount } from '../composables/useTaskMount'
 import { useTagSuggest } from '../composables/useTagSuggest'
+import { useUploadPlayable } from '../composables/useUploadPlayable'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -77,13 +78,9 @@ const selectedList = computed(() =>
   ),
 )
 
-// ---------- §4.2 标签建议包（T15 拆分件 useTagSuggest；逐字迁出行为不变） ----------
-const {
-  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack,
-} = useTagSuggest({ editSlug, title, description, prompt, selected, stamp, aside })
-
 // ================= 向导状态机（设计依据见 docs/deepdemosv2/上传页重设计.md） =================
 // 一步只解决一个子问题：① 作品是什么 ② 哪个模型做的 ③ 说清楚 —— 步内不留必填盲区。
+// （标签建议包/可玩性层已拆 composables，调用见下方 computeds 之后——deps 顺序：本段产出 checklist 等入参）
 const step = ref(1)
 const showAdvanced = ref(false)
 const TOTAL_STEPS = 3
@@ -187,6 +184,17 @@ const allDone = computed(() => checklist.value.filter((c) => c.done).length)
 const readyToSubmit = computed(() => mustDone.value === mustTotal.value && !!tagsOk.value)
 /** 标签至少 1 个：与后端 `_require_model_tag`/tags≥1 同规则（模型已含在 tags 内时自然满足） */
 const tagsOk = computed(() => selectedCount.value >= 1)
+
+// ---------- 可玩性（T15 拆分件 useUploadPlayable；逐字迁出行为不变） ----------
+// 旁白 aside / 盖章 stamp 由本件产出，供 tagSuggest/taskMount/draft 与 pickModel/resetAll 等消费（调用序：本件最先）
+const {
+  asideOn, lastAside, toggleAside, stamped, rank, expNo, modelStats, statsLoading, drawnTask, drawing, drawTask, aside, stamp,
+} = useUploadPlayable({ checklist, allDone, mustDone, chosenModelNames, modelUncertain, hasModel, prompt, idempotencyKey })
+
+// ---------- §4.2 标签建议包（T15 拆分件 useTagSuggest；逐字迁出行为不变） ----------
+const {
+  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack,
+} = useTagSuggest({ editSlug, title, description, prompt, selected, stamp, aside })
 
 // 门禁错误与服务器错误分开：前者随用户补全自动消失，后者必须保留到下一次提交
 const stepError = ref('')
@@ -317,117 +325,12 @@ const {
   pickedTask, taskQuery, taskHits, taskSearching, taskPickerOpen, runTaskSearch, scheduleTaskSearch, pickTask, clearTask, openTaskPicker, simPct,
 } = useTaskMount({ title, description, prompt, aside })
 
-// ---------- 可玩性：旁白 + 盖章 + 称号（都可一键关，不尊重注意力就不算设计） ----------
-const asideOn = ref(localStorage.getItem('upload.aside') !== '0')
-const lastAside = ref('')
-const asideKey = ref('')
-let asideTimer: ReturnType<typeof setTimeout> | null = null
-/** 旁白：`key` 用于同一事件不重复叨叨（连点同一 chip 不该被念两遍） */
-function aside(key: string, text: string) {
-  if (!asideOn.value || asideKey.value === key) return
-  asideKey.value = key
-  lastAside.value = text
-  if (asideTimer) clearTimeout(asideTimer)
-  asideTimer = setTimeout(() => {
-    lastAside.value = ''
-    asideKey.value = ''
-  }, 4200)
-}
-function toggleAside() {
-  asideOn.value = !asideOn.value
-  localStorage.setItem('upload.aside', asideOn.value ? '1' : '0')
-  if (!asideOn.value) {
-    lastAside.value = ''
-    asideKey.value = ''
-  }
-}
-
-const stamped = ref<Record<string, boolean>>({})
-let stampTimer: ReturnType<typeof setTimeout> | null = null
-function stamp(kind: string) {
-  stamped.value[kind] = true
-  if (stampTimer) clearTimeout(stampTimer)
-  stampTimer = setTimeout(() => (stamped.value = {}), 1100)
-}
-
-/** 称号：把"完成度"翻译成人话（数据真实，只是换个说法） */
-const rank = computed(() => {
-  const total = checklist.value.length || 1
-  const p = allDone.value / total
-  if (!mustDone.value) return { label: t('upload.rank0', '草稿'), hint: t('upload.rank0Hint', '还差必答项') }
-  if (p < 0.5) return { label: t('upload.rank1', '半成品'), hint: t('upload.rank1Hint', '能提交，但别人看不懂') }
-  if (p < 0.8) return { label: t('upload.rank2', '说得清'), hint: t('upload.rank2Hint', '再补两项就更像一次实验') }
-  if (p < 1) return { label: t('upload.rank3', '认真的人'), hint: t('upload.rank3Hint', '离满格差一点点') }
-  return { label: t('upload.rank4', '民间科研杰作'), hint: t('upload.rank4Hint', '全部填完，可以签发了') }
-})
-
-// 实验编号：幂等键本来就有，给它一个"实验记录"的读法（不改后端语义）
-const expNo = computed(() => (idempotencyKey.value || '').replace(/-/g, '').slice(-6).toUpperCase())
-
-/** 选中模型后的站内战绩：有趣且真的有用（别在自己没胜算的题上硬拼） */
-const modelStats = ref<{ name: string; demo_count: number; rating_avg: number | null } | null>(null)
-const statsLoading = ref(false)
-let statsTimer: ReturnType<typeof setTimeout> | null = null
-async function loadStats() {
-  const first = chosenModelNames.value[0]
-  if (!first) {
-    modelStats.value = null
-    return
-  }
-  statsLoading.value = true
-  try {
-    const d = await api.getModel(first)
-    modelStats.value = { name: d.name, demo_count: d.demo_count, rating_avg: d.rating_avg ?? null }
-  } catch {
-    modelStats.value = null // 拉不到就不演，安静退场
-  } finally {
-    statsLoading.value = false
-  }
-}
-watch(chosenModelNames, (v) => {
-  if (v.length) {
-    if (statsTimer) clearTimeout(statsTimer)
-    statsTimer = setTimeout(loadStats, 260)
-  } else {
-    modelStats.value = null
-  }
-})
-
-/** 没灵感就抽一题：把"挑战"这条闭环真正接上（只跳题目页，不自动挂题） */
-const drawnTask = ref<{ slug: string; title: string } | null>(null)
-const drawing = ref(false)
-async function drawTask() {
-  drawing.value = true
-  try {
-    const r = await api.listTasks({ sort: 'demos', page_size: 30 })
-    const pool = r.items.filter((t2) => t2.demo_count > 0)
-    const pick = (pool.length ? pool : r.items)[Math.floor(Math.random() * (pool.length || r.items.length || 1))]
-    drawnTask.value = pick ? { slug: pick.slug, title: pick.title } : null
-    if (drawnTask.value) aside('draw', t('upload.asDraw', '抽到一题：{t}', { t: drawnTask.value.title }))
-  } catch {
-    drawnTask.value = null
-  } finally {
-    drawing.value = false
-  }
-}
-
-// 旁白：真实事件驱动，不搞随机鸡汤
-watch(modelUncertain, (on) => {
-  if (on && hasModel.value) aside('unc', t('upload.asUncertain', '诚实比准确稀有 —— 站方日后会来找你确认。'))
-})
-
 // ---------- 草稿持久化（T15 拆分件 useUploadDraft；逐字迁出行为不变） ----------
 // 边界（必须如实告知）：File 对象存不进 localStorage，所以文件与封面不恢复，需重选。
 const {
   draftFound, resumeDraft, discardDraft, clearDraft, loadDraftRaw, hasDraftContent,
 } = useUploadDraft({
   editSlug, title, description, prompt, videoUrl, externalUrl, demoType, modelHint, selected, step, idempotencyKey, aside,
-})
-watch(prompt, (v) => {
-  if (v.trim().length > 24) aside('prompt', t('upload.asPrompt', '这条提示词会让别人能复刻你的实验。'))
-})
-watch(hasModel, (on) => {
-  if (on && !modelUncertain.value) aside('model', t('upload.asModel', '署名完成。它会出现在模型页和同题对比里。'))
 })
 
 // 宽屏（≥1281px）两栏布局：标签面板常驻右侧；窄屏默认收起、点横条展开

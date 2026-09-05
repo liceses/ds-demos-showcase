@@ -298,6 +298,12 @@ onMounted(() => {
   background: var(--wash-yellow, #ffe66d);
   box-shadow: var(--shadow-lg, 6px 6px 0 0 #000);
 }
+/* T16（M4-2c）右簇盒高残差归一：t9 实测墨 39/EN 38/CTA 39——同 padding/边框/字号下
+   line-height:normal 随 CJK/拉丁字体度量浮动 1px。min-height 归一到 39px 主档，
+   内容 flex 居中，字形渲染差异不再进盒高。 */
+.topbar .topnav-tools .btn {
+  min-height: 39px;
+}
 @media (hover: hover) {
   .topbar .notif-bell:hover {
     transform: translate(-2px, -2px);

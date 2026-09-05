@@ -290,11 +290,19 @@ def _ensure_demo_columns() -> None:
         ("gen_minutes", "INTEGER"),
         ("gen_platform", "VARCHAR(32)"),
         ("model_hint", "TEXT NOT NULL DEFAULT ''"),
+        # 计数列兜底：create_all 新库自带，但若生产库是远古备份/手工建表缺这两列，
+        # 列表 ORDER BY view_count 会直接 500 —— 与其余列同一套自愈机制。
+        ("view_count", "INTEGER NOT NULL DEFAULT 0"),
+        ("download_count", "INTEGER NOT NULL DEFAULT 0"),
     ]
     with engine.begin() as conn:
         for name, ddl in additions:
             if name not in cols:
                 conn.exec_driver_sql(f"ALTER TABLE demos ADD COLUMN {name} {ddl}")
+        # 计数列 NULL 回填（幂等，无 NULL 时零行受影响）：NULL+1=NULL 会让
+        # counters.py 的原子自增 UPDATE 永远停在 NULL（2026-09-04 计数事故排查假设 A）。
+        conn.exec_driver_sql("UPDATE demos SET view_count = 0 WHERE view_count IS NULL")
+        conn.exec_driver_sql("UPDATE demos SET download_count = 0 WHERE download_count IS NULL")
         # 幂等键唯一索引（SQLite 中 NULL 可重复，不影响无 key 的历史行）
         conn.exec_driver_sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_demos_idempotency_key ON demos (idempotency_key)")
         # 内容哈希普通索引（按作者去重查询）

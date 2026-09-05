@@ -208,13 +208,51 @@ def admin_list_tasks(
     }
 
 
+@router.get("/tasks/{ident}")
+def admin_task_detail(
+    ident: str,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    """M3-B2 管理端题目详情（任何状态含 merged/hidden）+ 归属作品全量列表（含 pending/rejected）。
+
+    挂载摘除 UI 的数据源：公开 GET /tasks/{slug} 只出 approved 且 merged/hidden 直接 404，
+    管理员看不到待挂/已下架作品就没法管理归属（用户点名痛点「题目没法管理归属它的 demo」）。
+    """
+    task = task_service.get_task_or_404(db, ident)
+    rows = (
+        db.query(Demo.id, Demo.slug, Demo.title, Demo.status)
+        .join(DemoTask, DemoTask.demo_id == Demo.id)
+        .filter(DemoTask.task_id == task.id)
+        .order_by(Demo.id.desc())
+        .all()
+    )
+    return {
+        "id": task.id,
+        "slug": task.slug,
+        "title": task.title,
+        "description": task.description,
+        "category": task.category,
+        "status": task.status,
+        "merged_into_id": task.merged_into_id,
+        "created_at": task.created_at,
+        "demos": [{"id": r[0], "slug": r[1], "title": r[2], "status": r[3]} for r in rows],
+    }
+
+
 @router.post("/tasks", status_code=201)
 def admin_create_task(
     body: TaskCreateIn,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """建题；带 demo_ids 时一并挂题（prompt 簇「成题」走这一条路径）。"""
+    """管理员直接建题（治理边界内合法，不经候选队列，落审计）；带 demo_ids/demo_slugs 时一并挂题。
+
+    M3-B2：slug 先解析后建题（fail-fast）——未知 slug 整批 404，不留下已建好的空题。
+    """
+    ids = list(body.demo_ids or [])
+    if body.demo_slugs:
+        ids += entity_admin_service.resolve_demo_slugs(db, body.demo_slugs)
     task = task_service.create_task(
         db,
         title=body.title,
@@ -224,8 +262,8 @@ def admin_create_task(
         created_by=admin.id,
     )
     attached = 0
-    if body.demo_ids:
-        attached = task_service.attach_demos(db, task, body.demo_ids, actor_id=admin.id)
+    if ids:
+        attached = task_service.attach_demos(db, task, ids, actor_id=admin.id)
     return {"id": task.id, "slug": task.slug, "title": task.title, "status": task.status, "attached": attached}
 
 

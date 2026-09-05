@@ -841,6 +841,8 @@ class TaskCreateIn(BaseModel):
     status: str = Field(default="active", pattern="^(candidate|active|merged|hidden)$")
     # 建题即挂题（prompt 簇「成题」一次点击完成：新建 + 批量挂载）
     demo_ids: list[int] = Field(default_factory=list, max_length=500)
+    # M3-B2：按 slug 初始挂载（实体详情/知识中心直建题用；与 demo_ids 可混用）
+    demo_slugs: list[str] = Field(default_factory=list, max_length=500)
 
 
 class TaskUpdateIn(BaseModel):

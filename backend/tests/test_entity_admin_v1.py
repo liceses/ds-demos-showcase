@@ -171,6 +171,53 @@ def test_task_attach_detach_by_slug_writes_audit(client: TestClient, admin_heade
     assert r.status_code == 404, r.text
 
 
+def test_admin_task_detail_and_create_with_slugs(client: TestClient, admin_headers):
+    """M3-B2：直建题带 demo_slugs 初始挂载 + 管理端详情（任何状态+归属全量含 pending）。"""
+    from app.models import Demo
+
+    approved_slug = f"m3b2-ok-{os.urandom(3).hex()}"
+    pending_slug = f"m3b2-pending-{os.urandom(3).hex()}"
+    db = _db()
+    db.add(Demo(slug=approved_slug, title="已上架件", status="approved", prompt="p"))
+    db.add(Demo(slug=pending_slug, title="待审件", status="pending", prompt="p"))
+    db.commit()
+    db.close()
+
+    # 直建题初始挂载（slug 通道，响应带 attached）
+    r = client.post(
+        "/api/v1/admin/tasks",
+        json={"title": "直建挂载题", "demo_slugs": [approved_slug]},
+        headers=admin_headers,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["attached"] == 1
+    created = r.json()
+
+    # 把待审件也挂上，管理端详情必须看得见 pending（公开端点只出 approved）
+    r = client.post(
+        f"/api/v1/admin/tasks/{created['slug']}/demos",
+        json={"demo_slugs": [pending_slug]},
+        headers=admin_headers,
+    )
+    assert r.status_code == 200, r.text
+
+    r = client.get(f"/api/v1/admin/tasks/{created['slug']}", headers=admin_headers)
+    assert r.status_code == 200, r.text
+    slugs = {d["slug"]: d["status"] for d in r.json()["demos"]}
+    assert slugs.get(approved_slug) == "approved"
+    assert slugs.get(pending_slug) == "pending"
+
+    # fail-fast：未知 slug 建题 → 404 且不留已建好的空题
+    r = client.post(
+        "/api/v1/admin/tasks",
+        json={"title": "不该存在的题", "demo_slugs": ["no-such-demo"]},
+        headers=admin_headers,
+    )
+    assert r.status_code == 404, r.text
+    r = client.get("/api/v1/admin/tasks", params={"q": "不该存在的题"}, headers=admin_headers)
+    assert r.json()["total"] == 0
+
+
 def test_task_update_reason_lands_audit(client: TestClient, admin_headers):
     r = client.post("/api/v1/admin/tasks", json={"title": "理由审计测试题"}, headers=admin_headers)
     task = r.json()

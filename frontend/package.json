@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run clean && vue-tsc -b && vite build",
-    "build": "npm run clean && vue-tsc -b && vite build",
     "lint:css": "stylelint \"src/styles/**/*.css\"",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
@@ -30,6 +29,7 @@
     "stylelint": "17.15.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
+    "vitest": "5.0.0",
     "vue-tsc": "^3.3.8"
   }
 }

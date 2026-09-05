@@ -15,6 +15,7 @@ import { useTaskMount } from '../composables/useTaskMount'
 import { useTagSuggest } from '../composables/useTagSuggest'
 import { useUploadPlayable } from '../composables/useUploadPlayable'
 import { useUploadWizard } from '../composables/useUploadWizard'
+import CompletenessDash from '../components/upload/CompletenessDash.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -491,30 +492,19 @@ async function submit() {
           </li>
         </ol>
 
-        <!-- 完成度仪表盘：goal-gradient —— 让人一直看得见"还剩几步"，点击直达 -->
-        <div class="uw-dash">
-          <span class="uw-rank" :class="{ full: rank.label && allDone === checklist.length }">
-            <b>{{ rank.label }}</b><span class="uw-rank-hint">{{ rank.hint }}</span>
-          </span>
-          <span class="uw-dash-lead">
-            <b>{{ mustDone }}</b>/{{ mustTotal }} {{ t('upload.dashMust', '必答已就绪') }} · {{ allDone }}/{{ checklist.length }} {{ t('upload.dashAll', '项已填') }}
-          </span>
-          <span class="uw-dash-bar" role="progressbar" :aria-valuenow="barPct" aria-valuemin="0" aria-valuemax="100" :aria-label="t('upload.dashAll', '完成度')"><i :style="{ width: barPct + '%' }"></i></span>
-          <button
-            v-for="c in checklist"
-            :key="c.label"
-            type="button"
-            class="uw-item"
-            :class="{ done: c.done, pending: c.must && !c.done && c.step === step }"
-            :title="c.must ? t('upload.dashRequired', '必填') : t('upload.dashBetter', '建议补上')"
-            @click="goStep(c.step)"
-          >
-            <span class="uw-dot">{{ c.done ? '✓' : '·' }}</span>{{ c.label }}
-          </button>
-          <button class="uw-aside-toggle" type="button" :aria-pressed="asideOn" :title="t('upload.asideTip', '要不要旁白解说')" @click="toggleAside">
-            {{ asideOn ? '💬' : '💬̸' }} {{ t('upload.asideLabel', '旁白') }}
-          </button>
-        </div>
+        <!-- 完成度仪表盘（T15 拆分件 CompletenessDash）：goal-gradient —— 让人一直看得见"还剩几步"，点击直达 -->
+        <CompletenessDash
+          :rank="rank"
+          :all-done="allDone"
+          :checklist="checklist"
+          :must-done="mustDone"
+          :must-total="mustTotal"
+          :bar-pct="barPct"
+          :step="step"
+          :aside-on="asideOn"
+          @go="goStep"
+          @toggle-aside="toggleAside"
+        />
         <p v-if="lastAside" class="uw-aside" aria-live="polite">{{ lastAside }}</p>
 
         <form class="form-stack" @submit.prevent="submit">

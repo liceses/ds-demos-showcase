@@ -55,6 +55,9 @@ class Tag(Base):
     # 固定值分组/厂商（如 model 的 "DeepSeek"、"OpenAI"），用于前端分组展示
     group: Mapped[str | None] = mapped_column(String(64), nullable=True)
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("tags.id"), nullable=True, index=True)
+    # T3·M5-B2 Tag 状态机（06 附录 B 实施，用户裁决三态）：candidate | active | deprecated
+    # 存量迁移见 main._ensure_tag_columns —— 全量视作 active，零行为变化；hidden 未引入
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False, index=True)
 
     parent: Mapped["Tag | None"] = relationship(remote_side=[id], back_populates="children")
     children: Mapped[list["Tag"]] = relationship(back_populates="parent", cascade="all, delete-orphan")

@@ -353,17 +353,28 @@ def _ensure_tag_key_columns() -> None:
 
 
 def _ensure_tag_columns() -> None:
-    """SQLite 增量迁移：给已存在的 tags 表补充 group 列（固定值分组/厂商）。"""
+    """SQLite 增量迁移：给已存在的 tags 表补充 group 列（固定值分组/厂商）与 status 列。
+
+    T3·M5-B2：status 列（Tag 状态机三态 candidate|active|deprecated，06 附录 B 实施）。
+    存量全量视为 active（NOT NULL DEFAULT 'active' = 零行为变化，无需逐行回填；NULL
+    行防御性归位）。部署前需对 data/*.db 手工备份（任务书前置动作；SQLite ADD COLUMN
+    是元数据操作不重写表，回滚=恢复备份）。
+    """
     from sqlalchemy import inspect as sa_inspect
 
     insp = sa_inspect(engine)
     if "tags" not in insp.get_table_names():
         return
     cols = {c["name"] for c in insp.get_columns("tags")}
-    if "group" not in cols:
-        with engine.begin() as conn:
+    with engine.begin() as conn:
+        if "group" not in cols:
             # group 是 SQLite 保留字，必须加双引号
             conn.exec_driver_sql('ALTER TABLE tags ADD COLUMN "group" TEXT')
+        if "status" not in cols:
+            conn.exec_driver_sql("ALTER TABLE tags ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'active'")
+        # 防御性归位：历史上手工建表/异常写入产生的 NULL 不影响 DEFAULT 语义
+        conn.exec_driver_sql("UPDATE tags SET status = 'active' WHERE status IS NULL")
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_tags_status ON tags (status)")
 
 
 def _ensure_announcement_columns() -> None:

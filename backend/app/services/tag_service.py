@@ -7,7 +7,14 @@ from ..models import DemoTag, Tag, TagKey
 from ..schemas import TagKeyOut, TagKeyValueOut
 
 
-def tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
+def tag_key_out(db: Session, k: TagKey, include_deprecated: bool = False) -> TagKeyOut:
+    """键的词表输出（含各固定值 demo_count）。
+
+    读口口径（T3·M5-B2，Model 实体先例——评审与重排 §三.1「已退役不该出现在新页面」）：
+    - 公开读口（上传选择器/标签词表页/derive 建议）默认**剔除 deprecated**；
+    - 管理端（知识中心总表/详情导航——复活入口的数据源）用 include_deprecated=True
+      保留全部状态并随附 status 徽章字段。
+    """
     rows = (
         db.query(Tag, func.count(DemoTag.demo_id))
         .outerjoin(DemoTag, DemoTag.tag_id == Tag.id)
@@ -17,8 +24,16 @@ def tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
         .all()
     )
     values = [
-        TagKeyValueOut(id=t.id, value=t.value, description=t.description, demo_count=count, group=t.group)
+        TagKeyValueOut(
+            id=t.id,
+            value=t.value,
+            description=t.description,
+            demo_count=count,
+            group=t.group,
+            status=t.status or "active",
+        )
         for t, count in rows
+        if include_deprecated or (t.status or "active") != "deprecated"
     ]
     min_v = max_v = None
     if k.mode == "int":

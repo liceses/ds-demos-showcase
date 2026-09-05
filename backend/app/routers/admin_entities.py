@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_admin
-from ..models import AUDIT_ACTIONS, AuditLog, Demo, DemoModel, DemoTask, EntitySuggestion, Task, User
+from ..models import AUDIT_ACTIONS, AuditLog, Demo, DemoModel, DemoTask, EntitySuggestion, Tag, Task, User
 from ..schemas import (
     AliasIn,
     AttachDemosIn,
@@ -23,6 +23,7 @@ from ..schemas import (
     ModelStatusIn,
     ModelUpdate,
     SuggestionReviewIn,
+    TagStatusIn,
     TaskCreateIn,
     TaskUpdateIn,
     UnmergeIn,
@@ -430,6 +431,27 @@ def admin_patch_entity(
 ):
     """M3-B1 统一实体字段直改（06 §A2「自由」格落地）：白名单逐实体定义，全部走 service 层+审计。"""
     return entity_admin_service.patch_entity(db, entity_type, ident, patch, actor_id=admin.id)
+
+
+@router.put("/entities/tag/{tag_id}/status")
+def admin_tag_status(
+    tag_id: int,
+    body: TagStatusIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """T3·M5-B2 Tag 状态跃迁（06 §A3.3 + 附录 B 实施）：candidate|active|deprecated。
+
+    独立端点（不并入 PATCH——状态是「受限」格，理由随审计落行）；写操作走 service
+    entity_admin_service.tag_status_set + 同事务审计。tag 实体 ident 恒为数值 id。
+    """
+    tag = db.get(Tag, tag_id)
+    if tag is None:
+        raise HTTPException(status_code=404, detail="标签值不存在")
+    entity_admin_service.tag_status_set(
+        db, tag, body.status, actor_id=admin.id, reason=body.reason
+    )
+    return {"id": tag.id, "key": tag.key, "value": tag.value, "status": tag.status}
 
 
 @router.get("/knowledge/stats")

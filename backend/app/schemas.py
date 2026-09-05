@@ -57,11 +57,22 @@ class TagOut(ORMModel):
     demo_count: int = 0
     child_count: int = 0
     mode: str = "open"
+    # T3·M5-B2：状态机字段（candidate|active|deprecated；存量 DEFAULT active）
+    status: str = "active"
 
 
 class TagDetail(TagOut):
     parent: TagOut | None = None
     children: list[TagOut] = []
+
+
+class TagStatusIn(BaseModel):
+    """T3·M5-B2 Tag 状态跃迁：独立端点 PUT /admin/entities/tag/{id}/status。
+
+    与 Model/Task 同构：status 受机器枚举约束；reason 随审计落行（必填由 service/前端把关）。
+    """
+    status: str = Field(pattern="^(candidate|active|deprecated)$")
+    reason: str = Field(default="", max_length=500)
 
 
 class TagCreate(BaseModel):
@@ -78,6 +89,8 @@ class TagKeyValueOut(BaseModel):
     description: str = ""
     demo_count: int = 0
     group: str | None = None  # 固定值分组/厂商（如 DeepSeek、OpenAI）
+    # T3·M5-B2：状态机字段（词表/徽章读同字段——06 附录 B §5）
+    status: str = "active"
 
 
 class TagKeyOut(BaseModel):

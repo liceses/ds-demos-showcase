@@ -17,7 +17,8 @@ def _top_tag_values(db: Session, key: str, limit: int = 12) -> list[ExploreTagVa
         db.query(Tag.value, func.count(DemoTag.demo_id))
         .join(DemoTag, DemoTag.tag_id == Tag.id)
         .join(Demo, Demo.id == DemoTag.demo_id)
-        .filter(Tag.key == key, Demo.status == "approved")
+        # T3·M5-B2：公开筛选/展示读口剔除 deprecated（Model 先例）
+        .filter(Tag.key == key, Demo.status == "approved", Tag.status != "deprecated")
         .group_by(Tag.value)
         .order_by(func.count(DemoTag.demo_id).desc())
         .limit(limit)

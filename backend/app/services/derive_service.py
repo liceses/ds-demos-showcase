@@ -77,7 +77,8 @@ def suggest_pack(
     # 2) model：从 **model 词表**匹配（值本身或值的介绍），不是从实体表 ——
     #    建议包的产物必须落在作者真能点选的候选值上；而实体表要等首次上传才建出来，
     #    新库里查不到。归属工作台反过来：那里要的是实体 id，所以用 guess_model(实体表)。
-    model_tags = db.query(Tag).filter(Tag.key == "model").all()
+    # T3·M5-B2：建议引擎是公开推荐读口——deprecated 词表值不参与推荐（Model 先例）
+    model_tags = db.query(Tag).filter(Tag.key == "model", Tag.status != "deprecated").all()
     best_model: tuple[int, Tag] | None = None
     for t in model_tags:
         if t.value in BLACKLIST_VALUES or t.value.endswith("-unknown"):
@@ -103,7 +104,11 @@ def suggest_pack(
         db.query(Tag, func.count(DemoTag.demo_id))
         .outerjoin(DemoTag, DemoTag.tag_id == Tag.id)
         .join(TagKey, TagKey.key == Tag.key)
-        .filter(Tag.key.in_(VOCAB_KEYS), TagKey.mode.in_(("fixed", "open")))
+        .filter(
+            Tag.key.in_(VOCAB_KEYS),
+            TagKey.mode.in_(("fixed", "open")),
+            Tag.status != "deprecated",
+        )
         .group_by(Tag.id)
         .order_by(func.count(DemoTag.demo_id).desc())
         .limit(4000)

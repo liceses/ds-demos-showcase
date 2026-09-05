@@ -26,6 +26,34 @@ from . import audit_service, model_service, suggestion_service, task_service
 MODEL_FIELDS = {"name", "vendor", "description"}
 TASK_FIELDS = {"title", "description", "category", "status", "reason"}
 TAG_FIELDS = {"description", "group"}
+# T3·M5-B2：Tag 状态机三态（06 §A3.3 落点+用户裁决；PATCH 白名单**不含** status——
+# 跃迁走独立端点 PUT /admin/entities/tag/{id}/status，不并入 PATCH）
+TAG_STATUSES = ("candidate", "active", "deprecated")
+
+
+def tag_status_set(db, tag: Tag, status: str, actor_id: int, reason: str = "") -> Tag:
+    """Tag 状态跃迁（与 model_service.model_status_set 同构：service 收口+同事务审计）。
+
+    假动作守卫：同状态重复置位 409——不产生无意义审计行（「假动作比没动作更坏」）。
+    """
+    if status not in TAG_STATUSES:
+        raise HTTPException(status_code=422, detail=f"非法状态，可选：{', '.join(TAG_STATUSES)}")
+    current = tag.status or "active"
+    if current == status:
+        raise HTTPException(status_code=409, detail=f"该标签已是 {status} 状态")
+    audit_service.record(
+        db,
+        action="status_set",
+        entity_type="tag",
+        entity_id=tag.id,
+        actor_id=actor_id,
+        before={"key": tag.key, "value": tag.value, "status": current},
+        after={"key": tag.key, "value": tag.value, "status": status},
+        reason=reason or f"状态置为 {status}",
+    )
+    tag.status = status
+    db.commit()
+    return tag
 
 
 def patch_entity(db, entity_type: str, ident: str, fields: dict, actor_id: int) -> dict:

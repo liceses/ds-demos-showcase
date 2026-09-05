@@ -19,7 +19,11 @@ def preload_demo_relations(db: Session, demos: list[Demo]) -> None:
 
     tags_by: dict[int, list] = {}
     for link, tag in (
-        db.query(DemoTag, Tag).join(Tag, Tag.id == DemoTag.tag_id).filter(DemoTag.demo_id.in_(ids)).all()
+        db.query(DemoTag, Tag)
+        .join(Tag, Tag.id == DemoTag.tag_id)
+        # T3·M5-B2 与模型同口径：deprecated 词表值已退役，不进公开作品卡（标签 chips 不留死链）
+        .filter(DemoTag.demo_id.in_(ids), Tag.status != "deprecated")
+        .all()
     ):
         tags_by.setdefault(link.demo_id, []).append({"key": tag.key, "value": tag.value})
 
@@ -107,6 +111,8 @@ def tag_dict(db: Session, tag: Tag) -> dict:
         "demo_count": demo_count,
         "child_count": child_count,
         "mode": key_def.mode if key_def else "open",
+        # T3·M5-B2：状态机字段随实体输出（徽章读同字段）；tag_dict 是 admin/公开共用输出
+        "status": tag.status or "active",
     }
 
 
@@ -127,7 +133,10 @@ def serialize_demo(
         author_name = pre_author or "public"
     pre_tags = getattr(demo, "_pre_tags", None)
     tags = pre_tags if pre_tags is not None else [
-        {"key": dt.tag.key, "value": dt.tag.value} for dt in demo.tag_associations
+        # T3·M5-B2：fallback 同口径剔除 deprecated（与 preload 的 SQL 过滤一致）
+        {"key": dt.tag.key, "value": dt.tag.value}
+        for dt in demo.tag_associations
+        if (dt.tag.status or "active") != "deprecated"
     ]
     comment_count = getattr(demo, "_pre_comment_count", None)
     if comment_count is None:

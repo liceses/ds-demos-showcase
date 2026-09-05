@@ -44,9 +44,20 @@ _SUGGEST_RATE = 10
 
 @router.get("/tag-keys", response_model=list[TagKeyOut])
 def list_tag_keys(db: Session = Depends(get_db)):
-    """标签键定义（供发布/编辑页做选择器 + 标签主页展示）。"""
+    """标签键定义（供发布/编辑页做选择器 + 标签主页展示）。
+
+    公开读口（T3·M5-B2）：词表剔除 deprecated（已退役不该出现在新页面——Model 先例）；
+    管理端全量读口见 GET /tags/admin/tag-keys（复活入口的数据源）。
+    """
     keys = db.query(TagKey).order_by(TagKey.sort, TagKey.key).all()
     return [_tag_key_out(db, k) for k in keys]
+
+
+@router.get("/admin/tag-keys", response_model=list[TagKeyOut])
+def list_tag_keys_admin(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """管理端词表全量：含 deprecated（状态徽章随附），知识中心总表/详情导航的数据源。"""
+    keys = db.query(TagKey).order_by(TagKey.sort, TagKey.key).all()
+    return [tag_service.tag_key_out(db, k, include_deprecated=True) for k in keys]
 
 
 def find_tag_by_key_value(db: Session, key_value: str) -> Tag:
@@ -62,9 +73,15 @@ def find_tag_by_key_value(db: Session, key_value: str) -> Tag:
 @router.get("/{key_value}", response_model=TagDetail)
 def get_tag(key_value: str, db: Session = Depends(get_db)):
     tag = find_tag_by_key_value(db, key_value)
+    # 公开详情读口（T3·M5-B2）：deprecated = 已退役，公开页不再出现（404，同 Model 先例）
+    if (tag.status or "active") == "deprecated":
+        raise HTTPException(status_code=404, detail="标签不存在", )
     data = tag_dict(db, tag)
-    data["parent"] = tag_dict(db, tag.parent) if tag.parent else None
-    data["children"] = [tag_dict(db, c) for c in tag.children]
+    parent = tag.parent
+    data["parent"] = tag_dict(db, parent) if parent and (parent.status or "active") != "deprecated" else None
+    data["children"] = [
+        tag_dict(db, c) for c in tag.children if (c.status or "active") != "deprecated"
+    ]
     return data
 
 

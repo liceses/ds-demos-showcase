@@ -24,9 +24,10 @@
 .tag-chip {
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
-/* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移（--sh-off 单源，@720 自动减半；uw-type 3px 非档位字面暂留） */
+/* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移（--sh-off 单源，@720 自动减半；
+   uw-type 压平位移=--sh-off-uw 3px 具名档——T15 归一：P2-4『非档位字面暂留』清偿，不随 @720 减半=原字面行为） */
 .ac-card:active { transform: translate(var(--sh-off-md)); box-shadow: none; }
-.uw-type:active { transform: translate(3px, 3px); box-shadow: none; }
+.uw-type:active { transform: translate(var(--sh-off-uw)); box-shadow: none; }
 .dv-rail:active,
 .dv-collapse:active,
 .uw-edit:active { transform: translate(var(--sh-off-sm)); box-shadow: none; }
@@ -74,7 +75,11 @@
   --b-ease-stamp: cubic-bezier(0.16, 1, 0.3, 1); /* easeOutExpo */
   --tilt-rest: 0deg;    /* R8 静止零倾斜基线 */
   --tilt-press: -1deg;  /* 仅 :active 可用；reduced-motion → 0deg */
-  --tilt-deco: -1.5deg; /* 装饰白名单专用（印章/徽章/ann-pin 等） */
+  /* T15 档位归一（t20 记账 P3）·二选一取【修正档位定义】：装饰倾斜档带 ±2°→±6°——
+     贴纸/纸条/斜角入口类装饰的 -3°~-6°（forum-peek -6°/home-lobby/upload-wizard/tag-system/scrollbar/about -3°~-5°）
+     为用户设计逐字件（t9 考古原件）与灰度既定值（P2-5 灰度纪律：保留既定值不换档），值不收编=视觉零变化；
+     新装饰件默认仍走 --tilt-deco（-1.5deg），±6° 子档仅限贴纸类既有件与用户拍板件 */
+  --tilt-deco: -1.5deg; /* 装饰白名单默认档（印章/徽章/ann-pin 等） */
 }
 /* 微交互词汇表（03 §12.5 v3.3 → 04 §2.3.1 映射）关键帧 */
 @keyframes b-stamp-lite {

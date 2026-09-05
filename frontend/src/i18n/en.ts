@@ -602,6 +602,7 @@ export const en = {
     discuss: 'Discuss',
     cancel: 'Cancel',
     close: 'Close',
+    ok: 'OK',
   },
 
   forum: {
@@ -1156,6 +1157,14 @@ export const en = {
       adopted: 'Task “{title}” created, {n} works attached',
       needName: 'Give the task a name first',
       noDemoIds: 'This cluster has no attachable demo ids',
+      // T14 i18n 补账：成题确认弹窗与簇语义（46 键存量债清偿）
+      confirmTitle: 'Run adopt?',
+      willCreate: 'Will create task',
+      willAttach: 'and attach {n} works',
+      fuzzyWarn: 'Note: this is a similar cluster (grouped by prompt similarity, not identical) — after attach these works share one same-task comparison.',
+      exactNote: 'These works share the exact same prompt — after adoption they enter strict reproduction comparison.',
+      doAdopt: 'Run',
+      adoptHint: 'One call = create task + batch attach; the cluster is marked adopted afterwards.',
     },
     inbox: {
       hint: 'Low-confidence suggestions stay out of this view by default',

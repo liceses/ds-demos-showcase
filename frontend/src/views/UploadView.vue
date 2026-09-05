@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
@@ -14,6 +14,7 @@ import { useUploadDraft } from '../composables/useUploadDraft'
 import { useTaskMount } from '../composables/useTaskMount'
 import { useTagSuggest } from '../composables/useTagSuggest'
 import { useUploadPlayable } from '../composables/useUploadPlayable'
+import { useUploadWizard } from '../composables/useUploadWizard'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -72,49 +73,54 @@ const modelUncertain = computed(() =>
   (selected.value['model'] || []).some((m) => FALLBACK_MODEL_RE.test(m.value)),
 )
 const modelHint = ref('')
-const selectedList = computed(() =>
-  Object.entries(selected.value).flatMap(([key, values]) =>
-    values.map((x) => ({ key, value: x.value, description: x.description })),
-  ),
-)
-
-// ================= 向导状态机（设计依据见 docs/deepdemosv2/上传页重设计.md） =================
-// 一步只解决一个子问题：① 作品是什么 ② 哪个模型做的 ③ 说清楚 —— 步内不留必填盲区。
-// （标签建议包/可玩性层已拆 composables，调用见下方 computeds 之后——deps 顺序：本段产出 checklist 等入参）
-const step = ref(1)
-const showAdvanced = ref(false)
-const TOTAL_STEPS = 3
-
-/** 词表里的 model 值分成三类：精确型号 / 厂商族（知厂商不知型号）/ 其他兜底 */
-const modelValues = computed(() => tagKeys.value.find((k) => k.key === 'model')?.values ?? [])
-const isFallbackValue = (v: string) => v === 'unspecified' || v === 'unknown' || v === 'ds-unknown' || v.endsWith('-unknown')
-const exactModels = computed(() => modelValues.value.filter((v) => !isFallbackValue(v.value)))
-/** 厂商族只从词表读（group=厂商名 → `<vendor>-unknown` 值），客户端不重算 slug：两处规则必漂移 */
-const vendorFamilies = computed(() => {
-  const map = new Map<string, string>()
-  for (const v of modelValues.value) {
-    if (v.value.endsWith('-unknown') && v.group) map.set(v.group, v.value)
-  }
-  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([vendor, value]) => ({ vendor, value }))
-})
-const unknownValue = computed(() => modelValues.value.find((v) => v.value === 'unspecified')?.value ?? '')
-const guessValue = computed(() => modelValues.value.find((v) => v.value === 'ds-unknown')?.value ?? '')
-
+// chosenModelNames：selected['model'] 的派生（useUploadPlayable 与 useUploadWizard 共同消费）
 const chosenModelNames = computed(() => (selected.value['model'] || []).map((m) => m.value))
+/** 标签至少 1 个：与后端 `_require_model_tag`/tags≥1 同规则（模型已含在 tags 内时自然满足）——
+ *  提前声明：useUploadWizard 的 readyToSubmit 以 dep 消费 */
+const tagsOk = computed(() => selectedCount.value >= 1)
 
-function pickModel(value: string) {
-  if (!value) return
-  const keep = (selected.value['model'] || []).filter((m) => isFallbackValue(m.value) === false && m.value !== value)
-  const wanted = isFallbackValue(value)
-  // 兜底与精确互斥：选了真的型号就别再留着 unspecified，反之亦然（归属统计才干净）
-  selected.value = {
-    ...selected.value,
-    model: wanted ? [{ value, description: '' }] : [...keep.filter((m) => !isFallbackValue(m.value)), { value, description: '' }].slice(-1),
-  }
-  stamp('model')
-}
+// ================= 向导状态机（T15 拆分件 useUploadWizard；逐字迁出行为不变） =================
+// 一步只解决一个子问题：① 作品是什么 ② 哪个模型做的 ③ 说清楚 —— 步内不留必填盲区。
+// 依赖序：本件产 checklist/stepError 等 → playable 经 getter 惰性消费（渲染期求值）→ 其余件消费 aside/stamp。
+// 编辑模式附加状态（提前声明：wizard 的 checklist 需读 currentCover，clearCover 归零 coverPreview）
+const demoTitle = ref('')
+const currentCover = ref('')
+const coverPreview = ref('')
+const denied = ref(false)
+const initial = ref({ title: '', description: '', demoType: 'web', externalUrl: '', prompt: '', videoUrl: '' })
 
-/** 清空重来：整页只有一个破坏性动作，所以必须二次确认 */
+// 可玩性（T15 拆分件 useUploadPlayable）：旁白 aside / 盖章 stamp 由本件产出，供 tagSuggest/taskMount/draft 与
+// pickModel/resetAll 等消费；getter 显式返回类型断开 playable↔wizard 类型推断环（值流：渲染期求值）
+const {
+  asideOn, lastAside, toggleAside, stamped, rank, expNo, modelStats, statsLoading, drawnTask, drawing, drawTask, aside, stamp,
+} = useUploadPlayable({
+  checklist: { get value(): { label: string; done: boolean; step: number; must: boolean }[] { return wizard.checklist.value } },
+  allDone: { get value(): number { return wizard.allDone.value } },
+  mustDone: { get value(): number { return wizard.mustDone.value } },
+  chosenModelNames, modelUncertain, hasModel, prompt, idempotencyKey,
+})
+
+// ---------- §4.2 标签建议包（T15 拆分件 useTagSuggest；逐字迁出行为不变） ----------
+const {
+  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack,
+} = useTagSuggest({ editSlug, title, description, prompt, selected, stamp, aside })
+
+// 向导状态机（T15 拆分件 useUploadWizard）
+const wizard = useUploadWizard({
+  editSlug, ui, tagKeys, selected, selectedCount, tagsOk, hasModel, modelUncertain, chosenModelNames,
+  title, description, prompt, demoType, externalUrl, videoUrl, zipFile, coverFile, coverPreview, currentCover, modelHint,
+  success, aside, stamp,
+})
+const {
+  step, showAdvanced, pickModel, descOk, promptOk,
+  stepProblems, stepOk, checklist, mustDone, mustTotal, allDone, readyToSubmit,
+  stepError, goStep, next, isDirty, onBeforeUnload,
+  reviewRows, stepDefs, typeOptions, barPct,
+  modelQuery, filteredExact, fbVendorOpen, fileInputKey, clearFile, clearCover, clearModel, selectedList,
+  vendorFamilies, unknownValue, guessValue,
+} = wizard
+
+/** 清空重来：整页只有一个破坏性动作，所以必须二次确认（跨件编排：清向导态+建议包+草稿，留主件） */
 async function resetAll() {
   const ok = await ui.confirm({
     title: t('upload.resetConfirmTitle', '清空重来？'),
@@ -141,175 +147,6 @@ async function resetAll() {
   clearDraft()
   step.value = 1
   aside('reset', t('upload.asReset', '白纸一张。'))
-}
-
-const typeOk = computed(() => (demoType.value === 'link' ? /^https?:\/\//.test(externalUrl.value.trim()) : !!zipFile.value || !!editSlug))
-const modelOk = computed(() => hasModel.value)
-const titleOk = computed(() => !!title.value.trim())
-const descOk = computed(() => description.value.trim().length >= 10)
-const promptOk = computed(() => !!prompt.value.trim())
-
-/** 步内问题：校验前移到这里，而不是等提交（错误拦截成本最低的位置） */
-const stepProblems = computed(() => {
-  // 必须覆盖到第 4 步：模板无条件读 stepProblems[step].length，
-  // 少一个键就会在核对页渲染时抛 TypeError 把整页崩掉（曾因此无法提交）。
-  const out: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [] }
-  if (step.value === 1 && !typeOk.value) {
-    out[1].push(demoType.value === 'link' ? t('upload.errLink', '链接类型需要填写 http(s) 地址') : t('upload.errFile', '请上传文件（zip 或单个 .html/.svg）'))
-  }
-  if (step.value === 2 && !modelOk.value) {
-    out[2].push(t('upload.errModel', '请选择模型：不确定就选「未标注 / 未定型号」这类兜底值，别空着'))
-  }
-  if (step.value === 3 && !titleOk.value) out[3].push(t('upload.errTitle', '请填写标题'))
-  // 第 4 步：把"还差什么"汇总出来，核对页不该只给一个禁用按钮
-  if (step.value === 4 && !readyToSubmit.value) {
-    for (const c of checklist.value.filter((x) => x.must && !x.done)) out[4].push(c.label)
-  }
-  return out
-})
-const stepOk = computed(() => [true, typeOk.value, modelOk.value, titleOk.value])
-
-const checklist = computed(() => [
-  { label: t('upload.clKind', '选好类型并给出文件/链接'), done: typeOk.value, step: 1, must: true },
-  { label: t('upload.clModel', '声明是哪个模型做的'), done: modelOk.value, step: 2, must: true },
-  { label: t('upload.clTitle', '写个说得清的标题'), done: titleOk.value, step: 3, must: true },
-  { label: t('upload.clDesc', '补 2 句描述'), done: descOk.value, step: 3, must: false },
-  { label: t('upload.clPrompt', '附第一轮提示词（同提示词对照靠它）'), done: promptOk.value, step: 3, must: false },
-  { label: t('upload.clTags', '再挑几个描述性标签'), done: selectedCount.value >= 2, step: 3, must: false },
-  { label: t('upload.clCover', '配一张封面'), done: !!coverFile.value || !!currentCover.value, step: 3, must: false },
-])
-const mustDone = computed(() => checklist.value.filter((c) => c.must && c.done).length)
-const mustTotal = computed(() => checklist.value.filter((c) => c.must).length)
-const allDone = computed(() => checklist.value.filter((c) => c.done).length)
-const readyToSubmit = computed(() => mustDone.value === mustTotal.value && !!tagsOk.value)
-/** 标签至少 1 个：与后端 `_require_model_tag`/tags≥1 同规则（模型已含在 tags 内时自然满足） */
-const tagsOk = computed(() => selectedCount.value >= 1)
-
-// ---------- 可玩性（T15 拆分件 useUploadPlayable；逐字迁出行为不变） ----------
-// 旁白 aside / 盖章 stamp 由本件产出，供 tagSuggest/taskMount/draft 与 pickModel/resetAll 等消费（调用序：本件最先）
-const {
-  asideOn, lastAside, toggleAside, stamped, rank, expNo, modelStats, statsLoading, drawnTask, drawing, drawTask, aside, stamp,
-} = useUploadPlayable({ checklist, allDone, mustDone, chosenModelNames, modelUncertain, hasModel, prompt, idempotencyKey })
-
-// ---------- §4.2 标签建议包（T15 拆分件 useTagSuggest；逐字迁出行为不变） ----------
-const {
-  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack,
-} = useTagSuggest({ editSlug, title, description, prompt, selected, stamp, aside })
-
-// 门禁错误与服务器错误分开：前者随用户补全自动消失，后者必须保留到下一次提交
-const stepError = ref('')
-watch([typeOk, modelOk, titleOk, selectedCount], () => {
-  if (stepError.value && !(stepProblems.value[step.value]?.length ?? 0)) stepError.value = ''
-})
-
-function goStep(n: number) {
-  if (n < 1 || n > TOTAL_STEPS + 1) return
-  stepError.value = ''
-  step.value = n
-}
-function next() {
-  if (step.value === 2 && !modelOk.value) {
-    stepError.value = t('upload.errModel', '请选择模型：不确定就选「未标注 / 未定型号」这类兜底值，别空着')
-    return
-  }
-  goStep(step.value + 1)
-}
-
-// 切步后把焦点送到该步第一个控件：键盘用户不必从头 Tab
-watch(step, async (n) => {
-  await nextTick()
-  const el = document.querySelector<HTMLElement>(`[data-step-focus="${n}"]`)
-  el?.focus?.()
-})
-
-// 脏状态离开页面提醒（未提交的劳动不该被一次误点抹掉）
-function onBeforeUnload(e: BeforeUnloadEvent) {
-  if (success.value || !isDirty.value) return
-  e.preventDefault()
-  e.returnValue = ''
-}
-const isDirty = computed(
-  () => !!zipFile.value || !!coverFile.value || !!title.value.trim() || !!description.value.trim() || !!prompt.value.trim() || selectedCount.value > 0,
-)
-
-interface ReviewRow {
-  label: string
-  value: string
-  note?: string
-  mono?: boolean
-  step: number
-}
-/** 核对页摘要：数据驱动，每行统一带一个右对齐的「改」直达对应步 */
-const reviewRows = computed<ReviewRow[]>(() => {
-  const clip = (s: string, n = 90) => (s.length > n ? `${s.slice(0, n)}…` : s) || '—'
-  return [
-    {
-      label: t('upload.sumKind', '作品'),
-      value: `${typeLabelNow.value} · ${demoType.value === 'link' ? externalUrl.value || '—' : zipFile.value ? zipFile.value.name : editSlug ? t('upload.keepOldFile', '保留原文件') : '—'}`,
-      step: 1,
-    },
-    {
-      label: t('upload.sumModel', '模型'),
-      value: chosenModelNames.value.map((m) => tagLabel(m)).join(' / ') || '—',
-      note: modelUncertain.value && modelHint.value ? modelHint.value : '',
-      step: 2,
-    },
-    { label: t('upload.sumTitle', '标题'), value: title.value || '—', step: 3 },
-    { label: t('upload.sumDesc', '描述'), value: description.value || '—', step: 3 },
-    { label: t('upload.sumPrompt', '提示词'), value: clip(prompt.value), mono: true, step: 3 },
-    { label: t('upload.sumTags', '标签'), value: selectedList.value.map((s) => `${s.key}:${s.value}`).join(' · ') || '—', step: 3 },
-  ]
-})
-
-const stepDefs = computed(() => [
-  { n: 1, title: t('upload.step1Title', '作品是什么'), hint: t('upload.step1Hint', '类型 + 文件/链接') },
-  { n: 2, title: t('upload.step2Title', '谁做的'), hint: t('upload.step2Hint', '哪个模型，必答') },
-  { n: 3, title: t('upload.step3Title', '说清楚'), hint: t('upload.step3Hint', '标题、描述、提示词、标签') },
-  { n: 4, title: t('upload.step4Title', '核对发布'), hint: t('upload.step4Hint', '最后一遍确认') },
-])
-
-const typeOptions = computed(() => [
-  { value: 'web' as const, label: t('upload.typeWebCard', '网页应用'), hint: t('upload.typeWebHint', 'zip 或单个 .html/.svg，站内直接预览') },
-  { value: 'zip' as const, label: t('upload.typeZipCard', '文件包'), hint: t('upload.typeZipHint', '只给下载，不预览') },
-  { value: 'link' as const, label: t('upload.typeLinkCard', '外部链接'), hint: t('upload.typeLinkHint', '跳到站外打开') },
-])
-const typeLabelNow = computed(() => typeOptions.value.find((o) => o.value === demoType.value)?.label || demoType.value)
-const barPct = computed(() => Math.round((allDone.value / Math.max(1, checklist.value.length)) * 100))
-
-// 步骤 2 的型号搜索：只搜精确型号，兜底值不混进主路径（它们各有独立出口）
-const modelQuery = ref('')
-const filteredExact = computed(() => {
-  const q = modelQuery.value.trim().toLowerCase()
-  const searching = q.length > 0
-  const list = exactModels.value.filter((v) => {
-    // 不搜的时候只给"站内真有人用过"的型号：0 作品的冷门值占首屏是纯噪音，
-    // 但它仍在词表里 —— 一搜就该出现（否则作者会以为站里不支持这个型号）
-    if (!searching && v.demo_count === 0) return false
-    if (!searching) return true
-    return v.value.toLowerCase().includes(q) || (v.description || '').toLowerCase().includes(q)
-  })
-  // 先按厂商聚、再按作品数：一屏里同厂商自然相邻，扫视成本远低于纯热度排序
-  return [...list]
-    .sort((a, b) => (a.group || 'zzz').localeCompare(b.group || 'zzz') || b.demo_count - a.demo_count)
-    .slice(0, searching ? 40 : 30)
-})
-const fbVendorOpen = ref(false)
-
-// ---------- 可撤销：选错了不该被锁住（每个"决定"都配一个"改主意"） ----------
-const fileInputKey = ref(0) // 重挂原生 file input 才能真的清空
-function clearFile() {
-  zipFile.value = null
-  fileInputKey.value += 1
-}
-function clearCover() {
-  coverFile.value = null
-  coverPreview.value = ''
-}
-function clearModel() {
-  selected.value = { ...selected.value, model: [] }
-  modelHint.value = ''
-  fbVendorOpen.value = false
-  aside('undo', t('upload.asUndoModel', '改主意了。上一句撤回。'))
 }
 /** 挑战横幅可摘掉：不想挂题就不挂，别被 URL 参数绑架 */
 const challengeOff = ref(false)
@@ -350,12 +187,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
 
-// 编辑模式附加状态
-const demoTitle = ref('')
-const currentCover = ref('')
-const coverPreview = ref('')
-const denied = ref(false)
-const initial = ref({ title: '', description: '', demoType: 'web', externalUrl: '', prompt: '', videoUrl: '' })
+// （编辑模式附加状态已在 useUploadWizard 调用前声明——原此处的重复块随 T15 拆分移除）
 
 function collectTags() {
   const out: (string | { key: string; value: string; description?: string })[] = []

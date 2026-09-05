@@ -55,16 +55,6 @@ export const en = {
       forum: 'Forum',
       about: 'About',
       up7d: 'Last 7d',
-    // T14 i18n 补账：站点导航条带（M0-D 数字条旁的入口条）
-    strip: {
-      label: 'Site navigation',
-      lib: 'Works',
-      explore: 'Explore',
-      rank: 'Leaderboard',
-      forum: 'Forum',
-      about: 'About',
-      up7d: 'in last 7 days',
-    },
     },
     agentHintPrefix: 'AI auto-upload: read ',
     agentHintSuffix: ' then publish',

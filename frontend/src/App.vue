@@ -297,6 +297,10 @@ onMounted(() => {
   border: var(--border-w, 3px) solid var(--ink, #000);
   background: var(--wash-yellow, #ffe66d);
   box-shadow: var(--shadow-lg, 6px 6px 0 0 #000);
+  /* T17 验收复扫（B1 残差实锤）：铃铛 18px svg 图标内容驱动 40>39，min-height 兜不住下限之上的内容
+     （svg 18+14 padding+8 border=40；字面钮内容 17 恰 39）——盒高钉回 39 主档：图标 flex 居中不动，
+     越出 1px 收进 7px padding 内不可见，右簇四钮等高。 */
+  height: 39px;
 }
 /* T16（M4-2c）右簇盒高残差归一：t9 实测墨 39/EN 38/CTA 39——同 padding/边框/字号下
    line-height:normal 随 CJK/拉丁字体度量浮动 1px。min-height 归一到 39px 主档，

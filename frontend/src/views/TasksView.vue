@@ -34,9 +34,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero page-hero--compact">
     <span class="eyebrow">{{ t('tasks.eyebrow', '题目图鉴') }}</span>
-    <h1 class="huge" style="margin-top: 14px">{{ t('tasks.title', '题目') }}</h1>
+    <h1 class="page-title">{{ t('tasks.title', '题目') }}</h1>
     <p class="sub">{{ t('tasks.sub', '同一道题，不同模型各交了什么 —— 题目是本站的比较单位。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ total }}</b> {{ t('tasks.count', '道题目') }}</span>

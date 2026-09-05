@@ -56,9 +56,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero page-hero--compact">
     <span class="eyebrow">{{ t('models.eyebrow', '模型图鉴') }}</span>
-    <h1 class="huge" style="margin-top: 14px">{{ t('models.title', '模型') }}</h1>
+    <h1 class="page-title">{{ t('models.title', '模型') }}</h1>
     <p class="sub">{{ t('models.sub', '每个模型在这一年里真正做过什么 —— 从作品反推它的行为，不给综合分。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ total }}</b> {{ t('models.count', '个模型') }}</span>

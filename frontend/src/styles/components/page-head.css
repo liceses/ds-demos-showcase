@@ -28,3 +28,30 @@
   font-size: 26px;
 }
 
+/* t6 M5-U3（C3 重裁，08 §3）：目录/列表页「页眉行」——巨标题降档、内容前置、留白给内容首屏。
+   适用 = models/explore/leaderboard/demos 四个列表页；首页 hero（品牌位）不挂本档。 */
+.page-hero--compact {
+  padding: 14px 0 12px;
+}
+.page-hero--compact .page-title {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.page-hero--compact .sub {
+  max-width: 620px;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.page-hero--compact .filter-row,
+.page-hero--compact .mini-stat {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+

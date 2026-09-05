@@ -56,9 +56,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero page-hero--compact">
     <span class="eyebrow">{{ t('explore.eyebrow', '探索') }}</span>
-    <h1 class="huge" style="margin-top: 14px">{{ t('explore.title', '探索') }}</h1>
+    <h1 class="page-title">{{ t('explore.title', '探索') }}</h1>
     <p class="sub">{{ t('explore.sub', '按模型看它做过什么，按题目看同一句话不同模型的回答，按标签看题材分布。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ data?.models.total ?? 0 }}</b> {{ t('explore.modelsN', '个模型') }}</span>

@@ -121,9 +121,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero page-hero--compact">
     <span class="eyebrow">{{ t('app.nav.leaderboard', '排行榜') }}</span>
-    <h1 class="huge">{{ t('leaderboard.title', '神鬼榜') }}</h1>
+    <h1 class="page-title">{{ t('leaderboard.title', '神鬼榜') }}</h1>
     <p class="sub">{{ tab === 'users' ? t('leaderboard.usersSub', '谁在给这个社区添砖加瓦——声望、获赞与作品说话。') : t('leaderboard.sub', '用「神作 / 鬼作」两极语义给作品投票，看看大家的口碑。') }}</p>
   </section>
 

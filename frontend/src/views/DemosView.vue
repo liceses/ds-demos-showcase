@@ -568,11 +568,11 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <section class="page-hero page-hero--compact">
     <span class="eyebrow">{{ t('app.nav.demos', '作品库') }}</span>
-    <h1 class="huge">{{ t('app.nav.demos', '作品库') }}</h1>
+    <h1 class="page-title">{{ t('app.nav.demos', '作品库') }}</h1>
     <p class="sub">{{ t('demos.sub', '搜索、筛选、浏览全部 AI 网页 Demo —— 支持按标签与热度检索。') }}</p>
-    <span class="mini-stat" style="margin-top: 14px"><b>{{ total }}</b> {{ t('demos.works', '件作品') }}</span>
+    <span class="mini-stat"><b>{{ total }}</b> {{ t('demos.works', '件作品') }}</span>
   </section>
 
   <section class="section" style="padding-top: 8px">

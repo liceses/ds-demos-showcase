@@ -2,13 +2,13 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import Comment, Demo, DemoModel, DemoTask, DemoTag, DemoTimeline, Model, SessionLog, Tag, TagKey, Task, User
+from .models import Demo, DemoModel, DemoTask, DemoTag, DemoTimeline, ForumTopic, Model, SessionLog, Tag, TagKey, Task, User
 from .services import oss
 from .services.scope import ASTRA, current_scope
 
 
 def preload_demo_relations(db: Session, demos: list[Demo]) -> None:
-    """列表页批量预加载：tags/models/tasks 关联 + 评论/会话日志计数。
+    """列表页批量预加载：tags/models/tasks 关联 + 讨论/会话日志计数。
 
     消除 serialize_demo 的 N+1（每页 20 条原本 ~60 条查询 → 5 条）。
     预载结果挂 demo 实例的 _pre_* 属性，serialize_demo 优先消费。
@@ -46,12 +46,24 @@ def preload_demo_relations(db: Session, demos: list[Demo]) -> None:
     ):
         tasks_by.setdefault(did, []).append(t)
 
-    comment_counts = dict(
-        db.query(Comment.demo_id, func.count(Comment.id))
-        .filter(Comment.demo_id.in_(ids))
-        .group_by(Comment.demo_id)
-        .all()
-    )
+    # T3·M5-B1（用户裁决 b）：讨论数口径从已退役 Comment 表切到关联论坛主题的回复数。
+    # 评论系统已 410、发言导流论坛；历史评论经 migrate_comments_to_forum.py 迁为
+    # demo_slug 关联主题的回复——reply_count 同样覆盖历史数。字段名 comment_count
+    # 保持不变（前端 DemoCard/DemoView 绑定不动，值语义=讨论数）。
+    # 只算 normal 主题（hidden/reviewing 主题的回复不进公开口径）。
+    # 注意键是 slug（forum_topics.demo_slug 关联 demos.slug，非 id）——下文按 d.slug 取。
+    slugs = [d.slug for d in demos]
+    comment_counts: dict[str, int] = {}
+    if slugs:
+        comment_counts = {
+            slug: int(total or 0)
+            for slug, total in (
+                db.query(ForumTopic.demo_slug, func.sum(ForumTopic.reply_count))
+                .filter(ForumTopic.demo_slug.in_(slugs), ForumTopic.status == "normal")
+                .group_by(ForumTopic.demo_slug)
+                .all()
+            )
+        }
     # 作者：批量取用户名（serialize 里一旦碰 demo.author 关系就会逐行懒加载，
     # 实测 637 规模 page_size=20 因此多出发 11 条查询，page_size=100 涨到 49）
     author_ids = {d.author_id for d in demos if d.author_id}
@@ -71,7 +83,8 @@ def preload_demo_relations(db: Session, demos: list[Demo]) -> None:
         d._pre_tags = tags_by.get(d.id, [])
         d._pre_models = models_by.get(d.id, [])
         d._pre_tasks = tasks_by.get(d.id, [])
-        d._pre_comment_count = comment_counts.get(d.id, 0)
+        # comment_counts 以 demo_slug 为键（forum 关联口径）；d.id 是恒 0 的错键（前手半成品遗留）
+        d._pre_comment_count = comment_counts.get(d.slug, 0)
         d._pre_session_log_count = log_counts.get(d.id, 0)
         d._pre_author = authors.get(d.author_id) if d.author_id else None
 
@@ -118,8 +131,12 @@ def serialize_demo(
     ]
     comment_count = getattr(demo, "_pre_comment_count", None)
     if comment_count is None:
+        # 单条（未预加载）兜底：与 preload 同一 forum 口径——normal 主题的回复数合计
         comment_count = (
-            db.query(func.count(Comment.id)).filter(Comment.demo_id == demo.id).scalar() or 0
+            db.query(func.coalesce(func.sum(ForumTopic.reply_count), 0))
+            .filter(ForumTopic.demo_slug == demo.slug, ForumTopic.status == "normal")
+            .scalar()
+            or 0
         )
     session_log_count = getattr(demo, "_pre_session_log_count", None)
     if session_log_count is None:

@@ -38,6 +38,8 @@ function label(tag: { key: string; value: string }) {
     <div class="demo-cover">
       <img v-if="cover && !coverBroken" :src="cover" :alt="demo.title" loading="lazy" decoding="async" @error="onCoverError" />
       <div v-else class="cover-fallback" style="background: var(--wash-mint, #4ecdc4)">{{ demo.title[0] }}</div>
+      <!-- J1：web 型才有 iframe 预览——hover 浮现「▶ 预览」章（信息增益，非装饰）；触屏/reduced-motion 不出现 -->
+      <span v-if="demo.demo_type === 'web'" class="demo-preview-stamp" aria-hidden="true">▶ {{ t('card.preview', '预览') }}</span>
     </div>
     <div class="demo-card-body">
       <h3 class="demo-title">{{ demo.title }}</h3>

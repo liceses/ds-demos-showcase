@@ -335,6 +335,9 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transform: scale(1);
+  transform-origin: center center;
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
 }
 .prompt-cover .cover-fallback {
   width: 100%;
@@ -345,6 +348,26 @@
   font-size: 32px;
   font-weight: 900;
   color: var(--ink);
+  transform: scale(1);
+  transform-origin: center center;
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
+}
+/* J1 同构：PromptDemoCard 封面 hover scale（无计数行/预览章——该卡解剖不同） */
+@media (hover: hover) {
+  .prompt-card:hover .prompt-cover img,
+  .prompt-card:hover .prompt-cover .cover-fallback {
+    transform: scale(1.02);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-cover img,
+  .prompt-cover .cover-fallback {
+    transition: none;
+  }
+  .prompt-card:hover .prompt-cover img,
+  .prompt-card:hover .prompt-cover .cover-fallback {
+    transform: none;
+  }
 }
 
 /* 卡片模式：机械轨道开关 */

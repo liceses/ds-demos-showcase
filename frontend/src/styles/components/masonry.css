@@ -26,6 +26,9 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transform: scale(1);
+  transform-origin: center center;
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
 }
 .demo-cover .cover-fallback {
   width: 100%;
@@ -38,6 +41,65 @@
   font-size: 56px;
   color: var(--ink); /* 封面占位=大面积，wash 底配暖白字（t16 P1-fix-2） */
   text-shadow: 3px 3px 0 var(--ink);
+  transform: scale(1);
+  transform-origin: center center;
+  transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
+}
+/* J1（09 §7）：hover=信息增益——图 scale 1.02 + 计数行让位 + 预览章浮现。
+   @media(hover:hover) 触屏不粘滞；transform/opacity 白名单；R8 静止零倾斜。 */
+.demo-preview-stamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: var(--border-w, 3px) solid var(--ink, #000);
+  background: var(--yellow, #ffe66d);
+  color: var(--ink, #000);
+  box-shadow: var(--shadow-lg, 6px 6px 0 0 #000);
+  white-space: nowrap;
+}
+@media (hover: hover) {
+  .demo-card:hover .demo-cover img,
+  .demo-card:hover .demo-cover .cover-fallback {
+    transform: scale(1.02);
+  }
+  /* 计数行让位 + 预览章浮现：0ms 硬切（R7 交互层不许 opacity 过渡） */
+  .demo-card:hover .demo-stats {
+    visibility: hidden;
+    opacity: 0;
+  }
+  .demo-card:hover .demo-preview-stamp {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-cover img,
+  .demo-cover .cover-fallback {
+    transition: none;
+  }
+  .demo-card:hover .demo-cover img,
+  .demo-card:hover .demo-cover .cover-fallback {
+    transform: none;
+  }
+  .demo-card:hover .demo-stats {
+    visibility: visible;
+    opacity: 1;
+  }
+  .demo-card:hover .demo-preview-stamp {
+    visibility: hidden;
+    opacity: 0;
+  }
 }
 .demo-card-body {
   padding: 14px 16px 16px;

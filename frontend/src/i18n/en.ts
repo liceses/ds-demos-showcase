@@ -586,6 +586,7 @@ export const en = {
 
   card: {
     sampleLow: 'Low sample',
+    preview: 'Preview',
   },
 
   copy: {

@@ -46,7 +46,12 @@
   transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
 }
 /* J1（09 §7）：hover=信息增益——图 scale 1.02 + 计数行让位 + 预览章浮现。
-   @media(hover:hover) 触屏不粘滞；transform/opacity 白名单；R8 静止零倾斜。 */
+   @media(hover:hover) 触屏不粘滞；transform 白名单仅封面；R8 静止零倾斜。
+   T10：计数行/章显隐必须 0ms 硬切（R7 交互层禁止 opacity 过渡；勿继承 `all`）。 */
+.demo-stats,
+.demo-preview-stamp {
+  transition: none;
+}
 .demo-preview-stamp {
   position: absolute;
   left: 50%;

@@ -448,6 +448,7 @@ onMounted(() => {
   min-height: 44px;
   padding: 0;
   background: var(--yellow, #ffe66d);
+  box-shadow: var(--shadow-lg); /* T10：静止硬影——.btn 基类无影，.commit 口径 --shadow-lg */
   font-family: var(--font-heading);
   font-weight: 900;
   font-size: 18px;
@@ -458,6 +459,7 @@ onMounted(() => {
 @media (hover: hover) {
   .back-top:hover {
     transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-lg); /* 盖过 .btn:hover 的 --b-shadow 4px 缩影；抬起即表观增影 */
   }
 }
 .back-top:active {

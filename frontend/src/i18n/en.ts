@@ -878,6 +878,7 @@ export const en = {
     submit: 'Publish now',
     tagPicker: 'Tag picker',
     tagPickerHint: 'Fixed: click · Open: type to add · Numeric: integers · author is reserved',
+    mode: 'Mode',
   },
 
   ann: {
@@ -936,6 +937,27 @@ export const en = {
     recent: 'Recent works',
     viewAll: 'View all →',
     empty: 'No works from this model yet — be the first →',
+      // T14 i18n 补账：模型卡片/详情/搜索语义（第二批）
+      by: 'by',
+      andNMore: '+{n} more',
+      unresolvedLabel: 'Unlabeled model',
+      familyLabel: 'model TBD',
+      loadFailed: 'This model page failed to load',
+      retry: 'Retry',
+      backList: 'Back to models',
+      backExplore: 'Explore',
+      communityScore: 'Community score',
+      votesUnit: 'votes',
+      rawAvg: 'Raw average',
+      rawHint: 'Gap vs community score = small-sample shrinkage',
+      sortScore: 'Community score',
+      sortPopular: 'Hottest',
+      sortVotes: 'Most votes',
+      scoreTip: 'Community score = vote-weighted average shrunk toward the site prior; fewer votes pulls it toward the mean',
+      sampleTip: 'Vote count decides how much to trust this score',
+      facetLabel: 'Filter by type',
+      loadMore: 'Show {n} more',
+      bottom: 'End of list · {n} works, try sorting by community score',
   },
 
   tasks: {
@@ -1041,6 +1063,7 @@ export const en = {
     gameTitle: 'Gameplay',
     emptyLabels: 'None yet',
     emptyAll: 'Nothing to explore yet',
+    worksCount: '{n} works',
   },
 
   peek: {

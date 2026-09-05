@@ -1,7 +1,6 @@
 /* ---------- 论坛轻量版 ---------- */
-:root {
-  --paper-forum: #f7f0e3;
-}
+/* T16（M4-2b）：:root --paper-forum 覆盖已撤——令牌单一源归 forum.css（#f7f0e3），
+   消除双 :root 定义靠导入序取胜的存量 quirk（t8 记账，t16 并一）；视觉零变化（生效值即此值）。 */
 .forum-topbar-inner,
 .forum-hero-inner,
 .forum-section,

@@ -203,7 +203,7 @@ async function removeAlias(alias: string) {
   }
 }
 
-// ---- 直改：状态跃迁（受限格：Model 理由必填+影响面+二次确认；Task 无理由入参=协作项） ----
+// ---- 直改：状态跃迁（受限格：Model/Task 均理由必填+影响面+二次确认；TaskUpdateIn.reason 已落地=协作项②闭环） ----
 function openTransition() {
   transStatus.value = entityStatus.value || ''
   transReason.value = ''
@@ -427,6 +427,7 @@ onMounted(load)
               <div class="kc-field">
                 <span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span>
                 <b>{{ entityName }}</b>
+                <span v-if="props.type === 'tag'" class="kc-pending">{{ t('admin.kc.tagRenamePending', 'value 本体改名=微合并语义（别名+重定向）——端点待后端，不提供假改名。') }}</span>
               </div>
               <div class="kc-field">
                 <span class="kc-k">{{ t('admin.kc.fIdent', '标识') }}</span>
@@ -580,10 +581,17 @@ onMounted(load)
                 <option v-for="s in taskStatuses" :key="s" :value="s" :disabled="s === entityStatus">{{ statusZh[s] }}{{ s === entityStatus ? '（当前）' : '' }}</option>
               </select>
             </label>
+            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（必填）') }}</span><textarea
+              v-model="transReason"
+              class="input"
+              rows="2"
+              style="max-width: 420px"
+              :placeholder="t('admin.kc.transReasonPh', '跃迁理由——写入审计时间线')"
+            ></textarea></label>
             <div class="kc-field kc-wide">
-              <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
+              <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
               <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="transOpen = false">{{ t('common.cancel', '取消') }}</button>
-              <span class="hint">{{ t('admin.kc.transTaskReason', '理由入参后端未提供（协作项）：跃迁落 update 审计但无理由字段。') }}</span>
+              <span class="hint">{{ t('admin.kc.transTaskImpact', '理由随 update 落审计（TaskUpdateIn.reason）；影响面：该题挂载作品 {n} 件', { n: task?.demos?.length ?? 0 }) }}</span>
             </div>
           </div>
         </template>

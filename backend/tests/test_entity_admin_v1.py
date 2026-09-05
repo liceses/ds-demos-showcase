@@ -69,6 +69,14 @@ def test_patch_model_description_writes_audit(client: TestClient, admin_headers)
     assert "description" in r.json()["updated"]
     assert _audit_count(client, admin_headers, "model", m["id"], action="update") == before + 1
 
+    # T13 走查补锁（§31.1）：PATCH 的 reason 是审计元数据——必须落进审计行，
+    # 不得恒为默认「编辑实体信息」（此前 model 分支把 reason 弹出后丢在地上）
+    audit = client.get(
+        f"/api/v1/admin/audit?entity_type=model&entity_id={m['id']}&page_size=5",
+        headers=admin_headers,
+    ).json()["items"]
+    assert any((e.get("reason") or "") == "补描述" for e in audit), [e.get("reason") for e in audit]
+
     # 按 id 解析同样可达（id → slug → 别名统一解析链）
     r2 = client.patch(
         f"/api/v1/admin/entities/model/{m['id']}",

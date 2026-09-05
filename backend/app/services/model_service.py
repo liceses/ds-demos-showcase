@@ -703,8 +703,9 @@ def model_status_set(db: Session, model: Model, status: str, actor_id: int | Non
     return model
 
 
-def model_update(db: Session, model: Model, actor_id: int | None = None, **fields) -> Model:
-    """改实体基本字段（name/vendor/description/slug）。改名或改 slug 都会把旧值转成别名。"""
+def model_update(db: Session, model: Model, actor_id: int | None = None, reason: str = "", **fields) -> Model:
+    """改实体基本字段（name/vendor/description/slug）。改名或改 slug 都会把旧值转成别名。
+    M3-B1 契约 §31.1：PATCH 补丁体的 reason 是审计元数据——空缺省回既有默认语。"""
     before = audit_service.snapshot_model(model)
     old_name = model.name
     for f in ("vendor", "description"):
@@ -747,9 +748,12 @@ def model_update(db: Session, model: Model, actor_id: int | None = None, **field
         before=before,
         after=audit_service.snapshot_model(model),
         reason=(
-            f"slug：{before.get('slug')} → {model.slug}（旧值已转别名，对外链接会变）"
-            if slug_changed
-            else "编辑实体信息"
+            reason
+            or (
+                f"slug：{before.get('slug')} → {model.slug}（旧值已转别名，对外链接会变）"
+                if slug_changed
+                else "编辑实体信息"
+            )
         ),
     )
     db.commit()

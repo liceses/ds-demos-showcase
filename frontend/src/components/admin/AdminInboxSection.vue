@@ -253,7 +253,7 @@ onMounted(() => {
         <div class="filter-row" style="margin: 0; flex-wrap: wrap; align-items: center">
           <b>{{ t('admin.inbox.batchSelected', '已选 {n} 条', { n: selected.size }) }}</b>
           <button class="btn btn-sm btn-primary" type="button" @click="runBatch('approve')">
-            {{ t('admin.inbox.batchApprove', '批量批准（前端 5/s）') }}
+            {{ t('admin.inbox.batchApprove', '批量批准（服务端批量）') }}
           </button>
           <button class="btn btn-sm btn-dark" type="button" @click="runBatch('reject')">
             {{ t('admin.inbox.batchReject', '批量驳回') }}

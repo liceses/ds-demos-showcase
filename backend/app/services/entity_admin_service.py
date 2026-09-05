@@ -41,7 +41,9 @@ def patch_entity(db, entity_type: str, ident: str, fields: dict, actor_id: int) 
         _assert_str_fields(fields, MODEL_FIELDS)
         m = model_service.get_model_or_404(db, ident)
         fields = _drop_empty(fields)
-        model_service.model_update(db, m, actor_id=actor_id, **fields)
+        # M3-B1 契约 §31.1：reason 是审计元数据——model 分支此前把 reason 弹出后丢在地上，
+        # 审计理由恒为默认「编辑实体信息」（T13 走查实锤），现补传。
+        model_service.model_update(db, m, actor_id=actor_id, reason=reason, **fields)
         return {"type": "model", "id": m.id, "slug": m.slug, "updated": sorted(fields)}
 
     if entity_type == "task":

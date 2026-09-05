@@ -15,6 +15,7 @@ import { t } from '../i18n'
 import EntityStamp from '../components/EntityStamp.vue'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import SectionHead from '../components/SectionHead.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -169,10 +170,9 @@ watch(() => route.params.slug, load, { immediate: true })
     </div>
 
     <!-- 热门任务（同题对比入口）：每行 = 任务 + 该模型作品数 + 对比视图 -->
-    <div class="section-head" style="margin-top: 28px">
-      <h2 class="section-title">{{ t('models.hotTasks', '热门任务') }}</h2>
+    <SectionHead :title="t('models.hotTasks', '热门任务')" style="margin-top: 28px">
       <span class="muted" style="font-size: 13px">{{ t('models.compareSub', '进入任务即可与其他模型同题对比') }}</span>
-    </div>
+    </SectionHead>
     <div v-if="!model.tasks.length" class="empty-box">{{ t('models.emptyTasks', '还没有参与任务') }}</div>
     <div v-else class="task-lines">
       <RouterLink v-for="tk in model.tasks" :key="tk.slug" class="task-line" :to="`/tasks/${tk.slug}`">
@@ -183,8 +183,7 @@ watch(() => route.params.slug, load, { immediate: true })
     </div>
 
     <!-- 作品清单：默认按时间（与旧版一致），排序与筛选可切换且写进 URL -->
-    <div class="section-head" style="margin-top: 28px">
-      <h2 class="section-title">{{ t('models.recent', '最近作品') }}</h2>
+    <SectionHead :title="t('models.recent', '最近作品')" style="margin-top: 28px">
       <div class="filter-row" style="margin: 0">
         <button
           v-for="o in ([['newest', t('models.sortNew', '最新')], ['score', t('models.sortScore', '社区分')], ['popular', t('models.sortPopular', '最热')]] as [DemoSort, string][])"
@@ -196,7 +195,7 @@ watch(() => route.params.slug, load, { immediate: true })
         >{{ o[1] }}</button>
         <span class="muted mono" style="font-size: 12px">{{ demoItems.length }} / {{ demoTotal }}</span>
       </div>
-    </div>
+    </SectionHead>
     <!-- facet：用本页已有的类型分布做筛选，答的是"它擅长做什么" -->
     <div v-if="model.type_dist.length" class="filter-row" style="margin: 0 0 12px">
       <span class="filter-label">{{ t('models.facetLabel', '按类型筛') }}</span>

@@ -280,6 +280,8 @@ export const en = {
     related: 'Discussions {n} →',
     switchKey: 'Same-key switch',
     children: 'Child tags',
+    relatedDemos: 'Related demos',
+    relatedN: 'items',
   },
 
   auth: {

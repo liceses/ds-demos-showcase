@@ -9,6 +9,7 @@ import MasonryGrid from '../components/MasonryGrid.vue'
 import TagGroupBox from '../components/TagGroupBox.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
+import SectionHead from '../components/SectionHead.vue'
 
 const props = defineProps<{ k: string; v: string }>()
 
@@ -80,9 +81,7 @@ onMounted(async () => {
     </section>
 
     <section v-if="sameKeyValues.length > 1" class="section" style="padding-top: 8px">
-      <div class="section-head">
-        <h2 class="section-title">{{ t('tagDetail.switchKey', '同键切换') }}</h2>
-      </div>
+      <SectionHead :title="t('tagDetail.switchKey', '同键切换')" />
       <TagGroupBox
         v-if="sameKeyValues.length"
         :values="sameKeyValues"
@@ -92,9 +91,7 @@ onMounted(async () => {
     </section>
 
     <section v-if="tag.children?.length" class="section" style="padding-top: 8px">
-      <div class="section-head">
-        <h2 class="section-title">{{ t('tagDetail.children', '子标签') }}</h2>
-      </div>
+      <SectionHead :title="t('tagDetail.children', '子标签')" />
       <div class="filter-row">
         <RouterLink
           v-for="c in tag.children"
@@ -109,10 +106,9 @@ onMounted(async () => {
     </section>
 
     <section class="section">
-      <div class="section-head">
-        <h2 class="section-title">关联 Demo</h2>
-        <span class="mini-stat"><b>{{ demos.length }}</b> 个</span>
-      </div>
+      <SectionHead :title="t('tagDetail.relatedDemos', '关联 Demo')">
+        <span class="mini-stat"><b>{{ demos.length }}</b> {{ t('tagDetail.relatedN', '个') }}</span>
+      </SectionHead>
       <EmptyBox v-if="!demos.length" text="这个标签还很年轻，还没有 Demo" />
       <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
         <template #default="{ item }">

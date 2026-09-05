@@ -12,6 +12,7 @@ import EntityStamp from '../components/EntityStamp.vue'
 import TagGroupBox from '../components/TagGroupBox.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
+import SectionHead from '../components/SectionHead.vue'
 
 const data = ref<ExploreResult | null>(null)
 const loading = ref(true)
@@ -73,10 +74,9 @@ onMounted(load)
 
     <template v-else-if="data">
       <!-- 1. 模型 -->
-      <div class="section-head">
-        <h2 class="section-title">{{ t('explore.modelsTitle', '模型') }}</h2>
+      <SectionHead :title="t('explore.modelsTitle', '模型')">
         <RouterLink class="btn btn-sm btn-outline" to="/models">{{ t('explore.allModels', '全部模型 →') }}</RouterLink>
-      </div>
+      </SectionHead>
       <div v-if="!data.models.items.length" class="empty-box">{{ t('explore.emptyModels', '还没有模型条目') }}</div>
       <div v-else class="explore-grid">
         <RouterLink v-for="m in data.models.items" :key="m.slug" class="explore-cell card card-entity" :to="`/models/${m.slug}`">
@@ -102,10 +102,9 @@ onMounted(load)
       </RouterLink>
 
       <!-- 2. 题目 -->
-      <div class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">{{ t('explore.tasksTitle', '题目') }}</h2>
+      <SectionHead :title="t('explore.tasksTitle', '题目')" style="margin-top: 28px">
         <RouterLink class="btn btn-sm btn-outline" to="/tasks">{{ t('explore.allTasks', '全部题目 →') }}</RouterLink>
-      </div>
+      </SectionHead>
       <div v-if="!data.tasks.length" class="empty-box">{{ t('explore.emptyTasks', '还没有题目') }}</div>
       <div v-else class="task-lines">
         <RouterLink v-for="tk in data.tasks" :key="tk.slug" class="task-line" :to="`/tasks/${tk.slug}`">
@@ -120,10 +119,9 @@ onMounted(load)
       </div>
 
       <!-- 3. 描述性标签（D5：面板级标签一律用青色组盒，行内才留 chips） -->
-      <div class="section-head" style="margin-top: 28px">
-        <h2 class="section-title">{{ t('explore.labelsTitle', '描述性标签') }}</h2>
+      <SectionHead :title="t('explore.labelsTitle', '描述性标签')" style="margin-top: 28px">
         <RouterLink class="btn btn-sm btn-outline" to="/tags/keys">{{ t('explore.allKeys', '全部标签键 →') }}</RouterLink>
-      </div>
+      </SectionHead>
       <div class="explore-labels">
         <div v-for="k in LABEL_KEYS" :key="k" class="explore-label-block">
           <TagGroupBox :values="boxedValues(k)" mode="display" :route-key="k" />

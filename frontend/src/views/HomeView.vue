@@ -13,6 +13,7 @@ import { timeAgo } from '../utils/time'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementModal from '../components/AnnouncementModal.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import SectionHead from '../components/SectionHead.vue'
 
 // 整活模式：大标题/灰测区文案随全站开关切换
 const funOn = funEffective
@@ -402,8 +403,7 @@ onBeforeUnmount(() => {
     <div class="hub-main">
       <!-- 精选展示（hero 主件已取 featured[0]，网格展示其余 5 件——同池去重，05 §2.1） -->
       <section class="section hub-block" style="padding-top: 0">
-        <div class="section-head">
-          <h2 class="section-title">{{ t('home.featured', '精选作品') }}</h2>
+        <SectionHead :title="t('home.featured', '精选作品')">
           <div class="filter-row" style="margin: 0">
             <!-- 07 §2.2：策展态下不 shuffle（精选=编辑意图）；「换一批」只在随机回落态出现 -->
             <button v-if="!curated" class="btn btn-sm btn-secondary" type="button" :disabled="featuredBusy" @click="shuffleFeatured">
@@ -411,7 +411,7 @@ onBeforeUnmount(() => {
             </button>
             <RouterLink class="btn btn-sm btn-outline" to="/demos">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
           </div>
-        </div>
+        </SectionHead>
         <!-- 策展透明口径行（03 §3.2 / 07 §2.2）：策展态=管理员精选按序展示；随机回落态=已上架全量随机 60s 同批 -->
         <p class="muted caliber-line">{{ curated ? t('home.curatedCaliber', '本期由管理员精选，按编排顺序展示') : t('home.shuffleCaliber', '换池口径：已上架作品全量随机，60 秒内同一批') }}</p>
         <div v-if="error" class="notice notice-error">{{ error }}</div>
@@ -447,9 +447,7 @@ onBeforeUnmount(() => {
 
       <!-- 最新上传（续流，加载更多） -->
       <section class="section hub-block">
-        <div class="section-head">
-          <h2 class="section-title">{{ t('home.latest.title', '最新上传') }}</h2>
-        </div>
+        <SectionHead :title="t('home.latest.title', '最新上传')" />
         <div v-if="!latest.length && latestBusy" class="loading-row"><span class="spinner"></span> {{ t('home.latest.loading', '加载最新…') }}</div>
         <div v-else-if="!latest.length" class="empty-box">{{ t('home.latest.empty', '还没有新上传') }}</div>
         <div v-else class="latest-list">

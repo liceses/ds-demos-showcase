@@ -11,6 +11,7 @@ import CopyButton from '../components/CopyButton.vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import DshTrajectoryView from '../components/DshTrajectoryView.vue'
 import DemoCard from '../components/DemoCard.vue'
+import SectionHead from '../components/SectionHead.vue'
 import ModelChips from '../components/ModelChips.vue'
 import RatingWidget from '../components/RatingWidget.vue'
 import QuickComments from '../components/QuickComments.vue'
@@ -564,10 +565,9 @@ onMounted(load)
     <!-- ② 怎么做出来的：本站最独特的证据（真实生成过程），原来藏在第三个 tab 里。
          用原生 <details>：键盘可达、无需 JS 状态、展开即读。 -->
     <section class="section dv-archive">
-      <div class="section-head">
-        <h2 class="section-title">{{ t('demo.howTitle', '怎么做出来的') }}</h2>
+      <SectionHead :title="t('demo.howTitle', '怎么做出来的')">
         <span class="muted">{{ t('demo.howNote', '过程记录仅表示创建与更新演进，不等同于 AI 生成真实性证明') }}</span>
-      </div>
+      </SectionHead>
 
       <div class="dv-disclose-grid">
         <details v-if="sessionLogs.length" id="dv-session" class="dv-disclose" :open="opened === 'session'">
@@ -644,11 +644,10 @@ onMounted(load)
 
     <!-- v2：同提示词的其他作品（同一句话交给不同模型 → 严格复现对比，零 Task 依赖） -->
     <section v-if="samePrompt" class="section dv-cmp dv-cmp-repro" style="padding-top: 8px">
-      <div class="section-head">
-        <h2 class="section-title">{{ t('demo.samePromptTitle', '严格复现：同一句提示词，别的模型交出什么') }}</h2>
+      <SectionHead :title="t('demo.samePromptTitle', '严格复现：同一句提示词，别的模型交出什么')">
         <span class="dv-cmp-tag mono">PROMPT =</span>
         <span class="mini-stat"><b>{{ samePrompt.items.length }}</b> {{ t('demo.samePromptN', '个对照') }}</span>
-      </div>
+      </SectionHead>
       <div class="card card-mint same-prompt-quote" style="position: relative">
         <span class="same-prompt-label mono">PROMPT · {{ t('demo.samePromptHint', '同一句提示词，不同模型的回答') }}</span>
         <!-- t21 追加：PROMPT= 复现块一键复制（与①区同款 CopyButton） -->
@@ -665,13 +664,12 @@ onMounted(load)
     <!-- 相关推荐 -->
     <!-- v2 §7.3：同题作品（这道题别的模型交了什么）—— 与同提示词互补：一个严格复现，一个同命题发挥 -->
     <section v-if="sameTask" class="section dv-cmp dv-cmp-task" style="padding-top: 8px">
-      <div class="section-head">
-        <h2 class="section-title">{{ t('demo.sameTaskTitle', '同命题发挥：这道题其他模型交了什么') }}</h2>
+      <SectionHead :title="t('demo.sameTaskTitle', '同命题发挥：这道题其他模型交了什么')">
         <span class="dv-cmp-tag mono">TASK =</span>
         <RouterLink class="btn btn-sm btn-outline" :to="`/tasks/${sameTask.slug}`">
           {{ t('demo.sameTaskCta', '看同题对比 →') }}
         </RouterLink>
-      </div>
+      </SectionHead>
       <p class="muted" style="margin: 0 0 10px">
         <b>{{ sameTask.title }}</b>
         <span v-if="sameTask.description"> · {{ sameTask.description }}</span>
@@ -692,11 +690,10 @@ onMounted(load)
     </section>
 
     <section class="section dv-cmp dv-cmp-random" style="padding-top: 8px">
-      <div class="section-head">
-        <h2 class="section-title">{{ t('demo.related', '随便逛逛（与本页无因果关系）') }}</h2>
+      <SectionHead :title="t('demo.related', '随便逛逛（与本页无因果关系）')">
         <span class="dv-cmp-tag mono">RANDOM</span>
         <button class="btn btn-sm btn-outline" type="button" @click="drawRelated">{{ t('home.shuffle', '换一批') }}</button>
-      </div>
+      </SectionHead>
       <div v-if="relatedLoading && !relatedShown.length" class="loading-row"><span class="spinner"></span> {{ t('demo.loadingRelated', '加载推荐…') }}</div>
       <div v-else-if="!relatedShown.length" class="empty-box">{{ t('demo.noRelated', '暂无相关推荐') }}</div>
       <div v-else class="waterfall">

@@ -10,6 +10,7 @@ import { parseDate, currentLocale } from '../utils/time'
 import { tagLabel } from '../utils/funMode'
 import { t } from '../i18n'
 import EntityStamp from '../components/EntityStamp.vue'
+import SectionHead from '../components/SectionHead.vue'
 // 作品瀑布已被证据表取代（DemoCard / MasonryGrid 因此不再需要）
 
 const route = useRoute()
@@ -103,10 +104,9 @@ const chainStat = computed(() => {
     </section>
 
     <!-- 按模型对比（Benchmark 视图） -->
-    <div class="section-head">
-      <h2 class="section-title">{{ t('tasks.compareTitle', '按模型对比') }}</h2>
+    <SectionHead :title="t('tasks.compareTitle', '按模型对比')">
       <RouterLink class="btn btn-sm btn-primary" :to="`/upload?task=${task.slug}`">{{ t('tasks.challenge', '用你的模型挑战此题 →') }}</RouterLink>
-    </div>
+    </SectionHead>
     <div v-if="!task.compare.length" class="empty-box">{{ t('tasks.emptyCompare', '还没有模型参与此题，等更多模型来挑战 →') }}</div>
     <div v-else class="compare-list">
       <div v-for="(row, i) in task.compare" :key="row.model.slug" class="compare-row card card-entity">
@@ -132,8 +132,7 @@ const chainStat = computed(() => {
 
     <!-- 证据表：一行一件作品，列即链条环节（读表 = 读链条）。
          取代原来的作品瀑布——瀑布把"谁做的、用哪句题面、跑了几轮"这些信息全丢了。 -->
-    <div class="section-head" style="margin-top: 28px">
-      <h2 class="section-title">{{ t('tasks.chainSection', '逐件证据') }}</h2>
+    <SectionHead :title="t('tasks.chainSection', '逐件证据')" style="margin-top: 28px">
       <div class="filter-row" style="margin: 0; flex-wrap: wrap">
         <button
           v-for="o in ([['rating', t('tasks.sortRating', '按评分')], ['rounds', t('tasks.sortRounds', '按轮数')], ['title', t('tasks.sortTitle', '按标题')]] as [ChainSort, string][])"
@@ -148,7 +147,7 @@ const chainStat = computed(() => {
         </button>
         <span class="muted mono">{{ chainRows.length }} / {{ task.chain?.rows.length ?? 0 }}</span>
       </div>
-    </div>
+    </SectionHead>
     <div v-if="!chainRows.length" class="empty-box">{{ t('tasks.emptyDemos', '暂无作品') }}</div>
     <div v-else class="table-wrap">
       <table class="data chain-table">

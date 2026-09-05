@@ -1285,6 +1285,16 @@ export const en = {
       tagNoLifecycle: 'Tag has no status field/transition endpoint in the current DB — state machine pending backend (collab list #3); no fake transitions offered.',
       noAudit: 'No audit entries for this entity yet (tag key/value changes are not audited = backend collab item)',
       noWorks: 'No linked works',
+      // M3-B2 管理员直建题目（02 P1 管理员侧解法；初始挂载待后端 demo_slugs=t11）
+      newTask: 'New task',
+      taskTitlePh: 'Task title (required)',
+      taskCatPh: 'Optional, aligns with category tag values',
+      taskDescPh: 'Task brief / evaluation notes (optional)',
+      attachPending: 'Initial attach: pending backend demo_slugs param (t11 collab) — attach later in the task detail works zone.',
+      saving: 'Creating…',
+      taskCreate: 'Create task',
+      taskCreated: 'Task created: {slug}',
+      taskCreateNote: 'Admin direct-create takes effect immediately (audited) — not via the candidate queue; user proposals still go through task candidates.',
     },
     attr: {
       hint: 'A fallback slot is not the end state: move these works back to a real model.',

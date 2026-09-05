@@ -109,3 +109,21 @@ cd web && git pull && docker compose up -d --build
 ## 历史方案（已弃用）
 
 原「Cloudflare Worker 全栈（Hono + D1 + 阿里云 OSS）」部署方式见 git 历史（自 commit `04c4bc2` 起，`wrangler.toml`、`frontend/worker/` 等）。现线上以本文件的 Docker Compose + nginx 为准。
+
+## 安全待办（2026-09-05 登记，勿遗漏）
+
+### 1. OSS AccessKey 轮换（⚠️ 已泄露，最高优先）
+
+- **背景**：已弃用的 Cloudflare Worker 方案残留 wrangler.toml L20 明文提交了阿里云 OSS AccessKey ID（LTAI5t7…，Secret 走 wrangler secret 未泄，但 ID 本身不应入库）。该凭据对已弃用方案而言纯属暴露面。
+- **处置步骤**：
+  1. 登录阿里云 RAM 控制台，**禁用并轮换**该 AccessKey（创建新 Key，删除旧 Key）；
+  2. 若 OSS 仍在使用（OSS_SERVE_LOCAL=false 场景），用新 Key 更新 web/.env 的 OSS 配置并重启 backend；
+  3. 从仓库历史清除 wrangler.toml 中的 Key ID（git filter-repo 或接受历史留存但确保 Key 已失效——**Key 失效是唯一硬保障**）；
+  4. 确认 rontend/worker/ + wrangler.toml 死代码已从工作区移除（重构批已标记，随收尾批清理）。
+- **验收**：RAM 控制台该 Key 状态=已删除；仓库内无有效凭据。
+
+### 2. 计数修复部署备忘（2026-09-05）
+
+- 部署前**备份 app.db**（docker compose exec backend cp /app/data/app.db /app/data/app.db.bak）；
+- 09-04~部署窗口的计数增量无法找回（内存批次设计固有代价）；
+- 部署后验证：浏览/下载一个 demo → 30s 后计数落库、重启不归零。

@@ -853,10 +853,7 @@ class TaskUpdateIn(BaseModel):
 
 
 class AttachDemosIn(BaseModel):
-    """挂题：demo_ids（既有，簇成题用）或 demo_slugs（M3-B2，实体详情按 slug 挂）至少给一种。"""
-
-    demo_ids: list[int] = Field(default_factory=list, max_length=500)
-    demo_slugs: list[str] = Field(default_factory=list, max_length=500)
+    demo_ids: list[int] = Field(min_length=1, max_length=500)
 
 
 class AttributeIn(BaseModel):
@@ -869,10 +866,3 @@ class AttributeIn(BaseModel):
 
 class SuggestionReviewIn(BaseModel):
     action: str = Field(pattern="^(approve|reject)$")
-
-
-class BatchReviewIn(BaseModel):
-    """M3-B3 收件箱批量审核：事务内逐条走 suggestion_service.review（每条独立落审计，单条失败不拖垮整批）。"""
-
-    action: str = Field(pattern="^(approve|reject)$")
-    ids: list[int] = Field(min_length=1, max_length=500)

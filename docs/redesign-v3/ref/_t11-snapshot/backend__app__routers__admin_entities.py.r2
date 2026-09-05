@@ -6,18 +6,17 @@
 
 import json
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_admin
-from ..models import AUDIT_ACTIONS, AuditLog, Demo, DemoModel, DemoTask, EntitySuggestion, Task, User
+from ..models import AUDIT_ACTIONS, AuditLog, DemoModel, EntitySuggestion, Task, User
 from ..schemas import (
     AliasIn,
     AttachDemosIn,
     AttributeIn,
-    BatchReviewIn,
     MergeIn,
     ModelCreate,
     ModelStatusIn,
@@ -27,7 +26,7 @@ from ..schemas import (
     TaskUpdateIn,
     UnmergeIn,
 )
-from ..services import cluster_service, entity_admin_service, model_service, suggestion_service, task_service
+from ..services import cluster_service, model_service, suggestion_service, task_service
 
 router = APIRouter(prefix="/admin", tags=["admin-entities"])
 
@@ -270,14 +269,9 @@ def admin_attach_demos(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """批量挂题：冷启动与 prompt 簇「成题」的执行入口。M3-B2：支持 demo_ids 或 demo_slugs（实体详情按 slug 挂）。"""
+    """批量挂题：冷启动与 prompt 簇「成题」的执行入口。"""
     task = task_service.get_task_or_404(db, ident)
-    ids = list(body.demo_ids or [])
-    if body.demo_slugs:
-        ids += entity_admin_service.resolve_demo_slugs(db, body.demo_slugs)
-    if not ids:
-        raise HTTPException(status_code=422, detail="demo_ids / demo_slugs 至少给一种")
-    added = task_service.attach_demos(db, task, ids, actor_id=admin.id)
+    added = task_service.attach_demos(db, task, body.demo_ids, actor_id=admin.id)
     return {"task_id": task.id, "attached": added}
 
 
@@ -290,23 +284,6 @@ def admin_detach_demo(
 ):
     task = task_service.get_task_or_404(db, ident)
     if not task_service.detach_demo(db, task, demo_id, actor_id=admin.id):
-        raise HTTPException(status_code=404, detail="该作品不在此题目下")
-    return None
-
-
-@router.delete("/tasks/{ident}/demos/slug/{demo_slug}", status_code=204)
-def admin_detach_demo_by_slug(
-    ident: str,
-    demo_slug: str,
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
-):
-    """M3-B2 摘题（按 slug）：实体详情关联作品列表是 DemoSummary（只有 slug），按 slug 摘除。"""
-    task = task_service.get_task_or_404(db, ident)
-    row = db.query(Demo.id).filter(Demo.slug == demo_slug).first()
-    if row is None:
-        raise HTTPException(status_code=404, detail="demo slug 不存在")
-    if not task_service.detach_demo(db, task, row[0], actor_id=admin.id):
         raise HTTPException(status_code=404, detail="该作品不在此题目下")
     return None
 
@@ -372,28 +349,6 @@ def admin_review_suggestion(
     return suggestion_service.suggestion_out(s)
 
 
-@router.post("/suggestions/batch-review")
-def admin_batch_review_suggestions(
-    body: BatchReviewIn,
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
-):
-    """M3-B3 收件箱批量审核（t4 前端限速循环→真批量端点）：逐条独立提交+审计，单条失败不拖垮整批。"""
-    return entity_admin_service.batch_review(db, body.action, body.ids, actor_id=admin.id)
-
-
-@router.patch("/entities/{entity_type}/{ident}")
-def admin_patch_entity(
-    entity_type: str,
-    ident: str,
-    patch: dict = Body(default_factory=dict, description='字段白名单直改：model={name,vendor,description} task={title,description,category,status,reason} tag={description,group}；"reason" 键为审计元数据'),
-    db: Session = Depends(get_db),
-    admin: User = Depends(require_admin),
-):
-    """M3-B1 统一实体字段直改（06 §A2「自由」格落地）：白名单逐实体定义，全部走 service 层+审计。"""
-    return entity_admin_service.patch_entity(db, entity_type, ident, patch, actor_id=admin.id)
-
-
 @router.get("/knowledge/stats")
 def admin_knowledge_stats(db: Session = Depends(get_db), _: User = Depends(require_admin)):
     """治理体检：覆盖率 / 实体积压 / 收件箱待处理 / 重复率（明确不用「标签数量」当 KPI）。"""
@@ -402,7 +357,7 @@ def admin_knowledge_stats(db: Session = Depends(get_db), _: User = Depends(requi
 
 @router.get("/audit")
 def admin_audit(
-    entity_type: str | None = Query(default=None, pattern="^(model|task|tag|suggestion)$"),  # M3-B1：+tag（Tag PATCH 落 update 审计后需可按实体过滤）
+    entity_type: str | None = Query(default=None, pattern="^(model|task|suggestion)$"),
     entity_id: int | None = None,
     action: str | None = Query(default=None, pattern="^(" + "|".join(AUDIT_ACTIONS) + ")$"),
     q: str | None = Query(default=None, description="按 reason 关键词搜（定位是谁的哪次操作）"),
@@ -436,7 +391,7 @@ def admin_audit(
         "page": page,
         "page_size": page_size,
         "actions": list(AUDIT_ACTIONS),
-        "entity_types": ["model", "task", "tag", "suggestion"],  # M3-B1：+tag（前端审计下拉数据源）
+        "entity_types": ["model", "task", "suggestion"],
     }
 
 

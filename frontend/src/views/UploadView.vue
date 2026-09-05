@@ -5,13 +5,14 @@ import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useTagsStore } from '../stores/tags'
 import { useUiStore } from '../stores/ui'
-import type { DemoDetail, DerivedTag, TaskDetail } from '../api/types'
+import type { DemoDetail, TaskDetail } from '../api/types'
 import TagPicker from '../components/TagPicker.vue'
 import type { TagPick } from '../components/TagPicker.vue'
 import { t } from '../i18n'
 import { tagLabel } from '../utils/funMode'
 import { useUploadDraft } from '../composables/useUploadDraft'
 import { useTaskMount } from '../composables/useTaskMount'
+import { useTagSuggest } from '../composables/useTagSuggest'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -76,63 +77,10 @@ const selectedList = computed(() =>
   ),
 )
 
-// ---------- §4.2 标签建议包（规则推导，收下或跳过都行） ----------
-const pack = ref<DerivedTag[]>([])
-const packLoading = ref(false)
-const packIgnored = ref(false) // 作者主动收起后不再自动弹
-let packTimer: ReturnType<typeof setTimeout> | null = null
-
-function isSelectedTag(key: string, value: string) {
-  return (selected.value[key] || []).some((x) => x.value === value)
-}
-
-/** type 是单值语义：已有任一 type 就不再推别的（巡检发现多值 28 件就是历史教训） */
-const packVisible = computed(() =>
-  pack.value.filter((x) => !isSelectedTag(x.key, x.value) && !(x.key === 'type' && (selected.value['type'] || []).length)),
-)
-
-async function fetchPack() {
-  const text = `${title.value} ${description.value} ${prompt.value}`.trim()
-  if (text.length < 6 || editSlug) {
-    pack.value = []
-    return
-  }
-  packLoading.value = true
-  try {
-    const r = await api.deriveTags({ title: title.value, description: description.value, prompt: prompt.value, limit: 6 })
-    pack.value = r.items
-  } catch {
-    pack.value = [] // 建议包是增值信息，失败绝不打扰上传流程
-  } finally {
-    packLoading.value = false
-  }
-}
-
-function schedulePack() {
-  if (packTimer) clearTimeout(packTimer)
-  packTimer = setTimeout(fetchPack, 700) // 防抖：打字时不打扰，停下再推
-}
-
-function addSuggestion(s: DerivedTag) {
-  const list = selected.value[s.key] ? [...selected.value[s.key]] : []
-  if (!list.some((x) => x.value === s.value)) list.push({ value: s.value, description: s.label !== s.value ? s.label : '' })
-  selected.value = { ...selected.value, [s.key]: list }
-}
-
-function addAllSuggestions() {
-  const next: Record<string, { value: string; description: string }[]> = { ...selected.value }
-  for (const s of packVisible.value) {
-    const list = next[s.key] ? [...next[s.key]] : []
-    if (s.key === 'type' && list.length) continue
-    if (!list.some((x) => x.value === s.value)) list.push({ value: s.value, description: s.label !== s.value ? s.label : '' })
-    next[s.key] = list
-  }
-  selected.value = next
-  stamp('pack')
-  aside('pack', t('upload.asPack', '系统查了词表，你签了字 —— 出处就算你的。'))
-}
-
-watch([title, description, prompt], schedulePack)
+// ---------- §4.2 标签建议包（T15 拆分件 useTagSuggest；逐字迁出行为不变） ----------
+const {
+  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack,
+} = useTagSuggest({ editSlug, title, description, prompt, selected, stamp, aside })
 
 // ================= 向导状态机（设计依据见 docs/deepdemosv2/上传页重设计.md） =================
 // 一步只解决一个子问题：① 作品是什么 ② 哪个模型做的 ③ 说清楚 —— 步内不留必填盲区。
@@ -368,11 +316,6 @@ function dropChallenge() {
 const {
   pickedTask, taskQuery, taskHits, taskSearching, taskPickerOpen, runTaskSearch, scheduleTaskSearch, pickTask, clearTask, openTaskPicker, simPct,
 } = useTaskMount({ title, description, prompt, aside })
-/** 建议包被「不用了」收掉后必须还能叫回来（静默永久隐藏是设计失礼） */
-function bringBackPack() {
-  packIgnored.value = false
-  void fetchPack()
-}
 
 // ---------- 可玩性：旁白 + 盖章 + 称号（都可一键关，不尊重注意力就不算设计） ----------
 const asideOn = ref(localStorage.getItem('upload.aside') !== '0')

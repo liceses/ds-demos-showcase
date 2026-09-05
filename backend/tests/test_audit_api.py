@@ -87,6 +87,13 @@ def test_audit_paging_and_filters(client, admin_headers):
     ent = client.get("/api/v1/admin/audit?entity_type=model", headers=admin_headers).json()
     assert all(x["entity_type"] == "model" for x in ent["items"]), ent["items"][:2]
 
+    # T7 走查实锤：M5-F1 精选池审计以 entity_type=demo 落行，而 entity_type 过滤
+    # pattern 曾漏 demo → 422，精选操作在审计页筛不出来。此处锁放行 + 下拉源含 demo。
+    r = client.get("/api/v1/admin/audit?entity_type=demo", headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert all(x["entity_type"] == "demo" for x in r.json()["items"])
+    assert "demo" in r.json()["entity_types"]
+
 
 def test_audit_requires_admin(client):
     client.cookies.clear()

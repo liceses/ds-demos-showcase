@@ -102,7 +102,12 @@ const debouncing = ref(false)
 let seq = 0
 let timer: ReturnType<typeof setTimeout> | undefined
 
-const visible = computed(() => rows.value.filter((x) => x.id !== props.excludeId))
+// T7 走查实锤修复：excludeId 缺省 null，而公开 demo 行 id 恒 null（契约无数字 id）——
+// 旧写法 x.id !== excludeId(null) 会把所有 demo 行滤空（列表空但 total=1，「搜索即选」断链）。
+// 新语义：excludeId 未给 → 全量展示；给了 → 只剔除 id 精确匹配的行（未知 id 行不误杀）。
+const visible = computed(() =>
+  props.excludeId == null ? rows.value : rows.value.filter((x) => x.id !== props.excludeId),
+)
 const kindKey = computed(() => kind.value)
 
 function closePanel() {

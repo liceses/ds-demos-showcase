@@ -462,7 +462,7 @@ def admin_knowledge_stats(db: Session = Depends(get_db), _: User = Depends(requi
 
 @router.get("/audit")
 def admin_audit(
-    entity_type: str | None = Query(default=None, pattern="^(model|task|tag|suggestion)$"),  # M3-B1：+tag（Tag PATCH 落 update 审计后需可按实体过滤）
+    entity_type: str | None = Query(default=None, pattern="^(model|task|tag|suggestion|demo)$"),  # M3-B1：+tag；M5-F1：+demo（精选池 featured_* 审计可筛）
     entity_id: int | None = None,
     action: str | None = Query(default=None, pattern="^(" + "|".join(AUDIT_ACTIONS) + ")$"),
     q: str | None = Query(default=None, description="按 reason 关键词搜（定位是谁的哪次操作）"),
@@ -496,7 +496,7 @@ def admin_audit(
         "page": page,
         "page_size": page_size,
         "actions": list(AUDIT_ACTIONS),
-        "entity_types": ["model", "task", "tag", "suggestion"],  # M3-B1：+tag（前端审计下拉数据源）
+        "entity_types": ["model", "task", "tag", "suggestion", "demo"],  # M3-B1：+tag；M5-F1：+demo（前端审计下拉数据源）
     }
 
 

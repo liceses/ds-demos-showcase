@@ -6,7 +6,8 @@ import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import type { ConflictGroup, EntityConflicts, MergeHistoryItem, MergePreview, UnmergePreview } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
-import EntityPicker from './EntityPicker.vue'
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 import LoadingRow from '../LoadingRow.vue'
 import { t } from '../../i18n'
 
@@ -32,6 +33,16 @@ const conflictGroups = computed(() => (kind.value === 'models' ? conflicts.value
 function reset() {
   source.value = null
   target.value = null
+  preview.value = null
+}
+
+// T5·M5-F2：基座 pick 富化（id+slug+label）；合并只需 id，label 做回显
+function pickSource(p: EntityPick) {
+  source.value = { id: p.id ?? 0, label: p.label }
+  preview.value = null
+}
+function pickTarget(p: EntityPick) {
+  target.value = { id: p.id ?? 0, label: p.label }
   preview.value = null
 }
 
@@ -177,12 +188,12 @@ onMounted(load)
         <div class="card card-default merge-col">
           <h3 class="archive-title">{{ t('admin.merge.step1', '① 源实体（被合并、将退役）') }}</h3>
           <p v-if="source" class="merge-picked mono">{{ source.label }}</p>
-          <EntityPicker :kind="kind" :selected-id="source?.id" :exclude-id="target?.id" @pick="(p) => { source = p; preview = null }" />
+          <EntityPicker :kind="kind" mode="inline" :selected-id="source?.id" :exclude-id="target?.id" @pick="pickSource" />
         </div>
         <div class="card card-default merge-col">
           <h3 class="archive-title">{{ t('admin.merge.step2', '② 归宿实体（保留）') }}</h3>
           <p v-if="target" class="merge-picked mono">{{ target.label }}</p>
-          <EntityPicker :kind="kind" :selected-id="target?.id" :exclude-id="source?.id" @pick="(p) => { target = p; preview = null }" />
+          <EntityPicker :kind="kind" mode="inline" :selected-id="target?.id" :exclude-id="source?.id" @pick="pickTarget" />
         </div>
       </div>
 

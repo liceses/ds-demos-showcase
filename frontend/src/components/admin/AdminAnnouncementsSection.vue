@@ -5,7 +5,8 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { Announcement } from '../../api/types'
 import MarkdownEditor from '../MarkdownEditor.vue'
-import EntityPicker from './EntityPicker.vue'
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 import { parseDate } from '../../utils/time'
 import { t } from '../../i18n'
 
@@ -27,8 +28,8 @@ const newPicking = ref(false)
 const editTopicLabel = ref('')
 const editPicking = ref(false)
 
-function onPickNew(p: { id: number; label: string }) {
-  newAnn.value.topic_id = p.id
+function onPickNew(p: EntityPick) {
+  newAnn.value.topic_id = p.id ?? null
   newTopicLabel.value = p.label
   newPicking.value = false
 }
@@ -37,8 +38,8 @@ function onClearNew() {
   newTopicLabel.value = ''
   newPicking.value = false
 }
-function onPickEdit(p: { id: number; label: string }) {
-  editAnnForm.value.topic_id = p.id
+function onPickEdit(p: EntityPick) {
+  editAnnForm.value.topic_id = p.id ?? null
   editTopicLabel.value = p.label
   editPicking.value = false
 }
@@ -204,7 +205,8 @@ onMounted(loadAnnouncements)
           </div>
           <EntityPicker
             v-if="editPicking"
-            kind="topics"
+            kind="topic"
+            mode="inline"
             :selected-id="editAnnForm.topic_id"
             :placeholder="t('admin.ann.searchTopic', '搜索主题标题…')"
             @pick="onPickEdit"
@@ -250,7 +252,8 @@ onMounted(loadAnnouncements)
           </div>
           <EntityPicker
             v-if="newPicking"
-            kind="topics"
+            kind="topic"
+            mode="inline"
             :selected-id="newAnn.topic_id"
             :placeholder="t('admin.ann.searchTopic', '搜索主题标题…')"
             @pick="onPickNew"

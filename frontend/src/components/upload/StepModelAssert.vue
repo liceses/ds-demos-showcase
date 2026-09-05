@@ -2,6 +2,9 @@
 <script setup lang="ts">
 import { t } from '../../i18n'
 import { tagLabel } from '../../utils/funMode'
+// T5·M5-F2：词表无命中时展开 ModelPicker（后端模型搜索含别名——上传别名缺口根治）
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 
 const modelQuery = defineModel<string>('modelQuery')
 const modelHint = defineModel<string>('modelHint')
@@ -20,6 +23,13 @@ defineProps<{
   statsLoading: boolean
 }>()
 const emit = defineEmits<{ pick: [value: string]; clear: [] }>()
+
+/** ModelPicker 命中：实体规范 slug 即词表值（模型库与 model 词表同源），别名命中 → 真名入选 */
+function onEntityModelPick(p: EntityPick) {
+  const value = (p.slug as string) || (p.label as string)
+  if (!value) return
+  emit('pick', value)
+}
 </script>
 
 <template>
@@ -45,6 +55,20 @@ const emit = defineEmits<{ pick: [value: string]; clear: [] }>()
         {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
       </button>
       <p v-if="!filteredExact.length" class="muted">{{ t('upload.s2NoMatch', '词表里没有这个写法 —— 用下面三条出口之一，别硬填。') }}</p>
+    </div>
+
+    <!-- T5·M5-F2 别名缺口根治：词表无命中且已输入、尚未声明时，展开模型库搜索（后端 model 搜索含别名） -->
+    <div v-if="(modelQuery ?? '').trim() && !filteredExact.length && !chosenModelNames.length" class="uw-entity-fallback">
+      <p class="hint" style="margin: 4px 0 6px">
+        {{ t('upload.s2EntityNote', '按名称/别名在模型库里找（如输入了旧写法会命中真名）…') }}
+      </p>
+      <EntityPicker
+        kind="model"
+        source="public"
+        mode="dropdown"
+        :placeholder="t('upload.s2EntityPh', '搜模型名 / 别名…')"
+        @pick="onEntityModelPick"
+      />
     </div>
 
     <!-- 三条"不确定"出口与精确选择同层级：不确定是合法答案 -->

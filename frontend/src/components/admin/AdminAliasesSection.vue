@@ -6,14 +6,15 @@ import { computed, ref, watch } from 'vue'
 import { api } from '../../api'
 import type { ModelDetail } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
-import EntityPicker from './EntityPicker.vue'
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 import EmptyBox from '../EmptyBox.vue'
 import { modelDisplay } from '../../utils/modelDisplay'
 import { t } from '../../i18n'
 
 const ui = useUiStore()
 
-const picked = ref<{ id: number; label: string } | null>(null)
+const picked = ref<{ id: number | null; label: string; slug?: string | null } | null>(null)
 const detail = ref<ModelDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -47,9 +48,14 @@ watch(pickedSlug, (s) => {
   if (s) void loadDetail(s)
 })
 
-async function pick(p: { id: number; label: string }) {
-  picked.value = p
-  // 用列表接口反查 slug：详情按 slug 取，且 URL 也更好分享
+async function pick(p: EntityPick) {
+  // T5·M5-F2 基座富化：pick 直带 slug，无需再全量翻 200 行反查（旧 page_size=200 截断问题根治）
+  picked.value = { id: p.id ?? null, label: p.label, slug: p.slug ?? null }
+  if (p.slug) {
+    pickedSlug.value = p.slug
+    return
+  }
+  // 兜底：老数据源没给 slug 时才走列表反查
   const r = await api.adminListModels({ page_size: 200 })
   const row = r.items.find((x) => x.id === p.id)
   if (!row) {
@@ -133,7 +139,7 @@ async function removeAlias(alias: string) {
     <div class="merge-cols">
       <div class="card card-default merge-col">
         <h3 class="archive-title">{{ t('admin.alias.pickModel', '选一个模型实体') }}</h3>
-        <EntityPicker kind="models" :selected-id="picked?.id" :placeholder="t('admin.alias.ph', '搜型号名…')" @pick="pick" />
+        <EntityPicker kind="model" mode="inline" :selected-id="picked?.id" :placeholder="t('admin.alias.ph', '搜型号名…')" @pick="pick" />
       </div>
 
       <div class="card card-default merge-col">

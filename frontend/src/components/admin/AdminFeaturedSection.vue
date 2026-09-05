@@ -1,25 +1,22 @@
 <script setup lang="ts">
-// 精选管理（07 §2.2 首页策展池 / T5·M5-F1）：
-// 内容组新面板——从已上架作品里精选（DemoPicker 式添加）→ 排序（上移/下移）→ 置顶 hero →
-// 移除。首页展示侧：池非空按序展示（hero=第 1 件），池空回落现状随机（本面板即策展编辑入口）。
+// 精选管理（07 §2.2 首页策展池 / T5·M5-F1 + F2 收编 DemoPicker）：
+// 内容组新面板——从已上架作品里精选（基座 DemoPicker 添加）→ 排序（上移/下移）→ 置顶 hero → 移除。
+// 首页展示侧：池非空按序展示（hero=第 1 件），池空回落现状随机（本面板即策展编辑入口）。
 defineOptions({ name: 'AdminFeaturedSection' })
 import { onMounted, ref } from 'vue'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
-import type { AdminFeaturedItem, DemoSummary } from '../../api/types'
+import type { AdminFeaturedItem } from '../../api/types'
 import { t } from '../../i18n'
+// T5·M5-F2：添加入口 = 共享 DemoPicker（kind=demo，manualSlug 兜底手输 slug）
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 
 const ui = useUiStore()
 
 const rows = ref<AdminFeaturedItem[]>([])
 const loading = ref(false)
 const busy = ref<'move' | 'hero' | 'remove' | null>(null)
-
-// 添加（搜索即选）：公开 listDemos 只出已上架（approved），与后端入池校验同口径
-const addQ = ref('')
-const addOpen = ref(false)
-const addHits = ref<DemoSummary[]>([])
-const searching = ref(false)
 const adding = ref(false)
 
 async function load() {
@@ -34,32 +31,14 @@ async function load() {
   }
 }
 
-async function searchAdd() {
-  const q = addQ.value.trim()
-  if (q.length < 1) {
-    addHits.value = []
-    return
-  }
-  searching.value = true
-  try {
-    const r = await api.listDemos({ status: 'approved', q, page: 1, page_size: 8 })
-    addHits.value = r.items
-  } catch {
-    addHits.value = []
-  } finally {
-    searching.value = false
-  }
-}
-
-async function addDemo(slug: string) {
+async function pickToAdd(p: EntityPick) {
   if (adding.value) return
   adding.value = true
+  const slug = ((p.slug as string) || (p.label as string) || '').trim()
   try {
+    if (!slug) return
     await api.addFeaturedDemo({ slug })
     ui.toast(t('admin.featured.added', '已加入精选池'), 'success')
-    addQ.value = ''
-    addHits.value = []
-    addOpen.value = false
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -131,51 +110,31 @@ onMounted(load)
       <p class="muted" style="margin: 0 0 10px">
         {{ t('admin.featured.poolEmpty', '策展池为空——首页当前回落「已上架全量随机」（60s 同批 + 换一批）。加入第一件后即切换为策展态。') }}
       </p>
-      <button class="btn btn-sm btn-primary" type="button" @click="addOpen = !addOpen">
-        {{ addOpen ? t('common.collapse', '收起') : '+ ' + t('admin.featured.addFirst', '加入精选') }}
-      </button>
-      <div v-if="addOpen" class="feat-add">
-        <div class="filter-row" style="margin: 10px 0 0">
-          <input v-model="addQ" class="input" type="search" :placeholder="t('admin.featured.searchPh', '搜已上架作品（标题 / 描述）…')" style="max-width: 260px" @input="searchAdd" />
-          <span v-if="searching" class="muted mono">…</span>
-        </div>
-        <p v-if="addQ.trim() && !addHits.length && !searching" class="muted" style="margin: 8px 0 0">
-          {{ t('admin.featured.noResult', '没有匹配的已上架作品') }}
-        </p>
-        <div v-else-if="addHits.length" class="feat-hits">
-          <button v-for="d in addHits" :key="d.slug" type="button" class="feat-hit" :disabled="adding" @click="addDemo(d.slug)">
-            <span class="feat-hit-title">{{ d.title }}</span>
-            <span class="muted mono feat-hit-meta">{{ d.author }} · {{ d.view_count }} {{ t('admin.featured.views', '浏览') }}</span>
-            <span class="feat-hit-add">+</span>
-          </button>
-        </div>
-      </div>
+      <EntityPicker
+        kind="demo"
+        mode="dropdown"
+        manual-slug
+        :placeholder="t('admin.featured.addPh', '搜作品名 / 作者 / slug，选中即加入…')"
+        @pick="pickToAdd"
+      />
+      <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNote', '新件排在池尾；加入后可在下方上移/置顶。重复加入会被后端拒绝。') }}</p>
     </div>
 
     <template v-else>
       <div class="feat-bar">
-        <button class="btn btn-sm btn-primary" type="button" @click="addOpen = !addOpen">
-          {{ addOpen ? t('common.collapse', '收起') : '+ ' + t('admin.featured.addBtn', '加入作品') }}
-        </button>
         <button class="btn btn-sm btn-outline" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>
         <span class="hint">{{ t('admin.featured.count', '池内 {n} 件', { n: rows.length }) }}</span>
       </div>
-      <div v-if="addOpen" class="feat-add card card-default" style="padding: 12px; margin: 10px 0">
-        <div class="filter-row" style="margin: 0 0 8px">
-          <input v-model="addQ" class="input" type="search" :placeholder="t('admin.featured.searchPh', '搜已上架作品（标题 / 描述）…')" style="max-width: 260px" @input="searchAdd" />
-          <span v-if="searching" class="muted mono">…</span>
-        </div>
-        <p v-if="addQ.trim() && !addHits.length && !searching" class="muted" style="margin: 0">
-          {{ t('admin.featured.noResult', '没有匹配的已上架作品') }}
-        </p>
-        <div v-else-if="addHits.length" class="feat-hits">
-          <button v-for="d in addHits" :key="d.slug" type="button" class="feat-hit" :disabled="adding" @click="addDemo(d.slug)">
-            <span class="feat-hit-title">{{ d.title }}</span>
-            <span class="muted mono feat-hit-meta">{{ d.author }}</span>
-            <span class="feat-hit-add">+</span>
-          </button>
-        </div>
-        <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNote', '加入即排在池尾；可在下方上移/置顶调整。重复加入会被后端拒绝。') }}</p>
+
+      <div class="feat-add card card-default" style="padding: 12px; margin-bottom: 12px">
+        <EntityPicker
+          kind="demo"
+          mode="dropdown"
+          manual-slug
+          :placeholder="t('admin.featured.addPh', '搜作品名 / 作者 / slug，选中即加入…')"
+          @pick="pickToAdd"
+        />
+        <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNote', '新件排在池尾；可在行内上移/置顶调整。重复加入会被后端拒绝。') }}</p>
       </div>
 
       <div class="feat-list">
@@ -187,10 +146,10 @@ onMounted(load)
             <span class="muted mono feat-meta">{{ item.author }} · {{ item.slug }}<template v-if="item.rating_avg != null"> · ★{{ Number(item.rating_avg).toFixed(1) }}</template></span>
           </div>
           <div class="feat-actions">
-            <button type="button" class="btn btn-sm btn-outline" :disabled="busy !== null || i === 0" :title="t('admin.featured.up', '上移')" @click="move(item, 'up')">↑</button>
-            <button type="button" class="btn btn-sm btn-outline" :disabled="busy !== null || i === rows.length - 1" :title="t('admin.featured.down', '下移')" @click="move(item, 'down')">↓</button>
-            <button v-if="i > 0" type="button" class="btn btn-sm btn-secondary" :disabled="busy !== null" @click="hero(item)">{{ t('admin.featured.setHero', '置顶为 hero') }}</button>
-            <button type="button" class="btn btn-sm btn-dark" :disabled="busy !== null" @click="remove(item)">{{ t('admin.featured.remove', '移除') }}</button>
+            <button type="button" class="btn btn-sm btn-outline" :disabled="busy !== null || adding || i === 0" :title="t('admin.featured.up', '上移')" @click="move(item, 'up')">↑</button>
+            <button type="button" class="btn btn-sm btn-outline" :disabled="busy !== null || adding || i === rows.length - 1" :title="t('admin.featured.down', '下移')" @click="move(item, 'down')">↓</button>
+            <button v-if="i > 0" type="button" class="btn btn-sm btn-secondary" :disabled="busy !== null || adding" @click="hero(item)">{{ t('admin.featured.setHero', '置顶为 hero') }}</button>
+            <button type="button" class="btn btn-sm btn-dark" :disabled="busy !== null || adding" @click="remove(item)">{{ t('admin.featured.remove', '移除') }}</button>
           </div>
         </div>
       </div>
@@ -257,48 +216,5 @@ onMounted(load)
   align-items: center;
   gap: 6px;
   flex: none;
-}
-.feat-hits {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-.feat-hit {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 44px;
-  padding: 6px 10px;
-  text-align: left;
-  border: 2px solid var(--ink, #000);
-  background: var(--paper, #fff);
-  color: var(--ink, #000);
-  cursor: pointer;
-  font-family: inherit;
-}
-.feat-hit:hover {
-  background: var(--paper-deep, #f2eee6);
-}
-.feat-hit-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 700;
-}
-.feat-hit-meta {
-  flex: none;
-  font-size: 11px;
-}
-.feat-hit-add {
-  flex: none;
-  font-weight: 900;
-}
-.feat-add {
-  display: flex;
-  flex-direction: column;
 }
 </style>

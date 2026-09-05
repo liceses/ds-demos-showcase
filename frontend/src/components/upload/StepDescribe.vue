@@ -4,6 +4,9 @@ import { ref } from 'vue'
 import { t } from '../../i18n'
 import { tagLabel } from '../../utils/funMode'
 import type { DerivedTag, TaskSuggestItem } from '../../api/types'
+// T5·M5-F2：挑战挂题改用 TaskPicker（公开题目库搜索，词库归一）
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 
 const title = defineModel<string>('title', { default: '' })
 const description = defineModel<string>('description', { default: '' })
@@ -58,6 +61,19 @@ const emit = defineEmits<{
   coverChange: [e: Event]
   clearCover: []
 }>()
+
+/** TaskPicker 命中 → 既有 pickTask 语义（parent 只用 slug/title 落 pickedTask） */
+function onTaskEntityPick(p: EntityPick) {
+  taskQuery.value = ''
+  emit('pickTask', {
+    task_id: p.id ?? 0,
+    slug: (p.slug as string) || '',
+    title: p.label,
+    category: (p.category as string | null) ?? null,
+    demo_count: 0,
+    score: 1,
+  } as TaskSuggestItem)
+}
 </script>
 
 <template>
@@ -119,29 +135,19 @@ const emit = defineEmits<{
         </button>
       </template>
 
+      <!-- T5·M5-F2：搜索挂题 = TaskPicker（公开题目库：标题/分类搜索，chips 建议保留在上方） -->
       <div v-if="taskPickerOpen" class="uw-task-search">
-        <div class="filter-row" style="margin: 0">
-          <input
-            v-model="taskQuery"
-            class="input"
-            type="search"
-            :placeholder="t('upload.taskSearchPh', '输入题目关键词（≥2 字）…')"
-            @input="emit('scheduleTaskSearch', taskQuery)"
-          />
-          <button type="button" class="btn btn-sm btn-secondary" :disabled="taskSearching" @click="emit('runTaskSearch', taskQuery)">
-            {{ taskSearching ? '…' : t('common.search', '搜索') }}
-          </button>
+        <EntityPicker
+          kind="task"
+          source="public"
+          mode="dropdown"
+          :placeholder="t('upload.taskSearchPh', '输入题目关键词…')"
+          @pick="onTaskEntityPick"
+        />
+        <div class="filter-row" style="margin: 6px 0 0">
           <button type="button" class="btn btn-sm btn-ghost" @click="taskPickerOpen = false">{{ t('common.collapse', '收起') }}</button>
         </div>
-        <div v-if="taskHits.length" class="uw-suggest" style="margin-top: 8px">
-          <div class="filter-row" style="margin: 0; flex-wrap: wrap">
-            <button v-for="x in taskHits" :key="x.slug" type="button" class="tag-chip mode-open" @click="emit('pickTask', x)">
-              {{ x.title }}<span class="count">{{ x.demo_count }}</span>
-              <i class="uw-sim mono">{{ simPct(x.score) }}</i>
-            </button>
-          </div>
-        </div>
-        <p v-else-if="taskQuery.trim().length >= 2 && !taskSearching" class="hint">
+        <p class="hint" style="margin: 6px 0 0">
           {{ t('upload.taskNoHit', '没有匹配的题目。可以不挂题；若想出题，去题目页看看「题目候选」。') }}
           <RouterLink to="/tasks" target="_blank" rel="noopener">{{ t('upload.taskGo', '题目页 ↗') }}</RouterLink>
         </p>

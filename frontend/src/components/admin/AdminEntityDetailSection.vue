@@ -20,6 +20,9 @@ import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo,
 import { useUiStore } from '../../stores/ui'
 import EntityStamp from '../EntityStamp.vue'
 import LoadingRow from '../LoadingRow.vue'
+// T5·M5-F2：DemoPicker 多选挂载（datalist 手输 slug 退役）
+import EntityPicker from '../picker/EntityPicker.vue'
+import type { EntityPick } from '../picker/pickerSources'
 import { auditActionLabel, fmtTime } from '../../utils/adminLabels'
 import { t } from '../../i18n'
 
@@ -51,10 +54,9 @@ const transOpen = ref(false)
 const transStatus = ref('')
 const transReason = ref('')
 const taskList = ref<(TaskSummary & { merged_into_id?: number | null })[]>([])
-// M3-B5 Task 挂摘/合并两步流状态
-const attachSlug = ref('')
+// M3-B5 Task 挂摘/合并两步流状态（T5·M5-F2：datalist 手输 slug → DemoPicker 多选，chips 挂载）
 const attachBusy = ref(false)
-const demoOptions = ref<{ slug: string; title: string }[]>([])
+const attachPicks = ref<EntityPick[]>([])
 const mergeOpen = ref(false)
 const mergeTarget = ref('')
 const mergeReason = ref('')
@@ -261,26 +263,30 @@ async function saveGroup(group: string | null) {
   }
 }
 
-// ---- M3-B5 Task 挂摘（④⑤：by slug；数据源=管理端详情全量） ----
-async function loadDemoOptions() {
-  if (demoOptions.value.length) return
-  try {
-    const all = await api.adminDemos()
-    demoOptions.value = all.map((d) => ({ slug: d.slug, title: d.title }))
-  } catch {
-    demoOptions.value = []
-  }
-}
-
-async function attachDemo() {
-  const s = attachSlug.value.trim()
-  if (!s || !task.value || attachBusy.value) return
+// ---- M3-B5 Task 挂摘（④⑤：by slug；T5·M5-F2 DemoPicker 多选 + 逐个挂载，语义与手输 slug 完全一致） ----
+async function attachPicked() {
+  const picks = attachPicks.value
+  if (!picks.length || !task.value || attachBusy.value) return
   attachBusy.value = true
+  let okCount = 0
+  let firstErr = ''
   try {
-    await api.attachTaskDemoBySlug(task.value.slug, s)
-    ui.toast(t('admin.kc.attached', '已挂载（attach 审计）'), 'success')
-    attachSlug.value = ''
-    await load()
+    for (const p of picks) {
+      const s = (p.slug || (p.label || '').trim()) as string
+      if (!s) continue
+      try {
+        await api.attachTaskDemoBySlug(task.value.slug, s)
+        okCount++
+      } catch (e) {
+        if (!firstErr) firstErr = (e as Error).message
+      }
+    }
+    if (okCount > 0) {
+      ui.toast(t('admin.kc.attachedN', '已挂载 {n} 件（attach 审计）', { n: okCount }), 'success')
+      attachPicks.value = []
+      await load()
+    }
+    if (firstErr) ui.toast(firstErr, 'error')
   } catch (e) {
     ui.toast((e as Error).message, 'error')
   } finally {
@@ -384,7 +390,7 @@ async function saveTagDesc() {
 
 watch(() => [props.type, props.id, props.tagKey], () => {
   void load()
-  if (props.type === 'task') void loadDemoOptions()
+  attachPicks.value = []
 })
 onMounted(load)
 </script>
@@ -655,10 +661,18 @@ onMounted(load)
         <h3 class="kc-zone-title">{{ t('admin.kc.zWorks', '⑤ 关联作品') }}</h3>
         <template v-if="props.type === 'task'">
           <div class="kc-rel-row">
-            <input v-model="attachSlug" class="input" style="max-width: 260px" list="kc-demo-slugs" :placeholder="t('admin.kc.attachSlugPh', '输入 demo slug 挂载…')" />
-            <datalist id="kc-demo-slugs"><option v-for="o in demoOptions" :key="o.slug" :value="o.slug">{{ o.title }}</option></datalist>
-            <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy || !attachSlug.trim()" @click="attachDemo">{{ t('admin.kc.attachAdd', '挂载') }}</button>
-            <span class="hint">{{ t('admin.kc.attachNote', 'POST /admin/tasks/{id}/demos（按 slug，未知整批 404）；挂/摘均落 attach/detach 审计。') }}</span>
+            <EntityPicker
+              v-model="attachPicks"
+              kind="demo"
+              mode="dropdown"
+              multiple
+              manual-slug
+              :placeholder="t('admin.kc.attachSlugPh2', '搜作品名 / 作者 / slug 选入，逐个可挂载…')"
+            />
+            <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy || !attachPicks.length" @click="attachPicked">
+              {{ attachBusy ? t('admin.kc.attaching', '挂载中…') : t('admin.kc.attachAdd', '挂载选中') }}
+            </button>
+            <span class="hint">{{ t('admin.kc.attachNote', '按 slug 逐个挂载（attach 审计，未知 slug 单项失败不影响其余）；点 ✕ 可摘除选中。') }}</span>
           </div>
           <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
           <ul v-else class="kc-works">

@@ -1224,11 +1224,15 @@ export const mockApi = {
   ): Promise<PaginatedModels> {
     await delay()
     const items: ModelSummary[] = mockModels.map((m) => ({ ...m }))
+    const lq = params.q?.toLowerCase()
     const filtered = items.filter(
       (m) =>
         (!params.status || m.status === params.status) &&
         (!params.vendor || m.vendor === params.vendor) &&
-        (!params.q || m.name.toLowerCase().includes(params.q.toLowerCase())),
+        // 真实后端 model 搜索含别名；mock 同口径（防上传「别名缺口」在离线态失真的关键）
+        (!lq ||
+          m.name.toLowerCase().includes(lq) ||
+          (mockAliases[m.slug] || []).some((a) => a.toLowerCase().includes(lq))),
     )
     if (params.sort === 'rating') filtered.sort((a, b) => (b.rating_avg ?? 0) - (a.rating_avg ?? 0))
     else if (params.sort === 'score' || params.sort === 'votes')

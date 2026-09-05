@@ -10,6 +10,7 @@ import TagPicker from '../components/TagPicker.vue'
 import type { TagPick } from '../components/TagPicker.vue'
 import { t } from '../i18n'
 import { tagLabel } from '../utils/funMode'
+import { useUploadDraft } from '../composables/useUploadDraft'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -524,88 +525,13 @@ watch(modelUncertain, (on) => {
   if (on && hasModel.value) aside('unc', t('upload.asUncertain', '诚实比准确稀有 —— 站方日后会来找你确认。'))
 })
 
-// ---------- 草稿持久化：跳走/刷新/误关都不该把已填的东西抹掉 ----------
+// ---------- 草稿持久化（T15 拆分件 useUploadDraft；逐字迁出行为不变） ----------
 // 边界（必须如实告知）：File 对象存不进 localStorage，所以文件与封面不恢复，需重选。
-const DRAFT_KEY = 'upload.draft.v1'
-const draftFound = ref<{ savedAt: number; title: string } | null>(null)
-let draftTimer: ReturnType<typeof setTimeout> | null = null
-
-function draftPayload() {
-  return {
-    v: 1,
-    title: title.value,
-    description: description.value,
-    prompt: prompt.value,
-    videoUrl: videoUrl.value,
-    externalUrl: externalUrl.value,
-    demoType: demoType.value,
-    modelHint: modelHint.value,
-    selected: selected.value,
-    step: step.value,
-    // 连幂等键一起存：中途真提交过一次的话，回来重试不会被当成新作品
-    idem: idempotencyKey.value,
-    savedAt: Date.now(),
-  }
-}
-function hasDraftContent(p: ReturnType<typeof draftPayload>) {
-  return !!(p.title.trim() || p.description.trim() || p.prompt.trim() || Object.keys(p.selected || {}).length)
-}
-function scheduleDraftSave() {
-  if (editSlug) return // 编辑态存的是某件作品，不该污染创建态草稿
-  if (draftTimer) clearTimeout(draftTimer)
-  draftTimer = setTimeout(() => {
-    const p = draftPayload()
-    try {
-      if (hasDraftContent(p)) localStorage.setItem(DRAFT_KEY, JSON.stringify(p))
-      else localStorage.removeItem(DRAFT_KEY)
-    } catch {
-      /* 隐私模式/配额满：草稿是增值能力，失败绝不影响上传 */
-    }
-  }, 500)
-}
-function loadDraftRaw(): any | null {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-function resumeDraft() {
-  const p = loadDraftRaw()
-  if (!p) {
-    draftFound.value = null
-    return
-  }
-  title.value = p.title || ''
-  description.value = p.description || ''
-  prompt.value = p.prompt || ''
-  videoUrl.value = p.videoUrl || ''
-  externalUrl.value = p.externalUrl || ''
-  demoType.value = p.demoType || 'web'
-  modelHint.value = p.modelHint || ''
-  selected.value = p.selected && typeof p.selected === 'object' ? p.selected : {}
-  if (p.idem) idempotencyKey.value = p.idem
-  step.value = p.step || 1
-  draftFound.value = null
-  aside('resume', t('upload.asResume', '接上了。文件记得重新选一次。'))
-}
-function discardDraft() {
-  try {
-    localStorage.removeItem(DRAFT_KEY)
-  } catch {
-    /* 同上，静默 */
-  }
-  draftFound.value = null
-}
-function clearDraft() {
-  try {
-    localStorage.removeItem(DRAFT_KEY)
-  } catch {
-    /* 同上 */
-  }
-}
-watch([title, description, prompt, videoUrl, externalUrl, demoType, modelHint, selected], scheduleDraftSave)
+const {
+  draftFound, resumeDraft, discardDraft, clearDraft, loadDraftRaw, hasDraftContent,
+} = useUploadDraft({
+  editSlug, title, description, prompt, videoUrl, externalUrl, demoType, modelHint, selected, step, idempotencyKey, aside,
+})
 watch(prompt, (v) => {
   if (v.trim().length > 24) aside('prompt', t('upload.asPrompt', '这条提示词会让别人能复刻你的实验。'))
 })

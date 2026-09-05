@@ -14,6 +14,7 @@ import type {
   CurationResult,
   DemoDetail,
   DemoListParams,
+  FeaturedPool,
   ForumTopic,
   ForumReply,
   ForumTopicInput,
@@ -193,6 +194,7 @@ const realApi = {
         sort: params.sort,
         page: params.page,
         page_size: params.page_size,
+        featured: params.featured,
       },
       paramsSerializer: { indexes: null },
     })
@@ -461,6 +463,32 @@ const realApi = {
   /** astra 橱窗策展：发放/回收站点通行证 + 语言标记（None 字段后端保持不变） */
   async setCuration(slug: string, body: { sites?: string[]; lang?: 'zh' | 'en' }): Promise<CurationResult> {
     const { data } = await http.put(`/admin/demos/${encodeURIComponent(slug)}/curation`, body)
+    return data
+  },
+  // ---------- 首页策展池（07 §2.2 / T5·M5-F1）----------
+  /** 精选池列表（含 featured_order；面板数据源） */
+  async listFeatured(): Promise<FeaturedPool> {
+    const { data } = await http.get('/admin/featured')
+    return data
+  },
+  /** 加入精选池（尾部追加 order）；仅已上架作品可进（后端校验） */
+  async addFeaturedDemo(payload: { slug?: string; demo_id?: number }): Promise<{ ok: boolean; slug: string; featured_order: number; total: number }> {
+    const { data } = await http.post('/admin/featured', payload)
+    return data
+  },
+  /** 移出精选池（剩余自动重排） */
+  async removeFeaturedDemo(demoId: number): Promise<{ ok: boolean; slug: string }> {
+    const { data } = await http.delete(`/admin/featured/${demoId}`)
+    return data
+  },
+  /** 池内上移/下移 */
+  async moveFeaturedDemo(demoId: number, direction: 'up' | 'down'): Promise<{ ok: boolean; slug: string; featured_order: number }> {
+    const { data } = await http.put(`/admin/featured/${demoId}/order`, { direction })
+    return data
+  },
+  /** 置顶为 hero（=池首，首页大卡取 order 最小） */
+  async heroFeaturedDemo(demoId: number): Promise<{ ok: boolean; slug: string; featured_order: number }> {
+    const { data } = await http.put(`/admin/featured/${demoId}/hero`)
     return data
   },
   async getSettings(): Promise<Settings> {

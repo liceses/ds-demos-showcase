@@ -21,6 +21,7 @@ from ..schemas import (
     UserOut,
 )
 from ..serializers import serialize_demo
+from ..services import audit_service
 from ..services import notification_service
 from ..services import oss, settings_service
 
@@ -197,3 +198,156 @@ def admin_stats(db: Session = Depends(get_db), _: User = Depends(require_admin))
         users=users,
         storage=StorageStatusOut(**_storage_status()),
     )
+
+
+# ==================== 首页策展（07 §2.2 / T5·M5-F1）====================
+# 策展池 = demos.featured=1 的行，featured_order 1 起连续（每写操作后重排归一）。
+# hero 大卡语义 = 池内 order 最小（=1）的那件（GET /demos?featured=1 的首件）。
+# 纪律：全部写操作 require_admin + 同事务落 audit（featured_add/remove/order/hero）。
+
+
+def _featured_ordered(db: Session) -> list[Demo]:
+    return (
+        db.query(Demo)
+        .filter(Demo.featured.is_(True))
+        .order_by(Demo.featured_order.asc(), Demo.id.asc())
+        .all()
+    )
+
+
+def _featured_reindex(db: Session, rows: list[Demo]) -> None:
+    """把池内排序位归一为 1..n（featured_order 与列表位置永远一致，防陈旧碎片值）。"""
+    for i, d in enumerate(rows, start=1):
+        d.featured_order = i
+
+
+def _featured_row_out(db: Session, d: Demo) -> dict:
+    out = serialize_demo(db, d, detail=True)
+    out["id"] = d.id  # 后台写操作（order/hero/remove）以 demo_id 为键；公开列表口径不含 id
+    out["featured_order"] = d.featured_order
+    return out
+
+
+@router.get("/featured")
+def admin_list_featured(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """精选池列表（含 featured_order；面板排序/hero/移除的数据源）。"""
+    rows = _featured_ordered(db)
+    return {"items": [_featured_row_out(db, d) for d in rows], "total": len(rows)}
+
+
+@router.post("/featured")
+def admin_add_featured(body: dict, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """把已上架 demo 加入首页策展池（尾部追加 order）。只接受 approved（上架）作品——
+    策展池只从已上线作品里精选，pending/rejected 不该出现在首页（含未来意外上线面）。"""
+    slug = (body.get("slug") or "").strip() or None
+    demo_id = body.get("demo_id")
+    if not slug and not demo_id:
+        raise HTTPException(status_code=422, detail="需要 slug 或 demo_id", )
+    demo = db.query(Demo).filter(Demo.id == demo_id).first() if demo_id else db.query(Demo).filter(Demo.slug == slug).first()
+    if demo is None:
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    if demo.status != "approved":
+        raise HTTPException(status_code=422, detail="仅已上架（approved）作品可进首页策展池", )
+    if demo.featured:
+        raise HTTPException(status_code=409, detail=f"已在精选池：{demo.slug}", )
+    rows = _featured_ordered(db)
+    demo.featured = True
+    rows.append(demo)
+    _featured_reindex(db, rows)
+    audit_service.record(
+        db,
+        action="featured_add",
+        entity_type="demo",
+        entity_id=demo.id,
+        actor_id=admin.id,
+        after={"slug": demo.slug, "featured": True, "featured_order": demo.featured_order},
+        reason="",
+    )
+    db.commit()
+    return {"ok": True, "slug": demo.slug, "featured_order": demo.featured_order, "total": len(rows)}
+
+
+@router.delete("/featured/{demo_id}")
+def admin_remove_featured(demo_id: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """把 demo 移出策展池并重排剩余行。"""
+    demo = db.get(Demo, demo_id)
+    if demo is None:
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    if not demo.featured:
+        raise HTTPException(status_code=404, detail="该作品不在精选池", )
+    before = demo.featured_order
+    demo.featured = False
+    demo.featured_order = None
+    _featured_reindex(db, _featured_ordered(db))
+    audit_service.record(
+        db,
+        action="featured_remove",
+        entity_type="demo",
+        entity_id=demo.id,
+        actor_id=admin.id,
+        before={"slug": demo.slug, "featured": True, "featured_order": before},
+        after={"slug": demo.slug, "featured": False},
+        reason="",
+    )
+    db.commit()
+    return {"ok": True, "slug": demo.slug}
+
+
+@router.put("/featured/{demo_id}/order")
+def admin_move_featured(demo_id: int, body: dict, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """池内上移/下移（body: {"direction": "up"|"down"}）；相邻交换后重排归一。"""
+    direction = body.get("direction")
+    if direction not in ("up", "down"):
+        raise HTTPException(status_code=422, detail='direction 需为 "up" 或 "down"', )
+    demo = db.get(Demo, demo_id)
+    if demo is None:
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    if not demo.featured:
+        raise HTTPException(status_code=404, detail="该作品不在精选池", )
+    rows = _featured_ordered(db)
+    idx = next((i for i, d in enumerate(rows) if d.id == demo_id), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="该作品不在精选池", )
+    swap = idx - 1 if direction == "up" else idx + 1
+    if swap < 0 or swap >= len(rows):
+        raise HTTPException(status_code=409, detail="已在边界，不能再移", )
+    rows[idx], rows[swap] = rows[swap], rows[idx]
+    _featured_reindex(db, rows)
+    audit_service.record(
+        db,
+        action="featured_order",
+        entity_type="demo",
+        entity_id=demo.id,
+        actor_id=admin.id,
+        after={"slug": demo.slug, "featured_order": demo.featured_order, "direction": direction},
+        reason="",
+    )
+    db.commit()
+    return {"ok": True, "slug": demo.slug, "featured_order": demo.featured_order}
+
+
+@router.put("/featured/{demo_id}/hero")
+def admin_set_featured_hero(demo_id: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """把该件置为 hero（=移到池首，order 归一为 1）——首页 hero 大卡取池内首件。"""
+    demo = db.get(Demo, demo_id)
+    if demo is None:
+        raise HTTPException(status_code=404, detail="Demo 不存在", )
+    if not demo.featured:
+        raise HTTPException(status_code=404, detail="该作品不在精选池", )
+    rows = _featured_ordered(db)
+    if rows and rows[0].id == demo_id:
+        raise HTTPException(status_code=409, detail="它已是 hero（池内第一件）", )
+    rows = [d for d in rows if d.id != demo_id]
+    rows.insert(0, demo)
+    _featured_reindex(db, rows)
+    audit_service.record(
+        db,
+        action="featured_hero",
+        entity_type="demo",
+        entity_id=demo.id,
+        actor_id=admin.id,
+        after={"slug": demo.slug, "featured_order": 1, "hero": True},
+        reason="",
+    )
+    db.commit()
+    return {"ok": True, "slug": demo.slug, "featured_order": 1}

@@ -630,6 +630,18 @@ export interface AdminDemo extends DemoDetail {
   lang?: string
 }
 
+/** 首页策展池行（07 §2.2 / T5·M5-F1）：精选池列表 = 序列化 demo + 排序位（hero=order 最小）。
+ *  列表含 id（后台写操作 demo_id 键）；公开 /demos?featured=1 不含 id（同其他列表口径）。 */
+export interface AdminFeaturedItem extends DemoSummary {
+  id: number
+  featured_order: number
+}
+
+export interface FeaturedPool {
+  items: AdminFeaturedItem[]
+  total: number
+}
+
 export interface CurationResult {
   slug: string
   sites: string
@@ -664,6 +676,8 @@ export interface DemoListParams {
   model?: string
   /** v2：按题目实体 slug 过滤 */
   task?: string
+  /** 首页策展池（07 §2.2）：featured=1 只出精选并按 featured_order 排序 */
+  featured?: number
   page?: number
   page_size?: number
 }

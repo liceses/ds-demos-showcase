@@ -259,6 +259,32 @@ def _safe_join(slug: str, path: str) -> str:
     return file_path.relative_to(root).as_posix()
 
 
+def _sqlite_db_backup(tag: str) -> None:
+    """SQLite ADD COLUMN 前置备份（07 §2.2 红线：策展列迁移不备份不动库）。
+
+    用 sqlite3 在线备份 API（WAL 安全），产物落在同目录 `app.db.bak-<tag>-<ts>`；
+    失败只告警不阻断（SQLite ADD COLUMN 是元数据操作，回滚=整库恢复该备份）。
+    """
+    try:
+        import sqlite3 as _sq3
+
+        from sqlalchemy.engine import make_url
+
+        url = make_url(settings.database_url)
+        if url.drivername != "sqlite" or not url.database or url.database == ":memory:":
+            return
+        src = Path(url.database).expanduser().resolve()
+        if not src.exists():
+            return
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        dst = src.with_name(f"{src.stem}.bak-{tag}-{ts}{src.suffix}")
+        with _sq3.connect(src) as con, _sq3.connect(dst) as bak:
+            con.backup(bak)
+        print(f"[migrate] DB 已备份（{tag} 列迁移前置）: {dst}", flush=True)
+    except Exception as e:  # noqa: BLE001 —— 备份失败只告警，不阻断启动
+        print(f"[warn] DB 迁移备份失败（继续；SQLite ADD COLUMN 回滚=整库恢复备份）: {e}", flush=True)
+
+
 def _ensure_demo_columns() -> None:
     """SQLite 增量迁移：给已存在的 demos 表补充新增列（create_all 不会改旧表）。"""
     from sqlalchemy import inspect as sa_inspect
@@ -294,7 +320,13 @@ def _ensure_demo_columns() -> None:
         # 列表 ORDER BY view_count 会直接 500 —— 与其余列同一套自愈机制。
         ("view_count", "INTEGER NOT NULL DEFAULT 0"),
         ("download_count", "INTEGER NOT NULL DEFAULT 0"),
+        # 首页策展（07 §2.2）：featured=1 进首页精选/hero 策展池；featured_order=排序位（1 起连续）
+        ("featured", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("featured_order", "INTEGER"),
     ]
+    if "featured" not in cols:
+        # 迁移前置备份（07 §2.2 红线；仅首次加列时做一次）
+        _sqlite_db_backup("featured")
     with engine.begin() as conn:
         for name, ddl in additions:
             if name not in cols:
@@ -310,6 +342,8 @@ def _ensure_demo_columns() -> None:
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_prompt_id ON demos (prompt_id)")
         # astra 橱窗：按可见域过滤列表的主索引
         conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_sites ON demos (sites)")
+        # 首页策展：featured=1 查询（列表量小，但避免无索引全表扫）
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_demos_featured ON demos (featured, featured_order)")
 
 
 def _ensure_model_columns() -> None:

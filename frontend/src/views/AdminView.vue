@@ -11,7 +11,7 @@ import type { AdminStats } from '../api/types'
 
 const route = useRoute()
 const router = useRouter()
-const ALL_TABS: TabKey[] = ['console', 'entities', 'review', 'inbox', 'clusters', 'refine', 'inspection', 'attribution', 'merge', 'aliases', 'demos', 'announcements', 'tags', 'tagreq', 'forum', 'users', 'stats', 'audit', 'settings', 'sponsors']
+const ALL_TABS: TabKey[] = ['console', 'entities', 'review', 'inbox', 'clusters', 'refine', 'inspection', 'attribution', 'merge', 'aliases', 'demos', 'featured', 'announcements', 'tags', 'tagreq', 'forum', 'users', 'stats', 'audit', 'settings', 'sponsors']
 const initialTab = (ALL_TABS as string[]).includes(String(route.query.tab)) ? (String(route.query.tab) as TabKey) : 'console'
 const tab = ref<TabKey>(initialTab)
 // 同路径换 ?tab= 不再触发重挂（pageKey 已改为 path），所以必须自己监听
@@ -25,7 +25,7 @@ const { queues, refresh: refreshQueues } = useQueues()
 // 队列徽章计数统一取自 adminQueues 的单一描述符 —— 侧栏、概览台共用一份，杜绝口径漂移。
 type TabKey =
   | 'console' | 'entities' | 'review' | 'inbox' | 'clusters' | 'refine' | 'inspection' | 'attribution'
-  | 'merge' | 'aliases' | 'demos' | 'announcements' | 'tags' | 'tagreq'
+  | 'merge' | 'aliases' | 'demos' | 'featured' | 'announcements' | 'tags' | 'tagreq'
   | 'forum' | 'users' | 'stats' | 'audit' | 'settings' | 'sponsors'
 
 // 面板懒加载（04 §5.2）：除概览台外全部惰性组件表——后台按 tab 按需拉取，
@@ -43,6 +43,7 @@ const sections: Record<TabKey, Component> = {
   merge: defineAsyncComponent(() => import('../components/admin/AdminMergeSection.vue')),
   aliases: defineAsyncComponent(() => import('../components/admin/AdminAliasesSection.vue')),
   demos: defineAsyncComponent(() => import('../components/admin/AdminDemosSection.vue')),
+  featured: defineAsyncComponent(() => import('../components/admin/AdminFeaturedSection.vue')),
   announcements: defineAsyncComponent(() => import('../components/admin/AdminAnnouncementsSection.vue')),
   tags: defineAsyncComponent(() => import('../components/admin/AdminTagsSection.vue')),
   tagreq: defineAsyncComponent(() => import('../components/admin/AdminTagsSection.vue')),
@@ -90,6 +91,7 @@ const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
       { key: 'inspection', label: '巡检' },
       { key: 'attribution', label: '归属工作台', q: 'attribution' },
       { key: 'demos', label: 'Demo 管理' },
+      { key: 'featured', label: '精选管理' },
       { key: 'forum', label: '论坛管理' },
       { key: 'users', label: '用户管理' },
     ],

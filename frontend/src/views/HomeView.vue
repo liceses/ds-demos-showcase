@@ -21,6 +21,8 @@ const auth = useAuthStore()
 const featured = ref<DemoSummary[]>([])
 const featuredPool = ref<DemoSummary[]>([])
 const featuredBusy = ref(false)
+/** 策展态（07 §2.2）：true=首页精选/hero 来自管理员精选池（池空回落随机时 false） */
+const curated = ref(false)
 const grayTest = ref<DemoSummary[]>([])
 const announcements = ref<Announcement[]>([])
 const totalDemos = ref(0)
@@ -118,8 +120,21 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 async function loadFeatured() {
-  // 首页精选整批随机（后端随机序缓存 60s）：拉 24 个做池，本地洗牌后取 6，
-  // 保证「换一批」点击即时变化、且能从池里换入不同 demo（不依赖后端 60s 缓存过期）。
+  // 首页精选（07 §2.2 策展机制）：先问精选池——有则按 featured_order 展示（hero=池首，
+  // 排序与内容由管理员掌控，不 shuffle）；池空完全回落现状随机（含 60s 同批 + 换一批）。
+  try {
+    const c = await api.listDemos({ status: 'approved', featured: 1, page: 1, page_size: 100 })
+    if (c.items.length) {
+      curated.value = true
+      featuredPool.value = c.items
+      featured.value = c.items.slice(0, 6)
+      return
+    }
+  } catch {
+    /* 策展查询失败不阻塞——回落到现状随机路径 */
+  }
+  curated.value = false
+  // 池空随机（现状口径逐字节保留）：拉 24 做池，本地洗牌取 6，保证「换一批」即时变化
   const f = await api.listDemos({ status: 'approved', sort: 'random', page: 1, page_size: 24 })
   featuredPool.value = f.items
   featured.value = shuffle(f.items).slice(0, 6)
@@ -127,6 +142,8 @@ async function loadFeatured() {
 }
 
 async function shuffleFeatured() {
+  // 策展池存在时不 shuffle（策展=管理员编辑意图；随机=无策展时的消遣）
+  if (curated.value) return
   if (featuredBusy.value) return
   if (!featuredPool.value.length) {
     featuredBusy.value = true
@@ -388,18 +405,20 @@ onBeforeUnmount(() => {
         <div class="section-head">
           <h2 class="section-title">{{ t('home.featured', '精选作品') }}</h2>
           <div class="filter-row" style="margin: 0">
-            <button class="btn btn-sm btn-secondary" type="button" :disabled="featuredBusy" @click="shuffleFeatured">
+            <!-- 07 §2.2：策展态下不 shuffle（精选=编辑意图）；「换一批」只在随机回落态出现 -->
+            <button v-if="!curated" class="btn btn-sm btn-secondary" type="button" :disabled="featuredBusy" @click="shuffleFeatured">
               {{ featuredBusy ? t('home.shuffling', '换一批…') : t('home.shuffle', '换一批') }}
             </button>
             <RouterLink class="btn btn-sm btn-outline" to="/demos">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
           </div>
         </div>
-        <!-- 换池口径说明行（03 §3.2 策展透明）：写后端真实口径（demos.py _random_ids=已上架全量随机，60s 缓存同批），不写理想口径 -->
-        <p class="muted caliber-line">{{ t('home.shuffleCaliber', '换池口径：已上架作品全量随机，60 秒内同一批') }}</p>
+        <!-- 策展透明口径行（03 §3.2 / 07 §2.2）：策展态=管理员精选按序展示；随机回落态=已上架全量随机 60s 同批 -->
+        <p class="muted caliber-line">{{ curated ? t('home.curatedCaliber', '本期由管理员精选，按编排顺序展示') : t('home.shuffleCaliber', '换池口径：已上架作品全量随机，60 秒内同一批') }}</p>
         <div v-if="error" class="notice notice-error">{{ error }}</div>
         <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('home.loading', '加载精选…') }}</div>
-        <div v-else-if="!featuredGrid.length" class="empty-box">{{ t('home.empty', '还没有 Demo，来投第一篇稿吧。') }}</div>
-        <MasonryGrid v-else :cols="3" :items="featuredGrid" :item-key="(d: unknown) => (d as DemoSummary).slug">
+        <div v-else-if="!featuredGrid.length && !curated" class="empty-box">{{ t('home.empty', '还没有 Demo，来投第一篇稿吧。') }}</div>
+        <!-- 策展单件态（仅 hero 无网格）不显示空盒文案——hero 已在上方展示该件 -->
+        <MasonryGrid v-else-if="featuredGrid.length" :cols="3" :items="featuredGrid" :item-key="(d: unknown) => (d as DemoSummary).slug">
           <template #default="{ item }">
             <DemoCard :demo="item as DemoSummary" />
           </template>

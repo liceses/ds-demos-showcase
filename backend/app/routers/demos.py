@@ -285,6 +285,7 @@ def list_demos(
     minutes: str | None = Query(default=None, description="生成耗时（分钟）：同上（v2 B5′）"),
     platform: str | None = Query(default=None, description="运行平台精确匹配（v2 B5′）"),
     sort: str = Query(default="newest", pattern="^(newest|popular|random|prompt)$"),
+    featured: int | None = Query(default=None, ge=0, le=1, description="首页策展池（07 §2.2）：featured=1 只出精选并按 featured_order 排序（hero=首件）"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -392,6 +393,25 @@ def list_demos(
             | (Demo.id.in_(tag_ids))
         )
         query = query.filter(Demo.id.in_(ids))
+
+    if featured:
+        # 首页策展池（07 §2.2）：只出 featured 行、按 featured_order 排（hero=首件=order 最小）。
+        # 其余参数（status 默认 approved / q / scope）照常生效——策展只在已上架+可见域内成立。
+        total = query.filter(Demo.featured.is_(True)).count()
+        items = (
+            query.filter(Demo.featured.is_(True))
+            .order_by(Demo.featured_order.asc(), Demo.id.asc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+        preload_demo_relations(db, items)
+        return Paginated(
+            items=[serialize_demo(db, d) for d in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+        )
 
     if sort == "popular":
         query = query.order_by(Demo.view_count.desc(), Demo.created_at.desc(), Demo.id.desc())

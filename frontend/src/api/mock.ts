@@ -14,6 +14,8 @@ import type {
   CurationResult,
   DemoDetail,
   DemoListParams,
+  AdminFeaturedItem,
+  FeaturedPool,
   ForumTopic,
   ForumReply,
   ForumTopicInput,
@@ -659,6 +661,9 @@ function ensureAttribution(): AttributionGroup[] {
 }
 // astra 橱窗策展（mock 态记忆）：slug -> {sites, lang}
 const curationMap = new Map<string, { sites: string[]; lang: 'zh' | 'en' }>()
+// 首页策展池（07 §2.2 mock 态记忆）：池序 entries（真实后端以 demo 主键为操作键，mock 用合成 id 模拟）
+let featuredNextId = 5000
+const featuredEntries: { id: number; slug: string }[] = []
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T
@@ -936,8 +941,16 @@ export const mockApi = {
   // ---------- Demo ----------
   async listDemos(params: DemoListParams = {}): Promise<Paginated<DemoSummary>> {
     await delay()
-    const { tags: tagFilters = [], q = '', sort = 'newest', page = 1, page_size = 20, status = 'approved' } = params
+    const { tags: tagFilters = [], q = '', sort = 'newest', page = 1, page_size = 20, status = 'approved', featured } = params
     let items = [...demos, ...(status === 'pending' ? pendingDemos : [])].filter((d) => !status || d.status === status)
+    if (featured === 1) {
+      // 首页策展池：只出池内行并按池序（hero=首件），与真实后端语义一致
+      const idx = new Map(featuredEntries.map((e, i) => [e.slug, i]))
+      const pool = items.filter((d) => idx.has(d.slug)).sort((a, b) => idx.get(a.slug)! - idx.get(b.slug)!)
+      const total = pool.length
+      const start = (page - 1) * page_size
+      return { items: pool.slice(start, start + page_size), total, page, page_size }
+    }
     if (tagFilters.length) {
       items = items.filter((d) => tagFilters.every((tf) => d.tags.some((t) => tagOf(t) === tf)))
     }
@@ -2263,6 +2276,52 @@ export const mockApi = {
   async adminUsers(): Promise<AdminUser[]> {
     await delay()
     return clone(users.map((u) => ({ ...u, demo_count: demos.filter((d) => d.author_id === u.id).length })))
+  },
+
+  // ---------- 首页策展池（07 §2.2 / T5·M5-F1；mock 内存态）----------
+  async listFeatured(): Promise<FeaturedPool> {
+    await delay(150)
+    const items = featuredEntries.map((e, i) => {
+      const d = findDemo(e.slug)
+      if (!d) return null
+      const base: DemoSummary = clone(d)
+      return { ...base, id: e.id, featured_order: i + 1 }
+    }).filter((x): x is AdminFeaturedItem => x !== null)
+    return { items, total: items.length }
+  },
+  async addFeaturedDemo(payload: { slug?: string; demo_id?: number }): Promise<{ ok: boolean; slug: string; featured_order: number; total: number }> {
+    await delay(200)
+    const target = payload.slug ? findDemo(payload.slug) : undefined
+    if (!target) throw new Error('Demo 不存在')
+    if (target.status !== 'approved') throw new Error('仅已上架（approved）作品可进首页策展池')
+    if (featuredEntries.some((e) => e.slug === target.slug)) throw new Error(`已在精选池：${target.slug}`)
+    featuredEntries.push({ id: featuredNextId++, slug: target.slug })
+    return { ok: true, slug: target.slug, featured_order: featuredEntries.length, total: featuredEntries.length }
+  },
+  async removeFeaturedDemo(demoId: number): Promise<{ ok: boolean; slug: string }> {
+    await delay(150)
+    const i = featuredEntries.findIndex((e) => e.id === demoId)
+    if (i < 0) throw new Error('该作品不在精选池')
+    const [gone] = featuredEntries.splice(i, 1)
+    return { ok: true, slug: gone.slug }
+  },
+  async moveFeaturedDemo(demoId: number, direction: 'up' | 'down'): Promise<{ ok: boolean; slug: string; featured_order: number }> {
+    await delay(150)
+    const i = featuredEntries.findIndex((e) => e.id === demoId)
+    if (i < 0) throw new Error('该作品不在精选池')
+    const j = direction === 'up' ? i - 1 : i + 1
+    if (j < 0 || j >= featuredEntries.length) throw new Error('已在边界，不能再移')
+    ;[featuredEntries[i], featuredEntries[j]] = [featuredEntries[j], featuredEntries[i]]
+    return { ok: true, slug: featuredEntries[i].slug, featured_order: i + 1 }
+  },
+  async heroFeaturedDemo(demoId: number): Promise<{ ok: boolean; slug: string; featured_order: number }> {
+    await delay(150)
+    const i = featuredEntries.findIndex((e) => e.id === demoId)
+    if (i < 0) throw new Error('该作品不在精选池')
+    if (i === 0) throw new Error('它已是 hero（池内第一件）')
+    const [moved] = featuredEntries.splice(i, 1)
+    featuredEntries.unshift(moved)
+    return { ok: true, slug: moved.slug, featured_order: 1 }
   },
 
   async adminReview(): Promise<DemoDetail[]> {

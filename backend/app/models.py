@@ -142,6 +142,9 @@ class Demo(Base):
     sites: Mapped[str] = mapped_column(String(32), default="deep", nullable=False, index=True)
     # 作品内容语言：zh | en（astra 橱窗策展池要求 en；主站不以此过滤）
     lang: Mapped[str] = mapped_column(String(8), default="zh", nullable=False)
+    # 首页策展（07 §2.2）：featured=1 进首页精选/hero 策展池；featured_order = 排序位（1 起连续）
+    featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    featured_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 评分冗余统计列（榜单排序用，随评分事务更新）
     rating_sum: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -560,6 +563,11 @@ AUDIT_ACTIONS = (
     "attribute",
     "unmerge",
     "slug_set",
+    # 首页策展（07 §2.2 / T5·M5-F1）：精选池 添加/移除/排序/置顶 hero
+    "featured_add",
+    "featured_remove",
+    "featured_order",
+    "featured_hero",
 )
 # 建议来源六值（评审与重排.md 裁决 R2）
 SUGGESTION_SOURCES = ("user", "admin", "ai", "inferred", "external", "imported")

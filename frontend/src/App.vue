@@ -73,6 +73,23 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocClick)
 })
+
+// J5（09 §7）：返回顶部——滚动 >1 屏 0ms 硬切浮现；点击走 html scroll-behavior（reduced-motion 则 auto）
+const showBackTop = ref(false)
+function onWinScroll() {
+  showBackTop.value = window.scrollY > window.innerHeight
+}
+function scrollToTop() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
+}
+onMounted(() => {
+  window.addEventListener('scroll', onWinScroll, { passive: true })
+  onWinScroll()
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onWinScroll)
+})
 // 管理员：进站即拉一次队列计数（badge 合计的数据源；去重逻辑在 composable 内；
 // 用 watch 而非 onMounted——首屏时 fetchMe 可能尚未返回，身份就绪后再拉）
 watch(
@@ -245,6 +262,17 @@ onMounted(() => {
 
     <ConfirmHost />
     <ToastHost />
+    <!-- J5：全站返回顶部（硬影方钮 / 44px / 滚动 >1 屏才出现；Teleport 避开祖先 transform 裁切） -->
+    <Teleport to="body">
+      <button
+        v-show="showBackTop"
+        class="btn btn-sm back-top"
+        type="button"
+        :aria-label="t('app.backTop', '返回顶部')"
+        :title="t('app.backTop', '返回顶部')"
+        @click="scrollToTop"
+      >↑</button>
+    </Teleport>
     <!-- M2-3 全局搜索覆盖层（03 §12.1）：App 根一次挂载 + 组件内 Teleport to body——全路由可用（含 forum 双皮壳） -->
     <SearchOverlay />
   </div>
@@ -404,6 +432,52 @@ onMounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .user-menu-pop-enter-active {
     transition: none;
+  }
+}
+
+/* J5（09 §7）：返回顶部硬影方钮——btn 族物理 + stamp 字号；显隐走 v-show 0ms 硬切 */
+.back-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 800; /* 内容之上、TabBar(900)/SearchOverlay(1050)/toast(1100) 之下 */
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: var(--yellow, #ffe66d);
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+@media (hover: hover) {
+  .back-top:hover {
+    transform: translate(-2px, -2px);
+  }
+}
+.back-top:active {
+  transform: translate(var(--sh-off-md, 4px 4px)) rotate(var(--tilt-press, 0deg));
+  box-shadow: none;
+  transition-duration: 0ms;
+}
+@media (max-width: 720px) {
+  .back-top {
+    right: 16px;
+    bottom: calc(56px + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .back-top {
+    transition: none;
+  }
+  .back-top:hover,
+  .back-top:active {
+    transform: none;
   }
 }
 

@@ -36,6 +36,7 @@ export const en = {
     theme: { toPaper: 'Ink theme — tap for paper', toInk: 'Paper theme — tap for ink' },
     footerTail: 'AI-generated web demo collection',
     footerDisclaimer: 'Timeline only records creation/updates — not proof of AI generation.',
+    backTop: 'Back to top',
   },
 
   home: {

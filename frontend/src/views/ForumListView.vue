@@ -131,11 +131,12 @@ watch(
         <input v-model="q" class="input" type="search" :placeholder="t('forum.searchPlaceholder', '搜索主题…（回车提交）')" @keyup.enter="apply" />
         <button class="btn btn-secondary search-submit" type="button" @click="apply">{{ t('demos.search', '搜索') }}</button>
       </div>
-      <div class="tabs" style="margin: 0">
-        <button class="tab" :class="{ active: scope === 'general' }" type="button" @click="scope = 'general'; apply()">{{ t('forum.scopeGeneral', '综合') }}</button>
-        <button class="tab" :class="{ active: scope === 'demo' }" type="button" @click="scope = 'demo'; apply()">{{ t('forum.scopeDemo', '作品讨论') }}</button>
+      <div class="forum-scope" role="group" :aria-label="t('forum.scopeAria', '范围')">
+        <button class="tag-chip" :class="{ active: scope === 'general' }" type="button" :aria-pressed="scope === 'general'" @click="scope = 'general'; apply()">{{ t('forum.scopeGeneral', '综合') }}</button>
+        <button class="tag-chip" :class="{ active: scope === 'demo' }" type="button" :aria-pressed="scope === 'demo'" @click="scope = 'demo'; apply()">{{ t('forum.scopeDemo', '作品讨论') }}</button>
       </div>
-      <div class="tabs" style="margin: 0">
+      <span class="forum-toolbar-sep" aria-hidden="true"></span>
+      <div class="tabs forum-sort-group" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">{{ t('demos.newest', '最新') }}</button>
         <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">{{ t('demos.hot', '热门') }}</button>
         <button class="tab" :class="{ active: sort === 'replies' }" type="button" @click="sort = 'replies'; apply()">{{ t('forum.sortReplies', '回复') }}</button>

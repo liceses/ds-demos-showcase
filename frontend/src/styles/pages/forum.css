@@ -347,3 +347,19 @@
   background: var(--mint);
 }
 
+/* t6 M5-U4（C4 重裁，08 §3）：论坛列表头职责二分——范围/分类组（forum-scope=tag-chip 语汇，反色章选中）
+   与排序/视图组（.tabs .tab 分段钮，黄影章选中）形态分域 + 2px 竖分隔；同行不再双份 .tab 双活态抢眼 */
+.forum-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.forum-toolbar-sep {
+  width: 2px;
+  align-self: stretch;
+  min-height: 26px;
+  background: var(--ink);
+  opacity: 0.22;
+  flex: 0 0 auto;
+}

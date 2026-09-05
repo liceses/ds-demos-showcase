@@ -55,6 +55,16 @@ export const en = {
       forum: 'Forum',
       about: 'About',
       up7d: 'Last 7d',
+    // T14 i18n 补账：站点导航条带（M0-D 数字条旁的入口条）
+    strip: {
+      label: 'Site navigation',
+      lib: 'Works',
+      explore: 'Explore',
+      rank: 'Leaderboard',
+      forum: 'Forum',
+      about: 'About',
+      up7d: 'in last 7 days',
+    },
     },
     agentHintPrefix: 'AI auto-upload: read ',
     agentHintSuffix: ' then publish',
@@ -199,6 +209,7 @@ export const en = {
     retryPrompt: 'Re-look through the Prompt lens',
     askForum: 'Ask in the forum',
     askTitle: "Help: can't find works matching {filters}",
+    mode: 'Mode',
     modelChipTip: 'Model-entity filter from a model page',
     loading: 'Loading demos…',
     refreshing: 'Refreshing…',
@@ -342,6 +353,14 @@ export const en = {
       review_result: 'Review result',
       report_handled: 'Report handled',
       forum_reaction: 'Reaction',
+    // T14 i18n 补账：通知类型徽章（typeLabelText 动态拼键）
+    types: {
+      forum_reply: 'Forum reply',
+      demo_review: 'Pending review',
+      review_result: 'Review result',
+      report_handled: 'Report handled',
+      forum_reaction: 'Like/Thanks',
+    },
     },
     text: {
       reply: '{actor} replied to your discussion',
@@ -878,7 +897,14 @@ export const en = {
     submit: 'Publish now',
     tagPicker: 'Tag picker',
     tagPickerHint: 'Fixed: click · Open: type to add · Numeric: integers · author is reserved',
-    mode: 'Mode',
+    // T14 i18n 补账：上传核对清单（cl* = checklist）
+    clKind: 'Pick a type and provide a file/link',
+    clModel: 'Declare which model made it',
+    clTitle: 'Write a clear title',
+    clDesc: 'Add a 2-sentence description',
+    clPrompt: 'Attach the first-round prompt (powers same-prompt comparison)',
+    clTags: 'Pick a few descriptive tags',
+    clCover: 'Add a cover image',
   },
 
   ann: {

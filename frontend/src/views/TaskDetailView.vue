@@ -109,7 +109,7 @@ const chainStat = computed(() => {
     </div>
     <div v-if="!task.compare.length" class="empty-box">{{ t('tasks.emptyCompare', '还没有模型参与此题，等更多模型来挑战 →') }}</div>
     <div v-else class="compare-list">
-      <div v-for="(row, i) in task.compare" :key="row.model.slug" class="compare-row card card-default">
+      <div v-for="(row, i) in task.compare" :key="row.model.slug" class="compare-row card card-entity">
         <span class="compare-rank" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
         <RouterLink class="compare-model" :to="`/models/${row.model.slug}`">
           <EntityStamp :name="row.model.name" :vendor="row.model.vendor" size="md" />

@@ -79,7 +79,7 @@ onMounted(load)
       </div>
       <div v-if="!data.models.items.length" class="empty-box">{{ t('explore.emptyModels', '还没有模型条目') }}</div>
       <div v-else class="explore-grid">
-        <RouterLink v-for="m in data.models.items" :key="m.slug" class="explore-cell card card-default" :to="`/models/${m.slug}`">
+        <RouterLink v-for="m in data.models.items" :key="m.slug" class="explore-cell card card-entity" :to="`/models/${m.slug}`">
           <EntityStamp :name="m.name" :vendor="m.vendor" size="md" />
           <div class="explore-cell-main">
             <div class="explore-cell-name">{{ modelDisplay(m) }}</div>

@@ -94,7 +94,7 @@ onMounted(load)
     <EmptyBox v-else-if="!items.length" :text="t('models.emptyList', '还没有模型条目')" />
 
     <div v-else class="model-list">
-      <article v-for="m in items" :key="m.slug" class="model-row card card-default">
+      <article v-for="m in items" :key="m.slug" class="model-row card card-entity">
         <RouterLink class="model-row-stamp" :to="`/models/${m.slug}`">
           <EntityStamp :name="m.name" :vendor="m.vendor" size="md" />
         </RouterLink>

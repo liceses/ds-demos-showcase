@@ -66,7 +66,7 @@ onMounted(load)
     <EmptyBox v-else-if="!items.length" :text="t('tasks.emptyList', '还没有题目')" />
 
     <div v-else class="task-list">
-      <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-row card card-default">
+      <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-row card card-entity">
         <EntityStamp :name="tk.title" size="md" />
         <div class="task-row-main">
           <div class="task-row-title">{{ tk.title }}</div>

@@ -51,3 +51,8 @@ Thumbs.db
 .wrangler/
 .dev.vars
 .tmp-wrangler-out/
+
+# 个人素材（勿提交）
+docs/桌宠素材参考/
+frontend/src/*.jpg
+frontend/src/*.jpeg

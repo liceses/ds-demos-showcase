@@ -29,3 +29,37 @@
   overflow: hidden;
 }
 
+/* J4（09 §7）：同作者续流条——轻量行，复用 latest-list 节奏（硬边/零圆角） */
+.dv-author-strip {
+  display: flex;
+  flex-direction: column;
+  border: var(--border-w, 4px) solid var(--ink, #000);
+}
+.dv-author-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  color: var(--ink, #000);
+  text-decoration: none;
+  border-bottom: 2px solid var(--ink, #000);
+}
+.dv-author-row:last-child {
+  border-bottom: none;
+}
+.dv-author-row:hover {
+  background: var(--paper-deep, #f2eee6);
+}
+.dv-author-title {
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dv-author-meta {
+  flex: none;
+  font-size: 11px;
+}
+

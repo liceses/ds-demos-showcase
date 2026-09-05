@@ -314,6 +314,22 @@ async function loadRelated() {
   }
 }
 
+// J4（09 §7）：同作者续流条——补 aplaybox 主续流维度；无数据诚实隐藏
+const authorMore = ref<DemoSummary[]>([])
+async function loadAuthorMore() {
+  const d = demo.value
+  if (!d?.author) {
+    authorMore.value = []
+    return
+  }
+  try {
+    const res = await api.listDemos({ author: d.author, page: 1, page_size: 8, sort: 'newest' })
+    authorMore.value = res.items.filter((x) => x.slug !== slug).slice(0, 6)
+  } catch {
+    authorMore.value = []
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -322,6 +338,7 @@ async function load() {
     sessionLogs.value = await api.listSessionLogs(slug).catch(() => [])
     void loadSamePrompt()
     void loadSameTask()
+    void loadAuthorMore()
     await loadRelated()
     drawRelated()
     if (!relatedShown.value.length && relatedPool.value.length) drawRelated()
@@ -685,6 +702,22 @@ onMounted(load)
           <ModelChips v-if="d.models?.length" :models="d.models" :max="2" size="sm" />
           <span v-if="d.rating_count" class="stat stat-mint">R {{ (d.rating_avg ?? 0).toFixed(1) }}/{{ d.rating_count }}</span>
           <span class="task-line-cta">{{ t('demo.sameTaskOpen', '看这个版本 →') }}</span>
+        </RouterLink>
+      </div>
+    </section>
+
+    <!-- J4：同作者续流（相关区前；无则诚实隐藏） -->
+    <section v-if="authorMore.length" class="section dv-cmp dv-author-more" style="padding-top: 8px">
+      <SectionHead :title="t('demo.authorMore', '该作者的其他作品')">
+        <span class="dv-cmp-tag mono">AUTHOR</span>
+        <RouterLink class="btn btn-sm btn-outline" :to="`/user/${demo.author}`">
+          {{ t('demo.authorMoreCta', 'TA 的全部作品 →') }}
+        </RouterLink>
+      </SectionHead>
+      <div class="dv-author-strip">
+        <RouterLink v-for="d in authorMore" :key="d.slug" class="dv-author-row" :to="`/demo/${d.slug}`">
+          <span class="dv-author-title">{{ d.title }}</span>
+          <span class="muted mono dv-author-meta">VIEW {{ d.view_count }} · DL {{ d.download_count }}</span>
         </RouterLink>
       </div>
     </section>

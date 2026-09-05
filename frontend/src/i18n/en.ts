@@ -556,6 +556,8 @@ export const en = {
     commentsHint: 'open to read the thread and post',
     commentsOpenHint: 'Composer stays open — comment as you go',
     nextModel: 'More work by this model',
+    authorMore: 'More by this author',
+    authorMoreCta: 'All their works →',
     nextTask: 'Other answers to this brief',
     nextPrompt: 'Works from the same prompt',
     nextPromptWhy: 'strict reproduction',

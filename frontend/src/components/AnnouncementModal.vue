@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import MarkdownRenderer from './MarkdownRenderer.vue'
 import { parseDate, currentLocale } from '../utils/time'
 import { annLabel } from '../utils/announcement'
@@ -13,12 +13,23 @@ import { t } from '../i18n'
  *   「一条横幅+一个弹层」，弹层=全部公告两组列表；打开即全读由调用方 markRead 承担）。
  * 容器三律（05 §5.2）：无边框（scoped 覆写全局 markdown.css 的 4px 边框盒——styles/ 冻结令
  * 不动全局）+ 外部投影一刀 + b-stamp-drop 350ms 入场；关闭 0ms 硬切对称；reduced-motion 退场。
+ * T15（t13 记账轻量缺口）：Esc 关闭补齐——抽屉早已支持，弹层缺（12.4 弹层底线：焦点圈闭+Esc 关闭）。
  */
 const props = defineProps<{ ann?: Announcement | null; list?: Announcement[] | null; open?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 
 const pinnedList = computed(() => (props.list ?? []).filter((a) => a.pinned))
 const generalList = computed(() => (props.list ?? []).filter((a) => !a.pinned))
+
+const visible = computed(() => !!(props.ann || (props.open && (props.list?.length ?? 0) > 0)))
+function onEscKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') emit('close')
+}
+watch(visible, (v) => {
+  if (v) document.addEventListener('keydown', onEscKey)
+  else document.removeEventListener('keydown', onEscKey)
+}, { immediate: true })
+onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 </script>
 
 <template>

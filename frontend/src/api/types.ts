@@ -504,6 +504,18 @@ export interface AttributeResult {
   target: { id: number; slug: string; name: string }
 }
 
+/** M3-B3 管理端题目详情（任何状态含 merged/hidden + 归属作品全量含 pending/rejected——挂摘 UI 数据源） */
+export interface AdminTaskDetail {
+  id: number
+  slug: string
+  title: string
+  description: string
+  category: string | null
+  status: string
+  merged_into_id: number | null
+  created_at: string
+  demos: { id: number; slug: string; title: string; status: string }[]
+}
 /** v2 B4′：治理收件箱条目（kind/payload 组合，approve 才由 service 执行） */
 export interface SuggestionItem {
   id: number

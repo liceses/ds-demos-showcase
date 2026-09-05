@@ -579,6 +579,9 @@ let mockTaskSeq = 2
 // v2 B4′：mock 收件箱（带 task 的上传会真的入队，能完整演一遍批准流程）
 const mockSuggestions: SuggestionItem[] = []
 let mockSuggestionSeq = 1
+// M3-B3 挂摘演示态：task slug → 已挂 demo 行（mock 无 DemoTask 表，内存映射代偿）
+const taskAttached: Record<string, { id: number; slug: string; title: string; status: string }[]> = {}
+let attachSeq = 9000
 // M2-t4 演示种子：kind 分节/批量消化的可见样例（mock 占位数据性质；id 9001+ 不与上传入队冲突）
 void (() => {
   const seed = (id: number, kind: SuggestionItem['kind'], payload: Record<string, unknown>, confidence: number, status: SuggestionItem['status'] = 'pending', created_at = '2026-08-20T10:00:00Z') =>
@@ -1417,6 +1420,7 @@ export const mockApi = {
     category?: string
     status?: string
     demo_ids?: number[]
+    demo_slugs?: string[]
   }): Promise<{ id: number; slug: string; title: string; status: string; attached: number }> {
     await delay(200)
     const slug = `mock-task-${mockTaskSeq}`
@@ -1430,6 +1434,15 @@ export const mockApi = {
       demo_count: payload.demo_ids?.length ?? 0,
       created_at: new Date().toISOString(),
     })
+    // M3-B3 建题即挂（demo_slugs → 解析+挂载映射）
+    if (payload.demo_slugs?.length) {
+      const list = (taskAttached[slug] = taskAttached[slug] || [])
+      for (const ds of payload.demo_slugs) {
+        const d = demos.find((x) => x.slug === ds)
+        if (!d) throw new Error('demo slug 不存在: ' + ds)
+        if (!list.some((x) => x.slug === ds)) list.unshift({ id: ++attachSeq, slug: ds, title: d.title || ds, status: d.status || 'approved' })
+      }
+    }
     return { id: mockTaskSeq - 1, slug, title: payload.title, status: payload.status || 'active', attached: payload.demo_ids?.length ?? 0 }
   },
   async getSponsors(): Promise<SponsorBoard> {
@@ -1563,6 +1576,80 @@ export const mockApi = {
     if (payload.category !== undefined) k.category = payload.category
     if (payload.status) k.status = payload.status
     return { id: k.id, slug: k.slug, title: k.title, status: k.status }
+  },
+  // M3-B3 直改权/挂摘/批量（与真实端点同形状；mock 内存态）
+  async getAdminTaskDetail(ident: string): Promise<{ id: number; slug: string; title: string; description: string; category: string | null; status: string; merged_into_id: number | null; created_at: string; demos: { id: number; slug: string; title: string; status: string }[] }> {
+    await delay(150)
+    const k = mockTasks.find((x) => x.slug === ident || String(x.id) === ident)
+    if (!k) throw new Error('题目不存在')
+    return { id: k.id, slug: k.slug, title: k.title, description: k.description, category: k.category ?? null, status: k.status, merged_into_id: null, created_at: k.created_at, demos: taskAttached[k.slug] ?? [] }
+  },
+  async patchEntity(entityType: 'model' | 'task' | 'tag', ident: string | number, fields: Record<string, unknown>): Promise<Record<string, unknown>> {
+    await delay(180)
+    if (entityType === 'model') {
+      const m = mockModels.find((x) => x.slug === ident || String(x.id) === ident)
+      if (!m) throw new Error('模型实体不存在')
+      if (fields.name) m.name = String(fields.name)
+      if (fields.vendor !== undefined) m.vendor = fields.vendor as string | null
+      if (fields.description !== undefined) m.description = String(fields.description)
+      return { type: 'model', id: m.id, slug: m.slug, updated: Object.keys(fields) }
+    }
+    if (entityType === 'task') {
+      const k = mockTasks.find((x) => x.slug === ident || String(x.id) === ident)
+      if (!k) throw new Error('题目不存在')
+      const f = fields as { title?: string; description?: string; category?: string | null; status?: string }
+      if (f.title) k.title = f.title
+      if (f.description !== undefined) k.description = f.description
+      if (f.category !== undefined) k.category = f.category
+      if (f.status) k.status = f.status
+      return { type: 'task', id: k.id, slug: k.slug, updated: Object.keys(f) }
+    }
+    if (entityType === 'tag') {
+      const id = Number(ident)
+      for (const k of tagKeys) for (const v of k.values) {
+        if (v.id === id) {
+          if (fields.description !== undefined && fields.description !== null) v.description = String(fields.description)
+          if (fields.group !== undefined) v.group = (fields.group as string | null) || null
+          return { type: 'tag', id, key: k.key, value: v.value, updated: Object.keys(fields) }
+        }
+      }
+      throw new Error('标签值不存在')
+    }
+    throw new Error('未知实体类型 ' + entityType)
+  },
+  async batchReviewSuggestions(action: 'approve' | 'reject', ids: number[]): Promise<{ action: string; ok: number; failed: number; results: { id: number; ok: boolean; error?: string }[] }> {
+    await delay(300)
+    const results: { id: number; ok: boolean; error?: string }[] = []
+    for (const sid of ids) {
+      try {
+        await mockApi.reviewSuggestion(sid, action)
+        results.push({ id: sid, ok: true })
+      } catch (e) {
+        results.push({ id: sid, ok: false, error: (e as Error).message })
+      }
+    }
+    return { action, ok: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, results }
+  },
+  async attachTaskDemoBySlug(ident: string, demoSlug: string): Promise<{ task_id: number; attached: number }> {
+    await delay(180)
+    const k = mockTasks.find((x) => x.slug === ident || String(x.id) === ident)
+    if (!k) throw new Error('题目不存在')
+    const d = demos.find((x) => x.slug === demoSlug)
+    if (!d) throw new Error('demo slug 不存在: ' + demoSlug)
+    const list = (taskAttached[k.slug] = taskAttached[k.slug] || [])
+    if (!list.some((x) => x.slug === demoSlug)) list.unshift({ id: ++attachSeq, slug: demoSlug, title: d.title || demoSlug, status: d.status || 'approved' })
+    k.demo_count = (k.demo_count || 0) + 1
+    return { task_id: k.id, attached: 1 }
+  },
+  async detachTaskDemoBySlug(ident: string, demoSlug: string): Promise<void> {
+    await delay(180)
+    const k = mockTasks.find((x) => x.slug === ident || String(x.id) === ident)
+    if (!k) throw new Error('题目不存在')
+    const list = taskAttached[k.slug] || []
+    const i = list.findIndex((x) => x.slug === demoSlug)
+    if (i < 0) throw new Error('该作品不在此题目下')
+    list.splice(i, 1)
+    k.demo_count = Math.max(0, (k.demo_count || 0) - 1)
   },
   async reviewSuggestion(id: number, action: 'approve' | 'reject'): Promise<SuggestionItem> {
     await delay(200)
@@ -1729,7 +1816,10 @@ export const mockApi = {
   },
   async mergeEntity(kind: 'models' | 'tasks', ident: string, payload: { target_id: number; dry_run?: boolean; reason?: string }): Promise<MergePreview> {
     await delay(240)
-    const srcId = Number(ident)
+    // M3-B5：ident 支持 id 或 slug（管理端合并 UI 传 slug）
+    const srcList = kind === 'models' ? mockModels : mockTasks
+    const srcObj = srcList.find((x) => x.slug === ident || String(x.id) === ident)
+    const srcId = srcObj?.id ?? Number(ident)
     if (!Number.isFinite(srcId) || srcId === payload.target_id) throw new Error('不能合并到自身')
     const ref = (id: number): MergePreview['source'] => {
       const m = mockModels.find((x) => x.id === id)

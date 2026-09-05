@@ -35,6 +35,27 @@ const statusCounts = ref<Record<string, number>>({})
 const taskFormOpen = ref(false)
 const taskForm = ref({ title: '', category: '', description: '' })
 const savingTask = ref(false)
+// M3-B5 初始挂载解锁（②demo_slugs）：adminDemos 搜索+chips，建题即挂（slug 先解析后建题 fail-fast）
+const attachSlugs = ref<string[]>([])
+const attachDraft = ref('')
+const demoOpts = ref<{ slug: string; title: string }[]>([])
+function addAttach() {
+  const s = attachDraft.value.trim()
+  if (!s || attachSlugs.value.includes(s)) return
+  attachSlugs.value = [...attachSlugs.value, s]
+  attachDraft.value = ''
+}
+function removeAttach(s: string) {
+  attachSlugs.value = attachSlugs.value.filter((x) => x !== s)
+}
+async function loadDemoOpts() {
+  if (demoOpts.value.length) return
+  try {
+    demoOpts.value = (await api.adminDemos()).map((d) => ({ slug: d.slug, title: d.title }))
+  } catch {
+    demoOpts.value = []
+  }
+}
 const taskErr = ref('')
 
 async function createTask() {
@@ -43,9 +64,11 @@ async function createTask() {
   savingTask.value = true
   taskErr.value = ''
   try {
-    const created = await api.adminCreateTask({ title, description: taskForm.value.description || undefined, category: taskForm.value.category || undefined })
+    const created = await api.adminCreateTask({ title, description: taskForm.value.description || undefined, category: taskForm.value.category || undefined, demo_slugs: attachSlugs.value.length ? attachSlugs.value : undefined })
     ui.toast(t('admin.kc.taskCreated', '题目已创建：{slug}', { slug: created.slug }), 'success')
     taskForm.value = { title: '', category: '', description: '' }
+    attachSlugs.value = []
+    attachDraft.value = ''
     taskFormOpen.value = false
     if (facet.value !== 'task') setFacet('task')
     else void load()
@@ -205,7 +228,17 @@ onMounted(() => {
           <option value="">{{ t('admin.entities.statusAll', '全部状态') }}</option>
           <option v-for="(n, s) in statusCounts" :key="s" :value="s">{{ statusLabel(String(s)) }} <template v-if="n">({{ n }})</template></option>
         </select>
-        <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>        <!-- M3-B2 管理员直建题目入口（02 P1 管理员侧解法）：与 task_proposal 候选制并存——直建=即时生效，用户提议=候选审批 -->        <button class="btn btn-sm btn-primary" type="button" @click="taskFormOpen = !taskFormOpen">+ {{ t('admin.kc.newTask', '新建题目') }}</button>      </div>      <!-- 建题表单：初始挂载置灰待后端 demo_slugs（t11 协作中）——不给假挂载 -->      <div v-if="taskFormOpen" class="kc-task-form card card-default" style="margin-bottom: 14px">        <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span><input v-model="taskForm.title" class="input" style="max-width: 260px" :placeholder="t('admin.kc.taskTitlePh', '题目名称（必填）')" /></label>          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><input v-model="taskForm.category" class="input" style="max-width: 160px" :placeholder="t('admin.kc.taskCatPh', '可选，对齐 category 标签值')" /></label>        </div>        <label class="kc-block"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><textarea v-model="taskForm.description" class="input" rows="2" :placeholder="t('admin.kc.taskDescPh', '题面口径/评测说明（可选）')" /></label>        <div class="kc-pending" style="margin: 8px 0">{{ t('admin.kc.attachPending', '初始挂载：待后端 demo_slugs 入参（t11 协作中）——建题后可在题目详情关联作品区挂载。') }}</div>        <div v-if="taskErr" class="notice notice-error">{{ taskErr }}</div>        <div class="filter-row" style="margin: 0; flex-wrap: wrap">          <button type="button" class="btn btn-sm btn-primary" :disabled="savingTask || !taskForm.title.trim()" @click="createTask">{{ savingTask ? t('admin.kc.saving', '创建中…') : t('admin.kc.taskCreate', '创建题目') }}</button>          <button type="button" class="btn btn-sm btn-outline" :disabled="savingTask" @click="taskFormOpen = false">{{ t('common.cancel', '取消') }}</button>          <span class="hint">{{ t('admin.kc.taskCreateNote', '管理员直建=即时生效（落审计），不经候选队列；用户出题仍走题目候选审批。') }}</span>        </div>      </div>
+        <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>        <!-- M3-B2 管理员直建题目入口（02 P1 管理员侧解法）：与 task_proposal 候选制并存——直建=即时生效，用户提议=候选审批 -->        <button class="btn btn-sm btn-primary" type="button" @click="taskFormOpen = !taskFormOpen; if (taskFormOpen) void loadDemoOpts()">+ {{ t('admin.kc.newTask', '新建题目') }}</button>      </div>      <!-- 建题表单：初始挂载置灰待后端 demo_slugs（t11 协作中）——不给假挂载 -->      <div v-if="taskFormOpen" class="kc-task-form card card-default" style="margin-bottom: 14px">        <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span><input v-model="taskForm.title" class="input" style="max-width: 260px" :placeholder="t('admin.kc.taskTitlePh', '题目名称（必填）')" /></label>          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><input v-model="taskForm.category" class="input" style="max-width: 160px" :placeholder="t('admin.kc.taskCatPh', '可选，对齐 category 标签值')" /></label>        </div>        <label class="kc-block"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><textarea v-model="taskForm.description" class="input" rows="2" :placeholder="t('admin.kc.taskDescPh', '题面口径/评测说明（可选）')" /></label>        <div class="kc-field kc-wide" style="margin: 8px 0">
+          <span class="kc-k">{{ t('admin.kc.attachInit', '初始挂载') }}</span>
+          <input v-model="attachDraft" class="input" style="max-width: 240px" list="t7-demo-slugs" :placeholder="t('admin.kc.attachSlugPh', '输入 demo slug…')" @keyup.enter="addAttach" />
+          <datalist id="t7-demo-slugs"><option v-for="o in demoOpts" :key="o.slug" :value="o.slug">{{ o.title }}</option></datalist>
+          <button type="button" class="btn btn-sm btn-outline" @click="addAttach">{{ t('admin.kc.attachAdd', '添加') }}</button>
+          <span v-for="s in attachSlugs" :key="s" class="tag-chip mode-open">
+            {{ s }}
+            <button type="button" class="kc-chip-x" :aria-label="t('common.cancel', '取消')" @click="removeAttach(s)">×</button>
+          </span>
+          <span class="hint">{{ t('admin.kc.attachNote2', 'demo_slugs 建题即挂（slug 先解析后建题，未知整批 404 不留空题）。') }}</span>
+        </div>        <div v-if="taskErr" class="notice notice-error">{{ taskErr }}</div>        <div class="filter-row" style="margin: 0; flex-wrap: wrap">          <button type="button" class="btn btn-sm btn-primary" :disabled="savingTask || !taskForm.title.trim()" @click="createTask">{{ savingTask ? t('admin.kc.saving', '创建中…') : t('admin.kc.taskCreate', '创建题目') }}</button>          <button type="button" class="btn btn-sm btn-outline" :disabled="savingTask" @click="taskFormOpen = false">{{ t('common.cancel', '取消') }}</button>          <span class="hint">{{ t('admin.kc.taskCreateNote', '管理员直建=即时生效（落审计），不经候选队列；用户出题仍走题目候选审批。') }}</span>        </div>      </div>
 
       <div v-if="error" class="notice notice-error">{{ error }}</div>
       <LoadingRow v-if="loading && !rows.length" :text="t('admin.entities.loading', '加载实体…')" />

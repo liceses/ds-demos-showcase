@@ -16,7 +16,7 @@ defineOptions({ name: 'AdminEntityDetailSection' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api'
-import type { AuditEntry, DemoSummary, ModelDetail, TagKeyInfo, TaskDetail } from '../../api/types'
+import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo, TaskSummary } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import EntityStamp from '../EntityStamp.vue'
 import LoadingRow from '../LoadingRow.vue'
@@ -37,10 +37,10 @@ const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const model = ref<ModelDetail | null>(null)
-const task = ref<TaskDetail | null>(null)
+const task = ref<AdminTaskDetail | null>(null)
 const tagRow = ref<{ keyLabel: string; value: { id?: number; value: string; description: string; demo_count: number; group?: string | null } } | null>(null)
 const audit = ref<AuditEntry[]>([])
-const works = ref<DemoSummary[]>([])
+const works = ref<Array<{ slug: string; title: string; rating_avg?: number | null; status?: string; id?: number }>>([])
 
 const editing = ref(false)
 const editForm = ref<{ name?: string; vendor?: string; description?: string; title?: string; category?: string }>({})
@@ -50,6 +50,20 @@ const busyAlias = ref(false)
 const transOpen = ref(false)
 const transStatus = ref('')
 const transReason = ref('')
+const taskList = ref<(TaskSummary & { merged_into_id?: number | null })[]>([])
+// M3-B5 Task 挂摘/合并两步流状态
+const attachSlug = ref('')
+const attachBusy = ref(false)
+const demoOptions = ref<{ slug: string; title: string }[]>([])
+const mergeOpen = ref(false)
+const mergeTarget = ref('')
+const mergeReason = ref('')
+const mergePreview = ref<{ source: { id: number; slug: string; title: string }; target: { id: number; slug: string; title: string }; affected_demos: number } | null>(null)
+const mergeBusy = ref(false)
+// Tag description 直改状态（①tag.description 白名单解锁）
+const tagDescEditing = ref(false)
+const tagDescDraft = ref('')
+const tagDescSaving = ref(false)
 
 const statusZh: Record<string, string> = {
   candidate: '候选',
@@ -62,7 +76,7 @@ const statusZh: Record<string, string> = {
 
 const entityName = computed(() => (props.type === 'model' ? model.value?.name : props.type === 'task' ? task.value?.title : tagRow.value?.value.value) || props.id)
 const entityStatus = computed(() => (props.type === 'model' ? model.value?.status : props.type === 'task' ? task.value?.status : null) || null)
-const demoTotal = computed(() => (props.type === 'task' ? task.value?.demos_total : props.type === 'model' ? model.value?.demo_count : tagRow.value?.value.demo_count) ?? null)
+const demoTotal = computed(() => (props.type === 'task' ? task.value?.demos.length : props.type === 'model' ? model.value?.demo_count : tagRow.value?.value.demo_count) ?? null)
 /** Task 状态可选档（后端 TaskUpdateIn pattern 现值；deprecated 缺=协作项） */
 const taskStatuses = ['candidate', 'active', 'merged', 'hidden'] as const
 /** Model 状态可选档（ModelStatusIn pattern 全量） */
@@ -89,13 +103,11 @@ async function load() {
       audit.value = a.items
       works.value = w.items
     } else if (props.type === 'task') {
-      task.value = await api.getTask(props.id)
-      const [a, w] = await Promise.all([
-        api.getAudit({ entity_type: 'task', entity_id: task.value.id, page_size: 20 }).catch(() => ({ items: [] as AuditEntry[] })),
-        Promise.resolve({ items: task.value.demos || [] }),
-      ])
+      // M3-B5：管理端详情（任何状态含 merged/hidden + 归属作品全量含 pending/rejected）——挂摘 UI 数据源
+      task.value = await api.getAdminTaskDetail(props.id)
+      const a = await api.getAudit({ entity_type: 'task', entity_id: task.value.id, page_size: 20 }).catch(() => ({ items: [] as AuditEntry[] }))
       audit.value = a.items
-      works.value = w.items
+      works.value = (task.value.demos || []).map((d) => ({ ...d }))
     } else {
       const keys = await api.listTagKeys()
       const k = keys.find((x: TagKeyInfo) => x.key === props.tagKey)
@@ -213,8 +225,8 @@ async function doTransition() {
     if (props.type === 'model' && model.value) {
       await api.setModelStatus(model.value.slug, { status: target, reason: transReason.value.trim() || undefined })
     } else if (props.type === 'task' && task.value) {
-      // TaskUpdateIn 无 reason 入参（服务端审计记 update 但理由留空=后端协作项）
-      await api.updateTask(task.value.slug, { status: target })
+      // M3-B5 解锁：TaskUpdateIn.reason 入参已落地（协作项②闭环）——跃迁理由随 update 审计
+      await api.updateTask(task.value.slug, { status: target, reason: transReason.value.trim() || undefined })
     }
     ui.toast(t('admin.kc.transDone', '状态已跃迁并落审计'), 'success')
     transOpen.value = false
@@ -242,7 +254,131 @@ async function saveGroup(group: string | null) {
   }
 }
 
-watch(() => [props.type, props.id, props.tagKey], () => void load())
+// ---- M3-B5 Task 挂摘（④⑤：by slug；数据源=管理端详情全量） ----
+async function loadDemoOptions() {
+  if (demoOptions.value.length) return
+  try {
+    const all = await api.adminDemos()
+    demoOptions.value = all.map((d) => ({ slug: d.slug, title: d.title }))
+  } catch {
+    demoOptions.value = []
+  }
+}
+
+async function attachDemo() {
+  const s = attachSlug.value.trim()
+  if (!s || !task.value || attachBusy.value) return
+  attachBusy.value = true
+  try {
+    await api.attachTaskDemoBySlug(task.value.slug, s)
+    ui.toast(t('admin.kc.attached', '已挂载（attach 审计）'), 'success')
+    attachSlug.value = ''
+    await load()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    attachBusy.value = false
+  }
+}
+
+async function detachDemo(slug: string) {
+  if (!task.value || attachBusy.value) return
+  const ok = await ui.confirm({
+    title: t('admin.kc.detachTitle', '摘除作品？'),
+    message: t('admin.kc.detachMsg', '《{slug}》将从本题的归属列表移除（detach 审计；可重新挂载）。', { slug }),
+    confirmText: t('admin.kc.detach', '摘除'),
+  })
+  if (!ok) return
+  attachBusy.value = true
+  try {
+    await api.detachTaskDemoBySlug(task.value.slug, slug)
+    ui.toast(t('admin.kc.detached', '已摘除（detach 审计）'), 'success')
+    await load()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    attachBusy.value = false
+  }
+}
+
+// ---- M3-B5 Task 合并两步流（⑥：显式 dry_run:true 预览 → 确认后显式 false——缺省 false 的坑已规避） ----
+async function dryRunMerge() {
+  if (!task.value || mergeBusy.value) return
+  mergeBusy.value = true
+  try {
+    const raw = mergeTarget.value.trim()
+    // 目标解析：纯数字=id 直用；否则按 slug/题名在管理端任务列表查 id（找不到 422 诚实报错）
+    const target = /^\d+$/.test(raw) ? Number(raw) : await resolveTaskTargetId(raw)
+    const preview = await api.mergeEntity('tasks', task.value.slug, { target_id: target as number, dry_run: true, reason: mergeReason.value || undefined })
+    mergePreview.value = preview as unknown as { source: { id: number; slug: string; title: string }; target: { id: number; slug: string; title: string }; affected_demos: number }
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    mergeBusy.value = false
+  }
+}
+
+function closeMerge() {
+  mergeOpen.value = false
+  mergePreview.value = null
+}
+
+async function resolveTaskTargetId(raw: string): Promise<number> {
+  if (!taskList.value.length) taskList.value = (await api.adminListEntityTasks({ page_size: 200 })).items
+  const hit = taskList.value.find((t) => t.slug === raw || t.title === raw || String(t.id) === raw)
+  if (!hit) throw new Error(t('admin.kc.mergeTargetNotFound', '目标题目不存在（按 id/slug/题名核对）'))
+  return hit.id
+}
+
+async function doMerge() {
+  if (!task.value || !mergePreview.value || mergeBusy.value) return
+  const ok = await ui.confirm({
+    title: t('admin.kc.mergeConfirmTitle', '确认合并？'),
+    message: t('admin.kc.mergeConfirmMsg', '《{from}》并入《{to}》：{n} 件作品迁移 + 源标 merged（可 unmerge 回溯）。', { from: mergePreview.value.source.title, to: mergePreview.value.target.title, n: mergePreview.value.affected_demos }),
+    confirmText: t('admin.kc.mergeDo', '执行合并'),
+  })
+  if (!ok) return
+  mergeBusy.value = true
+  try {
+    await api.mergeEntity('tasks', task.value.slug, { target_id: mergePreview.value.target.id, dry_run: false, reason: mergeReason.value || undefined })
+    ui.toast(t('admin.kc.mergeDone', '已合并并落审计'), 'success')
+    mergeOpen.value = false
+    mergePreview.value = null
+    await load()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    mergeBusy.value = false
+  }
+}
+
+// ---- M3-B5 Tag description 直改（①tag.description 白名单） ----
+function startTagDesc() {
+  tagDescDraft.value = tagRow.value?.value.description || ''
+  tagDescEditing.value = true
+}
+
+async function saveTagDesc() {
+  const v = tagRow.value?.value
+  const tagId = v?.id
+  if (!tagId || tagDescSaving.value) return
+  tagDescSaving.value = true
+  try {
+    await api.patchEntity('tag', tagId, { description: tagDescDraft.value })
+    ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
+    tagDescEditing.value = false
+    await load()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    tagDescSaving.value = false
+  }
+}
+
+watch(() => [props.type, props.id, props.tagKey], () => {
+  void load()
+  if (props.type === 'task') void loadDemoOptions()
+})
 onMounted(load)
 </script>
 
@@ -317,13 +453,22 @@ onMounted(load)
                 <div class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><span>{{ task?.description || '—' }}</span></div>
                 <div class="kc-field kc-wide">
                   <span class="kc-k">{{ t('admin.kc.fPrompt', 'canonical prompt') }}</span>
-                  <span class="kc-pending">{{ t('admin.kc.pendingPatch', '直改需后端 PATCH 端点（协作清单#1）——题面一致性锚，改动需影响面预览') }}</span>
+                  <span class="kc-pending">{{ t('admin.kc.pendingPrompt', '不可直改（核对过 PATCH 白名单）：现库无独立题面字段，「题面摘录」派生自首件作品提示词；如需独立题面=加列协作项') }}</span>
                 </div>
               </template>
               <template v-else>
                 <div class="kc-field">
                   <span class="kc-k">{{ t('admin.kc.fDesc', '描述') }}</span>
-                  <span class="kc-pending">{{ t('admin.kc.pendingPatch', '直改需后端 PATCH 端点（协作清单#1）') }}</span>
+                  <template v-if="tagDescEditing">
+                    <input v-model="tagDescDraft" class="input" style="max-width: 260px" />
+                    <button type="button" class="btn btn-sm btn-primary" :disabled="tagDescSaving" @click="saveTagDesc">{{ t('admin.kc.save', '保存') }}</button>
+                    <button type="button" class="btn btn-sm btn-outline" :disabled="tagDescSaving" @click="tagDescEditing = false">{{ t('common.cancel', '取消') }}</button>
+                  </template>
+                  <template v-else>
+                    <span>{{ tagRow?.value.description || '—' }}</span>
+                    <button type="button" class="btn btn-sm btn-outline" @click="startTagDesc">{{ t('admin.kc.edit', '编辑') }}</button>
+                    <span class="hint">{{ t('admin.kc.tagDescNote', 'PATCH /admin/entities/tag/{id}——白名单直改，落审计。') }}</span>
+                  </template>
                 </div>
                 <template v-if="tagRow">
                   <div class="kc-field">
@@ -366,8 +511,20 @@ onMounted(load)
         <template v-else-if="props.type === 'task'">
           <div class="kc-rel-row">
             <span class="kc-k">{{ t('admin.kc.fMergedInto', 'merged_into') }}</span>
-            <span class="mono">{{ (task as unknown as { merged_into_id?: number | null })?.merged_into_id ?? '—' }}</span>
-            <span class="btn btn-sm btn-outline kc-disabled" :title="t('admin.kc.mergeDisabledTip', 'merge_task 端点后端缺口（协作清单#4）——不给假按钮')">{{ t('admin.kc.mergeDisabled', '合并（后端协作中）') }}</span>
+            <span class="mono">{{ task?.merged_into_id ?? '—' }}</span>
+            <button v-if="!mergeOpen" type="button" class="btn btn-sm btn-primary" @click="mergeOpen = true">{{ t('admin.kc.mergeGo', '合并向导 →') }}</button>
+          </div>
+          <div v-if="mergeOpen" class="kc-trans">
+            <label class="kc-field"><span class="kc-k">{{ t('admin.kc.mergeTarget', '合并到（题目 id/slug）') }}</span><input v-model="mergeTarget" class="input" style="max-width: 220px" :placeholder="t('admin.kc.mergeTargetPh', '如 12 或 task-slug')" /></label>
+            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（可选）') }}</span><input v-model="mergeReason" class="input" :placeholder="t('admin.kc.transReasonPh', '会进入审计时间线')" /></label>
+            <div class="kc-field kc-wide">
+              <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy || !mergeTarget.trim() || mergePreview != null" @click="dryRunMerge">{{ t('admin.kc.mergePreview', 'dry_run 预览') }}</button>
+              <button type="button" class="btn btn-sm btn-primary" :disabled="mergeBusy || mergePreview == null" @click="doMerge">{{ t('admin.kc.mergeConfirm', '确认合并') }}</button>
+              <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy" @click="closeMerge">{{ t('common.cancel', '取消') }}</button>
+            </div>
+            <div v-if="mergePreview" class="hint">
+              {{ t('admin.kc.mergePreviewMsg', '预览：《{from}》→《{to}》，{n} 件作品将随迁。确认后显式 dry_run=false 执行；合并可 unmerge 回溯。', { from: mergePreview.source.title, to: mergePreview.target.title, n: mergePreview.affected_demos }) }}
+            </div>
           </div>
         </template>
         <template v-else>
@@ -438,7 +595,7 @@ onMounted(load)
       <!-- ④ 审计时间线 -->
       <section class="kc-zone">
         <h3 class="kc-zone-title">{{ t('admin.kc.zAudit', '④ 审计时间线') }}</h3>
-        <div v-if="!audit.length" class="muted">{{ t('admin.kc.noAudit', '暂无该实体的审计记录（tag 键/值变更未落审计=后端协作项）') }}</div>
+        <div v-if="!audit.length" class="muted">{{ t('admin.kc.noAudit', '暂无该实体的审计记录') }}</div>
         <ul v-else class="kc-audit">
           <li v-for="a in audit" :key="a.id">
             <span class="mono kc-time">{{ fmtTime(a.created_at) }}</span>
@@ -449,17 +606,36 @@ onMounted(load)
         </ul>
       </section>
 
-      <!-- ⑤ 关联作品 -->
+      <!-- ⑤ 关联作品（task=管理端全量含 pending/rejected + 挂摘直改；model/tag 只读列表） -->
       <section class="kc-zone">
         <h3 class="kc-zone-title">{{ t('admin.kc.zWorks', '⑤ 关联作品') }}</h3>
-        <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
-        <ul v-else class="kc-works">
-          <li v-for="d in works" :key="d.slug">
-            <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
-            <span class="muted mono">{{ d.slug }}</span>
-            <span v-if="d.rating_avg != null" class="mini-stat"><b>{{ d.rating_avg.toFixed(1) }}</b></span>
-          </li>
-        </ul>
+        <template v-if="props.type === 'task'">
+          <div class="kc-rel-row">
+            <input v-model="attachSlug" class="input" style="max-width: 260px" list="kc-demo-slugs" :placeholder="t('admin.kc.attachSlugPh', '输入 demo slug 挂载…')" />
+            <datalist id="kc-demo-slugs"><option v-for="o in demoOptions" :key="o.slug" :value="o.slug">{{ o.title }}</option></datalist>
+            <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy || !attachSlug.trim()" @click="attachDemo">{{ t('admin.kc.attachAdd', '挂载') }}</button>
+            <span class="hint">{{ t('admin.kc.attachNote', 'POST /admin/tasks/{id}/demos（按 slug，未知整批 404）；挂/摘均落 attach/detach 审计。') }}</span>
+          </div>
+          <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
+          <ul v-else class="kc-works">
+            <li v-for="d in works" :key="d.slug">
+              <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
+              <span class="muted mono">{{ d.slug }}</span>
+              <span v-if="d.status && d.status !== 'approved'" class="cluster-badge cb-fuzzy">{{ d.status }}</span>
+              <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy" @click="detachDemo(d.slug)">{{ t('admin.kc.detach', '摘除') }}</button>
+            </li>
+          </ul>
+        </template>
+        <template v-else>
+          <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
+          <ul v-else class="kc-works">
+            <li v-for="d in works" :key="d.slug">
+              <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
+              <span class="muted mono">{{ d.slug }}</span>
+              <span v-if="d.rating_avg != null" class="mini-stat"><b>{{ d.rating_avg.toFixed(1) }}</b></span>
+            </li>
+          </ul>
+        </template>
       </section>
     </template>
   </div>

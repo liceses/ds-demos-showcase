@@ -40,8 +40,7 @@ const batchRunning = ref(false)
 const batchProgress = ref<{ done: number; total: number } | null>(null)
 const batchLastAction = ref<'approve' | 'reject' | null>(null)
 const failed = ref<{ id: number; kind: string; brief: string; message: string }[]>([])
-/** 前端限速 5/s：单条 review 端点循环；后端批量端点落地后此循环可整体替换 */
-const BATCH_INTERVAL_MS = 200
+
 
 const total = computed(() => Object.values(counts.value).reduce((a, b) => a + b, 0))
 
@@ -152,32 +151,26 @@ async function runBatch(action: 'approve' | 'reject', idsOverride?: number[]) {
       message:
         `${preview}${rows.length > 5 ? `\n…${t('admin.inbox.batchMore', '等共 {n} 条', { n: rows.length })}` : ''}\n\n` +
         t('admin.inbox.batchUndoNote', '治理语义：批准效果逐条可审计回溯（合并可 unmerge/实体可删/挂题可撤）；驳回不销毁数据，引擎可再次提名。'),
-      confirmText: t('admin.inbox.batchApprove', '批量批准（前端 5/s）'),
+      confirmText: t('admin.inbox.batchApprove', '批量批准'),
     })
     if (!ok) return
   }
   batchRunning.value = true
   batchLastAction.value = action
   failed.value = []
-  const fails: typeof failed.value = []
-  batchProgress.value = { done: 0, total: ids.length }
-  let i = 0
-  for (const id of ids) {
-    const item = rows.find((r) => r.id === id)
-    try {
-      await api.reviewSuggestion(id, action)
-    } catch (e) {
-      fails.push({ id, kind: item?.kind || '', brief: item ? brief(item) : `#${id}`, message: (e as Error).message })
-    }
-    i++
-    batchProgress.value = { done: i, total: ids.length }
-    if (i < ids.length) await new Promise((r) => setTimeout(r, BATCH_INTERVAL_MS))
-  }
+  // M3-B5 真批量端点（t4 前端限速循环退役）：POST /admin/suggestions/batch-review——逐条独立提交+审计，单条失败不拖垮整批
+  const res = await api.batchReviewSuggestions(action, ids)
+  const fails: typeof failed.value = res.results
+    .filter((x) => !x.ok)
+    .map((x) => {
+      const item = rows.find((r) => r.id === x.id)
+      return { id: x.id, kind: item?.kind || '', brief: item ? brief(item) : `#${x.id}`, message: x.error || '失败' }
+    })
   failed.value = fails
   batchRunning.value = false
   batchProgress.value = null
   selected.value = new Set()
-  const okCount = ids.length - fails.length
+  const okCount = res.ok
   ui.toast(
     t('admin.inbox.batchDone', '批量{action}完成：成功 {ok} · 失败 {bad}', {
       action: action === 'approve' ? t('admin.inbox.approve', '批准') : t('admin.inbox.reject', '驳回'),
@@ -254,7 +247,7 @@ onMounted(() => {
     <!-- M2-t4 批量工具条：选中即现；批量走前端限速循环（后端批量端点=协作清单），影响面先确认 -->
     <div v-if="status === 'pending' && (selected.size > 0 || batchRunning || failed.length)" class="inbox-batch card card-default" data-cdp="inbox-batch">
       <template v-if="batchRunning">
-        <b>{{ t('admin.inbox.batchProgress', '批量执行中 {done}/{total}（前端 5/s 限速）', batchProgress!) }}</b>
+        <b>{{ t('admin.inbox.batchRunning', '批量执行中…') }}</b>
       </template>
       <template v-else>
         <div class="filter-row" style="margin: 0; flex-wrap: wrap; align-items: center">
@@ -268,7 +261,7 @@ onMounted(() => {
           <button class="btn btn-sm btn-outline" type="button" @click="clearSelection">
             {{ t('admin.inbox.batchClear', '清空选择') }}
           </button>
-          <span class="hint">{{ t('admin.inbox.batchFrontNote', '批量=前端限速循环（5/s）逐条调用单条端点；后端批量端点在协作清单') }}</span>
+          <span class="hint">{{ t('admin.inbox.batchRealNote', '批量=真批量端点（逐条独立提交+审计，单条失败不拖垮整批）。') }}</span>
         </div>
         <div v-if="failed.length" class="inbox-failed">
           <b>{{ t('admin.inbox.batchFailTitle', '失败 {n} 条：', { n: failed.length }) }}</b>

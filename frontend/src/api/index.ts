@@ -65,6 +65,7 @@ import type {
   KnowledgeStats,
   AuditList,
   AdminModelList,
+  AdminTaskDetail,
   AdminTaskList,
   MergePreview,
   EntityConflicts,
@@ -563,6 +564,7 @@ const realApi = {
     category?: string
     status?: string
     demo_ids?: number[]
+    demo_slugs?: string[]
   }): Promise<{ id: number; slug: string; title: string; status: string; attached: number }> {
     const { data } = await http.post('/admin/tasks', payload)
     return data
@@ -644,9 +646,33 @@ const realApi = {
     return data
   },
   /** M3-3 直改权：Task 题面字段直改（title/description/category/status）——既有端点 PUT /admin/tasks/{ident}（服务端落 update 审计） */
-  async updateTask(ident: string | number, payload: { title?: string; description?: string; category?: string | null; status?: string }): Promise<{ id: number; slug: string; title: string; status: string }> {
+  async updateTask(ident: string | number, payload: { title?: string; description?: string; category?: string | null; status?: string; reason?: string }): Promise<{ id: number; slug: string; title: string; status: string }> {
     const { data } = await http.put(`/admin/tasks/${encodeURIComponent(String(ident))}`, payload)
     return data
+  },
+  /** M3-B3 管理端题目详情（任何状态含 merged/hidden + 归属作品全量含 pending/rejected——挂摘 UI 数据源） */
+  async getAdminTaskDetail(ident: string | number): Promise<AdminTaskDetail> {
+    const { data } = await http.get(`/admin/tasks/${encodeURIComponent(String(ident))}`)
+    return data
+  },
+  /** M3-B3 直改权统一入口：PATCH /admin/entities/{type}/{id}（白名单逐实体，服务端落审计） */
+  async patchEntity(entityType: 'model' | 'task' | 'tag', ident: string | number, fields: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { data } = await http.patch(`/admin/entities/${entityType}/${encodeURIComponent(String(ident))}`, fields)
+    return data
+  },
+  /** M3-B3 收件箱批量审核（t4 前端限速循环→真批量端点；ids 1..500） */
+  async batchReviewSuggestions(action: 'approve' | 'reject', ids: number[]): Promise<{ action: string; ok: number; failed: number; results: { id: number; ok: boolean; error?: string }[] }> {
+    const { data } = await http.post('/admin/suggestions/batch-review', { action, ids })
+    return data
+  },
+  /** M3-B3 按 slug 挂题（实体详情关联作品区；未知 slug 整批 404） */
+  async attachTaskDemoBySlug(ident: string | number, demoSlug: string): Promise<{ task_id: number; attached: number }> {
+    const { data } = await http.post(`/admin/tasks/${encodeURIComponent(String(ident))}/demos`, { demo_slugs: [demoSlug] })
+    return data
+  },
+  /** M3-B3 按 slug 摘题（不在该题下 404） */
+  async detachTaskDemoBySlug(ident: string | number, demoSlug: string): Promise<void> {
+    await http.delete(`/admin/tasks/${encodeURIComponent(String(ident))}/demos/slug/${encodeURIComponent(demoSlug)}`)
   },
   async getMergeHistory(): Promise<{ items: MergeHistoryItem[] }> {
     const { data } = await http.get('/admin/models/merge-history')

@@ -14,12 +14,8 @@
     <script>
       try { var c = localStorage.getItem('dsh_theme') || 'system'; document.documentElement.dataset.theme = c === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'ink' : 'paper') : c } catch (e) { document.documentElement.dataset.theme = 'paper' }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- 字体自托管（04 §2.4 F1 @fontsource，T18/M4-E4）：Google Fonts 三行移除，woff2 随 /assets 1y immutable 缓存；preload 标题用 Inter variable -->
+    <!-- preload 在 main.ts 运行时注入（vite 对 index.html 的 node_modules 相对 href 不改写——静态 link 会指向死路径） -->
   </head>
   <body>
     <div id="app"></div>

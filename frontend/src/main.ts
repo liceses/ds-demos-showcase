@@ -14,6 +14,16 @@ if (isAstraSite()) {
   void (async () => {
     // 英文用户：词表就绪再挂载（04 §5.3，P2-2），避免首帧中文回落闪帧；加载失败不阻塞（t() 回落中文）
     if (lang.value === 'en') await loadEn().catch(() => undefined)
+    const interWoff2 = (await import('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url')).default
+    // preload 标题字体（04 §2.4）：运行时注入（vite 哈希 URL 由 import 取得）
+    const pre = document.createElement('link')
+    pre.rel = 'preload'
+    pre.as = 'font'
+    pre.type = 'font/woff2'
+    pre.crossOrigin = ''
+    pre.href = interWoff2
+    document.head.appendChild(pre)
+    await import('./styles/fonts.css')
     await import('./styles/index.css') // 样式先行于壳层渲染（FOUC 由 index.html 头部内联置 data-theme 兜底）
     const [{ default: App }, { default: router }] = await Promise.all([import('./App.vue'), import('./router')])
     const app = createApp(App)

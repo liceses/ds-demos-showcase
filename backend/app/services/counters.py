@@ -9,14 +9,24 @@
 本模块把计数改成「内存累加 + 每 30s 一批原子 UPDATE」：
 - 读路径零写事务（详情页/下载不再碰写锁）；
 - 计数是统计语义，允许 30s 级最终一致；
-- 落库失败静默（统计绝不影响业务请求）。
+- 落库失败并回内存等下一轮重试 + 打 warning 日志（可观测，绝不影响业务请求）。
+
+2026-09-04 第二次事故（9f3f6ed 当天引入，直到 09-1x 才被发现）：
+- `_flush()` 写了 `buf, _BUF = _BUF, {}`——元组赋值目标里的 `_BUF` 使它成为函数
+  局部变量，右侧读取当即 `UnboundLocalError`，被 `_loop` 的裸 except 静默吞掉；
+- 结果：落库线程每 30s 空转一次，**任何计数自该日起从未持久化过**——
+  新 demo 恒 0（老 demo 只是停更在历史值上），生产用户报告「计数全 0」；
+- 教训：静默 except 必须配合可观测性（failure 要打日志），且核心落库路径要有回归测试。
 """
 
+import logging
 import threading
 
 from sqlalchemy import text
 
 from ..database import SessionLocal
+
+_log = logging.getLogger(__name__)
 
 _LOCK = threading.Lock()
 # (表动作, 行 id) -> 增量
@@ -38,22 +48,34 @@ def bump(action: str, row_id: int) -> None:
 
 
 def _flush() -> None:
+    """把内存批次落库。失败时批次并回内存等下一轮重试：
+    commit 未成功 ⇒ 批内 UPDATE 均未生效（SQLite 事务原子性）⇒ 并回不会重复计数。"""
+    # 注意：不能写 `buf, _BUF = _BUF, {}` —— 赋值目标里的 _BUF 会变成局部变量，
+    # 右侧读取直接 UnboundLocalError（2026-09-04 事故）。clear() 是方法调用（变异），
+    # 不会让名字变局部，这里才安全。
     with _LOCK:
-        buf, _BUF = _BUF, {}
+        buf = dict(_BUF)
+        _BUF.clear()
     if not buf:
         return
-    db = SessionLocal()
     try:
-        for (action, row_id), n in buf.items():
-            sql = _SQL.get(action)
-            if sql is None:
-                continue
-            db.execute(text(sql), {"n": n, "id": row_id})
-        db.commit()
-    except Exception:  # noqa: BLE001 —— 统计失败不影响业务
-        db.rollback()
-    finally:
-        db.close()
+        db = SessionLocal()
+        try:
+            for (action, row_id), n in buf.items():
+                sql = _SQL.get(action)
+                if sql is None:
+                    continue
+                db.execute(text(sql), {"n": n, "id": row_id})
+            db.commit()
+        finally:
+            db.close()
+    except Exception as exc:  # noqa: BLE001 —— 统计失败不影响业务，但必须可观测、可重试
+        with _LOCK:
+            for key, n in buf.items():
+                _BUF[key] = _BUF.get(key, 0) + n
+        _log.warning(
+            "counters flush failed, %s batch(es) merged back for retry: %s", len(buf), exc
+        )
 
 
 def _loop() -> None:

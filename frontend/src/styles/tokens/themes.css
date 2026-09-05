@@ -37,6 +37,14 @@ html.theme-switching *::after {
   --wash-yellow: var(--k-yellow-wash);
   --wash-mint: var(--k-mint-wash);
 
+  /* t6 M5-U1（C1 重裁，08 §3）：coral 强调卡墨黑降噪——大面积洋红底 → 暗房红 wash（--wash-red #3a1224，
+     暖白字 14.5:1），红硬影 → 暖白硬影（几何 8px --sh-off-xl 不变）；饱和红只留小面积/hover 档 */
+  --card-coral-bg: var(--wash-red);
+  --card-coral-shadow: var(--sh-off-xl) 0px 0px var(--k-warm-white);
+
+  /* t6 M5-U2（C2 重裁，08 §3）：实体强调卡影墨黑降饱和——电光青 #00d9ff 硬影 → --k-cyan-dim #2f95a3（≈5:1 可辨不刺眼） */
+  --shadow-entity: var(--sh-off-xl) 0px 0px var(--k-cyan-dim);
+
   color-scheme: dark;
 }
 

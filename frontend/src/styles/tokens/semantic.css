@@ -19,6 +19,11 @@
   --wash-yellow: var(--p-yellow-wash);
   --wash-mint: var(--p-mint-wash);
 
+  /* t6 M5-U1（C1 重裁，08 §3）：card-coral 面积×饱和度纪律落位——纸白=原值（bg --paper + 红硬影），
+     墨黑由 themes.css 换绑暗房 wash 底 + 暖白硬影；纸白逐字节零漂移。 */
+  --card-coral-bg: var(--paper);
+  --card-coral-shadow: var(--shadow-red);
+
   /* 强调色（别名桥：存量 68+ 引用保持原名，值绑 L1 纸系原子；themes/ink.css 换绑墨系） */
   --red: var(--p-red);
   --teal: var(--p-teal);
@@ -42,6 +47,9 @@
   --shadow-red: var(--sh-off-xl) 0px 0px var(--red);
   --shadow-yellow: var(--sh-off-xl) 0px 0px var(--yellow);
   --shadow-black-sm: var(--sh-off-sm) 0 0 var(--ink); /* P0-1 断 token 修复：小号硬影（此前未定义，L4908 一处引用带临时 fallback） */
+  /* t6 M5-U2（C2，08 §3）：实体强调卡单一语义影（models/explore/tasks 列表卡 + task 对比行）——
+     纸白=--shadow-teal 保值零漂移；墨黑由 themes.css 换绑 --k-cyan-dim（电光青降饱和档） */
+  --shadow-entity: var(--shadow-teal);
 
   color-scheme: light;
   font-family: var(--font-body);

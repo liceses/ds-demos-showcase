@@ -9,9 +9,16 @@
   box-shadow: var(--shadow-teal);
   /* R8：静止零倾斜（原 rotate(1deg) 清零） */
 }
-.card-coral {
-  box-shadow: var(--shadow-red);
-  /* R8：静止零倾斜（原 rotate(-1deg) 清零） */
+.card-entity {
+  box-shadow: var(--shadow-entity);
+  /* t6 M5-U2（C2，08 §3）：实体强调卡（models/explore/tasks 列表 + task 对比行）单一语义影；
+     纸白=--shadow-teal 保值，墨黑=--k-cyan-dim 降饱和（themes.css 换绑） */
+}
+.card.card-coral {
+  background: var(--card-coral-bg);
+  box-shadow: var(--card-coral-shadow);
+  /* t6 M5-U1（C1，08 §3）：bg/shadow 走 --card-coral-* 语义角色——纸白=原值（--paper/--shadow-red）零漂移；
+     墨黑=暗房 wash 底+暖白硬影（themes.css 换绑）。R8：静止零倾斜（原 rotate(-1deg) 清零） */
 }
 .card-sunny {
   background: var(--wash-yellow);

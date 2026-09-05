@@ -11,9 +11,11 @@
 }
 
 /* ---------- 作品库分组标签筛选（A+B） ---------- */
+/* T15（t13 记账）：撤 flex-shrink:0——admin 长提示在 filter-row 内不可压缩，单行 407px 溢出 375
+   （6/9 面板实测 scrollWidth 406-423）；撤除后 item 压缩至容器宽→zh 逐字换行；demos 短标签视觉不变 */
 .filter-label {
   align-self: center;
-  flex-shrink: 0;
+  min-width: 0;
   padding: 2px 8px;
   border: 2px solid var(--ink);
   background: var(--paper);

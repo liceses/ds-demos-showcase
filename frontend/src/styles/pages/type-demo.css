@@ -9,6 +9,9 @@
 .kpi-num { font-family: var(--font-heading); font-size: 30px; font-weight: 900; line-height: 1; }
 .refine-table {
   width: 100%;
+  display: block;      /* T15：数据表容器化——375 下长 slug 的 min-content 超容器（audit 实测 388/375）
+                           时面板内横滚，不撑破页面；桌面满宽渲染零变化 */
+  overflow-x: auto;
   border-collapse: collapse;
   border: 3px solid var(--ink);
   background: var(--paper);

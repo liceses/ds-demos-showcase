@@ -624,6 +624,7 @@ export const en = {
     searchPlaceholder: 'Search topics… (Enter to submit)',
     scopeGeneral: 'General',
     scopeDemo: 'Demo talks',
+    scopeAria: 'Scope',
     sortReplies: 'Replies',
     sortHeat: 'Heat',
     hideSide: 'Hide sidebar',

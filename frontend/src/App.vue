@@ -125,8 +125,9 @@ onMounted(() => {
       </RouterLink>
 
       <!-- T7 v3（用户二轮反馈①③）：论坛出顶栏（首页纸条+footer+404 地图+TabBar 社区承接），
-           ⌕ 占论坛原槽位（SearchOverlay openSearch 复用——/ 与 ⌘K 仍由覆盖层自持）；
-           「关于」回栏（06 v2 报头导航序：作品库/探索/排行榜/⌕/关于）。
+           ⌕ 占论坛原槽位（SearchOverlay openSearch 复用——/ 与 ⌘K 仍由覆盖层自持）。
+           入口收口 D（只减不增）：顶栏维持 ≤4 项（作品库/探索/排行榜/⌕）+ 上传 CTA；
+           「关于」迁出顶栏 → footer + 管理用户菜单 + 404 地图（低频件不再占信息位，避免多主入口）。
            T9 反馈②：⌕ 去卡片化——与相邻 nav-link 同形态（裸图标链，hover=现有静默语汇：变色+3px 下划线），
            去 btn-outline 边框卡片感（06 §P2 的『唯一带框件』分工被用户实测否决） -->
       <nav class="topnav topnav-desktop">
@@ -139,7 +140,6 @@ onMounted(() => {
             <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
           </svg>
         </button>
-        <RouterLink class="nav-link" to="/about">{{ t('app.nav.about', '关于本站') }}</RouterLink>
       </nav>
 
       <!-- M2-1 右簇降级修正：工具簇不再整体隐藏（topnav-desktop 会连主题/语言一起藏掉，

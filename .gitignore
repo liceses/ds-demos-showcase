@@ -56,3 +56,6 @@ Thumbs.db
 docs/桌宠素材参考/
 frontend/src/*.jpg
 frontend/src/*.jpeg
+
+# 机器产物：骨架 json 由 tooling 重算，门禁只比对 hash；语义段 modules/*.json 保留提交
+docs/model/pim.generated.json

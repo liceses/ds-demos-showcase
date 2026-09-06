@@ -8,10 +8,8 @@ name: model-gate
 # 豁免：PR title 或描述含 "model-exempt: <issue>" 且模型文件未变更时放行；
 #       模型文件本身变更时豁免不生效（防止借豁免绕门禁）。
 #
-# 配置：EXTRACT_ROOTS 按项目填源码根（可多个，空格分隔）。本模板由
-#   @icelily/dsh-project-model init 安装，安装后按项目修改该行；v1 提取器
-#   只支持 Python，根必须是指向含 *.py 包的目录。
-# 注意：修改本行后必须重跑提取并更新 docs/model/pim.generated.hash。
+# 配置：py/ts 源根在下方提取步骤按项目修改（v1 支持 Python + TS/Vue）。
+# 修改后必须重跑提取并更新 docs/model/pim.generated.hash。
 
 env:
   EXTRACT_ROOTS: "backend/app frontend/src"
@@ -37,12 +35,19 @@ jobs:
       - name: 安装校验依赖
         run: pip install jsonschema
 
-      - name: 提取骨架（重算当前代码产物）
+      - name: 提取骨架（重算当前代码产物：py + ts → merge）
         run: |
           python tooling/extract.py \
-            --dst /tmp/pim.generated.json \
-            --hash-out /tmp/pim.generated.hash \
-            $EXTRACT_ROOTS
+            --dst /tmp/be.json \
+            backend/app
+          node tooling/extract-ts.mjs \
+            --src frontend/src \
+            --dst /tmp/fe.json
+          python tooling/merge.py \
+            --py-fragment /tmp/be.json \
+            --fe-json /tmp/fe.json \
+            --out /tmp/pim.generated.json \
+            --hash-out /tmp/pim.generated.hash
 
       - name: ① 骨架 hash 门禁
         run: |
@@ -55,16 +60,17 @@ jobs:
           fi
           echo "骨架 hash 一致: $actual"
 
-      - name: ② 契约 + 交叉校验
+      - name: ② 契约 + 交叉校验（合并骨架在步骤①产物中）
         run: |
           python tooling/validate.py \
             --schema docs/model/contract.schema.json \
-            docs/model/pim.generated.json \
+            /tmp/pim.generated.json \
             docs/model/modules/*.json
 
       - name: ③ 渲染冒烟（合并视图，验证 JGF→Mermaid 可渲染）
         run: |
           python tooling/render-mermaid.py \
-            docs/model/pim.generated.json docs/model/modules/*.json \
+1: @theirs
+            --frontend-subsystems views \
             --out /tmp/pim.mmd
           echo "渲染成功：$(grep -c '^    .* --' /tmp/pim.mmd) 条边"

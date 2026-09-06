@@ -1,0 +1,8 @@
+```mermaid
+flowchart TD
+    services_oss["OSS 客户端"]
+    services_storage["存储服务"]
+    services_storage --> services_oss
+    services_storage -.-> services_oss
+```
+<!-- 跨层依赖：→application:1，→unassigned:10，→web:3 -->

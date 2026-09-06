@@ -588,7 +588,6 @@ let mockSuggestionSeq = 1
 const mockTagSuggestions: TagSuggestion[] = [
   { id: 1, key: 'plugin', value: 'routing-lite', description: '用户申请的固定值', group: null, status: 'pending', demo_id: null, created_at: '2026-08-20T10:00:00Z' },
 ]
-let mockTagSuggestionSeq = 2
 // M3-B3 挂摘演示态：task slug → 已挂 demo 行（mock 无 DemoTask 表，内存映射代偿）
 const taskAttached: Record<string, { id: number; slug: string; title: string; status: string }[]> = {}
 let attachSeq = 9000

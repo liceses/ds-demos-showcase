@@ -688,6 +688,14 @@ export interface ProposeTask {
   category?: string | null
 }
 
+/** 契约只增：上传成功后前端用 id 回挂 POST /tags/suggestions.demo_id */
+export interface DemoCreateResult {
+  id: number
+  slug: string
+  status: string
+  created: boolean
+}
+
 export interface CreateDemoPayload {
   title: string
   description?: string

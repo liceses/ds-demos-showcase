@@ -82,8 +82,8 @@ def group_by_layer(nodes):
 
 
 def san(s):
-    """节点/层 id 消毒：点号与 `-` 是 Mermaid 词法风险字符，统一替换。"""
-    return s.replace(".", "_").replace("-", "_")
+    """节点/层 id 消毒：点号/`-`/冒号是 Mermaid 词法风险字符，统一替换（fe: 前缀含冒号）。"""
+    return s.replace(".", "_").replace("-", "_").replace(":", "_")
 
 
 def write_doc(path, title, body_lines, note_lines):
@@ -156,11 +156,27 @@ def main():
     ap.add_argument("--workflow", help="仅输出该工作流的高亮路径")
     ap.add_argument("--backing-only", action="store_true", help="配合 --workflow：边仅含工作流边及其依赖背书边")
     ap.add_argument("--by-layer", metavar="OUT_DIR", help="输出层概览 + 每层细节图到目录（.md）")
+    ap.add_argument("--backend-layers", nargs="*", help="仅渲染这些后端层（如 --backend-layers web application）")
+    ap.add_argument("--frontend-subsystems", nargs="*", help="仅渲染这些前端子系统（如 --frontend-subsystems views api）")
     ap.add_argument("--out", help="输出文件（.md，默认 stdout）")
     ap.add_argument("--title", help="markdown 标题行（默认取文件名的图 id）")
     args = ap.parse_args()
 
     nodes, edges = merge(args.pims)
+
+    # 子系统过滤：前端 fe: 前缀节点按 layer 过滤；后端无前缀节点按 layer 过滤
+    if args.backend_layers or args.frontend_subsystems:
+        allow_all = (args.backend_layers is None and args.frontend_subsystems is None)
+        keep = set()
+        for nid, n in nodes.items():
+            layer = n.get("metadata", {}).get("layer", "unassigned")
+            is_fe = nid.startswith("fe:")
+            if is_fe and args.frontend_subsystems is not None and layer in args.frontend_subsystems:
+                keep.add(nid)
+            if not is_fe and args.backend_layers is not None and layer in args.backend_layers:
+                keep.add(nid)
+        nodes = {k: v for k, v in nodes.items() if k in keep}
+        edges = [e for e in edges if e.get("source", "") in keep and e.get("target", "") in keep]
 
     if args.by_layer:
         out_dir = Path(args.by_layer)
@@ -199,12 +215,22 @@ def main():
 
 def lines_from(nodes, edges, note):
     lines = ["```mermaid", "flowchart TD"]
-    for layer, nids in sorted(group_by_layer(nodes).items()):
+    # 后端 curated 层 → subgraph；前端 fe: 节点（结构事实层）保持扁平，避免 180 节点子图爆炸
+    grouped = defaultdict(list)
+    for nid, n in nodes.items():
+        if nid.startswith("fe:"):
+            continue
+        grouped[n.get("metadata", {}).get("layer", "unassigned") or "unassigned"].append(nid)
+    for layer, nids in sorted(grouped.items()):
         lines.append(f"    subgraph L_{san(layer)}[{layer}]")
         for nid in sorted(nids):
             label = nodes[nid].get("label", nid)
             lines.append(f"        {san(nid)}[\"{label}\"]")
         lines.append("    end")
+    for nid, n in sorted(nodes.items()):
+        if nid.startswith("fe:"):
+            label = n.get("label", nid)
+            lines.append(f'    {san(nid)}["{label}"]')
     for e in edges:
         rel, src, dst = e.get("relation"), san(e.get("source", "")), san(e.get("target", ""))
         arrow = "-->" if rel == "dependency" else "-.->"

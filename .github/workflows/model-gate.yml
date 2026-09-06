@@ -16,24 +16,10 @@ name: model-gate
 env:
   EXTRACT_ROOTS: "backend/app frontend/src"
 
-# 分阶段门禁（showcase 特例）：仓库并行开发中，团队尚未全员接纳模型协议。
-# 当前仅 动到模型相关路径 的 PR 跑门禁；纯代码 PR 不受影响。
-# 团队接纳 AGENTS.md 协议后：删除下方 paths 块，恢复全量门禁
-# （hash 漂移检测对所有人开启——设计终态，见 design.md §6.1）。
 on:
   push:
     branches: [main]
-    paths:
-      - 'docs/model/**'
-      - 'tooling/**'
-      - 'AGENTS.md'
-      - '.github/workflows/model-gate.yml'
   pull_request:
-    paths:
-      - 'docs/model/**'
-      - 'tooling/**'
-      - 'AGENTS.md'
-      - '.github/workflows/model-gate.yml'
 
 jobs:
   gate:

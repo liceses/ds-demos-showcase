@@ -13,6 +13,80 @@
         "metadata": { "layer": "application", "provenance": "curated",
                       "description": "应用装配：路由挂载、中间件、启动钩子" }
       },
+      "routers": {
+        "label": "routers 包",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "路由包入口（re-export）" }
+      },
+      "routers.admin": {
+        "label": "Admin 路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "管理后台：用户/标签/设置/审核" }
+      },
+      "routers.admin_entities": {
+        "label": "Admin 实体路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "管理后台：实体 CRUD" }
+      },
+      "routers.announcements": {
+        "label": "公告路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.auth": {
+        "label": "认证路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "登录/注册/token" }
+      },
+      "routers.comments": {
+        "label": "评论路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.explore": {
+        "label": "探索路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.meta": {
+        "label": "Meta 路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "站点信息/agent-guide 等公开元数据接口" }
+      },
+      "routers.models": {
+        "label": "模型路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.notifications": {
+        "label": "通知路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.peek": {
+        "label": "Peek 路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.ratings": {
+        "label": "评分路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.sessions": {
+        "label": "会话路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.stats": {
+        "label": "统计路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.tags": {
+        "label": "标签路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "标签系统：键值定义/建议/审核" }
+      },
+      "routers.tasks": {
+        "label": "任务路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
+      "routers.users": {
+        "label": "用户路由",
+        "metadata": { "layer": "web", "provenance": "curated" }
+      },
       "routers.demos": {
         "label": "Demos 路由",
         "metadata": { "layer": "web", "provenance": "curated",
@@ -23,6 +97,143 @@
         "metadata": { "layer": "web", "provenance": "curated",
                       "description": "论坛：主题/回帖/版块" }
       },
+      "services": {
+        "label": "services 包",
+        "metadata": { "layer": "application", "provenance": "curated",
+                      "description": "服务层出口（re-export 桶，fan_in 29）" }
+      },
+      "services.audit_service": {
+        "label": "审计服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.cluster_service": {
+        "label": "聚类服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.community_service": {
+        "label": "社区服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.counters": {
+        "label": "计数器服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.derive_service": {
+        "label": "派生服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.entity_admin_service": {
+        "label": "实体管理服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.forum_service": {
+        "label": "论坛服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.inspect_service": {
+        "label": "检查服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.matching_service": {
+        "label": "匹配服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.notification_service": {
+        "label": "通知服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.oss_sync": {
+        "label": "OSS 同步服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.rating_service": {
+        "label": "评分服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.refine_service": {
+        "label": "精炼服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.scope": {
+        "label": "作用域服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.settings_service": {
+        "label": "设置服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.site_git": {
+        "label": "站点 Git 服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.site_info_service": {
+        "label": "站点信息服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.suggestion_service": {
+        "label": "建议服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.tag_service": {
+        "label": "标签服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.task_service": {
+        "label": "任务服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.visits": {
+        "label": "访问服务",
+        "metadata": { "layer": "application", "provenance": "curated" }
+      },
+      "services.model_service": {
+        "label": "模型服务",
+        "metadata": { "layer": "domain", "provenance": "curated",
+                      "description": "模型标签/映射业务" }
+      },
+      "models": {
+        "label": "ORM 模型",
+        "metadata": { "layer": "domain", "provenance": "curated",
+                      "description": "SQLAlchemy 实体（fan_in 41，耦合中心）" }
+      },
+      "schemas": {
+        "label": "Pydantic 模型",
+        "metadata": { "layer": "domain", "provenance": "curated",
+                      "description": "请求/响应 Schema，含上传与分页" }
+      },
+      "serializers": {
+        "label": "序列化器",
+        "metadata": { "layer": "domain", "provenance": "curated",
+                      "description": "ORM → 输出 DTO 转换" }
+      },
+      "config": {
+        "label": "配置",
+        "metadata": { "layer": "infrastructure", "provenance": "curated",
+                      "description": "pydantic-settings 配置（fan_in 13）" }
+      },
+      "database": {
+        "label": "数据库",
+        "metadata": { "layer": "infrastructure", "provenance": "curated",
+                      "description": "SQLAlchemy engine/session（fan_in 26）" }
+      },
+      "deps": {
+        "label": "依赖注入",
+        "metadata": { "layer": "infrastructure", "provenance": "curated",
+                      "description": "FastAPI 依赖（db/current_user 等）" }
+      },
+      "security": {
+        "label": "安全",
+        "metadata": { "layer": "infrastructure", "provenance": "curated",
+                      "description": "密码哈希/JWT" }
+      },
+      "client_ip": {
+        "label": "客户端 IP",
+        "metadata": { "layer": "infrastructure", "provenance": "curated" }
+      },
+      "errors": {
+        "label": "错误定义",
+        "metadata": { "layer": "infrastructure", "provenance": "curated" }
+      },
       "services.storage": {
         "label": "存储服务",
         "metadata": { "layer": "infrastructure", "provenance": "curated",
@@ -32,16 +243,6 @@
         "label": "OSS 客户端",
         "metadata": { "layer": "infrastructure", "provenance": "curated",
                       "description": "阿里云 OSS 封装（oss2）" }
-      },
-      "services.model_service": {
-        "label": "模型服务",
-        "metadata": { "layer": "domain", "provenance": "curated",
-                      "description": "模型标签/映射业务" }
-      },
-      "schemas": {
-        "label": "Pydantic 模型",
-        "metadata": { "layer": "domain", "provenance": "curated",
-                      "description": "请求/响应 Schema，含上传与分页" }
       }
     },
     "edges": [

@@ -1,0 +1,3020 @@
+{
+  "graph": {
+    "id": "pim-skeleton",
+    "directed": true,
+    "type": "pim-skeleton",
+    "metadata": {
+      "schema_contract": "docs/model/contract.schema.json"
+    },
+    "nodes": {
+      "client_ip": {
+        "label": "client_ip",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 35,
+            "todo_density": 0.0,
+            "fan_in": 7,
+            "fan_out": 0
+          }
+        }
+      },
+      "config": {
+        "label": "config",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 101,
+            "todo_density": 0.0,
+            "fan_in": 13,
+            "fan_out": 0
+          }
+        }
+      },
+      "database": {
+        "label": "database",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 55,
+            "todo_density": 0.0,
+            "fan_in": 26,
+            "fan_out": 1
+          }
+        }
+      },
+      "deps": {
+        "label": "deps",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 37,
+            "todo_density": 0.0,
+            "fan_in": 13,
+            "fan_out": 3
+          }
+        }
+      },
+      "errors": {
+        "label": "errors",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 12,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 0
+          }
+        }
+      },
+      "main": {
+        "label": "main",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 674,
+            "todo_density": 0.0,
+            "fan_in": 0,
+            "fan_out": 31
+          }
+        }
+      },
+      "models": {
+        "label": "models",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 602,
+            "todo_density": 0.0,
+            "fan_in": 41,
+            "fan_out": 1
+          }
+        }
+      },
+      "routers": {
+        "label": "routers",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 1,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 0
+          }
+        }
+      },
+      "routers.admin": {
+        "label": "admin",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 353,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 13
+          }
+        }
+      },
+      "routers.admin_entities": {
+        "label": "admin_entities",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 671,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 12
+          }
+        }
+      },
+      "routers.announcements": {
+        "label": "announcements",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 221,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 5
+          }
+        }
+      },
+      "routers.auth": {
+        "label": "auth",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 64,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 5
+          }
+        }
+      },
+      "routers.comments": {
+        "label": "comments",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 76,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 4
+          }
+        }
+      },
+      "routers.demos": {
+        "label": "demos",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 1324,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 16
+          }
+        }
+      },
+      "routers.explore": {
+        "label": "explore",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 53,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "routers.forum": {
+        "label": "forum",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 494,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 10
+          }
+        }
+      },
+      "routers.meta": {
+        "label": "meta",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 33,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "routers.models": {
+        "label": "models",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 62,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "routers.notifications": {
+        "label": "notifications",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 72,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 4
+          }
+        }
+      },
+      "routers.peek": {
+        "label": "peek",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 159,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 5
+          }
+        }
+      },
+      "routers.ratings": {
+        "label": "ratings",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 172,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 9
+          }
+        }
+      },
+      "routers.sessions": {
+        "label": "sessions",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 108,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 7
+          }
+        }
+      },
+      "routers.stats": {
+        "label": "stats",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 190,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 7
+          }
+        }
+      },
+      "routers.tags": {
+        "label": "tags",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 599,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 9
+          }
+        }
+      },
+      "routers.tasks": {
+        "label": "tasks",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 60,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "routers.users": {
+        "label": "users",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 90,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "schemas": {
+        "label": "schemas",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 894,
+            "todo_density": 0.0,
+            "fan_in": 20,
+            "fan_out": 0
+          }
+        }
+      },
+      "security": {
+        "label": "security",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 76,
+            "todo_density": 0.0,
+            "fan_in": 3,
+            "fan_out": 1
+          }
+        }
+      },
+      "serializers": {
+        "label": "serializers",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 258,
+            "todo_density": 0.0,
+            "fan_in": 6,
+            "fan_out": 6
+          }
+        }
+      },
+      "services": {
+        "label": "services",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 1,
+            "todo_density": 0.0,
+            "fan_in": 29,
+            "fan_out": 0
+          }
+        }
+      },
+      "services.audit_service": {
+        "label": "audit_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 76,
+            "todo_density": 0.0,
+            "fan_in": 5,
+            "fan_out": 1
+          }
+        }
+      },
+      "services.cluster_service": {
+        "label": "cluster_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 252,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 3
+          }
+        }
+      },
+      "services.community_service": {
+        "label": "community_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 367,
+            "todo_density": 0.0,
+            "fan_in": 3,
+            "fan_out": 4
+          }
+        }
+      },
+      "services.counters": {
+        "label": "counters",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 92,
+            "todo_density": 0.0,
+            "fan_in": 2,
+            "fan_out": 1
+          }
+        }
+      },
+      "services.derive_service": {
+        "label": "derive_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 144,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 3
+          }
+        }
+      },
+      "services.entity_admin_service": {
+        "label": "entity_admin_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 169,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "services.forum_service": {
+        "label": "forum_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 113,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 4
+          }
+        }
+      },
+      "services.inspect_service": {
+        "label": "inspect_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 233,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "services.matching_service": {
+        "label": "matching_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 269,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 1
+          }
+        }
+      },
+      "services.model_service": {
+        "label": "model_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 1317,
+            "todo_density": 0.0,
+            "fan_in": 9,
+            "fan_out": 5
+          }
+        }
+      },
+      "services.notification_service": {
+        "label": "notification_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 61,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 2
+          }
+        }
+      },
+      "services.oss": {
+        "label": "oss",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 111,
+            "todo_density": 0.0,
+            "fan_in": 7,
+            "fan_out": 1
+          }
+        }
+      },
+      "services.oss_sync": {
+        "label": "oss_sync",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 151,
+            "todo_density": 0.0,
+            "fan_in": 2,
+            "fan_out": 6
+          }
+        }
+      },
+      "services.rating_service": {
+        "label": "rating_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 51,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 2
+          }
+        }
+      },
+      "services.refine_service": {
+        "label": "refine_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 278,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 3
+          }
+        }
+      },
+      "services.scope": {
+        "label": "scope",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 168,
+            "todo_density": 0.0,
+            "fan_in": 6,
+            "fan_out": 3
+          }
+        }
+      },
+      "services.settings_service": {
+        "label": "settings_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 62,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 1
+          }
+        }
+      },
+      "services.site_git": {
+        "label": "site_git",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 62,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 1
+          }
+        }
+      },
+      "services.site_info_service": {
+        "label": "site_info_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 235,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 6
+          }
+        }
+      },
+      "services.storage": {
+        "label": "storage",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 306,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 3
+          }
+        }
+      },
+      "services.suggestion_service": {
+        "label": "suggestion_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 327,
+            "todo_density": 0.0,
+            "fan_in": 4,
+            "fan_out": 6
+          }
+        }
+      },
+      "services.tag_service": {
+        "label": "tag_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 60,
+            "todo_density": 0.0,
+            "fan_in": 1,
+            "fan_out": 2
+          }
+        }
+      },
+      "services.task_service": {
+        "label": "task_service",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 602,
+            "todo_density": 0.0,
+            "fan_in": 6,
+            "fan_out": 5
+          }
+        }
+      },
+      "services.visits": {
+        "label": "visits",
+        "metadata": {
+          "layer": "unassigned",
+          "provenance": "generated",
+          "metrics": {
+            "loc": 157,
+            "todo_density": 0.0,
+            "fan_in": 2,
+            "fan_out": 2
+          }
+        }
+      }
+    },
+    "edges": [
+      {
+        "id": "dep-database->config",
+        "source": "database",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-deps->database",
+        "source": "deps",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-deps->models",
+        "source": "deps",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-deps->security",
+        "source": "deps",
+        "target": "security",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->client_ip",
+        "source": "main",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->config",
+        "source": "main",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->database",
+        "source": "main",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->errors",
+        "source": "main",
+        "target": "errors",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->models",
+        "source": "main",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers",
+        "source": "main",
+        "target": "routers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.admin",
+        "source": "main",
+        "target": "routers.admin",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.admin_entities",
+        "source": "main",
+        "target": "routers.admin_entities",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.announcements",
+        "source": "main",
+        "target": "routers.announcements",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.auth",
+        "source": "main",
+        "target": "routers.auth",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.comments",
+        "source": "main",
+        "target": "routers.comments",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.demos",
+        "source": "main",
+        "target": "routers.demos",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.explore",
+        "source": "main",
+        "target": "routers.explore",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.forum",
+        "source": "main",
+        "target": "routers.forum",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.meta",
+        "source": "main",
+        "target": "routers.meta",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.models",
+        "source": "main",
+        "target": "routers.models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.notifications",
+        "source": "main",
+        "target": "routers.notifications",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.peek",
+        "source": "main",
+        "target": "routers.peek",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.ratings",
+        "source": "main",
+        "target": "routers.ratings",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.sessions",
+        "source": "main",
+        "target": "routers.sessions",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.stats",
+        "source": "main",
+        "target": "routers.stats",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.tags",
+        "source": "main",
+        "target": "routers.tags",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.tasks",
+        "source": "main",
+        "target": "routers.tasks",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->routers.users",
+        "source": "main",
+        "target": "routers.users",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->security",
+        "source": "main",
+        "target": "security",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->services",
+        "source": "main",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->services.model_service",
+        "source": "main",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->services.oss",
+        "source": "main",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->services.oss_sync",
+        "source": "main",
+        "target": "services.oss_sync",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->services.scope",
+        "source": "main",
+        "target": "services.scope",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-main->services.settings_service",
+        "source": "main",
+        "target": "services.settings_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-models->database",
+        "source": "models",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->config",
+        "source": "routers.admin",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->database",
+        "source": "routers.admin",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->deps",
+        "source": "routers.admin",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->models",
+        "source": "routers.admin",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->schemas",
+        "source": "routers.admin",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->serializers",
+        "source": "routers.admin",
+        "target": "serializers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services",
+        "source": "routers.admin",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services.audit_service",
+        "source": "routers.admin",
+        "target": "services.audit_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services.notification_service",
+        "source": "routers.admin",
+        "target": "services.notification_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services.oss",
+        "source": "routers.admin",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services.oss_sync",
+        "source": "routers.admin",
+        "target": "services.oss_sync",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services.scope",
+        "source": "routers.admin",
+        "target": "services.scope",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin->services.settings_service",
+        "source": "routers.admin",
+        "target": "services.settings_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->database",
+        "source": "routers.admin_entities",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->deps",
+        "source": "routers.admin_entities",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->models",
+        "source": "routers.admin_entities",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->schemas",
+        "source": "routers.admin_entities",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services",
+        "source": "routers.admin_entities",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.cluster_service",
+        "source": "routers.admin_entities",
+        "target": "services.cluster_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.entity_admin_service",
+        "source": "routers.admin_entities",
+        "target": "services.entity_admin_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.inspect_service",
+        "source": "routers.admin_entities",
+        "target": "services.inspect_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.model_service",
+        "source": "routers.admin_entities",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.refine_service",
+        "source": "routers.admin_entities",
+        "target": "services.refine_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.suggestion_service",
+        "source": "routers.admin_entities",
+        "target": "services.suggestion_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.admin_entities->services.task_service",
+        "source": "routers.admin_entities",
+        "target": "services.task_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.announcements->database",
+        "source": "routers.announcements",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.announcements->deps",
+        "source": "routers.announcements",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.announcements->models",
+        "source": "routers.announcements",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.announcements->schemas",
+        "source": "routers.announcements",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.announcements->services.site_git",
+        "source": "routers.announcements",
+        "target": "services.site_git",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.auth->database",
+        "source": "routers.auth",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.auth->deps",
+        "source": "routers.auth",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.auth->models",
+        "source": "routers.auth",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.auth->schemas",
+        "source": "routers.auth",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.auth->security",
+        "source": "routers.auth",
+        "target": "security",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.comments->database",
+        "source": "routers.comments",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.comments->deps",
+        "source": "routers.comments",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.comments->models",
+        "source": "routers.comments",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.comments->schemas",
+        "source": "routers.comments",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->client_ip",
+        "source": "routers.demos",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->config",
+        "source": "routers.demos",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->database",
+        "source": "routers.demos",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->deps",
+        "source": "routers.demos",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->models",
+        "source": "routers.demos",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->schemas",
+        "source": "routers.demos",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->serializers",
+        "source": "routers.demos",
+        "target": "serializers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services",
+        "source": "routers.demos",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.counters",
+        "source": "routers.demos",
+        "target": "services.counters",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.model_service",
+        "source": "routers.demos",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.notification_service",
+        "source": "routers.demos",
+        "target": "services.notification_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.oss",
+        "source": "routers.demos",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.scope",
+        "source": "routers.demos",
+        "target": "services.scope",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.settings_service",
+        "source": "routers.demos",
+        "target": "services.settings_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.storage",
+        "source": "routers.demos",
+        "target": "services.storage",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.demos->services.suggestion_service",
+        "source": "routers.demos",
+        "target": "services.suggestion_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.explore->database",
+        "source": "routers.explore",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.explore->models",
+        "source": "routers.explore",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.explore->schemas",
+        "source": "routers.explore",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.explore->services",
+        "source": "routers.explore",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.explore->services.model_service",
+        "source": "routers.explore",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.explore->services.task_service",
+        "source": "routers.explore",
+        "target": "services.task_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->client_ip",
+        "source": "routers.forum",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->database",
+        "source": "routers.forum",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->deps",
+        "source": "routers.forum",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->models",
+        "source": "routers.forum",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->schemas",
+        "source": "routers.forum",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->services",
+        "source": "routers.forum",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->services.community_service",
+        "source": "routers.forum",
+        "target": "services.community_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->services.counters",
+        "source": "routers.forum",
+        "target": "services.counters",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->services.forum_service",
+        "source": "routers.forum",
+        "target": "services.forum_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.forum->services.notification_service",
+        "source": "routers.forum",
+        "target": "services.notification_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.meta->config",
+        "source": "routers.meta",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.meta->deps",
+        "source": "routers.meta",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.meta->models",
+        "source": "routers.meta",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.meta->services",
+        "source": "routers.meta",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.meta->services.scope",
+        "source": "routers.meta",
+        "target": "services.scope",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.meta->services.site_info_service",
+        "source": "routers.meta",
+        "target": "services.site_info_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.models->database",
+        "source": "routers.models",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.models->models",
+        "source": "routers.models",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.models->schemas",
+        "source": "routers.models",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.models->serializers",
+        "source": "routers.models",
+        "target": "serializers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.models->services",
+        "source": "routers.models",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.models->services.model_service",
+        "source": "routers.models",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.notifications->database",
+        "source": "routers.notifications",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.notifications->deps",
+        "source": "routers.notifications",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.notifications->models",
+        "source": "routers.notifications",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.notifications->schemas",
+        "source": "routers.notifications",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.peek->database",
+        "source": "routers.peek",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.peek->models",
+        "source": "routers.peek",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.peek->services",
+        "source": "routers.peek",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.peek->services.model_service",
+        "source": "routers.peek",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.peek->services.task_service",
+        "source": "routers.peek",
+        "target": "services.task_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->client_ip",
+        "source": "routers.ratings",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->config",
+        "source": "routers.ratings",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->database",
+        "source": "routers.ratings",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->deps",
+        "source": "routers.ratings",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->models",
+        "source": "routers.ratings",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->schemas",
+        "source": "routers.ratings",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->serializers",
+        "source": "routers.ratings",
+        "target": "serializers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->services",
+        "source": "routers.ratings",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.ratings->services.rating_service",
+        "source": "routers.ratings",
+        "target": "services.rating_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->client_ip",
+        "source": "routers.sessions",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->database",
+        "source": "routers.sessions",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->models",
+        "source": "routers.sessions",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->schemas",
+        "source": "routers.sessions",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->services",
+        "source": "routers.sessions",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->services.oss",
+        "source": "routers.sessions",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.sessions->services.storage",
+        "source": "routers.sessions",
+        "target": "services.storage",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->client_ip",
+        "source": "routers.stats",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->database",
+        "source": "routers.stats",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->deps",
+        "source": "routers.stats",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->models",
+        "source": "routers.stats",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->schemas",
+        "source": "routers.stats",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->services",
+        "source": "routers.stats",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.stats->services.visits",
+        "source": "routers.stats",
+        "target": "services.visits",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->client_ip",
+        "source": "routers.tags",
+        "target": "client_ip",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->database",
+        "source": "routers.tags",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->deps",
+        "source": "routers.tags",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->models",
+        "source": "routers.tags",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->schemas",
+        "source": "routers.tags",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->serializers",
+        "source": "routers.tags",
+        "target": "serializers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->services",
+        "source": "routers.tags",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->services.derive_service",
+        "source": "routers.tags",
+        "target": "services.derive_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tags->services.tag_service",
+        "source": "routers.tags",
+        "target": "services.tag_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tasks->database",
+        "source": "routers.tasks",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tasks->models",
+        "source": "routers.tasks",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tasks->schemas",
+        "source": "routers.tasks",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tasks->serializers",
+        "source": "routers.tasks",
+        "target": "serializers",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tasks->services",
+        "source": "routers.tasks",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.tasks->services.task_service",
+        "source": "routers.tasks",
+        "target": "services.task_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.users->database",
+        "source": "routers.users",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.users->deps",
+        "source": "routers.users",
+        "target": "deps",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.users->models",
+        "source": "routers.users",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.users->schemas",
+        "source": "routers.users",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.users->services",
+        "source": "routers.users",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-routers.users->services.community_service",
+        "source": "routers.users",
+        "target": "services.community_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-security->config",
+        "source": "security",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-serializers->config",
+        "source": "serializers",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-serializers->models",
+        "source": "serializers",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-serializers->services",
+        "source": "serializers",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-serializers->services.oss",
+        "source": "serializers",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-serializers->services.scope",
+        "source": "serializers",
+        "target": "services.scope",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-serializers->services.storage",
+        "source": "serializers",
+        "target": "services.storage",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.audit_service->models",
+        "source": "services.audit_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.cluster_service->models",
+        "source": "services.cluster_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.cluster_service->services",
+        "source": "services.cluster_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.cluster_service->services.matching_service",
+        "source": "services.cluster_service",
+        "target": "services.matching_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.community_service->models",
+        "source": "services.community_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.community_service->schemas",
+        "source": "services.community_service",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.community_service->services",
+        "source": "services.community_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.community_service->services.notification_service",
+        "source": "services.community_service",
+        "target": "services.notification_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.counters->database",
+        "source": "services.counters",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.derive_service->models",
+        "source": "services.derive_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.derive_service->services",
+        "source": "services.derive_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.derive_service->services.refine_service",
+        "source": "services.derive_service",
+        "target": "services.refine_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.entity_admin_service->models",
+        "source": "services.entity_admin_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.entity_admin_service->services",
+        "source": "services.entity_admin_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.entity_admin_service->services.audit_service",
+        "source": "services.entity_admin_service",
+        "target": "services.audit_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.entity_admin_service->services.model_service",
+        "source": "services.entity_admin_service",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.entity_admin_service->services.suggestion_service",
+        "source": "services.entity_admin_service",
+        "target": "services.suggestion_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.entity_admin_service->services.task_service",
+        "source": "services.entity_admin_service",
+        "target": "services.task_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.forum_service->models",
+        "source": "services.forum_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.forum_service->schemas",
+        "source": "services.forum_service",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.forum_service->services",
+        "source": "services.forum_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.forum_service->services.community_service",
+        "source": "services.forum_service",
+        "target": "services.community_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.inspect_service->models",
+        "source": "services.inspect_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.inspect_service->services",
+        "source": "services.inspect_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.inspect_service->services.matching_service",
+        "source": "services.inspect_service",
+        "target": "services.matching_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.inspect_service->services.model_service",
+        "source": "services.inspect_service",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.inspect_service->services.refine_service",
+        "source": "services.inspect_service",
+        "target": "services.refine_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.inspect_service->services.suggestion_service",
+        "source": "services.inspect_service",
+        "target": "services.suggestion_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.matching_service->models",
+        "source": "services.matching_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.model_service->models",
+        "source": "services.model_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.model_service->services",
+        "source": "services.model_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.model_service->services.audit_service",
+        "source": "services.model_service",
+        "target": "services.audit_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.model_service->services.cluster_service",
+        "source": "services.model_service",
+        "target": "services.cluster_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.model_service->services.matching_service",
+        "source": "services.model_service",
+        "target": "services.matching_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.notification_service->database",
+        "source": "services.notification_service",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.notification_service->models",
+        "source": "services.notification_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss->config",
+        "source": "services.oss",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss_sync->config",
+        "source": "services.oss_sync",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss_sync->database",
+        "source": "services.oss_sync",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss_sync->models",
+        "source": "services.oss_sync",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss_sync->services",
+        "source": "services.oss_sync",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss_sync->services.oss",
+        "source": "services.oss_sync",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.oss_sync->services.storage",
+        "source": "services.oss_sync",
+        "target": "services.storage",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.rating_service->models",
+        "source": "services.rating_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.rating_service->schemas",
+        "source": "services.rating_service",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.refine_service->models",
+        "source": "services.refine_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.refine_service->services",
+        "source": "services.refine_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.refine_service->services.cluster_service",
+        "source": "services.refine_service",
+        "target": "services.cluster_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.scope->config",
+        "source": "services.scope",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.scope->database",
+        "source": "services.scope",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.scope->models",
+        "source": "services.scope",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.settings_service->models",
+        "source": "services.settings_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_git->config",
+        "source": "services.site_git",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_info_service->database",
+        "source": "services.site_info_service",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_info_service->models",
+        "source": "services.site_info_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_info_service->services",
+        "source": "services.site_info_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_info_service->services.scope",
+        "source": "services.site_info_service",
+        "target": "services.scope",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_info_service->services.settings_service",
+        "source": "services.site_info_service",
+        "target": "services.settings_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.site_info_service->services.visits",
+        "source": "services.site_info_service",
+        "target": "services.visits",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.storage->config",
+        "source": "services.storage",
+        "target": "config",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.storage->services",
+        "source": "services.storage",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.storage->services.oss",
+        "source": "services.storage",
+        "target": "services.oss",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.suggestion_service->models",
+        "source": "services.suggestion_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.suggestion_service->services",
+        "source": "services.suggestion_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.suggestion_service->services.audit_service",
+        "source": "services.suggestion_service",
+        "target": "services.audit_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.suggestion_service->services.model_service",
+        "source": "services.suggestion_service",
+        "target": "services.model_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.suggestion_service->services.refine_service",
+        "source": "services.suggestion_service",
+        "target": "services.refine_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.suggestion_service->services.task_service",
+        "source": "services.suggestion_service",
+        "target": "services.task_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.tag_service->models",
+        "source": "services.tag_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.tag_service->schemas",
+        "source": "services.tag_service",
+        "target": "schemas",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.task_service->models",
+        "source": "services.task_service",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.task_service->services",
+        "source": "services.task_service",
+        "target": "services",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.task_service->services.audit_service",
+        "source": "services.task_service",
+        "target": "services.audit_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.task_service->services.cluster_service",
+        "source": "services.task_service",
+        "target": "services.cluster_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.task_service->services.matching_service",
+        "source": "services.task_service",
+        "target": "services.matching_service",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.visits->database",
+        "source": "services.visits",
+        "target": "database",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      },
+      {
+        "id": "dep-services.visits->models",
+        "source": "services.visits",
+        "target": "models",
+        "relation": "dependency",
+        "metadata": {
+          "provenance": "generated"
+        }
+      }
+    ]
+  }
+}

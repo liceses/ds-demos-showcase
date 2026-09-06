@@ -1,0 +1,56 @@
+{
+  "graph": {
+    "id": "pim-semantic",
+    "directed": true,
+    "type": "pim-semantic",
+    "metadata": {
+      "schema_contract": "docs/model/contract.schema.json",
+      "layer_enum": ["web", "application", "domain", "infrastructure"]
+    },
+    "nodes": {
+      "main": {
+        "label": "FastAPI 入口",
+        "metadata": { "layer": "application", "provenance": "curated",
+                      "description": "应用装配：路由挂载、中间件、启动钩子" }
+      },
+      "routers.demos": {
+        "label": "Demos 路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "demo 列表/详情/上传入口，上传流程编排" }
+      },
+      "routers.forum": {
+        "label": "论坛路由",
+        "metadata": { "layer": "web", "provenance": "curated",
+                      "description": "论坛：主题/回帖/版块" }
+      },
+      "services.storage": {
+        "label": "存储服务",
+        "metadata": { "layer": "infrastructure", "provenance": "curated",
+                      "description": "OSS 与本地文件存储抽象" }
+      },
+      "services.oss": {
+        "label": "OSS 客户端",
+        "metadata": { "layer": "infrastructure", "provenance": "curated",
+                      "description": "阿里云 OSS 封装（oss2）" }
+      },
+      "services.model_service": {
+        "label": "模型服务",
+        "metadata": { "layer": "domain", "provenance": "curated",
+                      "description": "模型标签/映射业务" }
+      },
+      "schemas": {
+        "label": "Pydantic 模型",
+        "metadata": { "layer": "domain", "provenance": "curated",
+                      "description": "请求/响应 Schema，含上传与分页" }
+      }
+    },
+    "edges": [
+      { "id": "wf-upload-1", "source": "routers.demos", "target": "services.storage",
+        "relation": "workflow", "metadata": { "provenance": "curated", "workflow": "上传", "step": 1 } },
+      { "id": "wf-upload-2", "source": "services.storage", "target": "services.oss",
+        "relation": "workflow", "metadata": { "provenance": "curated", "workflow": "上传", "step": 2 } },
+      { "id": "wf-upload-3", "source": "routers.demos", "target": "services.model_service",
+        "relation": "workflow", "metadata": { "provenance": "curated", "workflow": "上传", "step": 3 } }
+    ]
+  }
+}

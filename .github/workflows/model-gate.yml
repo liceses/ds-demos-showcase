@@ -1,0 +1,84 @@
+name: model-gate
+
+# 项目模型门禁（design.md §6.1 强制 + 有批准的豁免）。
+# 三步：
+#   ① 骨架 hash 与存储 hash 比对（Generated 段必须跟代码）
+#   ② JSON Schema + 去重 + 交叉校验（workflow 边须有 dependency 边背书）
+#   ③ （可选）Mermaid 渲染冒烟——渲染失败即 fail，防止不可渲染的图进仓库
+# 豁免：PR title 或描述含 "model-exempt: <issue>" 且模型文件未变更时放行；
+#       模型文件本身变更时豁免不生效（防止借豁免绕门禁）。
+#
+# 配置：EXTRACT_ROOTS 按项目填源码根（可多个，空格分隔）。本模板由
+#   @icelily/dsh-project-model init 安装，安装后按项目修改该行；v1 提取器
+#   只支持 Python，根必须是指向含 *.py 包的目录。
+# 注意：修改本行后必须重跑提取并更新 docs/model/pim.generated.hash。
+
+env:
+  EXTRACT_ROOTS: "backend/app frontend/src"
+
+# 分阶段门禁（showcase 特例）：仓库并行开发中，团队尚未全员接纳模型协议。
+# 当前仅 动到模型相关路径 的 PR 跑门禁；纯代码 PR 不受影响。
+# 团队接纳 AGENTS.md 协议后：删除下方 paths 块，恢复全量门禁
+# （hash 漂移检测对所有人开启——设计终态，见 design.md §6.1）。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/model/**'
+      - 'tooling/**'
+      - 'AGENTS.md'
+      - '.github/workflows/model-gate.yml'
+  pull_request:
+    paths:
+      - 'docs/model/**'
+      - 'tooling/**'
+      - 'AGENTS.md'
+      - '.github/workflows/model-gate.yml'
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 安装校验依赖
+        run: pip install jsonschema
+
+      - name: 提取骨架（重算当前代码产物）
+        run: |
+          python tooling/extract.py \
+            --dst /tmp/pim.generated.json \
+            --hash-out /tmp/pim.generated.hash \
+            $EXTRACT_ROOTS
+
+      - name: ① 骨架 hash 门禁
+        run: |
+          expected="$(cat docs/model/pim.generated.hash 2>/dev/null || echo '<missing>')"
+          actual="$(cat /tmp/pim.generated.hash)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::PIM 骨架与代码漂移: 存储 $expected，当前 $actual。运行 python tooling/extract.py 并提交更新。"
+            echo "::error::如需豁免（重构中间态/跨 PR 迁移）：PR 描述标注 model-exempt: <issue>，且不得修改模型文件。"
+            exit 1
+          fi
+          echo "骨架 hash 一致: $actual"
+
+      - name: ② 契约 + 交叉校验
+        run: |
+          python tooling/validate.py \
+            --schema docs/model/contract.schema.json \
+            docs/model/pim.generated.json \
+            docs/model/modules/*.json
+
+      - name: ③ 渲染冒烟（合并视图，验证 JGF→Mermaid 可渲染）
+        run: |
+          python tooling/render-mermaid.py \
+            docs/model/pim.generated.json docs/model/modules/*.json \
+            --out /tmp/pim.mmd
+          echo "渲染成功：$(grep -c '^    .* --' /tmp/pim.mmd) 条边"

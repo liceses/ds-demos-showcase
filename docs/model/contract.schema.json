@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/icelily/dsh-workflow/blob/main/assets/contract.schema.json",
+  "title": "Project Model PIM Contract (M2 元模型)",
+  "description": "约束 PIM 实例（M1）的契约。基于 JGF v2（jsongraphformat.info），补足：relation 枚举、provenance 规则、工作流边背书约束、去重约束。骨架段（pim.generated.json）由脚本生成；语义段（modules/*.json）由 AI/人维护，均须通过本契约。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["graph"],
+  "properties": {
+    "graph": { "$ref": "#/definitions/graph" }
+  },
+  "definitions": {
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nodes", "edges"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "directed": { "type": "boolean", "default": true },
+        "type": { "enum": ["pim", "pim-skeleton", "pim-semantic", "workflow"] },
+        "metadata": { "$ref": "#/definitions/graphMetadata" },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/node" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/edge" }
+        }
+      }
+    },
+    "graphMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_contract": { "type": "string" },
+        "generated_at": { "type": "string" },
+        "code_hash": { "type": "string" },
+        "layer_enum": { "type": "array", "items": { "type": "string" } },
+        "repos": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string" },
+        "metadata": { "$ref": "#/definitions/nodeMetadata" }
+      },
+      "required": ["metadata"]
+    },
+    "nodeMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layer", "provenance"],
+      "properties": {
+        "layer": { "type": "string" },
+        "provenance": { "enum": ["generated", "curated"] },
+        "owner": { "type": "string" },
+        "description": { "type": "string" },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "files": { "type": "integer", "minimum": 0 },
+            "commits_30d": { "type": "integer", "minimum": 0 },
+            "fan_in": { "type": "integer", "minimum": 0 },
+            "fan_out": { "type": "integer", "minimum": 0 },
+            "todo_density": { "type": "number", "minimum": 0 },
+            "loc": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "target", "relation"],
+      "properties": {
+        "id": { "type": "string" },
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "relation": { "enum": ["dependency", "workflow"] },
+        "directed": { "type": "boolean", "default": true },
+        "label": { "type": "string" },
+        "metadata": { "$ref": "#/definitions/edgeMetadata" }
+      }
+    },
+    "edgeMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provenance"],
+      "properties": {
+        "provenance": { "enum": ["generated", "curated"] },
+        "workflow": { "type": "string" },
+        "step": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

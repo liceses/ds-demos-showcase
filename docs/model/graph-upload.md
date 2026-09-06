@@ -1,3 +1,7 @@
+# graph-upload
+
+<!-- 由 dsh-project-model render-mermaid 生成，勿手改；数据源为 docs/model/*.json -->
+
 ```mermaid
 flowchart TD
     subgraph L_application[application]

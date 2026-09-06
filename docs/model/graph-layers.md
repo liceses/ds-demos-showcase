@@ -1,3 +1,7 @@
+# 层概览（PIM）
+
+<!-- 由 dsh-project-model render-mermaid 生成，勿手改；数据源见注释 -->
+
 ```mermaid
 flowchart TD
     application["application (1 模块)"]
@@ -17,4 +21,6 @@ flowchart TD
     web -->|"3"| infrastructure
     web -->|"21"| unassigned
 ```
+
 <!-- 层内依赖（未画边）：infrastructure:2，unassigned:158 -->
+

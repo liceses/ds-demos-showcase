@@ -40,8 +40,22 @@ def layer_of(nodes, nid):
     return nodes.get(nid, {}).get("metadata", {}).get("layer", "unassigned") or "unassigned"
 
 
-def emit(nodes, edges, out_path, note):
-    lines = ["```mermaid", "flowchart TD"]
+def emit(nodes, edges, out_path, note, title=None):
+    """输出 markdown 文件（.md），内含 mermaid fenced block。
+    GitHub 官方承诺渲染 .md 内的 ```mermaid；.mmd 文件不支持/不稳定
+    （community discussion #121855 → Error rendering embedded code）。"""
+    if title is None:
+        title = Path(out_path).stem
+    body = [
+        f"# {title}",
+        "",
+        "<!-- 由 dsh-project-model render-mermaid 生成，勿手改；数据源为 docs/model/*.json -->",
+        "",
+    ]
+    body.extend(lines_from(nodes, edges, note))
+    Path(out_path).write_text("\n".join(body) + "\n", encoding="utf-8")
+    print(f"wrote {out_path}")
+    return len(edges)
     for layer, nids in sorted(group_by_layer(nodes).items()):
         lines.append(f"    subgraph L_{san(layer)}[{layer}]")
         for nid in sorted(nids):
@@ -72,6 +86,15 @@ def san(s):
     return s.replace(".", "_").replace("-", "_")
 
 
+def write_doc(path, title, body_lines, note_lines):
+    """写 markdown 文档：# 标题 + html 注释（图元数据）+ mermaid block。"""
+    out = [f"# {title}", "", "<!-- 由 dsh-project-model render-mermaid 生成，勿手改；数据源见注释 -->", ""]
+    out.extend(body_lines)
+    out.extend(["", f"<!-- {note_lines} -->", ""])
+    Path(path).write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"wrote {path}")
+
+
 def emit_overview(nodes, edges, out_dir):
     """层概览：节点=层，边=层间依赖计数（自环不计入，注释展示）。"""
     layers = group_by_layer(nodes)
@@ -91,10 +114,12 @@ def emit_overview(nodes, edges, out_dir):
         lines.append(f'    {labels[s]} -->|"{n}"| {labels[t]}')
     lines.append("```")
     loop_note = "，".join(f"{l}:{n}" for l, n in sorted(loop.items()))
-    (Path(out_dir) / "graph-layers.mmd").write_text(
-        "\n".join(lines) + f"\n<!-- 层内依赖（未画边）：{loop_note or '无'} -->\n", encoding="utf-8"
+    write_doc(
+        Path(out_dir) / "graph-layers.md",
+        "层概览（PIM）",
+        lines,
+        f"层内依赖（未画边）：{loop_note or '无'}",
     )
-    print(f"wrote {Path(out_dir) / 'graph-layers.mmd'}")
 
 
 def emit_layer_detail(nodes, edges, layer, out_dir):
@@ -117,10 +142,12 @@ def emit_layer_detail(nodes, edges, layer, out_dir):
         lines.append(f"    {src} {arrow} {dst}")
     lines.append("```")
     cross_note = "，".join(f"→{k}:{v}" for k, v in sorted(cross.items())) or "无"
-    (Path(out_dir) / f"graph-{san(layer)}.mmd").write_text(
-        "\n".join(lines) + f"\n<!-- 跨层依赖：{cross_note} -->\n", encoding="utf-8"
+    write_doc(
+        Path(out_dir) / f"graph-{san(layer)}.md",
+        f"{layer} 层（PIM）",
+        lines,
+        f"跨层依赖：{cross_note}",
     )
-    print(f"wrote {Path(out_dir) / f'graph-{san(layer)}.mmd'}")
 
 
 def main():
@@ -128,8 +155,9 @@ def main():
     ap.add_argument("pims", nargs="+", help="PIM 实例文件（骨架 + 语义段合并渲染）")
     ap.add_argument("--workflow", help="仅输出该工作流的高亮路径")
     ap.add_argument("--backing-only", action="store_true", help="配合 --workflow：边仅含工作流边及其依赖背书边")
-    ap.add_argument("--by-layer", metavar="OUT_DIR", help="输出层概览 + 每层细节图到目录")
-    ap.add_argument("--out", help="输出文件（默认 stdout）")
+    ap.add_argument("--by-layer", metavar="OUT_DIR", help="输出层概览 + 每层细节图到目录（.md）")
+    ap.add_argument("--out", help="输出文件（.md，默认 stdout）")
+    ap.add_argument("--title", help="markdown 标题行（默认取文件名的图 id）")
     args = ap.parse_args()
 
     nodes, edges = merge(args.pims)

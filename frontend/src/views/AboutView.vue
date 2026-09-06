@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { t } from '../i18n'
 import type { SiteInfo, SiteStats, SponsorBoard, ThanksBoard, LiveStats } from '../api/types'
-import SectionHead from '../components/SectionHead.vue'
 
 const stats = ref<SiteStats | null>(null)
 const info = ref<SiteInfo | null>(null)
@@ -66,7 +65,9 @@ onBeforeUnmount(() => {
     <template v-else>
       <!-- 站点概况（/meta/site-info：内容/社区一次拿全；失败静默隐藏） -->
       <template v-if="info">
-        <SectionHead :title="t('about.snapshot', '站点概况')" />
+        <div class="section-head">
+          <h2 class="section-title">{{ t('about.snapshot', '站点概况') }}</h2>
+        </div>
         <div class="dash-stats">
           <div class="stat-card stat-ok"><b>{{ info.content.demos_total }}</b>{{ t('about.demos', '作品') }}</div>
           <div class="stat-card"><b>{{ info.content.authors_total }}</b>{{ t('about.authors', '创作者') }}</div>
@@ -76,9 +77,10 @@ onBeforeUnmount(() => {
       </template>
 
       <!-- 实时访问 -->
-      <SectionHead :title="t('about.live', '实时访问')">
+      <div class="section-head">
+        <h2 class="section-title">{{ t('about.live', '实时访问') }}</h2>
         <span class="live-badge"><span class="live-dot"></span>LIVE</span>
-      </SectionHead>
+      </div>
       <div class="dash-stats">
         <div class="stat-card stat-live"><b>{{ live?.online ?? '—' }}</b>{{ t('about.online', '在线') }}</div>
         <div class="stat-card"><b>{{ live?.last1min ?? '—' }}</b>{{ t('about.last1min', '近 1 分钟') }}</div>
@@ -88,7 +90,9 @@ onBeforeUnmount(() => {
       <p class="hint live-hint">{{ t('about.liveHint', '页面停留时每 10s 自动刷新；离开页面不计入在线。') }}</p>
 
       <!-- 访问统计 -->
-      <SectionHead :title="t('about.stats', '访问统计')" style="margin-top: 28px" />
+      <div class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.stats', '访问统计') }}</h2>
+      </div>
       <div class="dash-stats">
         <div class="stat-card stat-ok"><b>{{ recent48h.toLocaleString() }}</b>{{ t('about.last48h', '近 48 小时') }}</div>
         <div class="stat-card"><b>{{ stats?.today.toLocaleString() }}</b>{{ t('about.today', '今日') }}</div>
@@ -97,7 +101,9 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 近 7 天趋势（纯 CSS 柱状图） -->
-      <SectionHead v-if="stats?.last7?.length" :title="t('about.trend', '近 7 天趋势')" style="margin-top: 28px" />
+      <div v-if="stats?.last7?.length" class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.trend', '近 7 天趋势') }}</h2>
+      </div>
       <div v-if="stats?.last7?.length" class="trend-card card card-default">
         <div class="trend-bars">
           <div v-for="(d, i) in stats.last7" :key="d.date" class="trend-col" :class="{ active: i === stats.last7.length - 1 }">
@@ -109,9 +115,10 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 赞助榜（锚点 /about#sponsors：首页 CTA「支持维护」的目标位，05 §5.1 件 3） -->
-      <SectionHead id="sponsors" :title="t('about.sponsors', '赞助榜')" style="margin-top: 28px">
+      <div id="sponsors" class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.sponsors', '赞助榜') }}</h2>
         <span v-if="sponsors?.total_amount" class="mini-stat"><b>{{ sponsors.total_amount }}</b> {{ t('about.cumulative', '累计') }}</span>
-      </SectionHead>
+      </div>
       <div v-if="sponsors?.sponsors?.length" class="sponsor-list">
         <div v-for="(s, i) in sponsors.sponsors" :key="s.name + i" class="sponsor-row" :class="'rank-' + (i + 1)">
           <span class="sponsor-rank">{{ i + 1 }}</span>
@@ -123,7 +130,9 @@ onBeforeUnmount(() => {
       <div v-else class="empty-box">{{ t('about.noSponsors', '暂无上榜，欢迎打赏支持') }}</div>
 
       <!-- 致谢榜 -->
-      <SectionHead :title="t('about.thanks', '致谢榜')" style="margin-top: 28px" />
+      <div class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.thanks', '致谢榜') }}</h2>
+      </div>
       <div v-if="thanks?.thanks?.length" class="sponsor-list">
         <div v-for="(t2, i) in thanks.thanks" :key="t2.name + i" class="sponsor-row">
           <span class="sponsor-rank thanks-rank" aria-hidden="true">{{ i + 1 }}</span>
@@ -134,7 +143,9 @@ onBeforeUnmount(() => {
       <div v-else class="empty-box">{{ t('about.noThanks', '暂无致谢') }}</div>
 
       <!-- M0 验收补项：声望怎么算（/about#reputation——榜单声望榜的说明锚点，03 §5.2 透明化口径） -->
-      <SectionHead id="reputation" :title="t('about.repTitle', '声望怎么算')" style="margin-top: 28px" />
+      <div id="reputation" class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.repTitle', '声望怎么算') }}</h2>
+      </div>
       <div class="card card-default" style="padding: 20px; max-width: 640px">
         <p style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repAgg', '声望是用户档案的聚合统计：综合你发布的作品、获赞与收到感谢、发起的主题、回复、被关注等社区活动，由后端按 profile 聚合口径计算。') }}</p>
         <p class="muted" style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repHonest', '我们不展示精确公式与实时分解：权重由后端算法决定，且可能随版本调整——给一个看起来精确的假公式，比诚实解释更误导。') }}</p>
@@ -145,7 +156,9 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 杂项 -->
-      <SectionHead :title="t('about.about', '关于')" style="margin-top: 28px" />
+      <div class="section-head" style="margin-top: 28px">
+        <h2 class="section-title">{{ t('about.about', '关于') }}</h2>
+      </div>
       <div class="card card-default" style="padding: 20px; max-width: 640px">
         <p style="line-height: 1.8; margin-bottom: 8px">{{ t('about.desc', '本站收集由 AI 模型生成的网页 Demo，作者可为已注册用户或匿名「公开用户」。所有作品附生成会话日志与版本时间线，力求过程透明。') }}</p>
         <p class="muted" style="font-size: 13px">{{ t('about.descNote', '时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明。若需反馈或投稿，请到「上传 Demo」页。') }}</p>

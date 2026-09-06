@@ -8,7 +8,6 @@ import { useNotificationsStore } from '../stores/notifications'
 import { useQueues } from '../composables/adminQueues'
 import { openSearch } from '../composables/useSearch'
 import DemoCard from '../components/DemoCard.vue'
-import SectionHead from '../components/SectionHead.vue'
 import { t } from '../i18n'
 
 const props = defineProps<{ username: string }>()
@@ -99,7 +98,9 @@ onMounted(async () => {
     </section>
 
     <section class="section">
-      <SectionHead :title="t('user.theirDemos', 'TA 的 Demo')" />
+      <div class="section-head">
+        <h2 class="section-title">{{ t('user.theirDemos', 'TA 的 Demo') }}</h2>
+      </div>
       <div v-if="!demos.length" class="empty-box">{{ t('user.noDemos', '还没有发布 Demo') }}</div>
       <div v-else class="waterfall">
         <div v-for="d in demos" :key="d.slug" class="waterfall-item">

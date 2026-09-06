@@ -4,9 +4,13 @@
 
 ```mermaid
 flowchart TD
+    models["ORM 模型"]
     schemas["Pydantic 模型"]
+    serializers["序列化器"]
     services_model_service["模型服务"]
+    serializers --> models
+    services_model_service --> models
 ```
 
-<!-- 跨层依赖：→application:1，→unassigned:30，→web:4 -->
+<!-- 跨层依赖：→application:34，→infrastructure:5，→web:46 -->
 

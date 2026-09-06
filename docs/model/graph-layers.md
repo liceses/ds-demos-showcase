@@ -4,23 +4,21 @@
 
 ```mermaid
 flowchart TD
-    application["application (1 模块)"]
-    domain["domain (2 模块)"]
-    infrastructure["infrastructure (2 模块)"]
-    unassigned["unassigned (47 模块)"]
-    web["web (2 模块)"]
-    application -->|"1"| domain
-    application -->|"1"| infrastructure
-    application -->|"27"| unassigned
-    application -->|"2"| web
-    domain -->|"5"| unassigned
-    infrastructure -->|"3"| unassigned
-    unassigned -->|"25"| domain
-    unassigned -->|"7"| infrastructure
-    web -->|"4"| domain
-    web -->|"3"| infrastructure
-    web -->|"21"| unassigned
+    application["application (23 模块)"]
+    domain["domain (4 模块)"]
+    infrastructure["infrastructure (8 模块)"]
+    web["web (19 模块)"]
+    application -->|"28"| domain
+    application -->|"17"| infrastructure
+    application -->|"19"| web
+    domain -->|"6"| application
+    domain -->|"4"| infrastructure
+    infrastructure -->|"1"| application
+    infrastructure -->|"1"| domain
+    web -->|"45"| application
+    web -->|"46"| domain
+    web -->|"47"| infrastructure
 ```
 
-<!-- 层内依赖（未画边）：infrastructure:2，unassigned:158 -->
+<!-- 层内依赖（未画边）：application:35，domain:2，infrastructure:8 -->
 

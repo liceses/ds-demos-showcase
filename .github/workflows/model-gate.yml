@@ -60,17 +60,17 @@ jobs:
           fi
           echo "骨架 hash 一致: $actual"
 
-      - name: ② 契约 + 交叉校验
+      - name: ② 契约 + 交叉校验（合并骨架在步骤①产物中）
         run: |
           python tooling/validate.py \
             --schema docs/model/contract.schema.json \
-            docs/model/pim.generated.json \
+            /tmp/pim.generated.json \
             docs/model/modules/*.json
 
       - name: ③ 渲染冒烟（合并视图，验证 JGF→Mermaid 可渲染）
         run: |
           python tooling/render-mermaid.py \
-            docs/model/pim.generated.json docs/model/modules/*.json \
+1: @theirs
             --frontend-subsystems views \
             --out /tmp/pim.mmd
           echo "渲染成功：$(grep -c '^    .* --' /tmp/pim.mmd) 条边"

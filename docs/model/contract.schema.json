@@ -57,6 +57,11 @@
       "properties": {
         "layer": { "type": "string" },
         "provenance": { "enum": ["generated", "curated"] },
+        "depth": {
+          "type": "string",
+          "enum": ["skeleton", "brief", "detailed", "deep"],
+          "description": "语义标注强度（D4 可选档）：skeleton=无语义；brief=一句话职责（默认）；detailed=职责+关键对外契约；deep=detailed+设计决策/领域概念/已知债务（须 owner review）"
+        },
         "owner": { "type": "string" },
         "description": { "type": "string" },
         "metrics": {

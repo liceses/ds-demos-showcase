@@ -581,6 +581,11 @@ let mockTaskSeq = 2
 // v2 B4′：mock 收件箱（带 task 的上传会真的入队，能完整演一遍批准流程）
 const mockSuggestions: SuggestionItem[] = []
 let mockSuggestionSeq = 1
+// C：TagValueSuggestion 与 EntitySuggestion 分表；概览台并语义合成
+const mockTagSuggestions: TagSuggestion[] = [
+  { id: 1, key: 'plugin', value: 'routing-lite', description: '用户申请的固定值', group: null, status: 'pending', demo_id: null, created_at: '2026-08-20T10:00:00Z' },
+]
+let mockTagSuggestionSeq = 2
 // M3-B3 挂摘演示态：task slug → 已挂 demo 行（mock 无 DemoTask 表，内存映射代偿）
 const taskAttached: Record<string, { id: number; slug: string; title: string; status: string }[]> = {}
 let attachSeq = 9000
@@ -591,7 +596,7 @@ void (() => {
   seed(9001, 'retag_demo', { demo_title: '重力迷宫', demo_slug: 'demo_重力迷宫', remove: 'demo', add: 'puzzle', matched: ['puzzle', 'maze', 'grid'] }, 0.72)
   seed(9002, 'retag_demo', { demo_title: '粒子星空', demo_slug: 'demo_粒子星空', remove: 'demo', add: 'visual', matched: ['canvas', 'shader'] }, 0.68)
   seed(9003, 'retag_demo', { demo_title: '霓虹打字机', demo_slug: 'demo_霓虹打字机', remove: 'demo', add: 'effect', matched: ['text-fx'] }, 0.66)
-  seed(9004, 'task_match', { demo_title: '粒子星空', demo_slug: 'demo_粒子星空', task_title: '用 Canvas 画星空' }, 0.81)
+  seed(9004, 'task_match', { demo_title: '粒子星空', demo_slug: 'demo_粒子星空', task_title: '我的世界网页版', task_id: 1 }, 0.81)
   seed(9005, 'alias', { name: 'dsv4flash', alias: 'DSV4 Flash（旧写法）', model_id: 'dsv4flash' }, 0.77)
   seed(9006, 'new_model', { name: 'kimi-k3.5', model_id: 'kimi-k3.5' }, 0.55, 'rejected')
 })()
@@ -818,9 +823,10 @@ export const mockApi = {
     }
     return clone(s)
   },
-  async listTagSuggestions(_status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
+  async listTagSuggestions(status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
     await delay()
-    return []
+    const all: TagSuggestion[] = mockTagSuggestions
+    return clone(status ? all.filter((s) => s.status === status) : all)
   },
   async listTagGroups(key: string): Promise<TagGroupDistribution> {
     await delay()
@@ -865,7 +871,17 @@ export const mockApi = {
 
   async reviewTagSuggestion(id: number, action: 'approve' | 'reject', group?: string): Promise<TagSuggestion> {
     await delay(200)
-    return { id, key: 'model', value: 'x', description: '', group: group || null, status: action === 'approve' ? 'approved' : 'rejected', demo_id: null, created_at: new Date().toISOString() }
+    const s = mockTagSuggestions.find((x) => x.id === id)
+    if (!s) throw new Error('建议不存在')
+    s.status = action === 'approve' ? 'approved' : 'rejected'
+    if (group) s.group = group
+    if (action === 'approve') {
+      const k = tagKeys.find((x) => x.key === s.key)
+      if (k && !k.values.some((v) => v.value === s.value)) {
+        k.values.push({ id: 8000 + s.id, value: s.value, description: s.description, demo_count: 0, group: s.group, status: 'active' })
+      }
+    }
+    return clone(s)
   },
   async fetchModels(): Promise<{ created: number; note: string }> {
     await delay(300)
@@ -1696,8 +1712,16 @@ export const mockApi = {
     // 批准挂题：mock 里把对应题目的作品数 +1，面板反馈可见
     if (action === 'approve' && s.kind === 'task_match') {
       const title = String(s.payload.task_title || '')
-      const t = mockTasks.find((x) => x.slug === title || x.title === title)
+      const t = mockTasks.find((x) => x.slug === title || x.title === title || x.id === Number(s.payload.task_id))
       if (t) t.demo_count += 1
+    }
+    if (action === 'approve' && s.kind === 'new_task') {
+      const slug = String(s.payload.slug || 'new-task')
+      s.result = `题目 ${slug} 挂 0 个作品`
+    }
+    if (action === 'approve' && s.kind === 'new_model') {
+      const name = String(s.payload.name || s.payload.slug || 'model')
+      s.result = `模型 ${name} → ${name}`
     }
     return clone(s)
   },

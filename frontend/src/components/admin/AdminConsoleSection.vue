@@ -4,13 +4,14 @@
 // M2-t4 待办驱动升级（03 §9.3）：卡片 = kind 分组计数 + 「直达」深链（?tab=x&filter=y）
 // + 卡上批量按钮（只挂在真有批量能力处：收件箱=本任务新建、归属=组内多选既有；
 // 审核/簇/细分暂无批量端点，不放假门）；灰测池揭晓提醒常驻卡（90 天未揭晓标红）。
+// C：TagValueSuggestion 与 EntitySuggestion 在本卡合成一条待办（并语义、不并表）。
 defineOptions({ name: 'AdminConsoleSection' })
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api'
 import type { AuditEntry, KnowledgeStats, AttributionPending } from '../../api/types'
 import AdminStatsSection from './AdminStatsSection.vue'
 import { useQueues } from '../../composables/adminQueues'
-import { auditActionLabel, isDestructive, fmtTime, inboxKindLabel } from '../../utils/adminLabels'
+import { auditActionLabel, isDestructive, fmtTime, inboxKindLabel, TAGREQ_KIND } from '../../utils/adminLabels'
 import { parseDate } from '../../utils/time'
 import { t } from '../../i18n'
 import LoadingRow from '../LoadingRow.vue'
@@ -26,14 +27,21 @@ const kindCounts = ref<Record<string, number>>({})
 // 队列卡片：跳转目标就是现有面板的 key（壳层不改面板内部）
 const cards = computed(() => [
   { k: 'review', tab: 'review', label: t('admin.console.qReview', '待审作品'), why: t('admin.console.qReviewWhy', '匿名与信任通道上传都先落这里') },
-  { k: 'inbox', tab: 'inbox', label: t('admin.console.qInbox', '知识候选待批'), why: t('admin.console.qInboxWhy', '机器推的挂题/细分/合并，批了才生效') },
+  { k: 'inbox', tab: 'inbox', label: t('admin.console.qInbox', '知识候选待批'), why: t('admin.console.qInboxWhy', '实体建议 + 固定值申请：批了才生效，消化完回实体页改字段') },
   { k: 'clusters', tab: 'clusters', label: t('admin.console.qClusters', '可成题的簇'), why: t('admin.console.qClustersWhy', '同一句提示词被多模型答过') },
   { k: 'refine', tab: 'refine', label: t('admin.console.qRefine', '可细分/可补的类型'), why: t('admin.console.qRefineWhy', 'type:demo 垃圾桶与缺 type 的作品') },
   { k: 'attribution', tab: 'attribution', label: t('admin.console.qAttribution', '挂在兜底型号上的作品'), why: t('admin.console.qAttributionWhy', '未标注/未定型号/灰测，可批量归位') },
   { k: 'wordlist', tab: 'tags', label: t('admin.console.qWordlist', '固定值缺介绍'), why: t('admin.console.qWordlistWhy', '词表补课：悬浮提示与搜索都靠它') },
 ])
 
-const total = computed(() => cards.value.reduce((n, c) => n + (queues.value[c.k as keyof typeof queues.value]!.count || 0), 0))
+/** 并语义：收件箱卡 = EntitySuggestion + TagValueSuggestion（两表分计，展示合成） */
+const inboxCombined = computed(() => (queues.value.inbox.count || 0) + (queues.value.tagreq.count || 0))
+const tagreqCount = computed(() => queues.value.tagreq.count || 0)
+const tagreqLabel = computed(() => t('admin.kind.tagreq', TAGREQ_KIND[0]))
+
+const total = computed(() =>
+  cards.value.reduce((n, c) => n + (c.k === 'inbox' ? inboxCombined.value : queues.value[c.k as keyof typeof queues.value]!.count || 0), 0),
+)
 
 // M2-t4：收件箱卡 kind 计数条——按量取 Top3 直达（?tab=inbox&filter=k），其余合并展示
 const kindSorted = computed(() => Object.entries(kindCounts.value).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]))
@@ -167,13 +175,13 @@ onMounted(load)
         <div
           v-if="c.k === 'inbox'"
           class="ac-card"
-          :class="{ hot: queues[c.k as keyof typeof queues]!.count > 0 }"
+          :class="{ hot: inboxCombined > 0 }"
           role="button"
           tabindex="0"
           @click="go(c.tab)"
           @keydown.enter="go(c.tab)"
         >
-          <b class="ac-num">{{ queues[c.k as keyof typeof queues]!.count }}</b>
+          <b class="ac-num">{{ inboxCombined }}</b>
           <span class="ac-label">{{ c.label }}</span>
           <span class="ac-why">{{ c.why }}</span>
           <div class="ac-card-actions" @click.stop @keydown.stop>
@@ -187,6 +195,15 @@ onMounted(load)
               @click="go('inbox', kd[0])"
             >
               {{ inboxKindLabel(kd[0]) }} <b>{{ kd[1] }}</b> →
+            </button>
+            <button
+              v-if="tagreqCount > 0"
+              type="button"
+              class="ac-kind"
+              :title="t('admin.console.tagreqGo', '直达固定值申请（不并表）')"
+              @click="go('tagreq')"
+            >
+              {{ tagreqLabel }} <b>{{ tagreqCount }}</b> →
             </button>
             <span v-if="kindRest > 0" class="muted mono">+{{ kindRest }}</span>
             <button type="button" class="btn btn-sm btn-primary" @click="go('inbox')">

@@ -65,6 +65,9 @@ export const INBOX_KINDS: Record<string, [string, string]> = {
   retag_demo: ['类型细分', 'refine type'],
 }
 
+/** 概览台合成待办的固定值申请 chip（TagValueSuggestion，不并进 EntitySuggestion kind） */
+export const TAGREQ_KIND: [string, string] = ['固定值申请', 'fixed-value request']
+
 export function inboxKindLabel(k: string): string {
   const hit = INBOX_KINDS[k]
   return hit ? t(`admin.kind.${k}`, hit[0]) : k

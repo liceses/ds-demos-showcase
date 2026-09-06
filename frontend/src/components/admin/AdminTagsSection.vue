@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'AdminTagsSection' })
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import { useTagsStore } from '../../stores/tags'
@@ -8,9 +9,12 @@ import { groupedTagValues } from '../../utils/tagGroups'
 import TagGroupBox from '../TagGroupBox.vue'
 import TagMergeModal from './TagMergeModal.vue'
 import { parseDate } from '../../utils/time'
+import { tagSuggestionEntityQuery } from '../../utils/entityDeepLink'
 import type { AdminDemo, TagKeyInfo, TagSuggestion } from '../../api/types'
+import { t } from '../../i18n'
 
 const ui = useUiStore()
+const router = useRouter()
 
 // only：后台导航直接把"词表"和"固定值申请"做成两个入口，不再让用户先进面板再找第二层 tab
 // （面板内再套 tab = 两套组织逻辑，是后台重设计诊断 #10 的同一个病）
@@ -177,9 +181,17 @@ async function loadSuggestions() {
 async function approveSuggestion(s: TagSuggestion) {
   try {
     await api.reviewTagSuggestion(s.id, 'approve', s.group || undefined)
-    ui.toast('已批准', 'success')
+    ui.toast(t('admin.inbox.doneApprove', '已批准并执行'), 'success')
     await loadSuggestions()
     await tagsStore.refresh()
+    const keys = await api.adminListTagKeys().catch(() => tagsStore.keys)
+    const k = keys.find((x) => x.key === s.key)
+    const v = k?.values.find((x) => x.value === s.value)
+    const q = tagSuggestionEntityQuery(s, v?.id)
+    if (q) {
+      void router.push({ path: '/admin', query: q })
+      return
+    }
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 
@@ -424,6 +436,7 @@ onMounted(() => {
 
       <div class="section-head">
         <h2 class="section-title">待审固定值建议</h2>
+        <span class="hint">{{ t('admin.inbox.digestThenEntity', '队列只消化待办；批准后深链回实体页改字段。') }}</span>
       </div>
       <div v-if="!suggestions.length" class="empty-box">暂无待审建议</div>
       <div v-else class="table-wrap">

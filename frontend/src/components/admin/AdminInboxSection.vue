@@ -10,18 +10,20 @@
 // 顺手修：后端 GET /suggestions 的 kind pattern 不含 retag_demo（传了 422）→ 该 kind 改客户端过滤。
 defineOptions({ name: 'AdminInboxSection' })
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api'
 import type { SuggestionItem } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import { parseDate } from '../../utils/time'
 import { INBOX_KINDS, inboxKindLabel } from '../../utils/adminLabels'
+import { entityHrefTo, suggestionEntityHref } from '../../utils/entityDeepLink'
 import LoadingRow from '../LoadingRow.vue'
 import EmptyBox from '../EmptyBox.vue'
 import { t } from '../../i18n'
 
 const ui = useUiStore()
 const route = useRoute()
+const router = useRouter()
 
 const items = ref<SuggestionItem[]>([])
 const counts = ref<Record<string, number>>({})
@@ -187,11 +189,18 @@ function retryFailed() {
   void runBatch(batchLastAction.value, failed.value.map((f) => f.id))
 }
 
+function goEntity(s: SuggestionItem) {
+  const href = suggestionEntityHref(s)
+  if (!href) return
+  const loc = entityHrefTo(href)
+  void router.push(loc)
+}
+
 async function review(s: SuggestionItem, action: 'approve' | 'reject') {
   if (action === 'approve') {
     const ok = await ui.confirm({
       title: t('admin.inbox.confirmApprove', '批准这条建议？'),
-      message: `${brief(s)}\n${effectOf(s)}`,
+      message: `${brief(s)}\n${effectOf(s)}\n${t('admin.inbox.digestThenEntity', '队列只消化待办；批准后深链回实体页改字段。')}`,
       confirmText: t('admin.inbox.approve', '批准'),
     })
     if (!ok) return
@@ -205,6 +214,13 @@ async function review(s: SuggestionItem, action: 'approve' | 'reject') {
         : t('admin.inbox.doneReject', '已驳回'),
       'success',
     )
+    if (action === 'approve') {
+      const merged = { ...s, ...done, payload: done.payload || s.payload, result: done.result || s.result }
+      if (suggestionEntityHref(merged)) {
+        goEntity(merged)
+        return
+      }
+    }
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -306,6 +322,9 @@ onMounted(() => {
               </button>
             </template>
             <span v-else class="cluster-covered-tag">{{ s.status === 'approved' ? t('admin.inbox.approved', '已批准') : t('admin.inbox.rejected', '已驳回') }}</span>
+            <button v-if="suggestionEntityHref(s)" class="btn btn-sm btn-outline" type="button" @click="goEntity(s)">
+              {{ t('admin.inbox.openEntity', '打开实体 →') }}
+            </button>
           </div>
         </article>
       </section>
@@ -330,6 +349,9 @@ onMounted(() => {
             </button>
           </template>
           <span v-else class="cluster-covered-tag">{{ s.status === 'approved' ? t('admin.inbox.approved', '已批准') : t('admin.inbox.rejected', '已驳回') }}</span>
+          <button v-if="suggestionEntityHref(s)" class="btn btn-sm btn-outline" type="button" @click="goEntity(s)">
+            {{ t('admin.inbox.openEntity', '打开实体 →') }}
+          </button>
         </div>
       </article>
     </div>

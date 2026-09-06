@@ -5,7 +5,7 @@ import { computed, ref } from 'vue'
 import { api } from '../api'
 import type { InspectionCheck } from '../api/types'
 
-export type QueueKey = 'review' | 'inbox' | 'clusters' | 'refine' | 'attribution' | 'wordlist'
+export type QueueKey = 'review' | 'inbox' | 'clusters' | 'refine' | 'attribution' | 'wordlist' | 'tagreq'
 
 export interface QueueState {
   count: number
@@ -20,6 +20,7 @@ export const queues = ref<Record<QueueKey, QueueState>>({
   refine: { count: 0, loading: true, error: '' },
   attribution: { count: 0, loading: true, error: '' },
   wordlist: { count: 0, loading: true, error: '' },
+  tagreq: { count: 0, loading: true, error: '' },
 })
 
 let inflight: Promise<void> | null = null
@@ -36,17 +37,20 @@ export function refreshQueues(): Promise<void> {
   if (inflight) return inflight
   for (const k of Object.keys(queues.value) as QueueKey[]) queues.value[k].loading = true
   inflight = (async () => {
-    const [stats, knowledge, inspection, clusters] = await Promise.allSettled([
+    const [stats, knowledge, inspection, clusters, tagSugg] = await Promise.allSettled([
       api.getAdminStats(),
       api.getKnowledgeStats(),
       api.getInspection({ sample_limit: 1 }),
       api.getPromptClusters(),
+      api.listTagSuggestions('pending'),
     ])
     const set = (k: QueueKey, n: number, err = '') => {
       queues.value[k] = { count: n, loading: false, error: err }
     }
     set('review', stats.status === 'fulfilled' ? stats.value.demos.pending : 0, stats.status === 'rejected' ? String(stats.reason) : '')
+    // 两表分计：inbox=EntitySuggestion，tagreq=TagValueSuggestion（并语义在概览台合成，不并表）
     set('inbox', knowledge.status === 'fulfilled' ? knowledge.value.inbox.pending : 0)
+    set('tagreq', tagSugg.status === 'fulfilled' ? tagSugg.value.length : 0)
     // 题目候选 = 未覆盖的可成题簇（exact + similar）
     set(
       'clusters',

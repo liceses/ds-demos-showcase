@@ -80,7 +80,7 @@ const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
       { key: 'merge', label: '合并向导' },
       { key: 'aliases', label: '别名中心' },
       { key: 'tags', label: '标签词表', q: 'wordlist' },
-      { key: 'tagreq', label: '固定值申请' },
+      { key: 'tagreq', label: '固定值申请', q: 'tagreq' },
     ],
   },
   {

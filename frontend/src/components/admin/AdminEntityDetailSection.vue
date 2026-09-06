@@ -16,7 +16,7 @@ defineOptions({ name: 'AdminEntityDetailSection' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api'
-import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo, TaskSummary } from '../../api/types'
+import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import EntityStamp from '../EntityStamp.vue'
 import LoadingRow from '../LoadingRow.vue'
@@ -24,6 +24,7 @@ import LoadingRow from '../LoadingRow.vue'
 import EntityPicker from '../picker/EntityPicker.vue'
 import type { EntityPick } from '../picker/pickerSources'
 import { auditActionLabel, fmtTime } from '../../utils/adminLabels'
+import { tagsForWrite } from '../../utils/entityDeepLink'
 import { t } from '../../i18n'
 
 const props = defineProps<{
@@ -53,12 +54,11 @@ const busyAlias = ref(false)
 const transOpen = ref(false)
 const transStatus = ref('')
 const transReason = ref('')
-const taskList = ref<(TaskSummary & { merged_into_id?: number | null })[]>([])
 // M3-B5 Task 挂摘/合并两步流状态（T5·M5-F2：datalist 手输 slug → DemoPicker 多选，chips 挂载）
 const attachBusy = ref(false)
 const attachPicks = ref<EntityPick[]>([])
 const mergeOpen = ref(false)
-const mergeTarget = ref('')
+const mergeTargetPick = ref<EntityPick | null>(null)
 const mergeReason = ref('')
 const mergePreview = ref<{ source: { id: number; slug: string; title: string }; target: { id: number; slug: string; title: string }; affected_demos: number } | null>(null)
 const mergeBusy = ref(false)
@@ -263,10 +263,30 @@ async function saveGroup(group: string | null) {
   }
 }
 
-// ---- M3-B5 Task 挂摘（④⑤：by slug；T5·M5-F2 DemoPicker 多选 + 逐个挂载，语义与手输 slug 完全一致） ----
+function kvOf(tags: { key: string; value: string }[]): { key: string; value: string }[] {
+  return tags.map((x) => ({ key: x.key, value: x.value }))
+}
+
+async function rewriteDemoTags(slug: string, mutate: (tags: { key: string; value: string }[]) => { key: string; value: string }[]) {
+  const demo = await api.getDemo(slug)
+  const next = mutate(kvOf(demo.tags || []))
+  const write = tagsForWrite(next)
+  if (!write.some((x) => x.startsWith('model:'))) {
+    throw new Error(t('admin.kc.needModelTag', '作品必须保留至少一个 model 标签（不确定就用 model:unspecified）'))
+  }
+  await api.updateDemo(slug, { tags: write })
+}
+
+function currentTagKV(): { key: string; value: string } | null {
+  if (props.type === 'model' && model.value) return { key: 'model', value: model.value.name }
+  if (props.type === 'tag' && props.tagKey && tagRow.value) return { key: props.tagKey, value: tagRow.value.value.value }
+  return null
+}
+
+// ---- 挂摘：Task 走 /admin/tasks/{id}/demos；Model/Tag 走 PUT /demos/{slug} 改 tags（既有端点，无新表） ----
 async function attachPicked() {
   const picks = attachPicks.value
-  if (!picks.length || !task.value || attachBusy.value) return
+  if (!picks.length || attachBusy.value) return
   attachBusy.value = true
   let okCount = 0
   let firstErr = ''
@@ -275,7 +295,16 @@ async function attachPicked() {
       const s = (p.slug || (p.label || '').trim()) as string
       if (!s) continue
       try {
-        await api.attachTaskDemoBySlug(task.value.slug, s)
+        if (props.type === 'task' && task.value) {
+          await api.attachTaskDemoBySlug(task.value.slug, s)
+        } else {
+          const kv = currentTagKV()
+          if (!kv) throw new Error(t('admin.kc.attachNoEntity', '当前实体无法挂载'))
+          await rewriteDemoTags(s, (tags) => {
+            if (tags.some((x) => x.key === kv.key && x.value === kv.value)) return tags
+            return [...tags, kv]
+          })
+        }
         okCount++
       } catch (e) {
         if (!firstErr) firstErr = (e as Error).message
@@ -295,16 +324,25 @@ async function attachPicked() {
 }
 
 async function detachDemo(slug: string) {
-  if (!task.value || attachBusy.value) return
+  if (attachBusy.value) return
   const ok = await ui.confirm({
     title: t('admin.kc.detachTitle', '摘除作品？'),
-    message: t('admin.kc.detachMsg', '《{slug}》将从本题的归属列表移除（detach 审计；可重新挂载）。', { slug }),
+    message:
+      props.type === 'task'
+        ? t('admin.kc.detachMsg', '《{slug}》将从本题的归属列表移除（detach 审计；可重新挂载）。', { slug })
+        : t('admin.kc.detachTagMsg', '《{slug}》将去掉本实体标签（PUT /demos 改 tags；可重新挂载）。', { slug }),
     confirmText: t('admin.kc.detach', '摘除'),
   })
   if (!ok) return
   attachBusy.value = true
   try {
-    await api.detachTaskDemoBySlug(task.value.slug, slug)
+    if (props.type === 'task' && task.value) {
+      await api.detachTaskDemoBySlug(task.value.slug, slug)
+    } else {
+      const kv = currentTagKV()
+      if (!kv) throw new Error(t('admin.kc.attachNoEntity', '当前实体无法摘除'))
+      await rewriteDemoTags(slug, (tags) => tags.filter((x) => !(x.key === kv.key && x.value === kv.value)))
+    }
     ui.toast(t('admin.kc.detached', '已摘除（detach 审计）'), 'success')
     await load()
   } catch (e) {
@@ -315,14 +353,21 @@ async function detachDemo(slug: string) {
 }
 
 // ---- M3-B5 Task 合并两步流（⑥：显式 dry_run:true 预览 → 确认后显式 false——缺省 false 的坑已规避） ----
+function pickMergeTarget(p: EntityPick) {
+  mergeTargetPick.value = p
+  mergePreview.value = null
+}
+
 async function dryRunMerge() {
   if (!task.value || mergeBusy.value) return
+  const rawId = mergeTargetPick.value?.id
+  if (rawId == null) {
+    ui.toast(t('admin.kc.mergePickFirst', '请先用选择器挑目标题目'), 'error')
+    return
+  }
   mergeBusy.value = true
   try {
-    const raw = mergeTarget.value.trim()
-    // 目标解析：纯数字=id 直用；否则按 slug/题名在管理端任务列表查 id（找不到 422 诚实报错）
-    const target = /^\d+$/.test(raw) ? Number(raw) : await resolveTaskTargetId(raw)
-    const preview = await api.mergeEntity('tasks', task.value.slug, { target_id: target as number, dry_run: true, reason: mergeReason.value || undefined })
+    const preview = await api.mergeEntity('tasks', task.value.slug, { target_id: rawId, dry_run: true, reason: mergeReason.value || undefined })
     mergePreview.value = preview as unknown as { source: { id: number; slug: string; title: string }; target: { id: number; slug: string; title: string }; affected_demos: number }
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -334,13 +379,7 @@ async function dryRunMerge() {
 function closeMerge() {
   mergeOpen.value = false
   mergePreview.value = null
-}
-
-async function resolveTaskTargetId(raw: string): Promise<number> {
-  if (!taskList.value.length) taskList.value = (await api.adminListEntityTasks({ page_size: 200 })).items
-  const hit = taskList.value.find((t) => t.slug === raw || t.title === raw || String(t.id) === raw)
-  if (!hit) throw new Error(t('admin.kc.mergeTargetNotFound', '目标题目不存在（按 id/slug/题名核对）'))
-  return hit.id
+  mergeTargetPick.value = null
 }
 
 async function doMerge() {
@@ -355,8 +394,7 @@ async function doMerge() {
   try {
     await api.mergeEntity('tasks', task.value.slug, { target_id: mergePreview.value.target.id, dry_run: false, reason: mergeReason.value || undefined })
     ui.toast(t('admin.kc.mergeDone', '已合并并落审计'), 'success')
-    mergeOpen.value = false
-    mergePreview.value = null
+    closeMerge()
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -391,6 +429,8 @@ async function saveTagDesc() {
 watch(() => [props.type, props.id, props.tagKey], () => {
   void load()
   attachPicks.value = []
+  closeMerge()
+  transOpen.value = false
 })
 onMounted(load)
 </script>
@@ -529,10 +569,21 @@ onMounted(load)
             <button v-if="!mergeOpen" type="button" class="btn btn-sm btn-primary" @click="mergeOpen = true">{{ t('admin.kc.mergeGo', '合并向导 →') }}</button>
           </div>
           <div v-if="mergeOpen" class="kc-trans">
-            <label class="kc-field"><span class="kc-k">{{ t('admin.kc.mergeTarget', '合并到（题目 id/slug）') }}</span><input v-model="mergeTarget" class="input" style="max-width: 220px" :placeholder="t('admin.kc.mergeTargetPh', '如 12 或 task-slug')" /></label>
+            <div class="kc-field kc-wide">
+              <span class="kc-k">{{ t('admin.kc.mergeTarget', '合并到') }}</span>
+              <EntityPicker
+                kind="task"
+                mode="dropdown"
+                :selected-id="mergeTargetPick?.id"
+                :exclude-id="task?.id"
+                :placeholder="t('admin.kc.mergeTargetPh', '搜题名 / slug 选目标…')"
+                @pick="pickMergeTarget"
+              />
+              <span v-if="mergeTargetPick" class="mono">{{ mergeTargetPick.label }}</span>
+            </div>
             <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（可选）') }}</span><input v-model="mergeReason" class="input" :placeholder="t('admin.kc.transReasonPh', '会进入审计时间线')" /></label>
             <div class="kc-field kc-wide">
-              <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy || !mergeTarget.trim() || mergePreview != null" @click="dryRunMerge">{{ t('admin.kc.mergePreview', 'dry_run 预览') }}</button>
+              <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy || mergeTargetPick == null || mergePreview != null" @click="dryRunMerge">{{ t('admin.kc.mergePreview', 'dry_run 预览') }}</button>
               <button type="button" class="btn btn-sm btn-primary" :disabled="mergeBusy || mergePreview == null" @click="doMerge">{{ t('admin.kc.mergeConfirm', '确认合并') }}</button>
               <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy" @click="closeMerge">{{ t('common.cancel', '取消') }}</button>
             </div>
@@ -656,44 +707,37 @@ onMounted(load)
         </ul>
       </section>
 
-      <!-- ⑤ 关联作品（task=管理端全量含 pending/rejected + 挂摘直改；model/tag 只读列表） -->
+      <!-- ⑤ 关联作品：三实体都可挂摘（Task=attach 端点；Model/Tag=PUT /demos tags） -->
       <section class="kc-zone">
         <h3 class="kc-zone-title">{{ t('admin.kc.zWorks', '⑤ 关联作品') }}</h3>
-        <template v-if="props.type === 'task'">
-          <div class="kc-rel-row">
-            <EntityPicker
-              v-model="attachPicks"
-              kind="demo"
-              mode="dropdown"
-              multiple
-              manual-slug
-              :placeholder="t('admin.kc.attachSlugPh2', '搜作品名 / 作者 / slug 选入，逐个可挂载…')"
-            />
-            <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy || !attachPicks.length" @click="attachPicked">
-              {{ attachBusy ? t('admin.kc.attaching', '挂载中…') : t('admin.kc.attachAdd', '挂载选中') }}
-            </button>
-            <span class="hint">{{ t('admin.kc.attachNote', '按 slug 逐个挂载（attach 审计，未知 slug 单项失败不影响其余）；点 ✕ 可摘除选中。') }}</span>
-          </div>
-          <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
-          <ul v-else class="kc-works">
-            <li v-for="d in works" :key="d.slug">
-              <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
-              <span class="muted mono">{{ d.slug }}</span>
-              <span v-if="d.status && d.status !== 'approved'" class="cluster-badge cb-fuzzy">{{ d.status }}</span>
-              <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy" @click="detachDemo(d.slug)">{{ t('admin.kc.detach', '摘除') }}</button>
-            </li>
-          </ul>
-        </template>
-        <template v-else>
-          <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
-          <ul v-else class="kc-works">
-            <li v-for="d in works" :key="d.slug">
-              <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
-              <span class="muted mono">{{ d.slug }}</span>
-              <span v-if="d.rating_avg != null" class="mini-stat"><b>{{ d.rating_avg.toFixed(1) }}</b></span>
-            </li>
-          </ul>
-        </template>
+        <div class="kc-rel-row">
+          <EntityPicker
+            v-model="attachPicks"
+            kind="demo"
+            mode="dropdown"
+            multiple
+            manual-slug
+            :placeholder="t('admin.kc.attachSlugPh2', '搜作品名 / 作者 / slug 选入，逐个可挂载…')"
+          />
+          <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy || !attachPicks.length" @click="attachPicked">
+            {{ attachBusy ? t('admin.kc.attaching', '挂载中…') : t('admin.kc.attachAdd', '挂载选中') }}
+          </button>
+          <span class="hint">{{
+            props.type === 'task'
+              ? t('admin.kc.attachNote', '按 slug 逐个挂载（attach 审计，未知 slug 单项失败不影响其余）；点 ✕ 可摘除选中。')
+              : t('admin.kc.attachTagNote', '挂摘走 PUT /demos/{slug} 改 tags（保留键由服务端重挂；必须留下至少一个 model 标签）。')
+          }}</span>
+        </div>
+        <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
+        <ul v-else class="kc-works">
+          <li v-for="d in works" :key="d.slug">
+            <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
+            <span class="muted mono">{{ d.slug }}</span>
+            <span v-if="d.status && d.status !== 'approved'" class="cluster-badge cb-fuzzy">{{ d.status }}</span>
+            <span v-if="d.rating_avg != null" class="mini-stat"><b>{{ d.rating_avg.toFixed(1) }}</b></span>
+            <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy" @click="detachDemo(d.slug)">{{ t('admin.kc.detach', '摘除') }}</button>
+          </li>
+        </ul>
       </section>
     </template>
   </div>

@@ -300,6 +300,7 @@ class DemoCreateResult(BaseModel):
     slug: str
     status: str
     created: bool = True  # False = 命中幂等键，返回已有结果（agent 重试去重）
+    id: int  # 契约只增：上传成功后前端用它回挂 POST /tags/suggestions.demo_id
 
 
 # ---------- Comments ----------

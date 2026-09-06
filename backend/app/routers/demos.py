@@ -726,6 +726,7 @@ async def _create_demo_record(
     single_file: str | None = None,
     challenge_task: Task | None = None,
     model_hint: str | None = None,
+    propose_task: dict | None = None,
 ) -> tuple[Demo, str, bool]:
     """创建 Demo 公共流程：落库 → 解压/OSS → 标签 → 公告 → 时间线。
     - user 为空 = 匿名（public 虚拟身份）：author_id=NULL，作者恒为 public
@@ -735,6 +736,7 @@ async def _create_demo_record(
     - content_hash：zip/单文件内容哈希（按作者去重，由调用方校验后传入）
     - single_file：'html' | 'svg' 时按单文件保存（zip_bytes 存的是该文件内容）
     - challenge_task：调用方已校验的 active 题目；只落一条 task_match 候选，不直接挂题
+    - propose_task：调用方已校验的新题草稿 {title,description,category?}；只落 new_task 候选，不建 Task
     - 解压/OSS/封面上传等阻塞操作放线程池，避免卡死事件循环（批量上传时其他接口还能响应）
     """
     demo = Demo(
@@ -811,6 +813,9 @@ async def _create_demo_record(
     # v2 B4′：挑战声明 → 候选（不直接挂题；重活已完成，此处只写一行建议）
     if challenge_task is not None:
         _queue_task_match(db, demo, challenge_task, user)
+    # 身份绑定闭环 B：用户提议新题 → 候选（与 task= 挂已有题并存，互不替代）
+    if propose_task is not None:
+        _queue_new_task(db, demo, propose_task, user)
     db.commit()
     # 待审：通知所有管理员
     if status == "pending":
@@ -880,6 +885,57 @@ def _queue_task_match(db: Session, demo: Demo, task: Task, user: User | None) ->
     )
 
 
+def _parse_propose_task(raw: str | None) -> dict | None:
+    """解析上传可选字段 propose_task。有字段则 title 必填；非法 422（须在解压/OSS 之前调用）。"""
+    if raw is None:
+        return None
+    text = raw.strip() if isinstance(raw, str) else ""
+    if not text:
+        raise HTTPException(status_code=422, detail="propose_task 需为 JSON 对象，且 title 必填")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="propose_task 需为 JSON 对象")
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=422, detail="propose_task 需为 JSON 对象")
+    title_raw = data.get("title")
+    title = title_raw.strip() if isinstance(title_raw, str) else ""
+    if not title:
+        raise HTTPException(status_code=422, detail="propose_task.title 必填")
+    desc_raw = data.get("description")
+    description = desc_raw if isinstance(desc_raw, str) else ("" if desc_raw is None else str(desc_raw))
+    cat_raw = data.get("category")
+    category = None
+    if isinstance(cat_raw, str):
+        category = cat_raw.strip() or None
+    elif cat_raw is not None:
+        category = str(cat_raw).strip() or None
+    out: dict = {"title": title, "description": description}
+    if category:
+        out["category"] = category
+    return out
+
+
+def _queue_new_task(db: Session, demo: Demo, propose: dict, user: User | None) -> None:
+    """把「上传时提议新题」落成 pending EntitySuggestion kind=new_task，禁止直建 Task。"""
+    payload: dict = {
+        "title": propose["title"],
+        "description": propose.get("description") or "",
+        "demo_ids": [demo.id],
+    }
+    if propose.get("category"):
+        payload["category"] = propose["category"]
+    suggestion_service.create(
+        db,
+        kind="new_task",
+        payload=payload,
+        confidence=USER_MATCH_CONFIDENCE,
+        source="user",
+        demo_id=demo.id,
+        created_by=user.id if user else None,
+    )
+
+
 def _validate_idempotency_key(key: str | None) -> str | None:
     """校验幂等键：8~128 位字母数字 _ . -；空返回 None。"""
     if not key:
@@ -911,6 +967,7 @@ async def create_demo(
     upload_code: str | None = Form(None),
     idempotency_key: str | None = Form(None),
     task: str | None = Form(None, description="挑战的题目 slug（v2 B4′，进候选待审）"),
+    propose_task: str | None = Form(None, description="提议新题 JSON：title/description/category?（身份绑定闭环 B，进候选待审）"),
     model_hint: str | None = Form(None, description="选了兜底型号时的依据（Q2，可选但鼓励）"),
     force: bool = Form(False),
     cover: UploadFile | None = File(None),
@@ -923,12 +980,13 @@ async def create_demo(
     _require_model_tag(tags)
     hint = (model_hint or "").strip()
     idem_key = _validate_idempotency_key(idempotency_key)
-    # 题面先校验：非法 task 必须在解压/传 OSS 之前失败，免得留下孤儿 demo
+    # 题面先校验：非法 task / propose_task 必须在解压/传 OSS 之前失败，免得留下孤儿 demo
     challenge = _resolve_challenge_task(db, task)
+    proposed = _parse_propose_task(propose_task)
     # 幂等：同 key 已成功创建过 → 直接返回已有结果（agent 重试去重，省去重新上传）
     existing = _existing_demo_by_key(db, idem_key)
     if existing is not None:
-        return DemoCreateResult(slug=existing.slug, status=existing.status, created=False)
+        return DemoCreateResult(id=existing.id, slug=existing.slug, status=existing.status, created=False)
 
     # force 仅管理员生效
     allow_force = bool(force) and user is not None and user.role == "admin"
@@ -987,8 +1045,9 @@ async def create_demo(
         single_file=single_file,
         challenge_task=challenge,
         model_hint=hint,
+        propose_task=proposed,
     )
-    return DemoCreateResult(slug=demo.slug, status=status, created=created)
+    return DemoCreateResult(id=demo.id, slug=demo.slug, status=status, created=created)
 
 
 @router.post("/from-url", status_code=201, response_model=DemoCreateResult)
@@ -1015,7 +1074,7 @@ async def create_demo_from_url(
     # 幂等：同 key 已创建 → 直接返回已有结果（agent 超时重试不再重复上传）
     existing = _existing_demo_by_key(db, idem_key)
     if existing is not None:
-        return DemoCreateResult(slug=existing.slug, status=existing.status, created=False)
+        return DemoCreateResult(id=existing.id, slug=existing.slug, status=existing.status, created=False)
     # 题面校验放在下载之前：拼错的 task 不该留下已建好的孤儿 demo
     challenge = _resolve_challenge_task(db, body.task)
 
@@ -1080,7 +1139,7 @@ async def create_demo_from_url(
         challenge_task=challenge,
         model_hint=hint,
     )
-    return DemoCreateResult(slug=demo.slug, status=status, created=created)
+    return DemoCreateResult(id=demo.id, slug=demo.slug, status=status, created=created)
 
 
 @router.put("/{slug}", status_code=204)

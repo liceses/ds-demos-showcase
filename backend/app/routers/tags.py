@@ -33,7 +33,7 @@ from ..schemas import (
     TagValueSuggestionOut,
 )
 from ..serializers import tag_dict
-from ..services import tag_service
+from ..services import model_service, tag_service
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 
@@ -289,11 +289,16 @@ def review_suggestion(
             tag = Tag(key=s.key, value=s.value, description=s.description, group=s.group or body.group)
             db.add(tag)
             db.flush()
-        # 可选：同时补挂到提交者 demo
+        # 可选：同时补挂到提交者 demo；model 键必须双写 demo_models（身份绑定闭环 A）
         if s.demo_id:
             demo = db.get(Demo, s.demo_id)
-            if demo and not db.query(DemoTag).filter(DemoTag.demo_id == demo.id, DemoTag.tag_id == tag.id).first():
-                db.add(DemoTag(demo_id=demo.id, tag_id=tag.id))
+            if demo:
+                if not db.query(DemoTag).filter(DemoTag.demo_id == demo.id, DemoTag.tag_id == tag.id).first():
+                    db.add(DemoTag(demo_id=demo.id, tag_id=tag.id))
+                if s.key == "model":
+                    db.flush()
+                    db.expire(demo, ["tag_associations"])
+                    model_service.sync_demo_models(db, demo)
         s.status = "approved"
     else:
         s.status = "rejected"

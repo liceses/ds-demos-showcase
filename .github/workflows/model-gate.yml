@@ -82,11 +82,10 @@ jobs:
           fi
 
       # ── 豁免裁决（仅漂移时；契约违规/模型变更永不豁免）─────────
-      - name: 豁免裁决（model-exempt: #issue，open 且 7 天内）
+      - name: "豁免裁决（model-exempt: #issue，open 且 7 天内）"
         if: steps.hash.outputs.drifted == 'true'
         env:
-          PR_BODY: "${{ github.event.pull_request.title }}
-${{ github.event.pull_request.body }}"
+          PR_BODY: "${{ github.event.pull_request.title }} ${{ github.event.pull_request.body }}"
           CHANGED: ${{ steps.changed.outputs.list }}
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -69,6 +69,13 @@ const selectedTags = computed<TagPick[]>({
   },
 })
 const selectedCount = computed(() => Object.values(selected.value).reduce((n, arr) => n + arr.length, 0))
+// 上传场景标签申请（闭环 A）：TagPicker 在 defer 模式下把新 fixed 值留本地待审（此数组为受控源），
+// 不入 selected/tags JSON；createDemo 成功拿到 demo_id 后，再逐个 suggestTagValue，然后清空。
+const pendingTagApplies = ref<TagPick[]>([])
+// 上传提议新题（闭环 B）：有 pickedTask 走 task=，有提议走 propose_task；两路互斥。
+const proposeTitle = ref('')
+const proposeDesc = ref('')
+const proposeCategory = ref('')
 // Q2：模型必填，但「不确定」有正门 —— 选了兜底位就多问一句依据（供日后归属工作台收敛）
 const FALLBACK_MODEL_RE = /(^|-)unknown$|^unspecified$/i
 /** Q2：模型必选 —— 上传页据此把「可选」措辞与校验切成必答态 */
@@ -142,6 +149,10 @@ async function resetAll() {
   modelHint.value = ''
   pack.value = []
   selected.value = {}
+  pendingTagApplies.value = []
+  proposeTitle.value = ''
+  proposeDesc.value = ''
+  proposeCategory.value = ''
   clearFile()
   clearCover()
   error.value = ''
@@ -422,13 +433,36 @@ async function submit() {
           file: zipFile.value,
           idempotency_key: idempotencyKey.value || undefined,
           upload_code: uploadCode.value.trim() || undefined,
+          // 挂题两路互斥：有 pickedTask 走 task=，否则有提议走 propose_task（闭环 B）
           task: pickedTask.value?.slug,
+          propose_task:
+            !pickedTask.value && proposeTitle.value.trim()
+              ? {
+                  title: proposeTitle.value.trim(),
+                  description: proposeDesc.value.trim() || undefined,
+                  category: proposeCategory.value.trim() || undefined,
+                }
+              : undefined,
           model_hint: modelUncertain.value ? modelHint.value.trim() || undefined : undefined,
           force: forceUpload.value || undefined,
         },
         onProgress,
       )
       success.value = created
+      // 闭环 A：createDemo 成功后再把待审新 fixed 值带 demo_id 逐个提交申请，然后清空本地待审
+      if (created.id && pendingTagApplies.value.length) {
+        await Promise.all(
+          pendingTagApplies.value.map((p) =>
+            api.suggestTagValue({
+              key: p.key,
+              value: p.value,
+              description: p.description || undefined,
+              demo_id: created.id,
+            }),
+          ),
+        )
+        pendingTagApplies.value = []
+      }
       // 成功了就别再留草稿：下次进来该是白纸，而不是"继续上次那件已发布的"
       clearDraft()
     }
@@ -615,6 +649,9 @@ async function submit() {
           v-model:tags-open="tagsOpen"
           v-model:task-query="taskQuery"
           v-model:task-picker-open="taskPickerOpen"
+          v-model:propose-title="proposeTitle"
+          v-model:propose-desc="proposeDesc"
+          v-model:propose-category="proposeCategory"
           :desc-ok="descOk"
           :prompt-ok="promptOk"
           :edit-slug="editSlug"
@@ -715,7 +752,7 @@ async function submit() {
           </span>
         </div>
 
-        <TagPicker v-model="selectedTags" />
+        <TagPicker v-model="selectedTags" :defer-apply="true" v-model:pending-apply="pendingTagApplies" />
           </div>
         </div>
       </Teleport>

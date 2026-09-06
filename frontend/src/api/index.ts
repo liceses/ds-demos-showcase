@@ -11,6 +11,7 @@ import type {
   Comment,
   CreateDemoFromUrlPayload,
   CreateDemoPayload,
+  DemoCreateResult,
   CurationResult,
   DemoDetail,
   DemoListParams,
@@ -360,7 +361,7 @@ const realApi = {
 
 
 
-  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string; created: boolean }> {
+  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<DemoCreateResult> {
     const form = new FormData()
     form.append('title', payload.title)
     if (payload.description) form.append('description', payload.description)
@@ -373,6 +374,7 @@ const realApi = {
     if (payload.file) form.append('file', payload.file)
     if (payload.idempotency_key) form.append('idempotency_key', payload.idempotency_key)
     if (payload.task) form.append('task', payload.task)
+    if (payload.propose_task) form.append('propose_task', JSON.stringify(payload.propose_task))
     if (payload.model_hint) form.append('model_hint', payload.model_hint)
     if (payload.upload_code) form.append('upload_code', payload.upload_code)
     if (payload.force) form.append('force', 'true')
@@ -387,7 +389,7 @@ const realApi = {
     })
     return data
   },
-  async createDemoFromUrl(payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
+  async createDemoFromUrl(payload: CreateDemoFromUrlPayload): Promise<DemoCreateResult> {
     const { data } = await http.post('/demos/from-url', payload, { timeout: 120000 })
     return data
   },

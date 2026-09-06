@@ -682,6 +682,12 @@ export interface DemoListParams {
   page_size?: number
 }
 
+export interface ProposeTask {
+  title: string
+  description?: string | null
+  category?: string | null
+}
+
 export interface CreateDemoPayload {
   title: string
   description?: string
@@ -698,6 +704,8 @@ export interface CreateDemoPayload {
   upload_code?: string
   /** v2 B4′：挑战的题目 slug —— 只生成挂题候选，待管理员确认 */
   task?: string
+  /** 身份绑定闭环 B：提议新题（标题/题面/可选分类）。有 task 时走 task，有提议走 propose_task。 */
+  propose_task?: ProposeTask
   /** Q2：选了兜底型号（未标注 / 未定型号 / 灰测）时的依据留痕 */
   model_hint?: string
   /** 管理员强制上传（跳过 zip 去重 409） */

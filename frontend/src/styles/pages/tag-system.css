@@ -18,6 +18,22 @@
   background: var(--ink);
   color: var(--paper);
 }
+/* 上传场景身份绑定闭环 A：新 fixed 值只留本地待审（虚线描边，未上榜），点击即移除 */
+.tag-chip.mode-pending {
+  background: transparent;
+  border: 2px dashed var(--ink);
+  color: var(--ink);
+  opacity: 0.85;
+}
+.tag-pending-new {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid currentColor;
+}
 .mode-badge {
   display: inline-flex;
   align-items: center;

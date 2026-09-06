@@ -11,6 +11,7 @@ import type {
   Comment,
   CreateDemoFromUrlPayload,
   CreateDemoPayload,
+  DemoCreateResult,
   CurationResult,
   DemoDetail,
   DemoListParams,
@@ -577,6 +578,8 @@ const mockTasks: TaskSummary[] = [
   { id: 1, slug: 'mc-web', title: '我的世界网页版', description: '用网页技术复刻我的世界核心玩法', category: '游戏', status: 'active', demo_count: 3, created_at: '2026-08-05T00:00:00Z' },
 ]
 let mockTaskSeq = 2
+// 身份绑定闭环 A：createDemo 成功后才带 demo_id suggestTagValue，需要一个稳定 demo id
+let mockDemoIdSeq = 1
 
 // v2 B4′：mock 收件箱（带 task 的上传会真的入队，能完整演一遍批准流程）
 const mockSuggestions: SuggestionItem[] = []
@@ -1543,13 +1546,14 @@ export const mockApi = {
     if (i >= 0) recognition.splice(i, 1)
   },
 
-  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<{ slug: string; status: string }> {
+  async createDemo(payload: CreateDemoPayload, onProgress?: (percent: number) => void): Promise<DemoCreateResult> {
     await delay(500)
     onProgress?.(50)
     await delay(500)
     onProgress?.(100)
     if (!currentUser) throw new Error('请先登录')
     if (payload.demo_type !== 'link' && !payload.file) throw new Error('请上传 zip 文件')
+    const id = mockDemoIdSeq++
     const slug = 'demo_' + Math.random().toString(16).slice(2, 10)
     const demo: DemoDetail = {
       slug,
@@ -1585,7 +1589,23 @@ export const mockApi = {
         created_at: new Date().toISOString(),
       })
     }
-    return { slug: demo.slug, status: demo.status as string }
+    // 身份绑定闭环 B：带 propose_task 的上传只落 new_task 候选，不建 Task（对应 test_propose_task_queues_new_task_without_creating_task）
+    if (payload.propose_task) {
+      mockSuggestions.unshift({
+        id: mockSuggestionSeq++,
+        kind: 'new_task',
+        payload: {
+          title: payload.propose_task.title,
+          description: payload.propose_task.description || '',
+          category: payload.propose_task.category || null,
+        },
+        confidence: 0.98,
+        source: 'user',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      })
+    }
+    return { id, slug: demo.slug, status: demo.status as string, created: true }
   },
 
   async listSuggestions(params: { status?: string; kind?: string } = {}): Promise<SuggestionList> {
@@ -2210,10 +2230,11 @@ export const mockApi = {
 
 
 
-  async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<{ slug: string; status: string; created: boolean }> {
+  async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<DemoCreateResult> {
     await delay(400)
+    const id = mockDemoIdSeq++
     const slug = 'url-' + Math.random().toString(16).slice(2, 10)
-    return { slug, status: 'pending', created: true }
+    return { id, slug, status: 'pending', created: true }
   },
   async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {
     await delay(400)

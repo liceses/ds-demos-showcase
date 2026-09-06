@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useTagsStore } from '../stores/tags'
+import { t } from '../i18n'
 import TagTip from './TagTip.vue'
 import type { TagKeyInfo, TagKeyValue } from '../api/types'
 import { tagLabel } from '../utils/funMode'
@@ -12,8 +13,14 @@ export interface TagPick {
   description?: string
 }
 
-const props = withDefaults(defineProps<{ modelValue: TagPick[]; allowApply?: boolean }>(), { allowApply: true })
+const props = withDefaults(
+  defineProps<{ modelValue: TagPick[]; allowApply?: boolean; deferApply?: boolean }>(),
+  { allowApply: true, deferApply: false },
+)
 const emit = defineEmits<{ 'update:modelValue': [TagPick[]] }>()
+// 上传场景（deferApply=true）：新 fixed 值只留本地待审，不立刻 POST、不入 tags 数组；
+// createDemo 成功后由父级带 demo_id 一次性 suggestTagValue。默认（false）保持立即可申请。
+const pendingApply = defineModel<TagPick[]>('pendingApply', { default: () => [] })
 
 const tagsStore = useTagsStore()
 const tagKeys = computed(() => tagsStore.keys)
@@ -173,24 +180,39 @@ function toggleSuggestPanel(key: string) {
   suggestError.value = ''
 }
 async function submitSuggestion() {
-  if (!activeTagKey.value) return
+  const ak = activeTagKey.value
+  if (!ak) return
   suggestMsg.value = ''
   suggestError.value = ''
   if (!suggest.value.value.trim()) {
-    suggestError.value = '请填写新值'
+    suggestError.value = t('tagPicker.needValue', '请填写新值')
+    return
+  }
+  const val = suggest.value.value.trim()
+  const desc = suggest.value.description.trim() || undefined
+  // 上传场景：不立刻 POST，也不塞进 tags 数组 —— 只留本地待审；createDemo 成功后再带 demo_id 申请。
+  if (props.deferApply) {
+    if (pendingApply.value.some((p) => p.key === ak.key && p.value === val)) {
+      suggestError.value = t('tagPicker.alreadyPending', '该值已在待审列表中')
+      return
+    }
+    pendingApply.value = [...pendingApply.value, { key: ak.key, value: val, description: desc }]
+    suggestMsg.value = t('tagPicker.pendingNote', '已加入待审，发布成功后一并提交审核')
+    suggest.value = { value: '', description: '' }
     return
   }
   try {
-    await api.suggestTagValue({
-      key: activeTagKey.value.key,
-      value: suggest.value.value.trim(),
-      description: suggest.value.description.trim() || undefined,
-    })
-    suggestMsg.value = '已提交，等待管理员审核'
+    await api.suggestTagValue({ key: ak.key, value: val, description: desc })
+    suggestMsg.value = t('tagPicker.submitted', '已提交，等待管理员审核')
     suggest.value = { value: '', description: '' }
   } catch (e) {
     suggestError.value = (e as Error).message
   }
+}
+
+const pendingOfKey = computed(() => pendingApply.value.filter((p) => p.key === activeKey.value))
+function removePending(key: string, value: string) {
+  pendingApply.value = pendingApply.value.filter((p) => !(p.key === key && p.value === value))
 }
 
 onMounted(async () => {
@@ -285,6 +307,19 @@ onMounted(async () => {
                   <span v-if="suggestError" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestError }}</span>
                   <span v-if="suggestMsg" class="notice notice-success" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestMsg }}</span>
                 </div>
+              </div>
+
+              <!-- 上传场景待审新值：只留本地待审 chips，不入 tags 数组，不上公共词表 -->
+              <div v-if="props.deferApply" class="tag-pending-new">
+                <span v-if="pendingOfKey.length" class="filter-label">{{ t('tagPicker.pendingLabel', '待审新值') }}</span>
+                <span
+                  v-for="p in pendingOfKey"
+                  :key="p.value"
+                  class="tag-chip mode-pending"
+                  role="button"
+                  :title="p.description || p.value"
+                  @click="removePending(activeTagKey.key, p.value)"
+                >{{ tagLabel(p.value) }}<span class="chip-x">X</span></span>
               </div>
             </template>
 

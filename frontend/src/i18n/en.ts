@@ -690,6 +690,15 @@ export const en = {
     publish: 'Publish',
   },
 
+  // 上传场景标签申请（身份绑定闭环 A）：新 fixed 值只留本地待审 chips
+  tagPicker: {
+    needValue: 'Enter a new value',
+    alreadyPending: 'That value is already in the pending list',
+    pendingNote: 'Added to pending review — submitted for review once published',
+    submitted: 'Submitted, awaiting admin review',
+    pendingLabel: 'Pending new value',
+  },
+
   upload: {
     editEyebrow: 'Edit demo',
     edit: 'Edit',
@@ -876,6 +885,15 @@ export const en = {
     taskSearchPh: 'Type a task keyword (2+ chars)…',
     taskNoHit: 'No matching task. You can skip attaching; to propose a task see “task candidates” on the tasks page.',
     taskGo: 'Tasks page ↗',
+    taskPropose: 'No such task? Propose a new one',
+    taskProposeTitle: 'Propose a new task',
+    taskProposeName: 'Title (required)',
+    taskProposeNamePh: 'Name this task',
+    taskProposeBody: 'Requirements / brief',
+    taskProposeBodyPh: 'Make it precise so an admin can review it',
+    taskProposeCat: 'Category (optional)',
+    taskProposeCatPh: 'e.g. Game / Tool / Algorithm',
+    taskProposeNote: 'Proposal ≠ published: a new task enters a candidate queue and only joins the same-prompt comparison after an admin approves it.',
     asTask: 'Attaching is a request: it shows up in the comparison only after an admin approves.',
     needMust: 'Required items still missing',
     draftFound: 'You left an unfinished draft here',

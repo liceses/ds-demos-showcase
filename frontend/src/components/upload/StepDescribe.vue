@@ -19,8 +19,14 @@ const forceUpload = defineModel<boolean>('forceUpload', { default: false })
 const tagsOpen = defineModel<boolean>('tagsOpen', { default: false })
 const taskQuery = defineModel<string>('taskQuery', { default: '' })
 const taskPickerOpen = defineModel<boolean>('taskPickerOpen', { default: false })
+// 身份绑定闭环 B：上传时可提议新题（标题/题面/可选分类）。有 pickedTask 走 task=，有提议走 propose_task。
+const proposeTitle = defineModel<string>('proposeTitle', { default: '' })
+const proposeDesc = defineModel<string>('proposeDesc', { default: '' })
+const proposeCategory = defineModel<string>('proposeCategory', { default: '' })
 // 高级区展开态：纯面板本地视觉态（原 wizard 内 ref 初始 false，行为一致）
 const showAdvanced = ref(false)
+// 提议新题表单折叠态
+const proposeOpen = ref(false)
 
 defineProps<{
   descOk: boolean
@@ -133,6 +139,32 @@ function onTaskEntityPick(p: EntityPick) {
         <button v-if="!taskPickerOpen" type="button" class="btn btn-sm btn-outline" @click="emit('openTaskPicker')">
           {{ taskHits.length ? t('upload.taskFindMore', '都不是，我自己找…') : t('upload.taskFind', '选一道已有题目 →') }}
         </button>
+
+        <!-- 身份绑定闭环 B：挂已有题之外的岔路口 —— 不存在就提议新题（只进候选，批准后才上榜） -->
+        <div class="uw-propose">
+          <button v-if="!proposeOpen" type="button" class="btn btn-sm btn-outline" @click="proposeOpen = true">
+            {{ t('upload.taskPropose', '没有这道题？提议新题') }}
+          </button>
+          <div v-else class="form-stack uw-propose-form">
+            <div class="filter-row" style="margin: 0 0 6px">
+              <b>{{ t('upload.taskProposeTitle', '提议新题') }}</b>
+              <button type="button" class="btn btn-sm btn-dark" @click="proposeOpen = false">✕ {{ t('common.collapse', '收起') }}</button>
+            </div>
+            <label class="field">
+              {{ t('upload.taskProposeName', '题名 / 标题（必填）') }}
+              <input v-model="proposeTitle" class="input" maxlength="200" :placeholder="t('upload.taskProposeNamePh', '给这道题起个名字')" />
+            </label>
+            <label class="field">
+              {{ t('upload.taskProposeBody', '题面 / 描述') }}
+              <textarea v-model="proposeDesc" class="input textarea" rows="3" maxlength="2000" :placeholder="t('upload.taskProposeBodyPh', '把题目要求写清楚，便于管理员审核')"></textarea>
+            </label>
+            <label class="field">
+              {{ t('upload.taskProposeCat', '分类（可选）') }}
+              <input v-model="proposeCategory" class="input" maxlength="40" :placeholder="t('upload.taskProposeCatPh', '如 游戏 / 工具 / 算法')" />
+            </label>
+            <p class="hint" style="margin: 0">{{ t('upload.taskProposeNote', '提议 ≠ 上榜：新题先进候选，管理员批准后才会进同题对比。') }}</p>
+          </div>
+        </div>
       </template>
 
       <!-- T5·M5-F2：搜索挂题 = TaskPicker（公开题目库：标题/分类搜索，chips 建议保留在上方） -->

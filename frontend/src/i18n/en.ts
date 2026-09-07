@@ -705,6 +705,8 @@ export const en = {
     new: 'Upload',
     editSub: 'Update info or re-upload files; changes are recorded to the timeline and generate an update announcement.',
     newSub: 'Three steps: what it is → which model made it → say it clearly. Anonymous publishing as “public” is allowed.',
+    aiHint: 'Not sure if the HTML is self-contained, or how to zip a runnable package? Hand the files to an AI and let it check “self-contained / zip runs / cover can be a screenshot” then upload for you.',
+    aiHintLink: 'AI auto-upload guide →',
     errDenied: 'You are not allowed to edit this demo',
     errTitle: 'Title is required',
     errLink: 'Link type requires an http(s) URL',

@@ -486,6 +486,10 @@ async function submit() {
         ? t('upload.editSub', '改信息或重新上传文件；改动会写入时间线并生成更新公告。')
         : t('upload.newSub', '三步：先说清是什么、再说哪个模型做的、最后把它讲明白。未登录也能以公开用户身份发布。') }}
     </p>
+    <p v-if="!editSlug" class="notice notice-info upload-ai-hint">
+      {{ t('upload.aiHint', '不会打包、不确定 HTML 能不能单独打开？把文件丢给 AI，让它按指南检查「自包含 / zip 能跑 / 封面可截图」再代传。') }}
+      <a href="/api/v1/meta/agent-guide" target="_blank" rel="noopener">{{ t('upload.aiHintLink', 'AI 自动上传指南 →') }}</a>
+    </p>
   </section>
 
   <section class="section" style="padding-top: 8px">

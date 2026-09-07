@@ -1,3 +1,17 @@
+/* 上传页：可用 AI 代传（硬边 notice，链走文字链） */
+.upload-ai-hint {
+  max-width: 52rem;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+.upload-ai-hint a {
+  display: inline-block;
+  margin-left: 8px;
+  font-weight: 800;
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
 /* ---------- v2 B4′：上传页挑战卡片 + 治理收件箱 ---------- */
 .challenge-card { padding: 14px 18px; border-left: 6px solid var(--ink); }
 .challenge-prompt {

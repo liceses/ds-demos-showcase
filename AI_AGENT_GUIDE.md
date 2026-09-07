@@ -25,9 +25,10 @@ GET https://deepdemos.top/api/v1/meta/agent-guide
 这个接口返回本文件全文，agent 抓取后按指南执行即可（下面第二节的 prompt 已内置该步骤）。
 
 **你需要提供给 agent 的信息：**
-1. zip 文件的本地路径（或公网可下载 URL）
+1. 作品文件：单个自包含 HTML，或能直接打开的 zip（根目录含 `index.html`），或公网可下载 URL
 2. 站点地址：`https://deepdemos.top`
 3. 可选：`upload_code`（想要免审核时给）
+4. 封面可选——没有现成图就让 agent **截一张运行画面**（png/jpeg/webp）
 
 ---
 
@@ -55,10 +56,18 @@ GET {BASE_URL}/api/v1/meta/agent-guide
 
 ## 上传前必须做的工作（按顺序）
 
-1. **了解作品**
+1. **了解作品，并做可运行性检查（通不过不许上传）**
    - 如果是本地 zip：先列出压缩包内容、阅读 index.html / README / package.json /
      项目说明等，弄清：作品名、玩法或用途、技术栈、亮点、是否有外部链接
    - 如果是 URL：先访问确认内容
+   - **单 HTML 必须自包含**：CSS/JS 全部内联（或 data URI）；禁止依赖 `http://localhost`、
+     相对路径外的本地文件、未声明的外链、需要 `npm install` / `npm run build` 才能打开。
+     用浏览器或无头打开该文件，**画面出来才算过**。用户往往不会判断「自包含」——这是你的职责。
+   - **zip 必须能跑**：web 类型根目录必须有 `index.html`，资源路径相对 zip 根；
+     解压后本地静态打开（或 `python -m http.server`）不能白屏、不能缺 js/css/图。
+     源码工程 / `node_modules` / 半成品 **先打成可运行包再传**，不要丢给审核。
+   - **封面可以直接截图**：没有现成封面就对运行画面截一张 png/jpeg/webp 上传
+     （`cover` / `cover_url`）。不要因为没封面卡住整次发布。
 
 2. **拉取标签键定义，绝不乱造 key**
    ```
@@ -82,15 +91,18 @@ GET {BASE_URL}/api/v1/meta/agent-guide
    走兜底时请同时给 `model_hint`（如 `"prompt 标注为灰测版，未公开型号"`），站方后续可据此批量归位。
 
 3. **判断 demo_type**
-   - zip 里有 index.html → `web`（网页应用，可在线预览）
-   - zip 里没有 index.html（源码/素材/项目文件包）→ `zip`（只提供下载）
+   - 单个自包含 `.html` / `.svg` → `web`（multipart 的 `file`，或 from-url 的 `file_url`）
+   - zip 里有能跑的 index.html → `web`（网页应用，可在线预览）
+   - zip 里没有 index.html（源码/素材/项目文件包，只给下载）→ `zip`
    - 作品本身就是外部网址 → `link`（必须同时给 external_url，不传 zip）
+   - **打不开的 HTML / 打不开的 zip 两种都不要选 web 硬传**——先修好再上传
 
 4. **撰写发布信息（必须完成，不许留空）**
    - title：简短准确，≤60 字
    - description：2~4 句中文，说明「是什么 + 怎么玩/用 + 亮点」
    - prompt：如果作品是 AI 生成的，第一轮提示词（若有）填入；没有就不填
    - video_url：有演示视频链接可填；没有就不填
+   - cover / cover_url：有图就用；没有就截运行画面，不要留空干等
    - 匿名上传作者固定为 public，无需也不能指定昵称
    - **幂等键（必做）**：为本次上传生成唯一 `idempotency_key`（如 `game-watch-20240819-001`，8~128 位字母数字 `_ . -`）；
      如果请求超时/失败需要重试，**必须使用同一个 key**——后端会返回第一次的结果（`created:false`），绝不重复创建
@@ -106,7 +118,8 @@ GET {BASE_URL}/api/v1/meta/agent-guide
        "description": "2~4 句中文简介",
        "demo_type": "web",
        "zip_url": "https://公网可下载的zip地址",
-       "cover_url": "https://公网可下载的封面图(可选)",
+       "file_url": "https://公网可下载的单文件.html(与 zip_url 二选一)",
+       "cover_url": "https://公网可下载的封面图(可截运行画面)",
        "prompt": "第一轮提示词(可选)",
        "upload_code": "免审核密钥(有就给)",
        "idempotency_key": "本次上传的唯一幂等键",
@@ -115,7 +128,8 @@ GET {BASE_URL}/api/v1/meta/agent-guide
        "tags": ["model:DeepSeek-V4", {"key":"game","value":"mc","description":"我的世界"}]
      }'
    ```
-   > 注意：web/zip 必须给 `zip_url`；link 必须给 `external_url` 且不要给 zip_url。
+   > 注意：web 给 `zip_url` **或** 单文件 `file_url`（自包含 HTML/SVG）；zip 类型给 `zip_url`；
+   > link 必须给 `external_url` 且不要给 zip_url/file_url。封面没有现成图就截运行画面上传。
 
    方式 B：zip 在本地（multipart 直传）
    ```bash
@@ -128,8 +142,8 @@ GET {BASE_URL}/api/v1/meta/agent-guide
      -F "task=要挑战的题目slug(可选)" \
      -F 'tags=["model:DeepSeek-V4", {"key":"game","value":"mc"}]' \
      -F "prompt=第一轮提示词(可选)" \
-     -F "file=@本地zip路径.zip" \
-     -F "cover=@本地封面.png(可选)"
+     -F "file=@本地zip或自包含.html" \
+     -F "cover=@运行画面截图.png(推荐，没有现成封面就截)"
    ```
 
 6. **校验结果**
@@ -145,8 +159,10 @@ GET {BASE_URL}/api/v1/meta/agent-guide
 - [ ] title / description 都写了，且是中文、通顺、准确
 - [ ] **至少 1 个 `model:` 标签**；不确定则用兜底值（`unspecified` / `<厂商>-unknown` / `ds-unknown`）**并写 `model_hint`**，绝不编造型号
 - [ ] tags 全部来自 /tags/tag-keys 的真实 key；fixed 值在候选中；int 值是整数
-- [ ] demo_type 与 zip 内容一致（有 index.html 才用 web）
-- [ ] link 类型一定给了 external_url；web/zip 一定给了 zip 文件
+- [ ] **可运行**：单 HTML 已确认自包含且能打开；web zip 根目录有 index.html 且本地打开不白屏
+- [ ] demo_type 与内容一致（有能跑的 index.html / 自包含 HTML 才用 web）
+- [ ] link 类型一定给了 external_url；web/zip 一定给了 zip 或自包含单文件
+- [ ] 封面：有现成图，或已从运行画面截图（png/jpeg/webp）
 - [ ] 生成了唯一 idempotency_key，且重试时复用同一个 key
 - [ ] 没有编造不存在的标签键、没有编造作品信息
 - [ ] 上传后已用 GET /demos/{slug} 校验状态并告知结果

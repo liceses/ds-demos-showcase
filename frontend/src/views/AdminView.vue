@@ -63,24 +63,14 @@ interface AdminTab {
   q?: QueueKey
 }
 
-// M3-1 侧栏重排（06 §A3.1/A4 映射表）：7 组→4 组（总览/知识中心/运营/站点），18 面板零改动搬家——
-//   知识中心=实体生命周期域（候选收编 inbox/clusters/merge/aliases/tags/tagreq）；
-//   运营=队列+内容+社区治理（review/refine/inspection/attribution/demos/forum/users）；
-//   站点=audit/settings/sponsors/announcements（公告自「内容」迁入）；
-//   归属工作台按 A4#7 队列面留运营（跃迁操作面 P4 进 Model 详情）；
-//   实体总表（M3-2 新面板）落知识中心组首位，面板总数 18→19。
+// 知识中心收口：侧栏只留「知识」一项（看→选→改→存工作台）。
+// 旧 tab（inbox/clusters/merge/aliases/tags/tagreq）深链仍解析、不占导航。
 const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
   { label: '总览', tabs: [{ key: 'console', label: '概览台' }] },
   {
     label: '知识中心',
     tabs: [
-      { key: 'entities', label: '实体总表' },
-      { key: 'inbox', label: '知识候选', q: 'inbox' },
-      { key: 'clusters', label: '题目候选', q: 'clusters' },
-      { key: 'merge', label: '合并向导' },
-      { key: 'aliases', label: '别名中心' },
-      { key: 'tags', label: '标签词表', q: 'wordlist' },
-      { key: 'tagreq', label: '固定值申请', q: 'tagreq' },
+      { key: 'entities', label: t('admin.nav.knowledge', '知识') },
     ],
   },
   {

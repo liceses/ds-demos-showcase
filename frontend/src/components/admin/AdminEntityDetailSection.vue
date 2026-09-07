@@ -32,8 +32,10 @@ const props = defineProps<{
   id: string
   /** Tag 值实体所属键（type=tag 时必带） */
   tagKey?: string
+  /** 主从工作台嵌入：不显示「返回总表」，名单常驻左侧 */
+  embedded?: boolean
 }>()
-const emit = defineEmits<{ back: [] }>()
+const emit = defineEmits<{ back: []; saved: [] }>()
 
 const ui = useUiStore()
 const router = useRouter()
@@ -155,6 +157,7 @@ async function saveEdit() {
         description: editForm.value.description || '',
       })
       ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
+      emit('saved')
     } else if (props.type === 'task' && task.value) {
       await api.updateTask(task.value.slug, {
         title: editForm.value.title?.trim(),
@@ -162,6 +165,7 @@ async function saveEdit() {
         category: editForm.value.category || null,
       })
       ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
+      emit('saved')
     }
     editing.value = false
     await load()
@@ -418,6 +422,7 @@ async function saveTagDesc() {
     await api.patchEntity('tag', tagId, { description: tagDescDraft.value })
     ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
     tagDescEditing.value = false
+    emit('saved')
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -438,8 +443,8 @@ onMounted(load)
 <template>
   <div>
     <div class="filter-row" style="margin-bottom: 12px">
-      <button class="btn btn-sm btn-outline" type="button" @click="emit('back')">← {{ t('admin.kc.backToList', '返回实体总表') }}</button>
-      <span class="filter-label">{{ t('admin.kc.detailHint', '实体详情 v0（06 §A3.2 统一模板五区）·直改权诚实落地：有端点即真保存，无端点置灰待后端。') }}</span>
+      <button v-if="!embedded" class="btn btn-sm btn-outline" type="button" @click="emit('back')">← {{ t('admin.kc.backToList', '返回实体总表') }}</button>
+      <span class="filter-label">{{ t('admin.kc.detailHint', '看→选→改→存：内容字段点保存即审计；合并/slug/状态走身份闸。') }}</span>
     </div>
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <LoadingRow v-if="loading" :text="t('admin.kc.loading', '加载实体详情…')" />

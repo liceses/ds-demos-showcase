@@ -1142,6 +1142,9 @@ export const en = {
   },
   admin: {
     navSearch: 'Search panels…',
+    nav: {
+      knowledge: 'Knowledge',
+    },
     ann: {
       topic: 'Linked topic',
       pickTopic: '+ Link a forum topic',
@@ -1310,7 +1313,9 @@ export const en = {
     },
     // M3-2/M3-3 实体总表+实体详情（06 §A3）——M3-2 漏账的 entities 键随本 commit 补齐
     entities: {
-      hint: 'Unified entry for Model / Task / Tag — find it first, then govern it.',
+      hint: 'Look → pick → edit → save. Content fields save here; identity moves (merge / slug / status) stay gated.',
+      pickHint: 'Pick a row to inspect. Leave unsaved edits with a confirm.',
+      emptyPick: 'Pick a Model / Task / Tag on the left.',
       facetModel: 'Models',
       facetTask: 'Tasks',
       facetTag: 'Tag values',

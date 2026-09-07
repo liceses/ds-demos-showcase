@@ -4,7 +4,7 @@
 // 行点击→实体详情（?tab=entities&type=<model|task|tag>&id=<ident>[&key=<key>]，详情模板 AdminEntityDetailSection）。
 // 搜索：模型/题目走服务端 q（既有参数），标签值客户端过滤；状态筛选取自 status_counts（服务端真值）。
 defineOptions({ name: 'AdminEntitiesSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
@@ -173,6 +173,10 @@ function setFacet(f: Facet) {
   q.value = ''
   status.value = ''
   void load()
+  // 换类型时清掉旧选中，避免右栏还停在另一种实体
+  if (detail.value && detail.value.type !== f) {
+    void router.replace({ query: { tab: 'entities' } })
+  }
 }
 
 function openDetail(row: Row) {
@@ -186,19 +190,31 @@ function backToList() {
   void router.replace({ query: { tab: 'entities' } })
 }
 
+function isSelected(row: Row) {
+  return !!detail.value && detail.value.type === row.type && detail.value.id === row.idParam
+}
+
 onMounted(() => {
-  // 带详情深链进入时不必先拉列表（详情自取数）；返回列表时再加载
-  if (!detail.value) void load()
+  if (detail.value) facet.value = detail.value.type
+  void load()
 })
+
+watch(
+  () => detail.value?.type,
+  (ty) => {
+    if (ty && ty !== facet.value) {
+      facet.value = ty
+      void load()
+    }
+  },
+)
 </script>
 
 <template>
-  <div>
-    <!-- 详情模式：整体让位给实体详情模板（返回按钮在详情内） -->
-    <AdminEntityDetailSection v-if="detail" :type="detail.type" :id="detail.id" :tag-key="detail.key" @back="backToList" />
-    <template v-else>
+  <div class="kc-bench">
+    <div class="kc-bench-list">
       <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
-        <span class="filter-label">{{ t('admin.entities.hint', 'Model / Task / Tag 三类实体的统一入口——先找得到，再谈治理。') }}</span>
+        <span class="filter-label">{{ t('admin.entities.hint', '看→选→改→存。内容字段在右栏保存；合并/slug/状态走身份闸。') }}</span>
         <button
           v-for="f in ([['model', 'admin.entities.facetModel', '模型'], ['task', 'admin.entities.facetTask', '题目'], ['tag', 'admin.entities.facetTag', '标签值']] as const)"
           :key="f[0]"
@@ -228,35 +244,84 @@ onMounted(() => {
         <table class="ent-table">
           <thead>
             <tr>
-              <th>{{ t('admin.entities.colEntity', '实体') }}</th>
               <th>{{ t('admin.entities.colName', '名称') }}</th>
               <th>{{ t('admin.entities.colStatus', '状态') }}</th>
               <th>{{ t('admin.entities.colDemos', '关联作品数') }}</th>
-              <th>{{ t('admin.entities.colUpdated', '创建时间') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in rows" :key="r.type + ':' + r.ident" class="ent-row" @click="openDetail(r)">
-              <td><span class="cluster-badge cb-exact">{{ t(`admin.entities.facet${r.type[0].toUpperCase() + r.type.slice(1)}`, r.type === 'model' ? '模型' : r.type === 'task' ? '题目' : '标签值') }}</span></td>
+            <tr
+              v-for="r in rows"
+              :key="r.type + ':' + r.ident"
+              class="ent-row"
+              :class="{ selected: isSelected(r) }"
+              @click="openDetail(r)"
+            >
               <td>
                 <b>{{ r.name }}</b>
                 <span class="muted mono ent-sub">{{ r.sub }}</span>
               </td>
               <td>
                 <span v-if="r.status" class="cluster-badge" :class="{ 'cb-exact': r.status === 'active', 'cb-fuzzy': r.status === 'deprecated' || r.status === 'merged' || r.status === 'hidden' }">{{ statusLabel(r.status) }}</span>
-                <span v-else class="muted" :title="t('admin.entities.noStatusTip', 'Tag 现库无状态字段——状态机待后端（协作项）')">—</span>
+                <span v-else class="muted">—</span>
               </td>
               <td class="mono">{{ r.demoCount ?? '—' }}</td>
-              <td class="mono muted">{{ r.updatedAt ? r.updatedAt.slice(0, 10) : '—' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </template>
+    </div>
+
+    <div class="kc-bench-pane">
+      <AdminEntityDetailSection
+        v-if="detail"
+        :key="detail.type + ':' + detail.id"
+        embedded
+        :type="detail.type"
+        :id="detail.id"
+        :tag-key="detail.key"
+        @back="backToList"
+        @saved="load"
+      />
+      <EmptyBox v-else :text="t('admin.entities.emptyPick', '在左侧点一行，右侧改内容后保存。')" />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.kc-bench {
+  display: grid;
+  grid-template-columns: minmax(240px, 34%) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.kc-bench-list,
+.kc-bench-pane {
+  min-width: 0;
+}
+.kc-bench-pane {
+  border: var(--border-w, 4px) solid var(--ink, #000);
+  background: var(--paper, #fff);
+  padding: 12px;
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+}
+.kc-bench-list .table-wrap {
+  max-height: calc(100vh - 280px);
+  overflow: auto;
+}
+@media (max-width: 900px) {
+  .kc-bench {
+    grid-template-columns: 1fr;
+  }
+  .kc-bench-pane,
+  .kc-bench-list .table-wrap {
+    max-height: none;
+  }
+}
+.ent-row.selected td {
+  background: var(--yellow, #ffd93d);
+}
 /* ---- M3-2 实体总表（admin scoped 纪律：styles/ 零新增块）---- */
 .ent-table {
   width: 100%;

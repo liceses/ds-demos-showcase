@@ -1,6 +1,11 @@
 /* ---------- iframe 预览 ---------- */
+.preview-shell {
+  width: 100%;
+  min-width: 0;
+}
 .preview-frame {
   width: 100%;
+  max-width: 100%;
   height: 62vh;
   min-height: 420px;
   border: var(--border-w) solid var(--ink);

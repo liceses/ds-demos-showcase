@@ -1024,10 +1024,13 @@ onMounted(load)
   grid-column: 1;
   grid-row: 1;
   min-width: 0;
+  width: 100%;
 }
 /* 顺带收敛（05 §3.1）：窄主列下 68vh 偏高——预览不超过首屏视口（topbar 78 + 余量），
    释放点可预期；≤1024 全局 62vh 更小，此上限只在桌面大列生效 */
 .dv-stage {
   max-height: calc(100vh - 96px);
+  width: 100%;
+  min-width: 0;
 }
 </style>

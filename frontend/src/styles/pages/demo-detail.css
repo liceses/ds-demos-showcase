@@ -307,9 +307,23 @@
   max-height: 40vh;
 }
 @media (max-width: 1024px) {
-  /* 窄屏：侧栏槽退回文档流（flex 纵排 + order 语义），栅格成员全部归位 */
-  .dv-shell { display: flex; flex-direction: column; }
+  /* 窄屏：侧栏槽退回文档流（flex 纵排 + order 语义），栅格成员全部归位。
+     必须 stretch：基类 .dv-shell 的 align-items:start 在 column flex 上会变成
+     横向收缩——iframe 默认固有宽 300px，平板竖屏（宽但未到 1:1）会剩一条细预览。 */
+  .dv-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
   .dv-shell > * { grid-column: auto; grid-row: auto; }
+  .dv-row-preview,
+  .dv-stage,
+  .preview-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    align-self: stretch;
+  }
   /* 窄屏收起后仍要能恢复（藏掉入口＝自造的死角），轨改成横向按钮 */
   .dv-rail {
     position: static;
@@ -330,8 +344,13 @@
     box-shadow: var(--shadow-black, 4px 4px 0 var(--ink));
   }
   /* 窄屏：预览先走 sticky 反而挡住正文，退回普通流 */
-  .dv-stage { position: static; }
-  .dv-stage iframe { max-height: 62vh; }
+  .dv-stage { position: static; width: 100%; }
+  .dv-stage iframe {
+    width: 100%;
+    max-width: 100%;
+    max-height: 62vh;
+    box-sizing: border-box;
+  }
   /* 手机上"这是什么"比"立刻玩"更重要：标题/信息卡先于预览（order -1 既有语义） */
   .dv-rail,
   .dv-facts { order: -1; }

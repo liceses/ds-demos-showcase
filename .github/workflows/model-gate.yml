@@ -110,6 +110,17 @@ jobs:
             /tmp/pim.generated.json \
             docs/model/modules/*.json
 
+      # ── ②b 函数级存在性校验（分层门禁：现场提取 + 引用完整性，不比对 hash）──
+      - name: ②b 函数级存在性校验
+        if: steps.changed.outputs.biz_changed == 'true' || steps.changed.outputs.model_changed == 'true'
+        run: |
+          python tooling/extract.py --depth function --dst /tmp/fn-be.json backend/app
+          node tooling/extract-ts.mjs --src frontend/src --dst /tmp/fn-fe.json --depth function
+          python tooling/merge.py --py-fragment /tmp/fn-be.json --fn-fe-json /tmp/fn-fe.json \
+            --out /tmp/pim.generated.json --fn-out /tmp/pim.functions.json
+          python tooling/validate.py --schema docs/model/contract.schema.json \
+            /tmp/pim.generated.json --functions /tmp/pim.functions.json
+
       # ── ③ 渲染冒烟 ──────────────────────────────────────────────
       - name: ③ 渲染冒烟
         if: steps.changed.outputs.biz_changed == 'true' || steps.changed.outputs.model_changed == 'true'

@@ -66,11 +66,170 @@ def resolve_relative(level, module, self_dotted):
     return ".".join(base)
 
 
+# ── 函数级提取（--depth function）──────────────────────────────────────────
+# 输出 pim-functions 类型图：节点 = 函数（parent 指向骨架模块 id），
+# 边 = call（函数调用）。独立文件、gitignore、不参与 hash 门禁（分层门禁设计）。
+
+
+def signature_of(node):
+    """函数签名文本：name(args) -> ret。"""
+    args = node.args
+    parts = []
+    pos = list(args.posonlyargs) + list(args.args)
+    defaults = [None] * (len(pos) - len(args.defaults)) + list(args.defaults)
+    for a, d in zip(pos, defaults):
+        s = a.arg
+        if a.annotation:
+            try:
+                s += f": {ast.unparse(a.annotation)}"
+            except Exception:
+                pass
+        if d is not None:
+            try:
+                s += f" = {ast.unparse(d)}"
+            except Exception:
+                pass
+        parts.append(s)
+    if args.vararg:
+        parts.append(f"*{args.vararg.arg}")
+    for a in args.kwonlyargs:
+        s = a.arg
+        if a.annotation:
+            try:
+                s += f": {ast.unparse(a.annotation)}"
+            except Exception:
+                pass
+        parts.append(s)
+    if args.kwarg:
+        parts.append(f"**{args.kwarg.arg}")
+    ret = ""
+    if node.returns:
+        try:
+            ret = f" -> {ast.unparse(node.returns)}"
+        except Exception:
+            pass
+    return f"{node.name}({', '.join(parts)}){ret}"
+
+
+def collect_vars(node):
+    """函数体内赋值的目标变量名（去重，截断 20 个）。"""
+    out = []
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Assign):
+            for t in sub.targets:
+                if isinstance(t, ast.Name):
+                    out.append(t.id)
+        elif isinstance(sub, (ast.AnnAssign, ast.AugAssign)) and isinstance(sub.target, ast.Name):
+            out.append(sub.target.id)
+    return list(dict.fromkeys(out))[:20]
+
+
+def extract_functions(roots, dotted_of, self_dotted):
+    """函数级子图：函数节点 + call 边。parent 引用骨架模块 id。"""
+    # 项目内函数集合：(module_dotted, func_name) -> node_id
+    func_ids = {}
+    file_funcs = {}  # file -> [FunctionDef nodes]
+    for f, d in dotted_of.items():
+        try:
+            src = f.read_text(encoding="utf-8")
+            tree = ast.parse(src, filename=str(f))
+        except (UnicodeDecodeError, OSError, SyntaxError):
+            continue
+        fns = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        file_funcs[f] = fns
+        for n in fns:
+            func_ids[(d, n.name)] = f"{d}::{n.name}"
+
+    # 每模块的 import 符号表：symbol -> 目标函数 node_id（跨模块调用解析用）
+    imported = {}  # module_dotted -> {symbol: node_id}
+    for f, d in dotted_of.items():
+        try:
+            src = f.read_text(encoding="utf-8")
+            tree = ast.parse(src, filename=str(f))
+        except (UnicodeDecodeError, OSError, SyntaxError):
+            continue
+        syms = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                for a in node.names:
+                    if a.name == "*":
+                        continue
+                    tgt = f"{node.module}::{a.name}"
+                    if tgt in func_ids.values():
+                        syms[a.name] = tgt
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.name in self_dotted:
+                        syms[a.name.split('.')[-1]] = a.name  # 模块别名 → 模块 dotted
+        imported[d] = syms
+
+    nodes = {}
+    call_edges = []  # (src_id, dst_id)
+    for f, d in dotted_of.items():
+        for n in file_funcs.get(f, []):
+            nid = func_ids[(d, n.name)]
+            calls = set()
+            for sub in ast.walk(n):
+                if not isinstance(sub, ast.Call):
+                    continue
+                fn = sub.func
+                if isinstance(fn, ast.Name):
+                    name = fn.id
+                    if (d, name) in func_ids:
+                        calls.add(func_ids[(d, name)])
+                    elif name in imported.get(d, {}):
+                        tgt = imported[d][name]
+                        if tgt in func_ids.values():
+                            calls.add(tgt)
+                elif isinstance(fn, ast.Attribute) and isinstance(fn.value, ast.Name):
+                    # obj.method：obj 是 import 的模块 → module::method
+                    obj = fn.value.id
+                    mod = imported.get(d, {}).get(obj)
+                    if mod and f"{mod}::{fn.attr}" in func_ids.values():
+                        calls.add(f"{mod}::{fn.attr}")
+            nodes[nid] = {
+                "label": n.name,
+                "metadata": {
+                    "kind": "function",
+                    "parent": d,
+                    "provenance": "generated",
+                    "signature": signature_of(n),
+                    "line": n.lineno,
+                    "file": f.name,
+                    "calls": sorted(calls),
+                    "variables": collect_vars(n),
+                },
+            }
+            for c in calls:
+                call_edges.append((nid, c))
+
+    # called_by 反推
+    called_by = {}
+    for src, dst in call_edges:
+        called_by.setdefault(dst, set()).add(src)
+    for nid, n in nodes.items():
+        n["metadata"]["called_by"] = sorted(called_by.get(nid, ()))
+
+    edges = [
+        {
+            "id": f"call-{src}->{dst}",
+            "source": src,
+            "target": dst,
+            "relation": "call",
+            "metadata": {"provenance": "generated"},
+        }
+        for src, dst in sorted(set(call_edges))
+    ]
+    return nodes, edges
+
+
 def main():
     ap = argparse.ArgumentParser(description="PIM 骨架提取器 (dsh-project-model)")
     ap.add_argument("roots", nargs="+", help="源码根目录（Python 包）")
     ap.add_argument("--dst", required=True, help="输出 pim.generated.json")
     ap.add_argument("--hash-out", help="同时输出 canonical sha256 到该文件")
+    ap.add_argument("--depth", choices=["module", "function"], default="module",
+                    help="提取深度：module=骨架（默认，参与 hash 门禁）；function=函数级子图（独立文件，不参与门禁）")
     args = ap.parse_args()
 
     roots = [Path(r).resolve() for r in args.roots]
@@ -87,6 +246,31 @@ def main():
             if d:
                 dotted_of[f] = d
     self_dotted = set(dotted_of.values())
+
+    # ── 函数级模式：独立子图，带 generated_at（不参与 hash 门禁）──
+    if args.depth == "function":
+        nodes, edges = extract_functions(roots, dotted_of, self_dotted)
+        doc = {
+            "graph": {
+                "id": "pim-functions",
+                "directed": True,
+                "type": "pim-functions",
+                "metadata": {
+                    "schema_contract": "docs/model/contract.schema.json",
+                    "generated_at": __import__("datetime").datetime.now(
+                        __import__("datetime").timezone.utc
+                    ).isoformat(),
+                },
+                "nodes": nodes,
+                "edges": edges,
+            }
+        }
+        out = Path(args.dst)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"wrote {out} — {len(nodes)} function nodes, {len(edges)} call edges (depth=function)")
+        return 0
+
 
     edges = defaultdict(set)  # (src, dst) -> set of lines
     locs = {}

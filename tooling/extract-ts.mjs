@@ -23,19 +23,20 @@ function flag(name) {
 }
 const SRC = flag('--src')
 const DST = flag('--dst')
+const DEPTH = flag('--depth') || 'module'
 if (!SRC || !DST) {
-  console.error('usage: node extract-ts.mjs --src <dir> --dst <out.json>')
+  console.error('usage: node extract-ts.mjs --src <dir> --dst <out.json> [--depth module|function]')
   process.exit(2)
 }
 
-/** 递归收集目录下目标类型文件。 */
+/** 递归收集目录下目标类型文件（ts/tsx/vue + js/mjs——JS 项目同样适用）。 */
 function collectFiles(dir) {
   const out = []
   for (const entry of readdirSync(dir)) {
     if (entry === 'node_modules') continue
     const p = join(dir, entry)
     if (statSync(p).isDirectory()) out.push(...collectFiles(p))
-    else if (/\.(ts|tsx|vue)$/.test(entry)) out.push(p)
+    else if (/\.(ts|tsx|vue|js|mjs)$/.test(entry)) out.push(p)
   }
   return out
 }
@@ -85,11 +86,12 @@ function resolveImport(spec, fromDir) {
   return null
 }
 
-/** src 内路径 → 相对 src 的无扩展 id（去 /index）。 */
+/** src 内路径 → 相对 src 的无扩展 id（去 /index；剥空则保留 index）。 */
 function normalizeId(full) {
   let rel = relative(SRC, full).split(sep).join('/')
-  rel = rel.replace(/\.(ts|tsx|vue)$/, '')
+  rel = rel.replace(/\.(ts|tsx|vue|js|mjs)$/, '')
   rel = rel.replace(/(^|\/)index$/, '') // views/index.ts → views
+  if (!rel) rel = 'index' // lib/index.js → index（不剥成空 id）
   if (rel.endsWith('/')) rel = rel.slice(0, -1)
   return rel
 }
@@ -108,6 +110,109 @@ const ids = new Map() // full path → id
 for (const f of files) ids.set(f, normalizeId(f))
 const idSet = new Set(ids.values())
 
+// ── 函数级模式（--depth function）：正则提取函数 + 调用图 ──────────────
+// 粗糙但可用：函数级数据不参与门禁，新鲜度由 UI 提示兜底（分层门禁设计）。
+if (DEPTH === 'function') {
+  const FN_RE = /(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/g
+  const ARROW_RE = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\(([^)]*)\)|[A-Za-z_$][\w$]*)\s*=>/g
+  const nodes = {}
+  const callPairs = new Set() // "src|dst"
+  const funcNames = new Set()
+  const funcOf = new Map() // "moduleId::name" → nodeId
+  const fileFuncs = new Map() // moduleId → [{name, sig, line}]
+
+  for (const f of files) {
+    const text = readFileSync(f, 'utf8')
+    const mid = ids.get(f)
+    const found = []
+    const lines = text.split('\n')
+    for (const re of [FN_RE, ARROW_RE]) {
+      re.lastIndex = 0
+      let m
+      while ((m = re.exec(text))) {
+        const name = m[1]
+        const sig = `${name}(${m[2] || ''})`
+        const line = text.slice(0, m.index).split('\n').length
+        found.push({ name, sig, line })
+        funcNames.add(name)
+        funcOf.set(`${mid}::${name}`, `${mid}::${name}`)
+      }
+    }
+    fileFuncs.set(mid, found)
+  }
+
+  // 调用图：按函数体（声明行 → 下一声明行）匹配 `name(`，被调名 → 同文件函数
+  for (const f of files) {
+    const text = readFileSync(f, 'utf8')
+    const mid = ids.get(f)
+    const fns = (fileFuncs.get(mid) || []).slice().sort((a, b) => a.line - b.line)
+    const lines = text.split('\n')
+    for (let i = 0; i < fns.length; i++) {
+      const fn = fns[i]
+      const srcId = `${mid}::${fn.name}`
+      const end = i + 1 < fns.length ? fns[i + 1].line - 1 : lines.length
+      const body = lines.slice(fn.line - 1, end).join('\n')
+      const callRe = /\b([A-Za-z_$][\w$]*)\s*\(/g
+      let m
+      while ((m = callRe.exec(body))) {
+        const callee = m[1]
+        if (callee === fn.name) continue // 递归不算
+        const target = funcOf.get(`${mid}::${callee}`)
+        if (target && target !== srcId) callPairs.add(`${srcId}|${target}`)
+      }
+    }
+  }
+
+  // 跨文件调用：被调函数名在别的文件也定义时，v1 只连同文件（精确性由 UI 新鲜度兜底）
+  const calledBy = new Map()
+  for (const key of callPairs) {
+    const [s, t] = key.split('|')
+    if (!calledBy.has(t)) calledBy.set(t, [])
+    calledBy.get(t).push(s)
+  }
+  for (const [mid, fns] of fileFuncs) {
+    for (const fn of fns) {
+      const nid = `${mid}::${fn.name}`
+      const calls = [...callPairs].filter((k) => k.startsWith(nid + '|')).map((k) => k.split('|')[1]).sort()
+      nodes[nid] = {
+        label: fn.name,
+        metadata: {
+          kind: 'function',
+          parent: mid,
+          provenance: 'generated',
+          signature: fn.sig,
+          line: fn.line,
+          file: basename(mid) + '.ts',
+          calls,
+          called_by: (calledBy.get(nid) || []).sort(),
+          variables: [],
+        },
+      }
+    }
+  }
+  const edges = [...callPairs].sort().map((k) => {
+    const [s, t] = k.split('|')
+    return { id: `call-${s}->${t}`, source: s, target: t, relation: 'call', metadata: { provenance: 'generated' } }
+  })
+  const doc = {
+    graph: {
+      id: 'pim-functions-fe',
+      directed: true,
+      type: 'pim-functions',
+      metadata: {
+        schema_contract: 'docs/model/contract.schema.json',
+        generated_at: new Date().toISOString(),
+      },
+      nodes,
+      edges,
+    },
+  }
+  mkdirSync(dirname(DST), { recursive: true })
+  writeFileSync(DST, JSON.stringify(doc, null, 2), 'utf8')
+  console.log(`wrote ${DST} — ${Object.keys(nodes).length} function nodes, ${edges.length} call edges (depth=function)`)
+  process.exit(0)
+}
+
 // 收集边
 const edgeLines = new Map() // "src|dst" → 1
 const fileOfId = new Map([...ids].map(([f, id]) => [id, f]))
@@ -122,11 +227,13 @@ for (const f of files) {
   }
 }
 
-// 指标：loc + fan_in/out
+// 指标：loc + todo_density + fan_in/out
 const loc = new Map()
+const todos = new Map()
 for (const f of files) {
   const text = readFileSync(f, 'utf8')
   loc.set(ids.get(f), text.split('\n').length)
+  todos.set(ids.get(f), (text.match(/#\s*(TODO|FIXME|HACK|XXX)\b/gi) || []).length)
 }
 const fanIn = new Map([...ids.values()].map((id) => [id, 0]))
 const fanOut = new Map([...ids.values()].map((id) => [id, 0]))
@@ -160,15 +267,19 @@ function layerOf(nid) {
   return 'misc'
 }
 
+// 指标：loc + todo_density + fan_in/out（在 edgeLines 收集后定义，见上）
+
 const nodes = {}
 for (const id of [...ids.values()].sort()) {
+  const lc = loc.get(id) || 0
   nodes[id] = {
     label: basename(id) || id,
     metadata: {
       layer: layerOf(id),
       provenance: 'generated',
       metrics: {
-        loc: loc.get(id) || 0,
+        loc: lc,
+        todo_density: lc ? Math.round(((todos.get(id) || 0) / lc) * 1e4) / 1e4 : 0,
         fan_in: fanIn.get(id),
         fan_out: fanOut.get(id),
       },

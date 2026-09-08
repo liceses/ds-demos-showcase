@@ -29,6 +29,8 @@ def main():
     ap.add_argument("--py-fragment", help="后端 fragment JSON（已提取好，跳过 extract.py）")
     ap.add_argument("--out", required=True, help="输出 pim.generated.json")
     ap.add_argument("--hash-out", help="同时输出 canonical sha256")
+    ap.add_argument("--fn-fe-json", help="函数级前端 fragment（extract-ts.mjs --depth function 产物）：合并进函数级输出")
+    ap.add_argument("--fn-out", help="函数级合并输出（pim.functions.json；与骨架分开，不参与 hash 门禁）")
     args = ap.parse_args()
 
     merged_nodes = {}
@@ -38,9 +40,12 @@ def main():
     if args.py_fragment:
         fe_doc = json.load(open(args.py_fragment, encoding="utf-8"))
         g = fe_doc["graph"]
-        merged_nodes.update(g.get("nodes", {}))
-        merged_edges.extend(g.get("edges", []))
-        print(f"backend fragment: {len(g.get('nodes', {}))} nodes, {len(g.get('edges', []))} edges")
+        if g.get("type") == "pim-functions":
+            print("py-fragment 是函数级数据（pim-functions），骨架合并跳过（函数级走 --fn-out）")
+        else:
+            merged_nodes.update(g.get("nodes", {}))
+            merged_edges.extend(g.get("edges", []))
+            print(f"backend fragment: {len(g.get('nodes', {}))} nodes, {len(g.get('edges', []))} edges")
     else:
         if not args.py_roots:
             print("需要 --py-fragment 或 --py-roots", file=sys.stderr)
@@ -91,6 +96,53 @@ def main():
     if args.hash_out:
         Path(args.hash_out).write_text(h, encoding="utf-8")
         print(f"wrote hash {args.hash_out}")
+
+    # ── 函数级合并（可选）：后端函数 fragment（--py-fragment 同源）+ 前端 fe: 前缀 ──
+    if args.fn_out:
+        fn_nodes = {}
+        fn_edges = []
+        if args.py_fragment:
+            be = json.load(open(args.py_fragment, encoding="utf-8"))
+            if be["graph"].get("type") == "pim-functions":
+                fn_nodes.update(be["graph"].get("nodes", {}))
+                fn_edges.extend(be["graph"].get("edges", []))
+        if args.fn_fe_json:
+            fe = json.load(open(args.fn_fe_json, encoding="utf-8"))
+            fe_g = fe["graph"]
+            for nid, n in fe_g.get("nodes", {}).items():
+                n2 = dict(n)
+                md = dict(n2.get("metadata", {}))
+                if md.get("parent"):
+                    md["parent"] = "fe:" + md["parent"]
+                n2["metadata"] = md
+                fn_nodes["fe:" + nid] = n2
+            for e in fe_g.get("edges", []):
+                fn_edges.append({
+                    "id": f"call-{e['source']}->{e['target']}",
+                    "source": "fe:" + e["source"],
+                    "target": "fe:" + e["target"],
+                    "relation": "call",
+                    "metadata": {"provenance": "generated"},
+                })
+        fn_doc = {
+            "graph": {
+                "id": "pim-functions",
+                "directed": True,
+                "type": "pim-functions",
+                "metadata": {
+                    "schema_contract": "docs/model/contract.schema.json",
+                    "generated_at": __import__("datetime").datetime.now(
+                        __import__("datetime").timezone.utc
+                    ).isoformat(),
+                },
+                "nodes": fn_nodes,
+                "edges": fn_edges,
+            }
+        }
+        fn_out = Path(args.fn_out)
+        fn_out.parent.mkdir(parents=True, exist_ok=True)
+        fn_out.write_text(json.dumps(fn_doc, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"wrote {fn_out} — {len(fn_nodes)} function nodes, {len(fn_edges)} call edges")
     return 0
 
 

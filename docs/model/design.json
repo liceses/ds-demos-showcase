@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "status": "implemented",
+  "updatedAt": "2026-09-07T16:08:12.513Z",
+  "approvedAt": "2026-09-07T16:02:02.570Z",
+  "approvedBy": "user",
+  "note": "",
+  "cim": [
+    {
+      "id": "KC-1",
+      "title": "单一知识工作台",
+      "acceptance": "/admin 知识中心只留一个入口「知识」；Model/Task/Tag 在同一页切换；合并/别名/词表/申请/候选不再占侧栏位",
+      "status": "implemented"
+    },
+    {
+      "id": "KC-2",
+      "title": "看→选→改→存",
+      "acceptance": "左栏浏览与搜索；点行选中实体；右栏表单直改内容字段；一个保存按钮落库+审计；未保存离开要确认",
+      "status": "implemented"
+    },
+    {
+      "id": "KC-3",
+      "title": "内容自由、身份有闸",
+      "acceptance": "描述/分组/题面/厂商直改即生效；合并/改 slug/批量归属/状态跃迁必须 dry_run+影响面；无物理删除按钮",
+      "status": "implemented"
+    },
+    {
+      "id": "KC-4",
+      "title": "队列只消化不改字段",
+      "acceptance": "待办仍在概览台；批准后深链回工作台该实体；队列里不出现字段编辑器",
+      "status": "implemented"
+    }
+  ],
+  "modules": [
+    {
+      "id": "fe:views/AdminView",
+      "label": "AdminView",
+      "layer": "web",
+      "responsibility": "侧栏只留「知识」一项进工作台；旧 tab 深链仍解析但不占导航"
+    },
+    {
+      "id": "fe:components/admin/AdminEntitiesSection",
+      "label": "知识工作台",
+      "layer": "web",
+      "responsibility": "左栏看+选（类型/搜索/状态）；右栏改+存（复用详情模板）；主从常驻不串行页"
+    },
+    {
+      "id": "fe:components/admin/AdminEntityDetailSection",
+      "label": "实体检视器",
+      "layer": "web",
+      "responsibility": "内容表单+单一保存；身份操作收进详情并带 dry_run；EntityPicker 唯一选择器"
+    },
+    {
+      "id": "routers.admin_entities",
+      "label": "Admin 实体路由",
+      "layer": "web",
+      "responsibility": "PATCH 白名单直改；挂摔/状态/别名走既有 service；不新建表"
+    },
+    {
+      "id": "services.model_service",
+      "label": "Model 服务",
+      "layer": "application",
+      "responsibility": "模型字段更新、状态跃迁、别名、合并 dry_run+审计"
+    },
+    {
+      "id": "services.task_service",
+      "label": "Task 服务",
+      "layer": "application",
+      "responsibility": "题目字段更新、挂摔 demo、合并 dry_run+审计"
+    },
+    {
+      "id": "services.tag_service",
+      "label": "Tag 服务",
+      "layer": "application",
+      "responsibility": "标签字段直改、状态跃迁、词表合并 dry_run+审计"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "看选改存",
+      "name": "看选改存",
+      "steps": [
+        {
+          "source": "fe:components/admin/AdminEntitiesSection",
+          "target": "fe:components/admin/AdminEntityDetailSection",
+          "step": 1
+        },
+        {
+          "source": "fe:views/AdminView",
+          "target": "fe:components/admin/AdminEntitiesSection",
+          "step": 2
+        }
+      ]
+    },
+    {
+      "id": "身份闸",
+      "name": "身份闸",
+      "steps": [
+        {
+          "source": "routers.admin_entities",
+          "target": "services.model_service",
+          "step": 1
+        },
+        {
+          "source": "routers.admin_entities",
+          "target": "services.task_service",
+          "step": 2
+        }
+      ]
+    }
+  ]
+}

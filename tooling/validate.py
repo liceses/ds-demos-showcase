@@ -66,6 +66,59 @@ def check_backing(edges):
     ]
 
 
+def check_functions(fn_doc, skeleton_nodes):
+    """函数级数据存在性校验（分层门禁：不比对 hash，只查引用完整性）。
+
+    1. 函数节点 parent 必须存在于骨架节点（引用完整性）
+    2. call 边端点必须存在于函数级节点
+    3. 函数节点必须 provenance=generated（契约已强制，此处兜底）
+    """
+    errors = []
+    g = fn_doc.get("graph", {})
+    fn_nodes = g.get("nodes", {})
+    for nid, n in fn_nodes.items():
+        md = n.get("metadata", {})
+        if md.get("kind") == "function":
+            parent = md.get("parent")
+            if not parent:
+                errors.append(f"函数节点 {nid} 缺 parent")
+            elif parent not in skeleton_nodes:
+                errors.append(f"函数节点 {nid} 的 parent {parent} 不在骨架中（模块不存在或 id 写错）")
+            if md.get("provenance") != "generated":
+                errors.append(f"函数节点 {nid} 的 provenance 必须是 generated")
+    for e in g.get("edges", []):
+        if e.get("relation") == "call":
+            if e.get("source") not in fn_nodes:
+                errors.append(f"call 边 source {e.get('source')} 不在函数级节点中")
+            if e.get("target") not in fn_nodes:
+                errors.append(f"call 边 target {e.get('target')} 不在函数级节点中")
+    return errors
+
+
+def check_usecase(uc_doc, skeleton_nodes):
+    """用例图引用完整性校验（CIM：不比对 hash，只查引用）。
+
+    1. usecase 节点 supportModules 必须存在于骨架（支撑模块真实存在）
+    2. association 边端点必须存在（actor—usecase）
+    """
+    errors = []
+    g = uc_doc.get("graph", {})
+    uc_nodes = g.get("nodes", {})
+    for nid, n in uc_nodes.items():
+        md = n.get("metadata", {})
+        if md.get("kind") == "usecase":
+            for m in md.get("supportModules", []):
+                if m not in skeleton_nodes:
+                    errors.append(f"用例 {nid} 的支撑模块 {m} 不在骨架中（模块不存在或 id 写错）")
+    for e in g.get("edges", []):
+        if e.get("relation") == "association":
+            if e.get("source") not in uc_nodes:
+                errors.append(f"association 边 source {e.get('source')} 不在用例图节点中")
+            if e.get("target") not in uc_nodes:
+                errors.append(f"association 边 target {e.get('target')} 不在用例图节点中")
+    return errors
+
+
 def canonical_json(doc):
     """canonical 化：排序键、紧凑、UTF-8。用于可复现 hash。"""
     return json.dumps(doc, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -75,6 +128,8 @@ def main():
     ap = argparse.ArgumentParser(description="PIM validator (dsh-project-model)")
     ap.add_argument("--schema", help="contract.schema.json (M2 契约)")
     ap.add_argument("pims", nargs="*", help="PIM 实例文件（可多个：先骨架后语义，合并校验）")
+    ap.add_argument("--functions", help="函数级数据文件（pim.functions.json）：存在性校验，不比对 hash")
+    ap.add_argument("--usecase", help="用例图文件（usecase.json）：引用完整性校验，不比对 hash")
     ap.add_argument("--hash", action="store_true", help="输出 canonical sha256")
     ap.add_argument("--check-hash", metavar="EXPECTED", help="比对 canonical sha256")
     args = ap.parse_args()
@@ -128,6 +183,30 @@ def main():
     # 合并视图上的图级约束
     errors += check_dedupe(merged_edges)
     errors += check_backing(merged_edges)
+
+    # 函数级存在性校验（分层门禁：引用完整性，不比对 hash）
+    if args.functions:
+        if not Path(args.functions).exists():
+            errors.append(f"--functions 文件不存在: {args.functions}")
+        else:
+            fn_doc = load_json(args.functions)
+            try:
+                errors += validate_schema(schema_doc, fn_doc)
+            except jsonschema.exceptions.ValidationError as exc:
+                errors.append(f"{Path(args.functions).name}: schema 违规: {exc.message} @ {list(exc.absolute_path)}")
+            errors += check_functions(fn_doc, merged_nodes)
+
+    # 用例图引用完整性校验（CIM：引用完整性，不比对 hash）
+    if args.usecase:
+        if not Path(args.usecase).exists():
+            errors.append(f"--usecase 文件不存在: {args.usecase}")
+        else:
+            uc_doc = load_json(args.usecase)
+            try:
+                errors += validate_schema(schema_doc, uc_doc)
+            except jsonschema.exceptions.ValidationError as exc:
+                errors.append(f"{Path(args.usecase).name}: schema 违规: {exc.message} @ {list(exc.absolute_path)}")
+            errors += check_usecase(uc_doc, merged_nodes)
 
     if errors:
         for e in errors:

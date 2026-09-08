@@ -18,7 +18,7 @@
         "id": { "type": "string", "minLength": 1 },
         "label": { "type": "string" },
         "directed": { "type": "boolean", "default": true },
-        "type": { "enum": ["pim", "pim-skeleton", "pim-semantic", "workflow"] },
+        "type": { "enum": ["pim", "pim-skeleton", "pim-semantic", "workflow", "pim-functions", "pim-usecase"] },
         "metadata": { "$ref": "#/definitions/graphMetadata" },
         "nodes": {
           "type": "object",
@@ -38,7 +38,8 @@
         "generated_at": { "type": "string" },
         "code_hash": { "type": "string" },
         "layer_enum": { "type": "array", "items": { "type": "string" } },
-        "repos": { "type": "array", "items": { "type": "string" } }
+        "repos": { "type": "array", "items": { "type": "string" } },
+        "analyst": { "type": "string", "description": "用例图草案的分析者（agent / 人）" }
       }
     },
     "node": {
@@ -53,10 +54,15 @@
     "nodeMetadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["layer", "provenance"],
+      "required": ["provenance"],
       "properties": {
         "layer": { "type": "string" },
         "provenance": { "enum": ["generated", "curated"] },
+        "depth": {
+          "type": "string",
+          "enum": ["skeleton", "brief", "detailed", "deep"],
+          "description": "语义标注强度（D4 可选档）：skeleton=无语义；brief=一句话职责（默认）；detailed=职责+关键对外契约；deep=detailed+设计决策/领域概念/已知债务（须 owner review）"
+        },
         "owner": { "type": "string" },
         "description": { "type": "string" },
         "metrics": {
@@ -70,8 +76,57 @@
             "todo_density": { "type": "number", "minimum": 0 },
             "loc": { "type": "integer", "minimum": 1 }
           }
+        },
+        "kind": { "type": "string", "enum": ["module", "file", "function", "usecase", "actor"] },
+        "parent": { "type": "string", "minLength": 1 },
+        "signature": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "file": { "type": "string" },
+        "calls": { "type": "array", "items": { "type": "string" } },
+        "called_by": { "type": "array", "items": { "type": "string" } },
+        "variables": { "type": "array", "items": { "type": "string" } },
+        "supportModules": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "用例支撑的模块 id（必须存在于骨架）"
+        },
+        "contains": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "语义抽象模块包含的代码节点 id（桥接抽象层与代码层）"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "approved"],
+          "description": "用例确认状态：draft=AI 草案（虚线），approved=用户已确认（实线）。CIM 原则：未确认不进验收"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "AI 推断依据（哪些路由/页面/文档支持此判断）——可复查防幻觉"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "function" } }, "required": ["kind"] },
+          "then": {
+            "required": ["parent", "signature"],
+            "properties": { "provenance": { "const": "generated" }, "kind": { "const": "function" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "usecase" } }, "required": ["kind"] },
+          "then": { "required": ["description", "status"] }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "properties": { "kind": { "enum": ["module", "file"] } }, "required": ["kind"] },
+              { "not": { "required": ["kind"] } }
+            ]
+          },
+          "then": { "required": ["layer"] }
+        }
+      ]
     },
     "edge": {
       "type": "object",
@@ -81,7 +136,7 @@
         "id": { "type": "string" },
         "source": { "type": "string", "minLength": 1 },
         "target": { "type": "string", "minLength": 1 },
-        "relation": { "enum": ["dependency", "workflow"] },
+        "relation": { "enum": ["dependency", "workflow", "call", "association"] },
         "directed": { "type": "boolean", "default": true },
         "label": { "type": "string" },
         "metadata": { "$ref": "#/definitions/edgeMetadata" }

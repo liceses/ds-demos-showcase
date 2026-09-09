@@ -29,7 +29,7 @@ from ..models import (
     TagKey,
     Task,
 )
-from . import audit_service, model_service, task_service
+from . import audit_service, matching_service, model_service, task_service
 
 AUTO_ACCEPT = 0.99  # 自动执行阈值（v2.0 仅 LLM 接入后启用）
 REVIEW = 0.60       # 收件箱默认视图阈值
@@ -293,9 +293,12 @@ def knowledge_stats(db: Session) -> dict:
     )
     tier_keys = db.query(TagKey.key, TagKey.tier, TagKey.label).order_by(TagKey.tier, TagKey.key).all()
 
-    # 重复率：同一规范化名字指向多个实体（别名表设计已把归一收敛到 1，
-    # 真出现多个说明有历史脏数据，正是该合并进收件箱的对象）
-    dup_groups = db.query(Model.slug).group_by(Model.slug).having(func.count(Model.id) > 1).count()
+    # 重名口径（KB-7）：按**规范化名称**分组统计。原实现按 Model.slug 分组，而 slug 有
+    # 唯一约束 → 这个 KPI 结构性恒为 0（实测插入两个 normalize 同名实体后仍是 0）。
+    name_groups: dict[str, list[str]] = {}
+    for (name,) in db.query(Model.name).all():
+        name_groups.setdefault(matching_service.normalize(name), []).append(name)
+    dup_names = {norm: names for norm, names in name_groups.items() if len(names) > 1}
 
     return {
         "demos_approved": demos_total,
@@ -322,5 +325,8 @@ def knowledge_stats(db: Session) -> dict:
             "pending": db.query(func.count(EntitySuggestion.id)).filter(EntitySuggestion.status == "pending").scalar() or 0,
             "pending_actionable": counts_by_kind(db),
         },
-        "duplicate_slugs": dup_groups,
+        "duplicate_slugs": len(dup_names),  # 键名保持兼容（前端已消费）；语义=规范化同名实体组数
+        "duplicate_names": [
+            {"normalized": norm, "names": names} for norm, names in sorted(dup_names.items())
+        ],
     }

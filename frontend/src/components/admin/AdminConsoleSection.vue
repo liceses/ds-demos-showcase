@@ -267,7 +267,7 @@ onMounted(load)
         <b>{{ c.pct }}%</b> {{ c.label }}<span class="muted mono"> {{ c.demos }}</span>
       </button>
       <span v-if="knowledge" class="ac-cov" :class="{ bad: knowledge.duplicate_slugs > 0 }">
-        <b>{{ knowledge.duplicate_slugs }}</b> {{ t('admin.console.dup', '重复 slug 实体') }}
+        <b>{{ knowledge.duplicate_slugs }}</b> {{ t('admin.console.dup', '重复名称实体') }}
       </span>
       <button type="button" class="tag-chip mode-fixed" @click="showStats">{{ t('admin.console.more', '全部指标 →') }}</button>
     </div>

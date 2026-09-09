@@ -69,7 +69,7 @@ onMounted(load)
           <span class="muted">{{ t('admin.stats.kpiInboxHint', '积压不等于脏，但超过一周就该看') }}</span>
         </div>
         <div class="card card-default kpi">
-          <span class="kpi-label">{{ t('admin.stats.kpiDup', '重复 slug 实体') }}</span>
+          <span class="kpi-label">{{ t('admin.stats.kpiDup', '重复名称实体') }}</span>
           <b class="kpi-num">{{ data.duplicate_slugs }}</b>
           <span class="muted">{{ data.duplicate_slugs ? t('admin.stats.kpiDupBad', '需要合并') : t('admin.stats.kpiDupOk', '干净') }}</span>
         </div>

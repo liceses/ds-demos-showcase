@@ -23,7 +23,6 @@ from ..schemas import (
     TagKeyOut,
     TagKeyUpdate,
     TagKeyUpsert,
-    TagKeyValueOut,
     TagMergeIn,
     TagMergeResult,
     TagOut,
@@ -33,7 +32,7 @@ from ..schemas import (
     TagValueSuggestionOut,
 )
 from ..serializers import tag_dict
-from ..services import model_service, tag_service
+from ..services import audit_service, model_service, tag_service
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 
@@ -86,56 +85,36 @@ def get_tag(key_value: str, db: Session = Depends(get_db)):
 
 
 @router.post("", status_code=201, response_model=TagOut)
-def create_tag(body: TagCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    """新增固定值标签（仅 admin）。"""
-    if body.key in RESERVED_TAG_KEYS:
-        raise HTTPException(status_code=400, detail=f"{body.key} 为保留 key", )
-    key_def = db.get(TagKey, body.key)
-    if key_def is None:
-        raise HTTPException(status_code=422, detail="未知标签 key，请先在标签键管理中创建", )
-    if key_def.mode != "fixed":
-        raise HTTPException(status_code=400, detail=f"{body.key} 为 {key_def.mode} 模式，无需预定义 value", )
-    duplicate = db.query(Tag).filter(Tag.key == body.key, Tag.value == body.value).first()
-    if duplicate:
-        raise HTTPException(status_code=409, detail="标签已存在", )
-    if body.parent_id is not None:
-        parent = db.get(Tag, body.parent_id)
-        if parent is None:
-            raise HTTPException(status_code=404, detail="父标签不存在", )
-    tag = Tag(
+def create_tag(body: TagCreate, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """新增固定值标签（仅 admin）。规则与审计在 tag_service（KB-4）。"""
+    tag = tag_service.create_tag_value(
+        db,
         key=body.key,
         value=body.value,
         description=body.description,
         group=body.group,
         parent_id=body.parent_id,
+        actor_id=admin.id,
     )
-    db.add(tag)
-    db.commit()
-    db.refresh(tag)
     return tag_dict(db, tag)
 
 
 # ---------- 标签键管理（admin） ----------
 @router.post("/admin/tag-keys", status_code=201, response_model=TagKeyOut)
-def create_tag_key(body: TagKeyUpsert, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    if body.key == "author":
-        raise HTTPException(status_code=400, detail="author 为保留 key", )
-    existing = db.get(TagKey, body.key)
-    if existing is not None:
-        raise HTTPException(status_code=409, detail="标签键已存在，请用 PUT 更新", )
-    k = TagKey(
+def create_tag_key(body: TagKeyUpsert, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    k = tag_service.create_tag_key(
+        db,
         key=body.key,
         mode=body.mode,
         label=body.label,
         description=body.description,
         sort=body.sort,
+        actor_id=admin.id,
     )
-    db.add(k)
-    db.commit()
     return _tag_key_out(db, k)
 
 
-RESERVED_TAG_KEYS = {"author", "version-of"}
+RESERVED_TAG_KEYS = tag_service.RESERVED_TAG_KEYS
 
 
 @router.put("/admin/tag-keys/{key}", response_model=TagKeyOut)
@@ -143,44 +122,24 @@ def update_tag_key(
     key: str,
     body: TagKeyUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
-    k = db.get(TagKey, key)
-    if k is None:
-        raise HTTPException(status_code=404, detail="标签键不存在", )
-    if key in RESERVED_TAG_KEYS:
-        raise HTTPException(status_code=409, detail=f"{key} 为保留 key，禁止修改", )
-    k.mode = body.mode
-    k.label = body.label
-    k.description = body.description
-    k.sort = body.sort
-    db.commit()
+    k = tag_service.update_tag_key(
+        db,
+        key=key,
+        mode=body.mode,
+        label=body.label,
+        description=body.description,
+        sort=body.sort,
+        actor_id=admin.id,
+    )
     return _tag_key_out(db, k)
 
 
 @router.delete("/admin/tag-keys/{key}", status_code=204)
-def delete_tag_key(key: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    """删除标签键（同时删除该键下未被引用的标签值）。"""
-    if key in RESERVED_TAG_KEYS:
-        raise HTTPException(status_code=409, detail=f"{key} 为保留 key，禁止删除", )
-    k = db.get(TagKey, key)
-    if k is None:
-        raise HTTPException(status_code=404, detail="标签键不存在", )
-    referenced = (
-        db.query(func.count(DemoTag.demo_id))
-        .join(Tag, DemoTag.tag_id == Tag.id)
-        .filter(Tag.key == key)
-        .scalar()
-        or 0
-    )
-    if referenced > 0:
-        raise HTTPException(
-            status_code=409,
-            detail=f"该键下有 {referenced} 个标签正被 demo 引用，禁止删除",
-        )
-    db.query(Tag).filter(Tag.key == key).delete(synchronize_session=False)
-    db.delete(k)
-    db.commit()
+def delete_tag_key(key: str, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """删除标签键（同时删除该键下未被引用的标签值）；子标签/引用一律 409，不再 500。"""
+    tag_service.delete_tag_key(db, key, actor_id=admin.id)
 
 
 @router.delete("/admin/tag-keys/{key}/values/{value}", status_code=204)
@@ -188,24 +147,13 @@ def delete_tag_value(
     key: str,
     value: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
-    """删除某个标签值（被 demo 引用时禁止删除）。"""
-    if key in RESERVED_TAG_KEYS:
-        raise HTTPException(status_code=409, detail=f"{key} 为保留 key，禁止删除", )
+    """删除某个标签值（被 demo 引用或作为父标签时禁止删除）。"""
     tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
     if tag is None:
-        raise HTTPException(status_code=404, detail="标签值不存在", )
-    referenced = (
-        db.query(func.count(DemoTag.demo_id)).filter(DemoTag.tag_id == tag.id).scalar() or 0
-    )
-    if referenced > 0:
-        raise HTTPException(
-            status_code=409,
-            detail=f"该标签正被 {referenced} 个 demo 引用，禁止删除",
-        )
-    db.delete(tag)
-    db.commit()
+        raise HTTPException(status_code=404, detail="标签值不存在")
+    tag_service.delete_tag_value(db, tag, actor_id=admin.id)
 
 
 def _tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
@@ -236,6 +184,17 @@ def create_suggestion(
         raise HTTPException(status_code=422, detail="未知标签 key", )
     if key_def.mode != "fixed":
         raise HTTPException(status_code=422, detail=f"{body.key} 为 {key_def.mode} 模式，无需申请固定值", )
+    # KB-6：申请可以绑定作品（上传后回挂），但必须校验存在性与归属 ——
+    # 否则匿名用户能把申请挂到别人的作品上，管理员批准即等于替他人改标签。
+    if body.demo_id is not None:
+        demo = db.get(Demo, body.demo_id)
+        if demo is None:
+            raise HTTPException(status_code=404, detail="作品不存在", )
+        owned = demo.author_id is None or (
+            user is not None and (user.id == demo.author_id or user.role == "admin")
+        )
+        if not owned:
+            raise HTTPException(status_code=403, detail="无权为该作品申请标签", )
     if db.query(Tag).filter(Tag.key == body.key, Tag.value == body.value).first():
         raise HTTPException(status_code=409, detail="该固定值已存在", )
     if db.query(TagValueSuggestion).filter(
@@ -286,9 +245,20 @@ def review_suggestion(
     if body.action == "approve":
         tag = db.query(Tag).filter(Tag.key == s.key, Tag.value == s.value).first()
         if tag is None:
-            tag = Tag(key=s.key, value=s.value, description=s.description, group=s.group or body.group)
-            db.add(tag)
-            db.flush()
+            # Tag 写入收口在 tag_service（KB-4）
+            tag = tag_service.ensure_value(
+                db, s.value, group=s.group or body.group, description=s.description, key=s.key
+            )
+            # 词表变更与建议审核同事务留痕（谁批的、批出了哪个值）
+            audit_service.record(
+                db,
+                action="create",
+                entity_type="tag",
+                entity_id=tag.id,
+                actor_id=admin.id,
+                after=tag_service.tag_snapshot(tag),
+                reason=f"用户申请批准：{s.key}:{s.value}",
+            )
         # 可选：同时补挂到提交者 demo；model 键必须双写 demo_models（身份绑定闭环 A）
         if s.demo_id:
             demo = db.get(Demo, s.demo_id)
@@ -419,15 +389,12 @@ def rename_group(
     group: str,
     body: TagGroupRename,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
-    """重命名 group：批量更新该 group 下所有 Tag.group。"""
-    updated = (
-        db.query(Tag)
-        .filter(Tag.key == key, Tag.group == group)
-        .update({Tag.group: body.new_group}, synchronize_session=False)
+    """重命名 group：批量更新该 group 下所有 Tag.group（同事务落审计）。"""
+    updated = tag_service.rename_group(
+        db, key=key, group=group, new_group=body.new_group, actor_id=admin.id
     )
-    db.commit()
     return {"updated": updated, "new_group": body.new_group}
 
 
@@ -436,15 +403,10 @@ def clear_group(
     key: str,
     group: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
-    """清除 group：该 group 下所有值变为无分组。"""
-    cleared = (
-        db.query(Tag)
-        .filter(Tag.key == key, Tag.group == group)
-        .update({Tag.group: None}, synchronize_session=False)
-    )
-    db.commit()
+    """清除 group：该 group 下所有值变为无分组（同事务落审计）。"""
+    cleared = tag_service.clear_group(db, key=key, group=group, actor_id=admin.id)
     return {"cleared": cleared}
 
 
@@ -453,78 +415,33 @@ def set_value_group(
     tag_id: int,
     body: TagValueGroupSet,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
     """给单个固定值设置/清除 group。"""
     tag = db.get(Tag, tag_id)
     if tag is None:
         raise HTTPException(status_code=404, detail="标签不存在", )
-    tag.group = body.group or None
-    db.commit()
-    db.refresh(tag)
+    tag = tag_service.set_value_group(db, tag, body.group, actor_id=admin.id)
     return tag_dict(db, tag)
 
 
 # ---------- 标签合并（admin） ----------
 @router.post("/admin/merge", response_model=TagMergeResult)
-def merge_tags(body: TagMergeIn, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    """合并标签：把 from 值的引用迁移到 to 值，删除源值（事务内完成）。"""
-    if body.from_key in RESERVED_TAG_KEYS or body.to_key in RESERVED_TAG_KEYS:
-        raise HTTPException(status_code=409, detail="保留 key 禁止合并", )
-    if body.from_key != body.to_key:
-        raise HTTPException(status_code=422, detail="跨 key 合并暂不支持", )
+def merge_tags(body: TagMergeIn, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """合并标签：把 from 值的引用迁到 to 值，删除源值（单事务 + 审计 + 派生数据回填）。
 
-    src = db.query(Tag).filter(Tag.key == body.from_key, Tag.value == body.from_value).first()
-    if src is None:
-        return TagMergeResult(dry_run=body.dry_run)
-    tgt = db.query(Tag).filter(Tag.key == body.to_key, Tag.value == body.to_value).first()
-    if tgt is None:
-        raise HTTPException(status_code=422, detail="目标标签不存在，请先创建", )
-    if src.id == tgt.id:
-        return TagMergeResult(dry_run=body.dry_run)
-    if db.query(Tag).filter(Tag.parent_id == src.id).count() > 0:
-        raise HTTPException(status_code=422, detail="源标签有子标签，暂不支持合并", )
-
-    assocs = db.query(DemoTag).filter(DemoTag.tag_id == src.id).all()
-    merged = 0
-    removed = 0
-    demo_ids: set[int] = set()
-    for a in assocs:
-        demo_ids.add(a.demo_id)
-        if db.query(DemoTag).filter(DemoTag.demo_id == a.demo_id, DemoTag.tag_id == tgt.id).first():
-            removed += 1
-        else:
-            merged += 1
-
-    if body.dry_run:
-        # 合并后源引用清零，且无子标签 → 源可删
-        return TagMergeResult(
-            merged=merged,
-            removed_dups=removed,
-            affected_demos=len(demo_ids),
-            deleted_source=True,
-            dry_run=True,
-        )
-
-    for a in assocs:
-        if db.query(DemoTag).filter(DemoTag.demo_id == a.demo_id, DemoTag.tag_id == tgt.id).first():
-            db.delete(a)
-        else:
-            a.tag_id = tgt.id
-    # 同值的 pending 建议标记为已拒绝（避免审核出重复）
-    db.query(TagValueSuggestion).filter(
-        TagValueSuggestion.key == body.from_key,
-        TagValueSuggestion.value == body.from_value,
-        TagValueSuggestion.status == "pending",
-    ).update({TagValueSuggestion.status: "rejected"}, synchronize_session=False)
-    db.delete(src)
-    db.commit()
+    规则与完整性闸在 `tag_service.merge_tags`（KB-1/KB-4）。
+    """
     return TagMergeResult(
-        merged=merged,
-        removed_dups=removed,
-        affected_demos=len(demo_ids),
-        deleted_source=True,
-        dry_run=False,
+        **tag_service.merge_tags(
+            db,
+            from_key=body.from_key,
+            from_value=body.from_value,
+            to_key=body.to_key,
+            to_value=body.to_value,
+            dry_run=body.dry_run,
+            actor_id=admin.id,
+        )
     )
 
 

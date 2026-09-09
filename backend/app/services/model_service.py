@@ -12,11 +12,11 @@
 import hashlib
 
 from fastapi import HTTPException
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from ..models import AuditLog, Demo, DemoModel, DemoTask, DemoTag, Model, ModelAlias, Prompt, Tag, Task
-from . import audit_service, cluster_service, matching_service
+from . import audit_service, cluster_service, matching_service, tag_service
 
 _UNVERIFIED_NAMES = {"ds-unknown", "unknown"}  # 灰测模型：建实体即 unverified
 # 必须同样规范化后再比对：normalize 会吃掉分隔符，直接拿原始写法比会让 ds-unknown
@@ -72,14 +72,36 @@ def ensure_tag_value(db: Session, value: str, group: str | None = None, descript
 
     model 是 fixed 键，`_resolve_tag` 只放行词表里已有的值 —— 兜底值必须先进词表，
     否则「我不确定型号」这条合法路径会在上传时被 422 挡死。
+
+    KB-4：Tag 写入统一收口到 tag_service（本函数只是 model 域的便捷入口，保持既有调用面）。
     """
-    tag = db.query(Tag).filter(Tag.key == "model", Tag.value == value).first()
+    return tag_service.ensure_value(db, value, group=group, description=description)
+
+
+def model_tag(db: Session, model: Model) -> Tag | None:
+    """实体对应的 `model:<name>` 词表值（可能不存在 —— 词表是选择器口径）。"""
+    return db.query(Tag).filter(Tag.key == "model", Tag.value == model.name).first()
+
+
+def sync_model_tag(db: Session, model: Model) -> Tag | None:
+    """实体 → 词表单向补写（KB-2）：保证值存在，且退役状态与实体一致。
+
+    为什么需要它：`model` 是 fixed 键，作者只能选词表里已有的值。管理端新建实体若不同步
+    词表，就会造出「实体存在但作者永远选不到」的死值（实测上传 422）。反向（标签 → 实体）
+    由 `sync_demo_models` 负责，两侧合起来才是双写。
+
+    审计不在这里单独落行：调用方（create / status_set / merge / unmerge）的实体级审计
+    已覆盖本次变化，再补一条只会把 audit_log 灌成噪音。
+    """
+    tag = model_tag(db, model)
     if tag is None:
-        tag = Tag(key="model", value=value, group=group, description=description)
-        db.add(tag)
-        db.flush()
-        matching_service.invalidate_alias_cache()
-    return tag
+        if model.status == "deprecated":
+            return None
+        return ensure_tag_value(
+            db, model.name, group=model.vendor, description=model.description
+        )
+    # 状态同步也走 tag_service（Tag 写入只在本模块收口，见 KB-4）
+    return tag_service.sync_status(db, tag, model.status)
 
 
 def get_or_create_unspecified(db: Session) -> Model:
@@ -435,9 +457,17 @@ def _model_out(
     votes: int = 0,
     wsum: float = 0.0,
     prior: tuple[float, float] | None = None,
+    score_sql: float | None = None,
 ) -> dict:
     if prior is None:
         prior = (0.0, 1.0)
+    # KB-8：列表路径把 SQL 排序键原样当展示值（排序与展示同源）；详情等路径没传
+    # score_sql 时退回 Python 同公式计算。
+    score = (
+        round(float(score_sql), 2)
+        if (votes and score_sql is not None)
+        else shrink_score(int(votes or 0), float(wsum or 0.0), prior)
+    )
     return {
         "id": model.id,
         "slug": model.slug,
@@ -449,7 +479,7 @@ def _model_out(
         "demo_count": demo_count,
         "rating_avg": round(float(rating_avg), 2) if rating_avg is not None else None,
         # score=收缩后的社区分（对外排序与展示用它）；rating_avg 保留等权旧语义
-        "score": shrink_score(int(votes or 0), float(wsum or 0.0), prior),
+        "score": score,
         "votes": int(votes or 0),
         "sample_level": sample_level(int(votes or 0)),
         "created_at": model.created_at,
@@ -489,6 +519,11 @@ def list_models(
     wsum_col = func.coalesce(ra.c.wsum, 0.0)
     # 收缩分的 SQL 形态：(wsum + m·C) / (votes + m) —— 与 shrink_score() 同一公式
     score_col = (wsum_col + m * C) / (votes_col + m)
+    # KB-8：排序键取到 2 位小数（与响应里的 score 同精度）。用未取整值排序会让
+    # 「都显示 4.41」的两个模型按看不见的尾数排，出现 1 票压过 2 票的观感矛盾。
+    # 零票没有分数（shrink_score 返回 None）→ 排序也置 NULL 排最后，
+    # 否则它会按先验 C 混在中间，出现「显示没有分，位置却在中游」。
+    score_sort_col = case((votes_col > 0, func.round(score_col, 2)), else_=None)
 
     query = (
         db.query(
@@ -497,6 +532,7 @@ def list_models(
             rating_col.label("rating_avg"),
             votes_col.label("votes"),
             wsum_col.label("wsum"),
+            score_sort_col.label("score_sql"),
         )
         .outerjoin(dc, dc.c.model_id == Model.id)
         .outerjoin(ra, ra.c.model_id == Model.id)
@@ -516,7 +552,7 @@ def list_models(
 
     total = query.count()
     if sort in ("score", "rating"):  # rating 是旧参数名，现在按收缩分排（同分比票数）
-        query = query.order_by(score_col.desc(), votes_col.desc(), Model.id.asc())
+        query = query.order_by(score_sort_col.desc().nullslast(), votes_col.desc(), Model.id.asc())
     elif sort == "votes":
         query = query.order_by(votes_col.desc(), Model.id.asc())
     elif sort == "new":
@@ -527,7 +563,9 @@ def list_models(
         query = query.order_by(demo_count_col.desc(), Model.id.asc())
     rows = query.offset((page - 1) * page_size).limit(page_size).all()
 
-    items = [_model_out(m_, c, a, v, w, prior) for m_, c, a, v, w in rows]
+    # score_sql 是 SQL 里算出的排序键（2 位小数）：直接用它当展示值，保证
+    # 「看到的顺序」与「看到的数字」出自同一个值（KB-8）
+    items = [_model_out(m_, c, a, v, w, prior, score_sql=s) for m_, c, a, v, w, s in rows]
     return items, total
 
 
@@ -689,6 +727,7 @@ def model_status_set(db: Session, model: Model, status: str, actor_id: int | Non
         raise HTTPException(status_code=422, detail=f"非法状态，可选：{', '.join(MODEL_STATUSES)}")
     before = audit_service.snapshot_model(model)
     model.status = status
+    sync_model_tag(db, model)  # KB-2：实体退役/复活同步词表，避免词表留着可选死值
     audit_service.record(
         db,
         action="status_set",
@@ -736,6 +775,10 @@ def model_update(db: Session, model: Model, actor_id: int | None = None, reason:
         # 旧 slug 转别名：外部贴出去的旧链接与历史标签仍可解析（详情查找已支持别名兜底）
         if before.get("slug"):
             add_alias(db, model, str(before["slug"]))
+    # KB-2：改名后保证新名在词表里可选（旧值刻意不退役 —— 别名已兜住解析，
+    # 退役旧值只会让存量作品的标签从公开页消失）
+    if model.name != old_name:
+        sync_model_tag(db, model)
     # 补登厂商 → 顺手保证该厂商的「未定型号」族节点存在（B 档永远可一键选）
     if model.vendor:
         ensure_family_for_vendor(db, model.vendor)
@@ -865,6 +908,7 @@ def merge_model(
 
     source.status = "deprecated"
     source.merged_into_id = target.id
+    sync_model_tag(db, source)  # KB-2：源值退役，词表不再提供「已并入别处」的旧型号
     audit_service.record(
         db,
         action="merge",
@@ -981,6 +1025,7 @@ def unmerge_model(
         # 没有依据就不假装能恢复引用：只把实体本身放回去，并明确告知
         source.status = restored_status
         source.merged_into_id = None
+        sync_model_tag(db, source)  # KB-2：撤销合并后词表值重新可选
         audit_service.record(
             db,
             action="unmerge",
@@ -1003,6 +1048,7 @@ def unmerge_model(
 
     source.status = restored_status
     source.merged_into_id = None
+    sync_model_tag(db, source)  # KB-2：撤销合并后词表值重新可选
     audit_service.record(
         db,
         action="unmerge",
@@ -1069,6 +1115,8 @@ def create_model(
     add_alias(db, model, model.name)
     if vendor and model.resolution == "exact":
         ensure_family_for_vendor(db, vendor)
+    # KB-2：实体建出来必须同时进词表，否则作者在选择器里看不到这个型号（fixed 键只认词表）
+    sync_model_tag(db, model)
     audit_service.record(
         db,
         action="create",
@@ -1099,6 +1147,8 @@ def list_models_admin(
     votes_col = func.coalesce(ra.c.votes, 0)
     wsum_col = func.coalesce(ra.c.wsum, 0.0)
     score_col = (wsum_col + m * C) / (votes_col + m)
+    # KB-8：与展示精度一致；零票置 NULL 排最后（同 list_models）
+    score_sort_col = case((votes_col > 0, func.round(score_col, 2)), else_=None)
     query = (
         db.query(
             Model,
@@ -1106,6 +1156,7 @@ def list_models_admin(
             rating_col.label("rating_avg"),
             votes_col.label("votes"),
             wsum_col.label("wsum"),
+            score_sort_col.label("score_sql"),
         )
         .outerjoin(dc, dc.c.model_id == Model.id)
         .outerjoin(ra, ra.c.model_id == Model.id)
@@ -1122,12 +1173,12 @@ def list_models_admin(
     elif sort == "new":
         query = query.order_by(Model.created_at.desc(), Model.id.desc())
     elif sort in ("score", "rating"):
-        query = query.order_by(score_col.desc(), votes_col.desc(), Model.id.asc())
+        query = query.order_by(score_sort_col.desc().nullslast(), votes_col.desc(), Model.id.asc())
     else:
         query = query.order_by(demo_count_col.desc(), Model.id.asc())
     rows = query.limit(limit).all()
     counts = dict(db.query(Model.status, func.count(Model.id)).group_by(Model.status).all())
-    items = [_model_out(m_, c, a, v, w, prior) for m_, c, a, v, w in rows]
+    items = [_model_out(m_, c, a, v, w, prior, score_sql=s) for m_, c, a, v, w, s in rows]
     status_counts = {s: counts.get(s, 0) for s in MODEL_STATUSES}
     return items, total, status_counts
 

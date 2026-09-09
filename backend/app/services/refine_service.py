@@ -19,6 +19,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..models import Demo, DemoTag, Tag, TagKey
+from . import tag_service
 
 # 现有一级 type（fixed 种子）
 EXISTING_TYPE_VALUES = {"effect", "widget", "game", "demo"}
@@ -214,16 +215,14 @@ def stats(db: Session) -> dict:
 
 
 def ensure_type_value(db: Session, value: str, label_zh: str = "") -> Tag:
-    """确保 `type:<value>` 固定值在词表里（不存在则建 —— 由管理员批准候选这一步授权）。"""
+    """确保 `type:<value>` 固定值在词表里（不存在则建 —— 由管理员批准候选这一步授权）。
+
+    Tag 写入收口在 tag_service（KB-4）；这里只保留 type 域的语义入口。
+    """
     if db.get(TagKey, "type") is None:
         db.add(TagKey(key="type", mode="fixed", label="类型", description="Demo 类型（固定值）", sort=3, tier=2))
         db.flush()
-    tag = db.query(Tag).filter(Tag.key == "type", Tag.value == value).first()
-    if tag is None:
-        tag = Tag(key="type", value=value, description=label_zh or value)
-        db.add(tag)
-        db.flush()
-    return tag
+    return tag_service.ensure_value(db, value, description=label_zh or value, key="type")
 
 
 def apply_retag(db: Session, demo: Demo, add_value: str, *, remove_value: str | list[str] | None = "demo") -> dict:

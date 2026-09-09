@@ -157,6 +157,8 @@ class TagMergeResult(BaseModel):
     affected_demos: int = 0  # 受影响 demo 数（去重后的 demo 数）
     deleted_source: bool = False
     dry_run: bool = False
+    # KB-1：源值不存在时如实回报「没找到」，不再用一串 0 假装合并成功
+    found: bool = True
 
 
 class TagKeyUpsert(BaseModel):

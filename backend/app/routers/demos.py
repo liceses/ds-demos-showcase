@@ -32,7 +32,7 @@ from ..models import Announcement, Demo, DemoModel, DemoTask, DemoTimeline, Demo
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated, SamePromptOut
 from ..serializers import preload_demo_relations, serialize_demo
 from ..services import counters, model_service, oss, storage
-from ..services import notification_service, suggestion_service
+from ..services import notification_service, suggestion_service, tag_service
 from ..services.scope import demo_in_scope, get_scope, scope_contains_filter
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
 
@@ -106,21 +106,23 @@ def _find_demo(db: Session, slug: str) -> Demo:
 
 
 def _ensure_tag(db: Session, key: str, value: str) -> Tag:
-    """内部标签（author / version-of 等保留 key）直接创建或复用。"""
-    tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
-    if tag is None:
-        tag = Tag(key=key, value=value, description="")
-        db.add(tag)
-        db.flush()
-    return tag
+    """内部标签（author / version-of 等保留 key）直接创建或复用。
+
+    KB-4：Tag 写入统一走 tag_service（本函数只保留语义清晰的入口名）。
+    """
+    return tag_service.ensure_value(db, value, key=key)
 
 
-def _resolve_tag(db: Session, item: str | dict) -> Tag:
+def _resolve_tag(db: Session, item: str | dict, allow_tag_ids: set[int] | None = None) -> Tag:
     """按标签键定义校验并解析用户提交的标签：
     - 支持字符串 "k:v" 或对象 {"key","value","description?"}
-    - fixed: value 必须是已存在的固定值
+    - fixed: value 必须是已存在且**在用**的固定值
     - open:  任意自定义 value（自动建标签；首次创建可写入 description）
     - int:   value 必须是整数（自动建标签，规范化存储）
+
+    allow_tag_ids（KB-3）：作品**已经挂着**的标签 id 集合。已退役值不得再被新选，但存量
+    作品编辑时要放行自己原有的值 —— 否则一次改描述就会因为历史值被 422 卡死，
+    把退役成本转嫁给作者。传 None 表示纯新增场景（一律拦）。
     """
     if isinstance(item, str):
         key, _, value = item.partition(":")
@@ -145,6 +147,12 @@ def _resolve_tag(db: Session, item: str | dict) -> Tag:
         tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
         if tag is None:
             raise HTTPException(status_code=422, detail=f"{key}:{value} 不是该键的固定值，请从候选中选择", )
+        status = tag.status or "active"
+        if status != "active" and (allow_tag_ids is None or tag.id not in allow_tag_ids):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{key}:{value} 已退役（{status}），请从在用候选中另选",
+            )
         return tag
 
     if key_def.mode == "int":
@@ -156,10 +164,8 @@ def _resolve_tag(db: Session, item: str | dict) -> Tag:
 
     tag = db.query(Tag).filter(Tag.key == key, Tag.value == value).first()
     if tag is None:
-        # 首次创建 open/int 值时，可写入用户提供的介绍
-        tag = Tag(key=key, value=value, description=description or "")
-        db.add(tag)
-        db.flush()
+        # 首次创建 open/int 值时，可写入用户提供的介绍（写入收口在 tag_service）
+        tag = tag_service.ensure_value(db, value, description=description or "", key=key)
     return tag
 
 
@@ -213,9 +219,14 @@ async def _read_limited(file: UploadFile, limit: int, msg: str) -> bytes:
 
 
 def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
+    # 先记下「本作品已挂的标签 id」：编辑时允许保留自己原有的已退役值（KB-3），
+    # 但新选退役值一律 422。必须在删除旧关联之前取。
+    existing_tag_ids = {
+        row[0] for row in db.query(DemoTag.tag_id).filter(DemoTag.demo_id == demo.id).all()
+    }
     db.query(DemoTag).filter(DemoTag.demo_id == demo.id).delete()
     for kv in key_values:
-        tag = _resolve_tag(db, kv)
+        tag = _resolve_tag(db, kv, allow_tag_ids=existing_tag_ids)
         db.add(DemoTag(demo_id=demo.id, tag_id=tag.id))
     # 自动附加作者标签（保留 key，跳过键定义校验）；匿名统一为 public
     author_name = None

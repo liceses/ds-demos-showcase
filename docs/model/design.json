@@ -1,8 +1,8 @@
 {
   "version": 1,
   "status": "implemented",
-  "updatedAt": "2026-09-07T16:08:12.513Z",
-  "approvedAt": "2026-09-07T16:02:02.570Z",
+  "updatedAt": "2026-09-09T12:21:21.849Z",
+  "approvedAt": "2026-09-09T12:13:09.101Z",
   "approvedBy": "user",
   "note": "",
   "cim": [
@@ -28,6 +28,60 @@
       "id": "KC-4",
       "title": "队列只消化不改字段",
       "acceptance": "待办仍在概览台；批准后深链回工作台该实体；队列里不出现字段编辑器",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-1",
+      "title": "标签合并真迁移",
+      "acceptance": "合并 A→B 后，只挂 A 的作品标签变为 B（一条不丢）；返回的 merged/removed_dups/affected_demos 与实际库内一致；覆盖「单值作品」分支的回归用例",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-2",
+      "title": "标签与模型实体双向一致",
+      "acceptance": "管理端新建/改名/合并/退役模型实体时，model: 固定值同步创建或退役；词表不再出现已合并的旧型号；上传选择器能选到管理端新建的型号",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-3",
+      "title": "退役值只拦写、不误伤存量",
+      "acceptance": "deprecated 固定值用于新上传/新选择时 422；已挂该值的存量作品编辑不被 422 卡死；公开读口维持过滤与 404",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-4",
+      "title": "标签写路径全留痕",
+      "acceptance": "tags 域全部 admin 写操作（建/改/删标签键、建/删值、合并、分组改清、状态跃迁）各落一条 audit_log（before/after/理由）；审计页可按 entity_type=tag 筛出",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-5",
+      "title": "标签删除的完整性闸",
+      "acceptance": "父标签（含跨 key 子标签）删除返回 409+影响面，不再 500；创建标签时 parent 必须同 key，否则 422",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-6",
+      "title": "建议绑定作品需授权",
+      "acceptance": "POST /tags/suggestions 带 demo_id 时校验存在性与归属（本人 / 匿名 public / admin），越权 403、不存在 404；匿名上传后回挂流程保持可用",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-7",
+      "title": "治理 KPI 可信",
+      "acceptance": "duplicate_slugs 反映「规范化同名实体」组数（不再是结构性 0）；前端展示文案与语义一致",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-8",
+      "title": "排序与展示同精度",
+      "acceptance": "模型列表排序键与响应 score 同精度，同分按 votes desc、id asc 稳定；test_sort_by_score_orders_by_shrunk_value 整包跑也通过",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-9",
+      "title": "测试门禁可重跑",
+      "acceptance": "backend 下 python -m pytest tests -q 整包 0 failed；限流等内存状态按用例重置；新增 KB-1/KB-2/KB-3 回归用例",
       "status": "implemented"
     }
   ],
@@ -57,10 +111,28 @@
       "responsibility": "PATCH 白名单直改；挂摔/状态/别名走既有 service；不新建表"
     },
     {
+      "id": "routers.tags",
+      "label": "标签路由",
+      "layer": "web",
+      "responsibility": "只做鉴权与参数校验后转调 tag_service，不写业务规则、不直接改 Tag 表"
+    },
+    {
+      "id": "services.tag_service",
+      "label": "Tag 服务",
+      "layer": "application",
+      "responsibility": "Tag 域唯一写入口：建/改/删标签键与值、分组、合并（dry_run+影响面）、状态跃迁；每次写同事务落审计；删除前校验子标签（含跨 key）与引用"
+    },
+    {
       "id": "services.model_service",
       "label": "Model 服务",
       "layer": "application",
-      "responsibility": "模型字段更新、状态跃迁、别名、合并 dry_run+审计"
+      "responsibility": "模型实体 CRUD/别名/合并/状态机 + 与 model: 词表双向同步（新建/改名/合并/退役时同步标签值）"
+    },
+    {
+      "id": "services.suggestion_service",
+      "label": "建议服务",
+      "layer": "application",
+      "responsibility": "统一建议收件箱；治理 KPI 按规范化名称统计重名实体，不再用唯一约束列当重名口径"
     },
     {
       "id": "services.task_service",
@@ -69,10 +141,10 @@
       "responsibility": "题目字段更新、挂摔 demo、合并 dry_run+审计"
     },
     {
-      "id": "services.tag_service",
-      "label": "Tag 服务",
+      "id": "services.matching_service",
+      "label": "匹配服务",
       "layer": "application",
-      "responsibility": "标签字段直改、状态跃迁、词表合并 dry_run+审计"
+      "responsibility": "规范化/别名匹配与相似召回；规范化名称是「重名实体」KPI 的唯一口径来源"
     }
   ],
   "workflows": [
@@ -105,6 +177,44 @@
           "source": "routers.admin_entities",
           "target": "services.task_service",
           "step": 2
+        }
+      ]
+    },
+    {
+      "id": "标签合并",
+      "name": "标签合并",
+      "steps": [
+        {
+          "source": "routers.tags",
+          "target": "services.tag_service",
+          "step": 1
+        },
+        {
+          "source": "services.tag_service",
+          "target": "services.model_service",
+          "step": 2
+        }
+      ]
+    },
+    {
+      "id": "实体词表同步",
+      "name": "实体词表同步",
+      "steps": [
+        {
+          "source": "services.model_service",
+          "target": "services.tag_service",
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "重名口径",
+      "name": "重名口径",
+      "steps": [
+        {
+          "source": "services.suggestion_service",
+          "target": "services.matching_service",
+          "step": 1
         }
       ]
     }

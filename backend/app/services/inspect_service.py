@@ -12,7 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..models import Demo, DemoModel, DemoTag, EntitySuggestion, Model, Tag, TagKey
-from . import refine_service, suggestion_service
+from . import matching_service, refine_service, suggestion_service
 
 # level: action=有可自动执行的补救 | warn=需要人看但没有自动动作 | info=背景读数
 CHECKS: dict[str, dict] = {
@@ -45,10 +45,11 @@ def _tags_of(demo: Demo) -> dict[str, list[str]]:
     return tags
 
 
-def _proposals(db: Session, demo: Demo) -> list[dict]:
+def _proposals(db: Session, demo: Demo, tags: dict[str, list[str]] | None = None) -> list[dict]:
+    # KB-19：调用方批量预算标签后传入，避免逐作品懒加载
     return refine_service.classify(
         {"prompt": demo.prompt or "", "title": demo.title or "", "description": demo.description or ""},
-        _tags_of(demo),
+        tags if tags is not None else _tags_of(demo),
     )
 
 
@@ -103,7 +104,9 @@ def run(db: Session, *, sample_limit: int = 8) -> dict:
     emit("type_multi", len(multi), fixable=len(fixable),
          samples=[{"slug": d.slug, "title": d.title, "types": vs} for d, vs in multi[:sample_limit]])
 
-    no_signal = [d for d in _demo_bucket(db) if not _proposals(db, d)]
+    bucket = _demo_bucket(db)
+    bucket_tags = refine_service.tag_map_for(db, [d.id for d in bucket])  # KB-19：批量标签
+    no_signal = [d for d in bucket if not _proposals(db, d, bucket_tags.get(d.id, {}))]
     emit("demo_left", len(no_signal), samples=[{"slug": d.slug, "title": d.title} for d in no_signal[:sample_limit]])
 
     no_prompt = _approved(db).filter(func.trim(func.coalesce(Demo.prompt, "")) == "").count()
@@ -134,8 +137,13 @@ def run(db: Session, *, sample_limit: int = 8) -> dict:
     orphans = db.query(Tag).filter(Tag.id.notin_(used)).order_by(Tag.key, Tag.value).all()
     emit("orphan_values", len(orphans), samples=[{"key": t.key, "value": t.value} for t in orphans[:sample_limit]])
 
-    dup = [s for (s,) in db.query(Model.slug).group_by(Model.slug).having(func.count(Model.id) > 1).all()]
-    emit("dup_model_slug", len(dup), samples=[{"slug": s} for s in dup[:sample_limit]])
+    # KB-22：重名口径按**规范化名称**（与 knowledge_stats 同口径）。
+    # 旧实现按 Model.slug 分组，而 slug 有唯一约束 → 该检查结构性恒为 0（实测）。
+    name_groups: dict[str, list[str]] = {}
+    for (name,) in db.query(Model.name).all():
+        name_groups.setdefault(matching_service.normalize(name), []).append(name)
+    dup = [names for names in name_groups.values() if len(names) > 1]
+    emit("dup_model_slug", len(dup), samples=[{"names": names} for names in dup[:sample_limit]])
 
     pending = db.query(func.count(EntitySuggestion.id)).filter(EntitySuggestion.status == "pending").scalar() or 0
     emit("inbox_pending", pending)
@@ -196,6 +204,8 @@ def queue(db: Session, check_id: str, *, actor_id: int | None = None, min_confid
         targets = [(d, None) for d in _missing_type(db)]
 
     proposed = queued = 0
+    # KB-19：一次批量取标签，循环里不再逐作品懒加载
+    target_tags = refine_service.tag_map_for(db, [d.id for d, _ in targets])
     for d, keep in targets:
         if check_id == "type_multi":
             if not keep:
@@ -209,7 +219,7 @@ def queue(db: Session, check_id: str, *, actor_id: int | None = None, min_confid
             }
             conf = 0.95  # 纯机械判断，不含猜测
         else:
-            cands = _proposals(db, d)
+            cands = _proposals(db, d, target_tags.get(d.id, {}))
             if not cands or cands[0]["confidence"] < min_confidence:
                 continue
             top = cands[0]

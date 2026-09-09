@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "status": "implemented",
-  "updatedAt": "2026-09-09T12:21:21.849Z",
-  "approvedAt": "2026-09-09T12:13:09.101Z",
-  "approvedBy": "user",
-  "note": "",
+  "status": "draft",
+  "updatedAt": "2026-09-09T15:37:32.102Z",
+  "approvedAt": null,
+  "approvedBy": null,
+  "note": "后端收尾轮（KB-10..KB-23）已实施完毕。两处与初稿的差异（均已按代码实际口径写进验收）：① KB-10 未把详情/预览改成“非 approved 一律 404”——匿名上传者需要能预览自己的待审作品，故保留按 slug 的 capability URL 语义，只堵枚举（列表/公告）；astra 视区仍要求 approved。② KB-23 严格模式默认关闭（STRICT_SECRETS=false 只告警不阻断），避免存量部署因默认密钥直接启动失败。",
   "cim": [
     {
       "id": "KC-1",
@@ -32,83 +32,131 @@
     },
     {
       "id": "KB-1",
-      "title": "标签合并真迁移",
-      "acceptance": "合并 A→B 后，只挂 A 的作品标签变为 B（一条不丢）；返回的 merged/removed_dups/affected_demos 与实际库内一致；覆盖「单值作品」分支的回归用例",
+      "title": "标签/模型治理修复（KB-1..KB-9）",
+      "acceptance": "标签合并真迁移（单值作品不丢标签）；实体↔词表双向同步；退役值只拦写；tags 域写操作全审计；跨 key 父子 422、删键删值 409；建议绑定作品校验归属；重名 KPI 按规范化口径；模型排序与展示同精度；整包测试 0 failed",
       "status": "implemented"
     },
     {
-      "id": "KB-2",
-      "title": "标签与模型实体双向一致",
-      "acceptance": "管理端新建/改名/合并/退役模型实体时，model: 固定值同步创建或退役；词表不再出现已合并的旧型号；上传选择器能选到管理端新建的型号",
+      "id": "KB-10",
+      "title": "未上架内容不可枚举",
+      "acceptance": "匿名 GET /demos?status=pending|rejected|空串 不返回非 approved（空串按 approved，非 approved 需 admin，非法值 422）；待审作品不发公开公告（审核通过时补发）；改状态后可见域缓存立即失效；详情/预览/会话日志按 slug 访问保留（匿名上传者要能预览自己的待审作品），但 astra 视区仍要求 approved",
       "status": "implemented"
     },
     {
-      "id": "KB-3",
-      "title": "退役值只拦写、不误伤存量",
-      "acceptance": "deprecated 固定值用于新上传/新选择时 422；已挂该值的存量作品编辑不被 422 卡死；公开读口维持过滤与 404",
+      "id": "KB-11",
+      "title": "上传入口资源闸",
+      "acceptance": "请求体分块读取、超限立即 413，鉴权与限流在读文件之前；zip 解压前累计总字节/成员数/压缩比并设阀值；先解压到临时目录、全部校验通过后原子替换（坏 zip/缺 index.html 不再删掉旧文件）；封面解码前限像素并捕 DecompressionBomb",
       "status": "implemented"
     },
     {
-      "id": "KB-4",
-      "title": "标签写路径全留痕",
-      "acceptance": "tags 域全部 admin 写操作（建/改/删标签键、建/删值、合并、分组改清、状态跃迁）各落一条 audit_log（before/after/理由）；审计页可按 entity_type=tag 筛出",
+      "id": "KB-12",
+      "title": "URL 抓取防 SSRF",
+      "acceptance": "POST /demos/from-url 抓取禁用自动重定向（或逐跳校验）、只放行 http/https + 80/443、解析出的 IP 直接用于连接；内网/回环/保留地址与重定向目标一律拒绕，有回归用例",
       "status": "implemented"
     },
     {
-      "id": "KB-5",
-      "title": "标签删除的完整性闸",
-      "acceptance": "父标签（含跨 key 子标签）删除返回 409+影响面，不再 500；创建标签时 parent 必须同 key，否则 422",
+      "id": "KB-13",
+      "title": "路径按目录归属判定",
+      "acceptance": "/media/../<同前缀兄弟>/x 不再 200；_safe_join 同前缀绕过返 400 而非 500；zip 成员越界拒绝；全部改 is_relative_to 判定 + 回归用例",
       "status": "implemented"
     },
     {
-      "id": "KB-6",
-      "title": "建议绑定作品需授权",
-      "acceptance": "POST /tags/suggestions 带 demo_id 时校验存在性与归属（本人 / 匿名 public / admin），越权 403、不存在 404；匿名上传后回挂流程保持可用",
+      "id": "KB-14",
+      "title": "随机排序遵守筛选",
+      "acceptance": "sort=random 与 tag/q/model/author/task/rounds/platform 组合时 items 全部落在筛选集内且 total 一致；随机缓存键含筛选指纹",
+      "status": "draft"
+    },
+    {
+      "id": "KB-15",
+      "title": "题目域状态闸与挂题完整性",
+      "acceptance": "公开 GET /tasks 只出 active（其余值 422）；GET /tasks/{slug} 对 merged/hidden 404、candidate 仅 admin；挂题与收件箱批准拒绕 merged/hidden 目标；attach_demos 去重且重复 id 不再 500；delete_task 对被 merged_into 指向或被建议引用时 409",
       "status": "implemented"
     },
     {
-      "id": "KB-7",
-      "title": "治理 KPI 可信",
-      "acceptance": "duplicate_slugs 反映「规范化同名实体」组数（不再是结构性 0）；前端展示文案与语义一致",
+      "id": "KB-16",
+      "title": "建议审核的事务边界",
+      "acceptance": "批准一条建议时实体变更与建议状态在**同一事务**提交（中途失败不出现「实体已建、建议仍 pending」）；batch_review 单条失败先回滚再记结果；suggestion_service.create() 不再自行 commit",
       "status": "implemented"
     },
     {
-      "id": "KB-8",
-      "title": "排序与展示同精度",
-      "acceptance": "模型列表排序键与响应 score 同精度，同分按 votes desc、id asc 稳定；test_sort_by_score_orders_by_shrunk_value 整包跑也通过",
+      "id": "KB-17",
+      "title": "治理动作留痕扩展",
+      "acceptance": "demo 审核/策展、settings 修改、论坛审核/隐藏/删除/封禁/举报处理、用户 role/status 变更各落一条 audit_log（同事务 + before/after）；审计接口 entity_type/action 白名单由常量生成",
       "status": "implemented"
     },
     {
-      "id": "KB-9",
-      "title": "测试门禁可重跑",
-      "acceptance": "backend 下 python -m pytest tests -q 整包 0 failed；限流等内存状态按用例重置；新增 KB-1/KB-2/KB-3 回归用例",
+      "id": "KB-18",
+      "title": "计数与冗余列一致性",
+      "acceptance": "删除回复按受影响子树数扣减、reply_count 用原子 SQL 增减；评分/声望/收到赞用原子更新；并发唯一约束冲突返回幂等结果而非 500；有级联与并发回归用例",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-19",
+      "title": "列表与工作台的 N+1 消除",
+      "acceptance": "pending_attribution、attach_demos、task_compare、refine/inspect 扫描、论坛与通知列表、/related、/admin/users、排行榜的 SQL 条数与页大小/作品数解耦（有查询计数回归用例）",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-20",
+      "title": "管理端列表与统计轻量化",
+      "acceptance": "GET /admin/demos 改为轻量序列化（不再逐条查时间线/走磁盘）且支持可选服务端分页；/admin/stats 的存储统计带缓存；/admin/users 用聚合取数",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-21",
+      "title": "限流与内存状态收口",
+      "acceptance": "8 处 IP 限流合并为一个 services.ratelimit（滑动窗口 + 有界键空间 + 过期清理 + Retry-After）；登录失败按 IP+用户名限流；外部同步 sync_models 预载后批量提交",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-22",
+      "title": "口径与契约小修",
+      "acceptance": "inspect_service 重名检查改规范化口径；收件箱 kind 白名单由 SUGGESTION_KINDS 生成（含 retag_demo）；UserPatch 接受 banned 且状态集单一常量；PUT /admin/settings 用 SettingsIn（None=不改）+ 单事务 + 审计；RequestValidationError 响应补 code；max_file_size 接线",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-23",
+      "title": "安全默认值加固",
+      "acceptance": "默认 JWT 密钥/默认管理员口令在启动时输出醒目告警并写入 /health 的 warnings；ADMIN_INITIAL_PASSWORD/JWT_SECRET 可用环境变量覆盖；可选严格模式（STRICT_SECRETS=true）拒绕默认值启动；登录失败按 IP+用户名限流（本地开发与测试路径不变）",
       "status": "implemented"
     }
   ],
   "modules": [
     {
-      "id": "fe:views/AdminView",
-      "label": "AdminView",
+      "id": "routers.demos",
+      "label": "作品路由",
       "layer": "web",
-      "responsibility": "侧栏只留「知识」一项进工作台；旧 tab 深链仍解析但不占导航"
+      "responsibility": "作品列表/详情/上传/更新/下载；公开列表只出已上架；上传先鉴权限流再读流，预览/媒体出口走目录归属判定"
     },
     {
-      "id": "fe:components/admin/AdminEntitiesSection",
-      "label": "知识工作台",
+      "id": "routers.tasks",
+      "label": "题目路由",
       "layer": "web",
-      "responsibility": "左栏看+选（类型/搜索/状态）；右栏改+存（复用详情模板）；主从常驻不串行页"
+      "responsibility": "公开题目列表/详情只出 active；candidate/merged/hidden 仅管理端可见"
     },
     {
-      "id": "fe:components/admin/AdminEntityDetailSection",
-      "label": "实体检视器",
+      "id": "routers.admin",
+      "label": "管理路由",
       "layer": "web",
-      "responsibility": "内容表单+单一保存；身份操作收进详情并带 dry_run；EntityPicker 唯一选择器"
+      "responsibility": "审核与策展写操作 require_admin + 同事务落审计；列表接口轻量序列化且支持可选分页"
     },
     {
-      "id": "routers.admin_entities",
-      "label": "Admin 实体路由",
+      "id": "routers.forum",
+      "label": "论坛路由",
       "layer": "web",
-      "responsibility": "PATCH 白名单直改；挂摔/状态/别名走既有 service；不新建表"
+      "responsibility": "发帖/回复/举报与论坛管理；写操作走统一限流；审核/隐藏/删除/封禁/举报处理同事务落审计；列表批量取互动汇总"
+    },
+    {
+      "id": "routers.sessions",
+      "label": "会话日志路由",
+      "layer": "web",
+      "responsibility": "会话轨迹出口与作品详情共用可见域/上架门禁；内容代理带每 IP 限流"
+    },
+    {
+      "id": "routers.users",
+      "label": "用户路由",
+      "layer": "web",
+      "responsibility": "用户主页/关注/榜单；管理端改角色/状态同事务落审计"
     },
     {
       "id": "routers.tags",
@@ -117,34 +165,58 @@
       "responsibility": "只做鉴权与参数校验后转调 tag_service，不写业务规则、不直接改 Tag 表"
     },
     {
+      "id": "services.storage",
+      "label": "存储服务",
+      "layer": "infrastructure",
+      "responsibility": "zip 解压/封面压缩/文件落盘；解压前累计大小与压缩比、先临时目录后原子替换、路径用 is_relative_to 判定；封面解码前限像素"
+    },
+    {
+      "id": "services.ratelimit",
+      "label": "限流服务",
+      "layer": "infrastructure",
+      "responsibility": "全站 IP/用户维度滑动窗口限流的单一实现：有界键空间、过期清理、429 + Retry-After"
+    },
+    {
+      "id": "services.audit_service",
+      "label": "审计服务",
+      "layer": "application",
+      "responsibility": "知识与管理动作留痕的唯一入口：只 add/flush 不 commit，由业务事务收尾；实体类型与动作常量单一来源"
+    },
+    {
       "id": "services.tag_service",
       "label": "Tag 服务",
       "layer": "application",
-      "responsibility": "Tag 域唯一写入口：建/改/删标签键与值、分组、合并（dry_run+影响面）、状态跃迁；每次写同事务落审计；删除前校验子标签（含跨 key）与引用"
+      "responsibility": "Tag 域唯一写入口：建/改/删标签键与值、分组、合并（dry_run+影响面）、状态跃迁；每次写同事务落审计；删除前校验子标签与引用"
     },
     {
       "id": "services.model_service",
       "label": "Model 服务",
       "layer": "application",
-      "responsibility": "模型实体 CRUD/别名/合并/状态机 + 与 model: 词表双向同步（新建/改名/合并/退役时同步标签值）"
-    },
-    {
-      "id": "services.suggestion_service",
-      "label": "建议服务",
-      "layer": "application",
-      "responsibility": "统一建议收件箱；治理 KPI 按规范化名称统计重名实体，不再用唯一约束列当重名口径"
+      "responsibility": "模型实体 CRUD/别名/合并/状态机 + 与 model: 词表双向同步；归属预填的模型/别名一次取，不按作品循环扫表"
     },
     {
       "id": "services.task_service",
       "label": "Task 服务",
       "layer": "application",
-      "responsibility": "题目字段更新、挂摔 demo、合并 dry_run+审计"
+      "responsibility": "题目 CRUD/挂摔/合并；写操作拒绝 merged/hidden 目标；批量挂题用集合查询且去重；删除前校验反向引用"
+    },
+    {
+      "id": "services.suggestion_service",
+      "label": "建议服务",
+      "layer": "application",
+      "responsibility": "统一建议收件箱；批准执行与建议状态同事务；create 只 flush 不 commit；KPI 按规范化名称统计"
     },
     {
       "id": "services.matching_service",
       "label": "匹配服务",
       "layer": "application",
-      "responsibility": "规范化/别名匹配与相似召回；规范化名称是「重名实体」KPI 的唯一口径来源"
+      "responsibility": "规范化/别名匹配与相似召回；提供规范化键集缓存供最长匹配，避免按作品全表扫"
+    },
+    {
+      "id": "services.scope",
+      "label": "可见域服务",
+      "layer": "application",
+      "responsibility": "Host→视区判定与数据面过滤；公开出口（列表/详情/预览/下载/会话日志）的单一门禁实现，astra 要求已上架"
     }
   ],
   "workflows": [
@@ -215,6 +287,80 @@
           "source": "services.suggestion_service",
           "target": "services.matching_service",
           "step": 1
+        }
+      ]
+    },
+    {
+      "id": "上架门禁",
+      "name": "上架门禁",
+      "steps": [
+        {
+          "source": "routers.demos",
+          "target": "services.scope",
+          "step": 1
+        },
+        {
+          "source": "routers.sessions",
+          "target": "services.scope",
+          "step": 2
+        },
+        {
+          "source": "routers.tasks",
+          "target": "services.task_service",
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "上传资源闸",
+      "name": "上传资源闸",
+      "steps": [
+        {
+          "source": "routers.demos",
+          "target": "services.storage",
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "限流收口",
+      "name": "限流收口",
+      "steps": [
+        {
+          "source": "routers.demos",
+          "target": "services.ratelimit",
+          "step": 1
+        },
+        {
+          "source": "routers.forum",
+          "target": "services.ratelimit",
+          "step": 2
+        },
+        {
+          "source": "routers.sessions",
+          "target": "services.ratelimit",
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "治理留痕",
+      "name": "治理留痕",
+      "steps": [
+        {
+          "source": "routers.admin",
+          "target": "services.audit_service",
+          "step": 1
+        },
+        {
+          "source": "routers.forum",
+          "target": "services.audit_service",
+          "step": 2
+        },
+        {
+          "source": "routers.users",
+          "target": "services.audit_service",
+          "step": 3
         }
       ]
     }

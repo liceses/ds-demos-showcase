@@ -7,6 +7,7 @@
 
 from fastapi import HTTPException
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import Demo, ForumReaction, ForumReply, ForumTopic, User, UserFollow
@@ -23,6 +24,32 @@ from . import notification_service
 REACTION_POINTS = {"like": 1, "thanks": 2}
 
 
+def _bump_author(db: Session, user_id: int, reaction_type: str, delta: int) -> None:
+    """作者声望/收到赞（感谢）原子增减（KB-18）。
+
+    旧写法 `author.reputation += points` 是读改写：并发点赞会丢更新。这里用
+    `SET x = x + delta`，扣减时夹住 0（历史漂移不至于写出负数）。
+    """
+    if not delta:
+        return
+    counter = User.received_likes if reaction_type == "like" else User.received_thanks
+    if delta > 0:
+        db.query(User).filter(User.id == user_id).update(
+            {
+                User.reputation: User.reputation + delta,
+                counter: counter + 1,
+            },
+            synchronize_session=False,
+        )
+        return
+    db.query(User).filter(User.id == user_id, User.reputation >= -delta).update(
+        {User.reputation: User.reputation + delta}, synchronize_session=False
+    )
+    db.query(User).filter(User.id == user_id, counter > 0).update(
+        {counter: counter - 1}, synchronize_session=False
+    )
+
+
 def _reaction_target(db: Session, target_type: str, target_id: int):
     """返回可被互动的目标；不存在/不可见时抛 404。"""
     if target_type == "topic":
@@ -37,6 +64,51 @@ def _reaction_target(db: Session, target_type: str, target_id: int):
     if topic is None or topic.status != "normal":
         raise HTTPException(status_code=404, detail="回复不存在或未上线")
     return r
+
+
+def reaction_summaries(
+    db: Session,
+    target_type: str,
+    target_ids: list[int],
+    user_id: int | None = None,
+) -> dict[int, ReactionSummary]:
+    """批量互动汇总（KB-19）：一次分组查询 + 一次「我的互动」查询，覆盖整页。
+
+    论坛列表旧实现逐行调 reaction_summary（每行 1~2 条 SQL）→ page_size=100 约 200 条。
+    """
+    if not target_ids:
+        return {}
+    counts: dict[int, dict[str, int]] = {}
+    for target_id, reaction_type, n in (
+        db.query(ForumReaction.target_id, ForumReaction.reaction_type, func.count(ForumReaction.id))
+        .filter(ForumReaction.target_type == target_type, ForumReaction.target_id.in_(target_ids))
+        .group_by(ForumReaction.target_id, ForumReaction.reaction_type)
+        .all()
+    ):
+        counts.setdefault(target_id, {})[reaction_type] = int(n)
+    mine: dict[int, list[str]] = {}
+    if user_id is not None:
+        for target_id, reaction_type in (
+            db.query(ForumReaction.target_id, ForumReaction.reaction_type)
+            .filter(
+                ForumReaction.user_id == user_id,
+                ForumReaction.target_type == target_type,
+                ForumReaction.target_id.in_(target_ids),
+            )
+            .all()
+        ):
+            mine.setdefault(target_id, []).append(reaction_type)
+    out: dict[int, ReactionSummary] = {}
+    for tid in target_ids:
+        c = counts.get(tid, {})
+        out[tid] = ReactionSummary(
+            target_type=target_type,
+            target_id=tid,
+            like_count=c.get("like", 0),
+            thanks_count=c.get("thanks", 0),
+            my_reactions=mine.get(tid, []),
+        )
+    return out
 
 
 def reaction_summary(
@@ -116,14 +188,7 @@ def toggle_reaction(
     if existing:
         db.delete(existing)
         if target_author_id:
-            author = db.get(User, target_author_id)
-            if author:
-                if author.reputation >= points:
-                    author.reputation -= points
-                if reaction_type == "like" and author.received_likes > 0:
-                    author.received_likes -= 1
-                elif reaction_type == "thanks" and author.received_thanks > 0:
-                    author.received_thanks -= 1
+            _bump_author(db, target_author_id, reaction_type, -points)
         active = False
     else:
         db.add(ForumReaction(
@@ -132,14 +197,14 @@ def toggle_reaction(
             target_id=target_id,
             reaction_type=reaction_type,
         ))
+        try:
+            db.flush()  # KB-18：并发重复点赞撞 uq_forum_reaction 时转幂等返回，而不是 500
+        except IntegrityError:
+            db.rollback()
+            summary = reaction_summary(db, target_type, target_id, user.id)
+            return ReactionToggleOut(**summary.model_dump(), active=True)
         if target_author_id:
-            author = db.get(User, target_author_id)
-            if author:
-                author.reputation += points
-                if reaction_type == "like":
-                    author.received_likes += 1
-                else:
-                    author.received_thanks += 1
+            _bump_author(db, target_author_id, reaction_type, +points)
         active = True
         if target_type == "topic":
             notify_topic_id = target_id
@@ -297,69 +362,80 @@ def user_leaderboard(
     page: int,
     page_size: int,
 ) -> UserLeaderboardPage:
-    """用户排行榜：按声望/获赞/感谢/发帖/回复/作品/粉丝排序（仅 active 用户）。"""
-    users = db.query(User).filter(User.status == "active").all()
+    """用户排行榜：按声望/获赞/感谢/发帖/回复/作品/粉丝排序（仅 active 用户）。
 
-    demo_counts = dict(
-        db.query(Demo.author_id, func.count(Demo.id))
+    KB-19：排序与分页下推到 SQL（旧实现把全部 active 用户载进内存再 Python 排序，
+    公开端点被反复触发就是 O(用户数) 的内存与 CPU）。
+    """
+    demo_counts = (
+        db.query(Demo.author_id.label("uid"), func.count(Demo.id).label("c"))
         .filter(Demo.status == "approved", Demo.author_id.isnot(None))
         .group_by(Demo.author_id)
-        .all()
+        .subquery()
     )
-    topic_counts = dict(
-        db.query(ForumTopic.author_id, func.count(ForumTopic.id))
+    topic_counts = (
+        db.query(ForumTopic.author_id.label("uid"), func.count(ForumTopic.id).label("c"))
         .filter(ForumTopic.status == "normal", ForumTopic.author_id.isnot(None))
         .group_by(ForumTopic.author_id)
-        .all()
+        .subquery()
     )
-    reply_counts = dict(
-        db.query(ForumReply.author_id, func.count(ForumReply.id))
+    reply_counts = (
+        db.query(ForumReply.author_id.label("uid"), func.count(ForumReply.id).label("c"))
         .filter(ForumReply.status == "normal", ForumReply.author_id.isnot(None))
         .group_by(ForumReply.author_id)
-        .all()
+        .subquery()
     )
-    follower_counts = dict(
-        db.query(UserFollow.following_id, func.count(UserFollow.id))
+    follower_counts = (
+        db.query(UserFollow.following_id.label("uid"), func.count(UserFollow.id).label("c"))
         .group_by(UserFollow.following_id)
+        .subquery()
+    )
+    order_col = {
+        "likes": User.received_likes,
+        "thanks": User.received_thanks,
+        "topics": func.coalesce(topic_counts.c.c, 0),
+        "replies": func.coalesce(reply_counts.c.c, 0),
+        "demos": func.coalesce(demo_counts.c.c, 0),
+        "followers": func.coalesce(follower_counts.c.c, 0),
+    }.get(sort, User.reputation)
+
+    query = (
+        db.query(
+            User,
+            func.coalesce(demo_counts.c.c, 0),
+            func.coalesce(topic_counts.c.c, 0),
+            func.coalesce(reply_counts.c.c, 0),
+            func.coalesce(follower_counts.c.c, 0),
+        )
+        .outerjoin(demo_counts, demo_counts.c.uid == User.id)
+        .outerjoin(topic_counts, topic_counts.c.uid == User.id)
+        .outerjoin(reply_counts, reply_counts.c.uid == User.id)
+        .outerjoin(follower_counts, follower_counts.c.uid == User.id)
+        .filter(User.status == "active")
+    )
+    total = query.count()
+    rows = (
+        query.order_by(order_col.desc(), User.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-
-    rows = [
-        UserLeaderboardOut(
-            id=u.id,
-            username=u.username,
-            bio=u.bio,
-            reputation=u.reputation,
-            received_likes=u.received_likes,
-            received_thanks=u.received_thanks,
-            demo_count=demo_counts.get(u.id, 0),
-            topic_count=topic_counts.get(u.id, 0),
-            reply_count=reply_counts.get(u.id, 0),
-            follower_count=follower_counts.get(u.id, 0),
-        )
-        for u in users
-    ]
-
-    if sort == "likes":
-        key = lambda r: r.received_likes  # noqa: E731
-    elif sort == "thanks":
-        key = lambda r: r.received_thanks  # noqa: E731
-    elif sort == "topics":
-        key = lambda r: r.topic_count  # noqa: E731
-    elif sort == "replies":
-        key = lambda r: r.reply_count  # noqa: E731
-    elif sort == "demos":
-        key = lambda r: r.demo_count  # noqa: E731
-    elif sort == "followers":
-        key = lambda r: r.follower_count  # noqa: E731
-    else:
-        key = lambda r: r.reputation  # noqa: E731
-
-    rows.sort(key=lambda r: (key(r), r.id), reverse=True)
-    total = len(rows)
-    start = (page - 1) * page_size
     return UserLeaderboardPage(
-        items=rows[start : start + page_size],
+        items=[
+            UserLeaderboardOut(
+                id=u.id,
+                username=u.username,
+                bio=u.bio,
+                reputation=u.reputation,
+                received_likes=u.received_likes,
+                received_thanks=u.received_thanks,
+                demo_count=int(dc or 0),
+                topic_count=int(tc or 0),
+                reply_count=int(rc or 0),
+                follower_count=int(fc or 0),
+            )
+            for u, dc, tc, rc, fc in rows
+        ],
         total=total,
         page=page,
         page_size=page_size,

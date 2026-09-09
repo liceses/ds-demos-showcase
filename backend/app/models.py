@@ -20,6 +20,10 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+# 用户状态全集（KB-22）：模型注释、PATCH 校验、前端下拉共用这一份，别再各写一遍
+USER_STATUSES = ("active", "suspended", "banned", "deleted")
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -571,6 +575,21 @@ AUDIT_ACTIONS = (
 )
 # 建议来源六值（评审与重排.md 裁决 R2）
 SUGGESTION_SOURCES = ("user", "admin", "ai", "inferred", "external", "imported")
+
+# 审计实体类型全集（KB-17）：写入侧与审计页筛选白名单共用这一份，
+# 避免「加了新写入动作但忘了补白名单」导致审计记录筛不出来（tag/user/setting 曾各漏一次）。
+AUDIT_ENTITY_TYPES = (
+    "model",
+    "task",
+    "tag",
+    "suggestion",
+    "demo",
+    "forum_topic",
+    "forum_reply",
+    "forum_report",
+    "user",
+    "setting",
+)
 
 
 class EntitySuggestion(Base):

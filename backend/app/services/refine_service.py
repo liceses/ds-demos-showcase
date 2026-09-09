@@ -144,10 +144,30 @@ def classify(texts: dict[str, str], tags: dict[str, list[str]]) -> list[dict]:
     return out
 
 
-def proposals_for_demo(db: Session, demo: Demo) -> list[dict]:
-    tags: dict[str, list[str]] = {}
-    for link in demo.tag_associations:
-        tags.setdefault(link.tag.key, []).append(link.tag.value)
+def tag_map_for(db: Session, demo_ids: list[int]) -> dict[int, dict[str, list[str]]]:
+    """一次查询取多件作品的 `key -> [value]`（KB-19）。
+
+    调用方（scan / 巡检）都是「批量取 Demo 再逐个循环」，逐个访问 `demo.tag_associations`
+    会退化成 N+1（scan 上限 2000 → 单请求上千次查询）。
+    """
+    out: dict[int, dict[str, list[str]]] = {}
+    if not demo_ids:
+        return out
+    for demo_id, key, value in (
+        db.query(DemoTag.demo_id, Tag.key, Tag.value)
+        .join(Tag, Tag.id == DemoTag.tag_id)
+        .filter(DemoTag.demo_id.in_(demo_ids))
+        .all()
+    ):
+        out.setdefault(demo_id, {}).setdefault(key, []).append(value)
+    return out
+
+
+def proposals_for_demo(db: Session, demo: Demo, tags: dict[str, list[str]] | None = None) -> list[dict]:
+    if tags is None:
+        tags = {}
+        for link in demo.tag_associations:
+            tags.setdefault(link.tag.key, []).append(link.tag.value)
     cands = classify(
         {"prompt": demo.prompt or "", "title": demo.title or "", "description": demo.description or ""},
         tags,
@@ -176,8 +196,9 @@ def scan(
         .all()
     )
     out: list[Proposal] = []
+    tag_map = tag_map_for(db, [d.id for d in demos])  # KB-19：一次批量取标签
     for d in demos:
-        cands = proposals_for_demo(db, d)
+        cands = proposals_for_demo(db, d, tag_map.get(d.id, {}))
         if not cands:
             continue
         top = cands[0]

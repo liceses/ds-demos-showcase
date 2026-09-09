@@ -150,7 +150,12 @@ def resolve_demo_slugs(db, slugs: list[str]) -> list[int]:
 
 def batch_review(db, action: str, ids: list[int], actor_id: int) -> dict:
     """收件箱批量审核（06 协作清单 #4：t4 前端限速循环→真批量端点）。
-    每条独立走 suggestion_service.review（approve 落对应 service + 审计；单条 409/404 不拖垮整批）。"""
+    每条独立走 suggestion_service.review（approve 落对应 service + 审计；单条 409/404 不拖垮整批）。
+
+    KB-16：失败分支必须 `db.rollback()` —— 否则失败行未提交的写入会被下一条成功行的
+    commit 顺带提交；若失败发生在 flush（如 IntegrityError），SQLAlchemy 事务已失效，
+    后续条目会全部抛 PendingRollbackError，整批变成假失败。
+    """
     if action not in ("approve", "reject"):
         raise HTTPException(status_code=422, detail="action 需为 approve / reject")
     results: list[dict] = []
@@ -162,8 +167,10 @@ def batch_review(db, action: str, ids: list[int], actor_id: int) -> dict:
             suggestion_service.review(db, s, action, actor_id=actor_id)
             results.append({"id": sid, "ok": True})
         except HTTPException as e:
+            db.rollback()
             results.append({"id": sid, "ok": False, "error": e.detail})
         except Exception as e:  # 单条意外失败也不拖垮整批（前端失败列表可直接重试）
+            db.rollback()
             results.append({"id": sid, "ok": False, "error": str(e)})
     ok_count = sum(1 for r in results if r["ok"])
     return {"action": action, "ok": ok_count, "failed": len(ids) - ok_count, "results": results}

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from ..client_ip import get_client_ip
 from ..database import get_db
 from ..deps import current_user
 from ..models import User
@@ -12,8 +13,13 @@ from ..security import (
     set_auth_cookie,
     verify_password,
 )
+from ..services import ratelimit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# 登录限流（KB-23）：每 IP / 每用户名 5 分钟内最多 10 次尝试
+LOGIN_RATE = 10
+LOGIN_WINDOW = 300
 
 
 @router.post("/register", status_code=201, response_model=AuthResponse)
@@ -32,6 +38,10 @@ def register(body: RegisterRequest, request: Request, response: Response, db: Se
 
 @router.post("/login", response_model=AuthResponse)
 def login(body: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    # KB-23：登录失败按 IP + 用户名双维度限流（旧实现可无限次爆破口令）
+    ip = get_client_ip(request) or "unknown"
+    ratelimit.hit(f"login:ip:{ip}", LOGIN_RATE, LOGIN_WINDOW)
+    ratelimit.hit(f"login:user:{body.username.strip().lower()}", LOGIN_RATE, LOGIN_WINDOW)
     user = db.query(User).filter(User.username == body.username).first()
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="用户名或密码错误", )

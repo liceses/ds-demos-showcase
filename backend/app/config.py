@@ -24,8 +24,35 @@ class Settings(BaseSettings):
     # 匿名上传信任通道：agent 带 UPLOAD_CODE 上传 = 可信（绕过审核，见 API_CONTRACT 第 6 节）
     upload_code: str = ""
 
+    # ---- 安全默认值（KB-23）----
+    # 首次启动创建的管理员口令（新部署请用环境变量覆盖；默认值会在 /health 与启动日志里告警）
+    admin_initial_password: str = "admin123"
+    # 严格模式：默认密钥/口令未替换时拒绝启动（本地开发保持 False，CI/生产可开）
+    strict_secrets: bool = False
+
+    def secret_warnings(self) -> list[str]:
+        """默认密钥/口令的告警清单（KB-23）：启动日志与 /health 共用，不阻断默认启动。"""
+        out: list[str] = []
+        if self.jwt_secret == "please-change-me-to-a-long-random-string" or len(self.jwt_secret) < 32:
+            out.append(
+                "JWT_SECRET 仍是默认值或长度不足 32 字节：任何知道默认值的人都能伪造登录令牌（含 admin）"
+            )
+        if self.admin_initial_password == "admin123":
+            out.append(
+                "ADMIN_INITIAL_PASSWORD 仍是默认 admin123：新部署请设环境变量或立刻改密"
+            )
+        return out
+
     max_upload_size: int = 200 * 1024 * 1024  # 200MB
     max_file_size: int = 200 * 1024 * 1024
+
+    # ---- 上传/解压资源闸（KB-11）----
+    # zip 解压后的累计体积 / 成员数 / 压缩比上限：zip 炸弹打满磁盘会连带拖死同盘 SQLite
+    zip_max_uncompressed: int = 500 * 1024 * 1024  # 500MB
+    zip_max_members: int = 2000
+    zip_max_ratio: int = 100  # 解压/压缩 比
+    # 封面解码前允许的最大像素数（Pillow 默认阈值太宽松，1 亿像素足以顶爆内存）
+    cover_max_pixels: int = 40_000_000
 
     # 阿里云 OSS（可选；配置后文件双写备份到 OSS，log 只存 OSS）
     # oss_enabled 总开关：false 时即使填了 AK 也强制走本地存储（含 log）

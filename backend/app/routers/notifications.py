@@ -1,7 +1,7 @@
 """站内通知：列表 / 未读数 / 已读。"""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..deps import current_user
@@ -37,7 +37,8 @@ def list_notifications(
     if unread_only:
         q = q.filter(Notification.read == False)  # noqa: E712
     rows = (
-        q.order_by(Notification.created_at.desc(), Notification.id.desc())
+        q.options(joinedload(Notification.actor))  # KB-19：一次 join 取 actor，避免逐行懒加载
+        .order_by(Notification.created_at.desc(), Notification.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

@@ -1,6 +1,5 @@
 import asyncio
 import time
-from collections import defaultdict
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -11,23 +10,19 @@ from ..database import get_db
 from ..deps import require_admin
 from ..models import Acknowledgment, User
 from ..schemas import RecognitionIn
-from ..services import visits
+from ..services import ratelimit, visits
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 # 页面打点限流：每 IP 每分钟最多 120 次（T3·M5-B3，07 §3.3-4 用户裁决 30→120——
 # 快速浏览 30+ 页/分会被 429 静默吞 PV；120=「限流不该成为常态」档）
-_visit_hits: dict[str, list[float]] = defaultdict(list)
 _VISIT_RATE = 120  # 次/分钟/IP
 
 
 def _visit_rate_limit(request: Request) -> None:
+    # KB-21：统一走 services.ratelimit（有界键空间 + 过期清理 + Retry-After）
     ip = get_client_ip(request) or "unknown"
-    now = time.time()
-    _visit_hits[ip] = [t for t in _visit_hits[ip] if t > now - 60]
-    if len(_visit_hits[ip]) >= _VISIT_RATE:
-        raise HTTPException(status_code=429, detail="访问统计打点过于频繁", )
-    _visit_hits[ip].append(now)
+    ratelimit.hit(f"visit:{ip}", _VISIT_RATE, 60)
 
 
 # ---------- 公开 ----------
@@ -46,17 +41,13 @@ async def stats_visit(request: Request) -> dict:
 
 
 # 心跳限流：每 IP 每分钟 10 次（30s 一次正常，留余量）
-_heartbeat_hits: dict[str, list[float]] = defaultdict(list)
 _HEARTBEAT_RATE = 10
 
 
 def _heartbeat_rate_limit(request: Request) -> None:
+    # KB-21：统一走 services.ratelimit
     ip = get_client_ip(request) or "unknown"
-    now = time.time()
-    _heartbeat_hits[ip] = [t for t in _heartbeat_hits[ip] if t > now - 60]
-    if len(_heartbeat_hits[ip]) >= _HEARTBEAT_RATE:
-        raise HTTPException(status_code=429, detail="心跳过于频繁", )
-    _heartbeat_hits[ip].append(now)
+    ratelimit.hit(f"heartbeat:{ip}", _HEARTBEAT_RATE, 60)
 
 
 @router.post("/heartbeat")

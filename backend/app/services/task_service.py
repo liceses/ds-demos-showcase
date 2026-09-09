@@ -9,9 +9,9 @@
 
 from fastapi import HTTPException
 from sqlalchemy import case, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from ..models import Demo, DemoModel, DemoTask, Model, Prompt, Task
+from ..models import Demo, DemoModel, DemoTask, EntitySuggestion, Model, Prompt, Task
 from . import audit_service, cluster_service, matching_service
 
 TASK_STATUSES = ("candidate", "active", "merged", "hidden")
@@ -58,8 +58,12 @@ def create_task(
     status: str = "active",
     created_by: int | None = None,
     reason: str = "",
+    commit: bool = True,
 ) -> Task:
-    """建题。status 只接受合法值；管理员手工建题默认 active（冷启动要能立刻出内容）。"""
+    """建题。status 只接受合法值；管理员手工建题默认 active（冷启动要能立刻出内容）。
+
+    commit=False（KB-16）：供收件箱审核在单事务里执行 —— 由 review() 统一提交。
+    """
     if status not in TASK_STATUSES:
         raise HTTPException(status_code=422, detail=f"非法状态，可选：{', '.join(TASK_STATUSES)}")
     task = Task(
@@ -81,7 +85,8 @@ def create_task(
         after=audit_service.snapshot_task(task),
         reason=reason or f"新建题目《{task.title}》",
     )
-    db.commit()
+    if commit:
+        db.commit()
     _invalidate_indexes()
     return task
 
@@ -113,33 +118,44 @@ def update_task(db: Session, task: Task, actor_id: int | None = None, **fields) 
     return task
 
 
-def attach_demos(db: Session, task: Task, demo_ids: list[int], actor_id: int | None = None) -> int:
-    """批量挂题（冷启动 + prompt 簇「成题」的主手段）。返回新挂载数。"""
-    added = 0
-    for did in demo_ids:
-        if db.query(Demo.id).filter(Demo.id == did).first() is None:
-            continue
-        exists = (
-            db.query(DemoTask)
-            .filter(DemoTask.demo_id == did, DemoTask.task_id == task.id)
-            .first()
-        )
-        if exists is None:
-            db.add(DemoTask(demo_id=did, task_id=task.id))
-            added += 1
-    if added:
+def attach_demos(db: Session, task: Task, demo_ids: list[int], actor_id: int | None = None, commit: bool = True) -> int:
+    """批量挂题（冷启动 + prompt 簇「成题」的主手段）。返回新挂载数。
+
+    KB-15 修两处实测缺陷：
+    - **不去重**：同一 id 出现两次会撞 `(demo_id, task_id)` 复合主键 ——
+      `autoflush=False` 下第二次存在性检查看不到本事务刚 add 的行 → 整批 500 且全部回滚；
+    - **N+1**：逐 id 两次查询（实测挂 9 件要 21 条 SQL），改为一次 `IN` 查有效 id + 一次查已挂集合。
+    另外拒绝往 merged/hidden 题目挂载（合并后的题不该再长出作品）。
+    """
+    if task.status in ("merged", "hidden"):
+        raise HTTPException(status_code=409, detail="该题目已合并/下架，不能再挂作品")
+    ids = list(dict.fromkeys(int(d) for d in demo_ids if d))
+    if not ids:
+        return 0
+    valid = {row[0] for row in db.query(Demo.id).filter(Demo.id.in_(ids)).all()}
+    existing = {
+        row[0]
+        for row in db.query(DemoTask.demo_id)
+        .filter(DemoTask.task_id == task.id, DemoTask.demo_id.in_(ids))
+        .all()
+    }
+    new_ids = [i for i in ids if i in valid and i not in existing]
+    for did in new_ids:
+        db.add(DemoTask(demo_id=did, task_id=task.id))
+    if new_ids:
         audit_service.record(
             db,
             action="attach",
             entity_type="task",
             entity_id=task.id,
             actor_id=actor_id,
-            after={**audit_service.snapshot_task(task), "attached": added},
-            reason=f"挂载 {added} 个作品",
+            after={**audit_service.snapshot_task(task), "attached": len(new_ids)},
+            reason=f"挂载 {len(new_ids)} 个作品",
         )
-    db.commit()
+    if commit:
+        db.commit()
     cluster_service.invalidate()  # 挂题改变 covered，面板不该再推同簇
-    return added
+    return len(new_ids)
 
 
 def detach_demo(db: Session, task: Task, demo_id: int, actor_id: int | None = None) -> bool:
@@ -187,6 +203,7 @@ def merge_task(
     dry_run: bool = False,
     actor_id: int | None = None,
     reason: str = "",
+    commit: bool = True,
 ) -> dict:
     """把 source 合并进 target：迁挂载关系 → 源标 merged（单事务 + 审计，可回溯）。"""
     if source.id == target.id:
@@ -230,17 +247,38 @@ def merge_task(
         after=audit_service.snapshot_task(source),
         reason=reason or f"合并入《{target.title}》（id={target.id}），迁移 {affected} 个作品",
     )
-    db.commit()
+    if commit:
+        db.commit()
     _invalidate_indexes()
     preview["merged"] = True
     return preview
 
 
 def delete_task(db: Session, task: Task, actor_id: int | None = None) -> None:
-    """仅允许删除零挂载的题目（有挂载走 merge / hidden）。"""
+    """仅允许删除零挂载的题目（有挂载走 merge / hidden）。
+
+    KB-15：还要挡住两类反向引用，否则 `db.delete` 会撞外键抛 500（实测）：
+    - 别的题目 `merged_into_id` 指向它（删了 FK 直接失败）；
+    - 收件箱里仍有 pending 建议指向它（删完变悬空，approve 时 404）。
+    """
     linked = db.query(func.count(DemoTask.demo_id)).filter(DemoTask.task_id == task.id).scalar() or 0
     if linked:
         raise HTTPException(status_code=409, detail=f"该题目仍挂着 {linked} 个作品，请使用合并或下架")
+    pointing = db.query(func.count(Task.id)).filter(Task.merged_into_id == task.id).scalar() or 0
+    if pointing:
+        raise HTTPException(status_code=409, detail=f"有 {pointing} 个题目已合并到它，请先撤销合并")
+    pending_refs = (
+        db.query(func.count(EntitySuggestion.id))
+        .filter(
+            EntitySuggestion.status == "pending",
+            EntitySuggestion.ref_id == task.id,
+            EntitySuggestion.kind.in_(("task_match", "merge_task", "new_task")),
+        )
+        .scalar()
+        or 0
+    )
+    if pending_refs:
+        raise HTTPException(status_code=409, detail=f"收件箱里还有 {pending_refs} 条建议指向它，请先处理")
     audit_service.record(
         db,
         action="delete",
@@ -435,6 +473,7 @@ def task_compare(db: Session, task: Task) -> list[dict]:
     best_by_model: dict[int, Demo] = {}
     for demo in (
         db.query(Demo)
+        .options(selectinload(Demo.model_links))  # KB-19：一次预载，不再逐作品懒加载
         .join(DemoTask, DemoTask.demo_id == Demo.id)
         .join(DemoModel, DemoModel.demo_id == Demo.id)
         .filter(DemoTask.task_id == task.id, Demo.status == "approved")
@@ -471,9 +510,12 @@ def task_compare(db: Session, task: Task) -> list[dict]:
     return out
 
 
-def task_detail(db: Session, slug: str) -> dict | None:
+def task_detail(db: Session, slug: str, allow_candidate: bool = False) -> dict | None:
+    """题目详情。KB-15：公开只出 active；candidate 仅管理员可见（allow_candidate=True）。"""
     task = get_by_slug(db, slug)
-    if task is None or task.status not in ("active", "candidate"):
+    if task is None:
+        return None
+    if task.status != "active" and not (allow_candidate and task.status == "candidate"):
         return None
     demos_total = (
         db.query(func.count(Demo.id))

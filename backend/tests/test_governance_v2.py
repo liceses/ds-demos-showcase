@@ -223,6 +223,7 @@ def test_suggestion_approve_executes_and_rejects_double_review(client, admin_hea
     )
     assert s is not None
     sid = s.id
+    db.commit()  # KB-16：create 只 flush，事务边界归调用方
     db.close()
 
     # 待审阶段：实体尚未存在
@@ -249,6 +250,7 @@ def test_suggestion_approve_executes_and_rejects_double_review(client, admin_hea
     low = suggestion_service.create(db, kind="new_model", payload={"name": "LowConf"}, confidence=0.51, source="inferred")
     assert low is not None
     low_id = low.id
+    db.commit()  # KB-16
     db.close()
     items = client.get("/api/v1/admin/suggestions", headers=admin_headers).json()["items"]
     assert low_id not in {x["id"] for x in items}
@@ -267,6 +269,7 @@ def test_suggestion_create_is_deduped(client):
     assert second is None  # 去重丢弃
     third = suggestion_service.create(db, kind="new_task", payload={"title": "同一建议"}, confidence=0.95, source="inferred")
     assert third is None  # 更高置信度只刷新证据，不新建
+    db.commit()  # KB-16
     db.close()
 
 

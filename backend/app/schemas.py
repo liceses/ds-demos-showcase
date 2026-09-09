@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .models import USER_STATUSES
+
 
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -266,8 +268,9 @@ class DemoTimelineOut(BaseModel):
 
 class DemoDetailOut(DemoSummaryOut):
     preview_url: str = ""
-    session_log_count: int
-    is_author: bool
+    # KB-20：轻量列表（detail=False）不带这两项 → 给默认值，避免响应校验炸掉
+    session_log_count: int = 0
+    is_author: bool = False
     prompt: str = ""
     # Q2：选了兜底型号时的依据留痕（没记录/灰测不便说/别人传的/多模型混合 + 自由描述）
     model_hint: str = ""
@@ -338,6 +341,18 @@ class SettingsOut(BaseModel):
     fun_mode: bool | None = None
 
 
+class SettingsIn(BaseModel):
+    """PUT /admin/settings 请求体（KB-22）：**None = 不改该字段**。
+
+    旧实现直接复用 SettingsOut —— 它带默认值（auto_approve=True / auto_approve_public=False），
+    只想改 fun_mode 的调用方会把审核策略静默重置。现在三个字段都可缺省，且缺省即不改。
+    """
+
+    auto_approve: bool | None = None
+    auto_approve_public: bool | None = None
+    fun_mode: bool | None = None
+
+
 # ---------- 赞助/致谢 ----------
 class RecognitionIn(BaseModel):
     kind: str = Field(pattern="^(sponsor|thanks)$")
@@ -360,7 +375,8 @@ class ReviewAction(BaseModel):
 
 class UserPatch(BaseModel):
     role: str | None = Field(default=None, pattern="^(user|admin)$")
-    status: str | None = Field(default=None, pattern="^(active|suspended|deleted)$")
+    # KB-22：状态集来自 models.USER_STATUSES（旧写法漏了 banned，而封禁端点写的正是 banned）
+    status: str | None = Field(default=None, pattern="^(" + "|".join(USER_STATUSES) + ")$")
 
 
 class DemoCounts(BaseModel):

@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy import text
@@ -57,6 +58,19 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail, "code": f"http_{exc.status_code}"},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """参数校验失败也遵守统一错误契约（KB-22）。
+
+    默认 handler 只回 `{"detail": [...]}`，缺契约里的 `code`；前端拿 detail 当字符串
+    渲染时会显示 [object Object]。这里保留 detail 原样（前端已有消费），补上 code。
+    """
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "code": "http_422"},
     )
 
 app.add_middleware(
@@ -142,16 +156,23 @@ def api_root():
 
 @app.get(API_PREFIX + "/health")
 def health(db: Session = Depends(get_db)):
-    """存活探针：DB 可查即健康。no-store，避免监控读到缓存假活。"""
+    """存活探针：DB 可查即健康。no-store，避免监控读到缓存假活。
+
+    KB-23：默认密钥/口令的告警随响应返回（`warnings`），让部署方能从探针发现配置风险。
+    """
+    warnings = settings.secret_warnings()
     try:
         db.execute(text("SELECT 1"))
     except Exception:  # noqa: BLE001 —— 探针不抛栈，按 503 语义返回
         return JSONResponse(
-            {"status": "error", "db": "error"},
+            {"status": "error", "db": "error", "warnings": warnings},
             status_code=503,
             headers={"Cache-Control": "no-store"},
         )
-    return JSONResponse({"status": "ok", "db": "ok"}, headers={"Cache-Control": "no-store"})
+    return JSONResponse(
+        {"status": "ok", "db": "ok", "warnings": warnings},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def _serve_preview(slug: str, path: str, version: str | None = None):
@@ -244,7 +265,9 @@ def media_file(path: str):
                 headers={"Cache-Control": "no-store"},
             )
     file_path = (settings.media_path / safe).resolve()
-    if not str(file_path).startswith(str(settings.media_path.resolve())):
+    # KB-13：必须用「目录归属」判定。旧实现是字符串前缀比较，`../media_backup/x`
+    # 会解析到同前缀的兄弟目录而通过检查（实测能读到 media/ 之外的文件）。
+    if not file_path.is_relative_to(settings.media_path.resolve()):
         raise HTTPException(status_code=400, detail="非法的路径", )
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="文件不存在", )
@@ -252,9 +275,15 @@ def media_file(path: str):
 
 
 def _safe_join(slug: str, path: str) -> str:
-    root = settings.demos_path / slug / "files"
+    """预览子资源路径解析：越界一律 400（KB-13）。
+
+    旧写法 `str(resolved).startswith(str(root))` 对同前缀兄弟目录失效，且越界后
+    还调 `relative_to` 抛未捕获的 ValueError → 500。现在先按目录归属判定，
+    再用 resolved 根做 relative_to（不会抛）。
+    """
+    root = (settings.demos_path / slug / "files").resolve()
     file_path = (root / path).resolve()
-    if not str(file_path).startswith(str(root.resolve())):
+    if not file_path.is_relative_to(root):
         raise HTTPException(status_code=400, detail="非法的路径", )
     return file_path.relative_to(root).as_posix()
 
@@ -623,7 +652,12 @@ def init_db() -> None:
                 ))
 
         if db.query(User).filter(User.username == "admin").first() is None:
-            db.add(User(username="admin", password_hash=hash_password("admin123"), role="admin", bio="站点管理员"))
+            db.add(User(
+                username="admin",
+                password_hash=hash_password(settings.admin_initial_password),
+                role="admin",
+                bio="站点管理员",
+            ))
 
         if db.get(Setting, KEY_AUTO_APPROVE) is None:
             db.add(Setting(key=KEY_AUTO_APPROVE, value="true" if settings.auto_approve else "false"))
@@ -653,8 +687,18 @@ def _ensure_fallback_models() -> None:
         db.close()
 
 
+def _check_secrets() -> None:
+    """默认密钥/口令告警（KB-23）：默认只告警不阻断；STRICT_SECRETS=true 时拒绝启动。"""
+    warnings = settings.secret_warnings()
+    for w in warnings:
+        logger.warning("[security] %s", w)
+    if warnings and settings.strict_secrets:
+        raise RuntimeError("拒绝启动：默认密钥/口令未替换（STRICT_SECRETS=true）—— " + "；".join(warnings))
+
+
 @app.on_event("startup")
 def on_startup() -> None:
+    _check_secrets()
     init_db()
     _auto_sync_oss()
 

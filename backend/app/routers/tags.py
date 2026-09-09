@@ -32,12 +32,11 @@ from ..schemas import (
     TagValueSuggestionOut,
 )
 from ..serializers import tag_dict
-from ..services import audit_service, model_service, tag_service
+from ..services import audit_service, model_service, ratelimit, tag_service
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 
-# 用户申请固定值限流：每 IP 每小时 10 次
-_suggest_hits: dict[str, list[float]] = defaultdict(list)
+# 用户申请固定值限流：每 IP 每小时 10 次（实现见 services.ratelimit）
 _SUGGEST_RATE = 10
 
 
@@ -162,12 +161,9 @@ def _tag_key_out(db: Session, k: TagKey) -> TagKeyOut:
 
 # ---------- 固定值申请（用户） ----------
 def _suggest_rate_limit(request: Request) -> None:
+    # KB-21：统一走 services.ratelimit
     ip = get_client_ip(request) or "unknown"
-    now = time.time()
-    _suggest_hits[ip] = [t for t in _suggest_hits[ip] if t > now - 3600]
-    if len(_suggest_hits[ip]) >= _SUGGEST_RATE:
-        raise HTTPException(status_code=429, detail="申请过于频繁，请稍后再试", )
-    _suggest_hits[ip].append(now)
+    ratelimit.hit(f"tagsuggest:{ip}", _SUGGEST_RATE, 3600)
 
 
 @router.post("/suggestions", status_code=201, response_model=TagValueSuggestionOut)
@@ -471,6 +467,17 @@ def sync_models(db: Session = Depends(get_db), _: User = Depends(require_admin))
     total_models = 0
     providers = 0
 
+    # KB-21：预载既有词表值与 pending 建议（一次两条查询），循环里不再逐型号查库
+    existing_by_value = {
+        value: tag for value, tag in db.query(Tag.value, Tag).filter(Tag.key == "model").all()
+    }
+    pending_by_value = {
+        value: row
+        for value, row in db.query(TagValueSuggestion.value, TagValueSuggestion)
+        .filter(TagValueSuggestion.key == "model", TagValueSuggestion.status == "pending")
+        .all()
+    }
+
     for provider_id, provider in payload.items():
         if not isinstance(provider, dict):
             continue
@@ -485,29 +492,27 @@ def sync_models(db: Session = Depends(get_db), _: User = Depends(require_admin))
             total_models += 1
             value = str(meta.get("id") or model_id)
             name = str(meta.get("name") or "")
-            existing = db.query(Tag).filter(Tag.key == "model", Tag.value == value).first()
+            existing = existing_by_value.get(value)
             if existing is not None:
                 if existing.group != provider_name:
                     existing.group = provider_name
                     updated_group += 1
                 continue
-            pending = db.query(TagValueSuggestion).filter(
-                TagValueSuggestion.key == "model",
-                TagValueSuggestion.value == value,
-                TagValueSuggestion.status == "pending",
-            ).first()
+            pending = pending_by_value.get(value)
             if pending is not None:
                 if pending.group != provider_name:
                     pending.group = provider_name
                     updated_group += 1
                 continue
-            db.add(TagValueSuggestion(
+            row = TagValueSuggestion(
                 key="model",
                 value=value,
                 description=name,
                 group=provider_name,
                 status="pending",
-            ))
+            )
+            db.add(row)
+            pending_by_value[value] = row
             new_pending += 1
 
     db.commit()

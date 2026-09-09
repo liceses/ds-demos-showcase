@@ -721,7 +721,7 @@ def model_demos_page(
 # ---------------- 管理写操作（B1.5：全部同事务落审计） ----------------
 
 
-def model_status_set(db: Session, model: Model, status: str, actor_id: int | None = None, reason: str = "") -> Model:
+def model_status_set(db: Session, model: Model, status: str, actor_id: int | None = None, reason: str = "", commit: bool = True) -> Model:
     """状态机迁移：candidate→active（确认）/ →deprecated（退役）/ 灰测→unverified。"""
     if status not in MODEL_STATUSES:
         raise HTTPException(status_code=422, detail=f"非法状态，可选：{', '.join(MODEL_STATUSES)}")
@@ -738,7 +738,8 @@ def model_status_set(db: Session, model: Model, status: str, actor_id: int | Non
         after=audit_service.snapshot_model(model),
         reason=reason or f"状态置为 {status}",
     )
-    db.commit()
+    if commit:
+        db.commit()
     return model
 
 
@@ -804,7 +805,7 @@ def model_update(db: Session, model: Model, actor_id: int | None = None, reason:
     return model
 
 
-def alias_add(db: Session, model: Model, alias: str, actor_id: int | None = None) -> bool:
+def alias_add(db: Session, model: Model, alias: str, actor_id: int | None = None, commit: bool = True) -> bool:
     """admin 显式加别名（走审计；自动双写路径的 add_alias 不记）。"""
     added = add_alias(db, model, alias)
     if added:
@@ -817,7 +818,8 @@ def alias_add(db: Session, model: Model, alias: str, actor_id: int | None = None
             after=audit_service.snapshot_model(model),
             reason=f"新增别名 {alias}",
         )
-        db.commit()
+        if commit:
+            db.commit()
     return added
 
 
@@ -865,6 +867,7 @@ def merge_model(
     dry_run: bool = False,
     actor_id: int | None = None,
     reason: str = "",
+    commit: bool = True,
 ) -> dict:
     """把 source 合并进 target：迁引用 → 别名指向 → 废弃源（单事务 + 审计，可回溯）。
 
@@ -921,7 +924,8 @@ def merge_model(
         after={**audit_service.snapshot_model(source), "moved_demo_ids": demo_ids},
         reason=reason or f"合并入 {target.name}（id={target.id}），迁移 {affected} 个作品引用",
     )
-    db.commit()
+    if commit:
+        db.commit()
     matching_service.invalidate_alias_cache()
     preview["merged"] = True
     return preview
@@ -1271,16 +1275,14 @@ def guess_model(db: Session, text: str, *, exact_only: bool = False) -> Model | 
     hay = matching_service.normalize(text or "")
     if len(hay) < 3:
         return None
-    query = db.query(Model).filter(Model.status != "deprecated")
-    if exact_only:
-        query = query.filter(Model.resolution == "exact")
-    best: tuple[int, Model] | None = None
-    for m in query.all():
-        keys = {matching_service.normalize(m.name)} | {matching_service.normalize(a.alias) for a in m.aliases}
-        for key in keys:
-            if len(key) >= 3 and key in hay and (best is None or len(key) > best[0]):
-                best = (len(key), m)
-    return best[1] if best else None
+    # KB-19：键集走匹配层的 60s 缓存（一次查询），不再每次全表扫 Model + 逐行懒加载 aliases
+    best: tuple[int, int] | None = None
+    for key, model_id, resolution in matching_service.alias_pairs(db):
+        if exact_only and resolution != "exact":
+            continue
+        if len(key) >= 3 and key in hay and (best is None or len(key) > best[0]):
+            best = (len(key), model_id)
+    return db.get(Model, best[1]) if best else None
 
 
 def guess_target(db: Session, demo: Demo) -> Model | None:

@@ -32,26 +32,23 @@ from ..models import Announcement, Demo, DemoModel, DemoTask, DemoTimeline, Demo
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated, SamePromptOut
 from ..serializers import preload_demo_relations, serialize_demo
 from ..services import counters, model_service, oss, storage
-from ..services import notification_service, suggestion_service, tag_service
+from ..services import notification_service, ratelimit, suggestion_service, tag_service
 from ..services.scope import demo_in_scope, get_scope, scope_contains_filter
 from ..services.settings_service import get_auto_approve, get_auto_approve_public
 
 router = APIRouter(prefix="/demos", tags=["demos"])
 
-# 匿名上传限流：IP -> [unix 时间戳]（每小时窗口）
-_anon_uploads: dict[str, list[float]] = defaultdict(list)
+# 匿名上传限流：每 IP 每小时 20 次（实现见 services.ratelimit）
 ANON_RATE_LIMIT = 20  # 次/小时/IP
+
+# URL 抓取只允许这些端口（KB-12）：内网服务常挂在 8080/6379/9200 等非常规端口
+ALLOWED_FETCH_PORTS = frozenset({80, 443})
 
 
 def _anon_rate_limit(request: Request) -> None:
-    """匿名上传限流：每 IP 每小时最多 ANON_RATE_LIMIT 次。"""
+    """匿名上传限流：每 IP 每小时最多 ANON_RATE_LIMIT 次（KB-21：统一走 services.ratelimit）。"""
     ip = get_client_ip(request) or "unknown"
-    now = time.time()
-    window = now - 3600
-    _anon_uploads[ip] = [t for t in _anon_uploads[ip] if t > window]
-    if len(_anon_uploads[ip]) >= ANON_RATE_LIMIT:
-        raise HTTPException(status_code=429, detail=f"匿名上传过于频繁（{ANON_RATE_LIMIT} 次/小时），请稍后再试或登录", )
-    _anon_uploads[ip].append(now)
+    ratelimit.hit(f"upload:anon:{ip}", ANON_RATE_LIMIT, 3600)
 
 
 # ---- 高并发缓存：相关推荐 / 首页随机（锁只护缓存字典，不护 DB 查询）----
@@ -212,10 +209,22 @@ def _parse_tags(raw: str | None) -> list:
 
 
 async def _read_limited(file: UploadFile, limit: int, msg: str) -> bytes:
-    data = await file.read()
-    if len(data) > limit:
-        raise HTTPException(status_code=413, detail=msg, )
-    return data
+    """分块读取，超限立即 413（KB-11）。
+
+    旧实现 `await file.read()` 先把整个上传读进内存再比大小：200MB 上限下几十个并发
+    就能把进程 RSS 顶爆，而匿名限流还排在这之后。
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(1 << 20)  # 1MB
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(status_code=413, detail=msg)
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
@@ -243,6 +252,19 @@ def _set_demo_tags(db: Session, demo: Demo, key_values: list[str]) -> None:
     model_service.sync_demo_models(db, demo)
     # v2 B5′：run 语义标签 → demo 列（依赖刚写入的标签关联，故在其后；sync 内部已 flush）
     model_service.sync_run_meta(demo)
+
+
+def _add_publish_announcement(db: Session, demo: Demo, user: User | None) -> None:
+    """新作品公告（仅已上架作品调用，见 KB-10）。审核通过时由 admin.review_demo 补发。"""
+    db.add(Announcement(
+        type="auto",
+        title="新 Demo 发布",
+        content=demo.title,
+        demo_slug=demo.slug,
+        status="published",
+        category="demo",
+        created_by=user.id if user else None,
+    ))
 
 
 def _add_timeline(
@@ -286,7 +308,7 @@ def _parse_int_range(raw: str) -> tuple[int | None, int | None]:
 
 @router.get("", response_model=Paginated)
 def list_demos(
-    status: str | None = Query(default="approved"),
+    status: str | None = Query(default="approved", description="缺省 approved；其它状态仅 admin"),
     tag: list[str] = Query(default=[]),
     q: str | None = None,
     author: str | None = None,
@@ -301,12 +323,20 @@ def list_demos(
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
     scope: str = Depends(get_scope),
+    user: User | None = Depends(optional_user),
 ):
+    # KB-10：公开列表只出已上架。`?status=`（空串）历史上等价于「不过滤」→ 现在按 approved 处理；
+    # 其余状态只有 admin 能查（审核队列有专门的 /admin/review，不靠公开列表枚举）。
+    status = (status or "").strip() or "approved"
+    if status not in ("pending", "approved", "rejected"):
+        raise HTTPException(status_code=422, detail="status 需为 pending/approved/rejected", )
+    if status != "approved" and not (user is not None and user.role == "admin"):
+        raise HTTPException(status_code=403, detail="仅管理员可按状态查询作品", )
+
     query = db.query(Demo)
     # 可见域过滤（astra 橱窗只出策展池；deep 存量行 sites='deep' 恒真，主站行为不变）
     query = query.filter(scope_contains_filter(scope))
-    if status:
-        query = query.filter(Demo.status == status)
+    query = query.filter(Demo.status == status)
 
     if author:
         if author == "public":
@@ -548,7 +578,11 @@ def related_demos(
 
 
 def _compute_related(db: Session, slug: str, scope: str) -> list:
-    """计算相关推荐（结果已序列化为字典；锁外执行 DB 查询）。"""
+    """计算相关推荐（结果已序列化为字典；锁外执行 DB 查询）。
+
+    KB-19：候选集一次取回后用 `preload_demo_relations` 批量预载标签/模型，
+    不再对每行懒加载 `tag_associations`（637 件规模冷启动会放大成 600+ 次查询）。
+    """
     current = _find_demo(db, slug)
     cur_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in current.tag_associations}
     cur_type = current.demo_type
@@ -560,9 +594,10 @@ def _compute_related(db: Session, slug: str, scope: str) -> list:
     rows = db.query(Demo).filter(
         Demo.status == "approved", Demo.id != cur_id, scope_contains_filter(scope)
     ).all()
+    preload_demo_relations(db, rows)
     scored: list[tuple[float, Demo]] = []
     for d in rows:
-        d_tags = {f"{dt.tag.key}:{dt.tag.value}" for dt in d.tag_associations}
+        d_tags = {f"{t['key']}:{t['value']}" for t in getattr(d, "_pre_tags", [])}
         shared = cur_tags & d_tags
         if not shared and d.demo_type != cur_type:
             # 完全无关的弱推荐：给很低的保底分，保证池子不至于空
@@ -630,8 +665,20 @@ def _validate_url(url: str | None, field: str) -> str:
 
 
 def _assert_public_url(url: str) -> None:
-    """SSRF 基础防护：拒绝内网/回环/保留地址。"""
-    host = urlparse(url).hostname
+    """SSRF 防护（KB-12）：只放行 http/https + 白名单端口，且解析结果不得是内网/回环/保留地址。
+
+    注意：本函数是**逐跳**调用的（见 `_SafeRedirectHandler`），重定向目标同样要过这一关。
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=422, detail="只允许 http/https 地址", )
+    try:
+        port = parsed.port
+    except ValueError:
+        raise HTTPException(status_code=422, detail="无效的下载地址端口", )
+    if port is not None and port not in ALLOWED_FETCH_PORTS:
+        raise HTTPException(status_code=422, detail=f"不允许的端口：{port}", )
+    host = parsed.hostname
     if not host:
         raise HTTPException(status_code=422, detail="无效的下载地址", )
     try:
@@ -643,22 +690,48 @@ def _assert_public_url(url: str) -> None:
             ip = ipaddress.ip_address(info[4][0])
         except ValueError:
             continue
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
             raise HTTPException(status_code=422, detail="不允许下载内网/保留地址", )
 
 
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """重定向逐跳复查（KB-12）。
+
+    默认 opener 会静默跟随 302/307，`_assert_public_url` 只校验了首跳 ——
+    攻击者用一个公网域名 302 到 169.254.169.254/内网管理接口即可绕过。
+    """
+
+    max_redirections = 5
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _assert_public_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_SAFE_OPENER = urllib.request.build_opener(_SafeRedirectHandler)
+
+
 def _download_url_bytes(url: str, limit: int, what: str) -> bytes:
-    """从 URL 下载字节（带大小上限与超时）。"""
+    """从 URL 下载字节（逐跳 SSRF 校验 + 大小上限 + 超时）。"""
     url = _clean_url(url)
     if url is None:
         raise HTTPException(status_code=422, detail=f"{what} 地址无效", )
     _assert_public_url(url)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "ds-demos-showcase/1.0"})
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with _SAFE_OPENER.open(req, timeout=60) as resp:
             data = resp.read(limit + 1)
     except urllib.error.HTTPError as e:
         raise HTTPException(status_code=400, detail=f"下载{what}失败: HTTP {e.code}", )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"下载{what}失败: {e}", )
     if len(data) > limit:
@@ -811,15 +884,10 @@ async def _create_demo_record(
     model_service.set_demo_prompt(db, demo)
     db.commit()
 
-    db.add(Announcement(
-        type="auto",
-        title="新 Demo 发布",
-        content=demo.title,
-        demo_slug=slug,
-        status="published",
-        category="demo",
-        created_by=user.id if user else None,
-    ))
+    # KB-10：公告只给已上架作品。待审作品发公告会把 slug 暴露到公开列表（capability URL 失效）。
+    # 待审作品在审核通过时由 admin.review_demo 补发。
+    if status == "approved":
+        _add_publish_announcement(db, demo, user)
     _add_timeline(db, demo.id, "v1", "创建", None)
     # v2 B4′：挑战声明 → 候选（不直接挂题；重活已完成，此处只写一行建议）
     if challenge_task is not None:
@@ -991,6 +1059,8 @@ async def create_demo(
     _require_model_tag(tags)
     hint = (model_hint or "").strip()
     idem_key = _validate_idempotency_key(idempotency_key)
+    # KB-11：限流必须在读文件之前（旧顺序是先读满 200MB 再限流，内存/CPU 已付出）
+    trusted = _uploader_context(request, user, upload_code)
     # 题面先校验：非法 task / propose_task 必须在解压/传 OSS 之前失败，免得留下孤儿 demo
     challenge = _resolve_challenge_task(db, task)
     proposed = _parse_propose_task(propose_task)
@@ -1017,7 +1087,7 @@ async def create_demo(
         if single_file:
             if demo_type == "zip":
                 raise HTTPException(status_code=400, detail="zip 类型需要上传 zip 文件", )
-            zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+            zip_bytes = await _read_limited(file, settings.max_file_size, "上传超过大小限制")
             _validate_single_file(zip_bytes, single_file)
         else:
             if not file.filename.lower().endswith(".zip"):
@@ -1033,9 +1103,7 @@ async def create_demo(
     cover_ext = "png"
     if cover is not None and cover.filename:
         cover_ext = Path(cover.filename or "").suffix.lstrip(".") or "png"
-        cover_bytes = await _read_limited(cover, settings.max_upload_size, "封面文件过大")
-
-    trusted = _uploader_context(request, user, upload_code)
+        cover_bytes = await _read_limited(cover, settings.max_file_size, "封面文件过大")
 
     demo, status, created = await _create_demo_record(
         db, user,
@@ -1082,6 +1150,8 @@ async def create_demo_from_url(
     hint = (body.model_hint or "").strip()
 
     idem_key = _validate_idempotency_key(body.idempotency_key)
+    # KB-11：限流必须在下载之前（旧顺序是先抓完 zip/封面再限流，出站带宽与内存已付出）
+    trusted = _uploader_context(request, user, body.upload_code)
     # 幂等：同 key 已创建 → 直接返回已有结果（agent 超时重试不再重复上传）
     existing = _existing_demo_by_key(db, idem_key)
     if existing is not None:
@@ -1127,8 +1197,6 @@ async def create_demo_from_url(
         cover_ext = Path(urlparse(body.cover_url).path).suffix.lstrip(".") or "png"
 
     tags_raw = json.dumps(body.tags, ensure_ascii=False) if body.tags is not None else None
-
-    trusted = _uploader_context(request, user, body.upload_code)
 
     demo, status, created = await _create_demo_record(
         db, user,
@@ -1206,7 +1274,7 @@ async def update_demo(
         changed = True
     if cover is not None and cover.filename:
         ext = Path(cover.filename).suffix.lstrip(".") or "png"
-        cover_bytes = await _read_limited(cover, settings.max_upload_size, "封面文件过大")
+        cover_bytes = await _read_limited(cover, settings.max_file_size, "封面文件过大")
         demo.cover_url = await asyncio.to_thread(storage.save_cover, cover_bytes, ext)
         changed = True
     if file is not None and file.filename:
@@ -1216,7 +1284,7 @@ async def update_demo(
         if single_file:
             if demo.demo_type == "zip":
                 raise HTTPException(status_code=400, detail="zip 类型需要上传 zip 文件", )
-            zip_bytes = await _read_limited(file, settings.max_upload_size, "上传超过大小限制")
+            zip_bytes = await _read_limited(file, settings.max_file_size, "上传超过大小限制")
             _validate_single_file(zip_bytes, single_file)
         else:
             if not file.filename.lower().endswith(".zip"):

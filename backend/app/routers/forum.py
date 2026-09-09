@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..client_ip import get_client_ip
@@ -27,12 +28,11 @@ from ..schemas import (
     ReactionToggleIn,
     ReactionToggleOut,
 )
-from ..services import community_service, counters, forum_service, notification_service
+from ..services import audit_service, community_service, counters, forum_service, notification_service, ratelimit
 
 router = APIRouter(prefix="/forum", tags=["forum"])
 
-# 发帖/回复限流：用户 + IP 双维度
-_hits: dict[str, list[float]] = defaultdict(list)
+# 发帖/回复限流：用户 + IP 双维度（实现见 services.ratelimit）
 _TOPIC_RATE = 10
 _REPLY_RATE = 30
 
@@ -41,23 +41,41 @@ def _client_ip(request: Request) -> str:
     return get_client_ip(request) or "unknown"
 
 
+def _topic_snapshot(t: ForumTopic) -> dict:
+    """主题治理字段快照（KB-17 审计 before/after 用）。"""
+    return {
+        "id": t.id,
+        "title": t.title,
+        "status": t.status,
+        "pinned": t.pinned,
+        "sticky": t.sticky,
+        "locked": t.locked,
+        "solved": t.solved,
+        "category": t.category,
+        "tags": t.tags,
+    }
+
+
+def _bump_reply_count(db: Session, topic_id: int, delta: int) -> None:
+    """主题回复数原子增减（KB-18）。
+
+    旧写法是 ORM 读改写（`topic.reply_count += 1`），并发两条回复各自读到同值再写回 →
+    丢更新；删除走级联时还只扣 1。这里用 `SET reply_count = reply_count + delta`
+    并在扣减时夹住 0（历史漂移不至于把计数写成负数）。
+    """
+    if not delta:
+        return
+    q = db.query(ForumTopic).filter(ForumTopic.id == topic_id)
+    if delta < 0:
+        q = q.filter(ForumTopic.reply_count >= -delta)
+    q.update({ForumTopic.reply_count: ForumTopic.reply_count + delta}, synchronize_session=False)
+
+
 def _rate_limit(request: Request, key: str, limit: int, user: User) -> None:
+    """发帖/回复限流：用户 + IP 双维度（KB-21：统一走 services.ratelimit）。"""
     ip = _client_ip(request)
-    now = time.time()
-    buckets = (f"{key}:{user.id}", f"{key}:{ip}")
-    for bucket in buckets:
-        _hits[bucket] = [t for t in _hits[bucket] if t > now - 3600]
-    for bucket in buckets:
-        if len(_hits[bucket]) >= limit:
-            oldest = _hits[bucket][0] if _hits[bucket] else now
-            wait = max(1, int(3600 - (now - oldest)))
-            raise HTTPException(
-                status_code=429,
-                detail=f"操作过于频繁（每 IP/用户每小时 {limit} 次），请 {wait} 秒后重试",
-                headers={"Retry-After": str(wait)},
-            )
-    for bucket in buckets:
-        _hits[bucket].append(now)
+    ratelimit.hit(f"forum:{key}:user:{user.id}", limit, 3600)
+    ratelimit.hit(f"forum:{key}:ip:{ip}", limit, 3600)
 
 
 # ---------- 公开 ----------
@@ -123,8 +141,10 @@ def list_topics(
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     viewer_id = user.id if user else None
+    # KB-19：互动汇总一次批量取，不再逐主题查（page_size=100 旧实现约 200 条 SQL）
+    summaries = community_service.reaction_summaries(db, "topic", [t.id for t in items], viewer_id)
     return ForumTopicPage(
-        items=[forum_service.topic_out(t, db, viewer_id) for t in items],
+        items=[forum_service.topic_out(t, db, viewer_id, summary=summaries.get(t.id)) for t in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -162,8 +182,10 @@ def list_replies(
         .all()
     )
     viewer_id = user.id if user else None
+    # KB-19：回复列表同样批量取互动汇总
+    summaries = community_service.reaction_summaries(db, "reply", [r.id for r in rows], viewer_id)
     return ForumReplyPage(
-        items=[forum_service.reply_out(r, db, viewer_id) for r in rows],
+        items=[forum_service.reply_out(r, db, viewer_id, summary=summaries.get(r.id)) for r in rows],
         total=total,
         page=page,
         page_size=page_size,
@@ -243,8 +265,9 @@ def create_reply(
     status = "reviewing" if forum_service.needs_review(user) else "normal"
     r = ForumReply(topic_id=t.id, author_id=user.id, content=body.content, status=status, parent_id=parent_id)
     db.add(r)
+    db.flush()
     if status == "normal":
-        t.reply_count += 1
+        _bump_reply_count(db, t.id, +1)  # KB-18：原子自增，不再读改写
     t.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(r)
@@ -346,11 +369,13 @@ def admin_update_topic(
     tid: int,
     body: ForumTopicAdminUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
+    """改主题属性（置顶/精华/锁定/已解决/分类/状态）。KB-17：同事务落审计。"""
     t = db.get(ForumTopic, tid)
     if t is None:
         raise HTTPException(status_code=404, detail="主题不存在", )
+    before = _topic_snapshot(t)
     if body.title is not None:
         t.title = body.title
     if body.tags is not None:
@@ -367,6 +392,11 @@ def admin_update_topic(
         t.category = body.category
     if body.status is not None:
         t.status = body.status
+    if before != _topic_snapshot(t):
+        audit_service.record(
+            db, action="update", entity_type="forum_topic", entity_id=t.id, actor_id=admin.id,
+            before=before, after=_topic_snapshot(t), reason=f"管理端编辑主题《{t.title}》",
+        )
     db.commit()
     db.refresh(t)
     return forum_service.topic_out(t, db)
@@ -382,6 +412,7 @@ def admin_review_topic(
     t = db.get(ForumTopic, tid)
     if t is None or t.status != "reviewing":
         raise HTTPException(status_code=404, detail="主题不存在或不在审核中", )
+    before = _topic_snapshot(t)
     if body.action == "approve":
         t.status = "normal"
         if t.author and (t.author.need_review or t.author.trust_level < 1):
@@ -389,6 +420,11 @@ def admin_review_topic(
             t.author.need_review = False
     else:
         t.status = "hidden"
+    audit_service.record(
+        db, action="review", entity_type="forum_topic", entity_id=t.id, actor_id=admin.id,
+        before=before, after=_topic_snapshot(t),
+        reason=f"审核{'通过' if body.action == 'approve' else '隐藏'}主题《{t.title}》",
+    )
     db.commit()
     db.refresh(t)
     return forum_service.topic_out(t, db)
@@ -404,55 +440,90 @@ def admin_review_reply(
     r = db.get(ForumReply, rid)
     if r is None or r.status != "reviewing":
         raise HTTPException(status_code=404, detail="回复不存在或不在审核中", )
+    before_status = r.status
     if body.action == "approve":
         r.status = "normal"
-        topic = db.get(ForumTopic, r.topic_id)
-        if topic:
-            topic.reply_count += 1
+        _bump_reply_count(db, r.topic_id, +1)  # KB-18：原子自增
         if r.author and (r.author.need_review or r.author.trust_level < 1):
             r.author.trust_level = 1
             r.author.need_review = False
     else:
         r.status = "hidden"
+    audit_service.record(
+        db, action="review", entity_type="forum_reply", entity_id=r.id, actor_id=admin.id,
+        before={"status": before_status, "topic_id": r.topic_id},
+        after={"status": r.status, "topic_id": r.topic_id},
+        reason=f"审核{'通过' if body.action == 'approve' else '隐藏'}回复 #{r.id}",
+    )
     db.commit()
     db.refresh(r)
     return forum_service.reply_out(r, db)
 
 
 @router.delete("/admin/topics/{tid}", status_code=204)
-def admin_delete_topic(tid: int, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def admin_delete_topic(tid: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """删除主题（回复级联）。KB-17：不可逆治理动作必须留痕。"""
     t = db.get(ForumTopic, tid)
     if t is None:
         raise HTTPException(status_code=404, detail="主题不存在", )
+    before = {**_topic_snapshot(t), "reply_count": t.reply_count}
     db.query(Announcement).filter(Announcement.topic_id == tid).update({Announcement.topic_id: None})
     community_service.delete_reactions_for_topic(db, tid)
     db.delete(t)  # replies 级联删除
+    audit_service.record(
+        db, action="delete", entity_type="forum_topic", entity_id=tid, actor_id=admin.id,
+        before=before, reason=f"删除主题《{t.title}》",
+    )
     db.commit()
     return None
 
 
 @router.delete("/admin/replies/{rid}", status_code=204)
-def admin_delete_reply(rid: int, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def admin_delete_reply(rid: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
     r = db.get(ForumReply, rid)
     if r is None:
         raise HTTPException(status_code=404, detail="回复不存在", )
     topic = db.get(ForumTopic, r.topic_id)
     community_service.delete_reactions_for_reply_tree(db, rid)
+    # KB-18：parent_id 带 ondelete=CASCADE，删父回复会连带删整棵子树 ——
+    # 旧实现只 `-= 1`，少扣 N-1 条，reply_count 从此偏高（重启时那条全量重算才会自愈）。
+    subtree = forum_service.reply_subtree_ids(db, rid)
+    removed = (
+        db.query(func.count(ForumReply.id))
+        .filter(ForumReply.id.in_(subtree), ForumReply.status == "normal")
+        .scalar()
+        or 0
+    )
     db.delete(r)
-    if r.status == "normal" and topic is not None and topic.reply_count > 0:
-        topic.reply_count -= 1
+    db.flush()
+    if removed and topic is not None:
+        _bump_reply_count(db, topic.id, -removed)
+    audit_service.record(
+        db, action="delete", entity_type="forum_reply", entity_id=rid, actor_id=admin.id,
+        before={"topic_id": r.topic_id, "status": r.status, "subtree_normal_removed": removed},
+        reason=f"删除回复 #{rid}（连带子树 {len(subtree)} 条）",
+    )
     db.commit()
     return None
 
 
 @router.post("/admin/users/{uid}/ban", status_code=204)
-def admin_ban_user(uid: int, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def admin_ban_user(uid: int, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """封禁用户。KB-17：封禁是不可逆治理动作，必须留痕（谁封的、封前状态）。"""
     u = db.get(User, uid)
     if u is None:
         raise HTTPException(status_code=404, detail="用户不存在", )
     if u.role == "admin":
         raise HTTPException(status_code=400, detail="不能封禁管理员", )
+    if u.status == "banned":
+        raise HTTPException(status_code=409, detail="该用户已被封禁", )
+    before = {"username": u.username, "status": u.status, "role": u.role}
     u.status = "banned"
+    audit_service.record(
+        db, action="status_set", entity_type="user", entity_id=u.id, actor_id=admin.id,
+        before=before, after={"username": u.username, "status": u.status, "role": u.role},
+        reason=f"封禁用户 {u.username}",
+    )
     db.commit()
     return None
 
@@ -479,7 +550,15 @@ def admin_handle_report(
     r = db.get(ForumReport, rid)
     if r is None:
         raise HTTPException(status_code=404, detail="举报不存在", )
+    if r.status != "open":
+        raise HTTPException(status_code=409, detail="该举报已处理", )
+    before = {"status": r.status, "target_type": r.target_type, "target_id": r.target_id}
     r.status = "resolved" if body.action == "resolve" else "dismissed"
+    audit_service.record(
+        db, action="review", entity_type="forum_report", entity_id=r.id, actor_id=admin.id,
+        before=before, after={"status": r.status, "target_type": r.target_type, "target_id": r.target_id},
+        reason=f"举报处理：{r.status}",
+    )
     db.commit()
     db.refresh(r)
     if r.reporter_id:

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import require_admin
-from ..models import AUDIT_ACTIONS, AuditLog, Demo, DemoModel, DemoTask, EntitySuggestion, Tag, Task, User
+from ..models import AUDIT_ACTIONS, AUDIT_ENTITY_TYPES, SUGGESTION_KINDS, AuditLog, Demo, DemoModel, DemoTask, EntitySuggestion, Tag, Task, User
 from ..schemas import (
     AliasIn,
     AttachDemosIn,
@@ -385,7 +385,8 @@ def admin_prompt_clusters(
 @router.get("/suggestions")
 def admin_list_suggestions(
     status: str = Query(default="pending", pattern="^(pending|approved|rejected|all)$"),
-    kind: str | None = Query(default=None, pattern="^(new_model|new_task|task_match|merge_model|merge_task|alias)$"),
+    # KB-22：白名单由 SUGGESTION_KINDS 常量生成（旧写法手抄一份，漏了最大宗的 retag_demo → 422）
+    kind: str | None = Query(default=None, pattern="^(" + "|".join(SUGGESTION_KINDS) + ")$"),
     min_confidence: float | None = Query(default=None, ge=0, le=1),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
@@ -462,7 +463,8 @@ def admin_knowledge_stats(db: Session = Depends(get_db), _: User = Depends(requi
 
 @router.get("/audit")
 def admin_audit(
-    entity_type: str | None = Query(default=None, pattern="^(model|task|tag|suggestion|demo)$"),  # M3-B1：+tag；M5-F1：+demo（精选池 featured_* 审计可筛）
+    # KB-17：实体类型白名单由常量生成（论坛/用户/设置动作也要筛得出来）
+    entity_type: str | None = Query(default=None, pattern="^(" + "|".join(AUDIT_ENTITY_TYPES) + ")$"),
     entity_id: int | None = None,
     action: str | None = Query(default=None, pattern="^(" + "|".join(AUDIT_ACTIONS) + ")$"),
     q: str | None = Query(default=None, description="按 reason 关键词搜（定位是谁的哪次操作）"),
@@ -473,7 +475,8 @@ def admin_audit(
 ):
     """审计回溯：谁在什么时候改了什么、改前改后是什么。
 
-    `actions` 随响应返回 —— 前端下拉直接用它，常量只在一处定义（避免白名单与写入脱节）。
+    `actions` / `entity_types` 随响应返回 —— 前端下拉直接用它，常量只在一处定义
+    （避免白名单与写入脱节）。
     """
     query = db.query(AuditLog)
     if entity_type:
@@ -496,7 +499,7 @@ def admin_audit(
         "page": page,
         "page_size": page_size,
         "actions": list(AUDIT_ACTIONS),
-        "entity_types": ["model", "task", "tag", "suggestion", "demo"],  # M3-B1：+tag；M5-F1：+demo（前端审计下拉数据源）
+        "entity_types": list(AUDIT_ENTITY_TYPES),
     }
 
 

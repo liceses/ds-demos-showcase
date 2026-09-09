@@ -1,5 +1,4 @@
 import time
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -11,30 +10,38 @@ from ..client_ip import get_client_ip
 from ..database import get_db
 from ..models import Demo
 from ..schemas import SessionLogOut
-from ..services import oss
+from ..services import oss, ratelimit
+from ..services.scope import demo_public_in_scope
 from ..services.storage import demo_sessions_dir
 
 router = APIRouter(tags=["session-logs"])
 
 # 会话日志下载限流：每 IP 每小时最多 N 次（防 bot 爬取刷 OSS 下行流量）
-_hits: dict[str, list[float]] = defaultdict(list)
 RATE_LIMIT = 60  # 次/小时/IP
 
 
 def _rate_limit(request: Request) -> None:
+    # KB-21：统一走 services.ratelimit（有界键空间 + 过期清理 + Retry-After）
     ip = get_client_ip(request) or "unknown"
-    now = time.time()
-    _hits[ip] = [t for t in _hits[ip] if t > now - 3600]
-    if len(_hits[ip]) >= RATE_LIMIT:
-        raise HTTPException(status_code=429, detail="会话日志访问过于频繁，请稍后再试", )
-    _hits[ip].append(now)
+    ratelimit.hit(f"sessions:{ip}", RATE_LIMIT, 3600)
 
 
 def _find_demo(db: Session, slug: str) -> Demo:
+    """会话日志出口的作品门禁（KB-10）：与详情/预览共用可见域判定。
+
+    astra 视区只出策展池且必须已上架；deep 视区按 capability URL 语义放行（slug 不可枚举，
+    匿名上传者要能查看自己作品的轨迹）。
+    """
     demo = db.query(Demo).filter(Demo.slug == slug).first()
-    if demo is None:
+    if demo is None or not demo_public_in_scope(slug, get_scope_from_request()):
         raise HTTPException(status_code=404, detail="Demo 不存在", )
     return demo
+
+
+def get_scope_from_request() -> str:
+    from ..services.scope import current_scope
+
+    return current_scope.get()
 
 
 @router.get("/demos/{slug}/session-logs", response_model=list[SessionLogOut])

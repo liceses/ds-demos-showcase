@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..client_ip import get_client_ip
@@ -15,13 +16,11 @@ from ..deps import optional_user
 from ..models import Demo, DemoRating, User
 from ..schemas import Paginated, RatingIn, RatingOut
 from ..serializers import serialize_demo
-from ..services import rating_service
+from ..services import rating_service, ratelimit
 
 router = APIRouter(tags=["ratings"])
 
-# 匿名评分限流：每 IP 每 demo 10 次/小时 + 每 IP 全局 60 次/小时
-_anon_demo_hits: dict[tuple[str, str], list[float]] = defaultdict(list)
-_anon_global_hits: dict[str, list[float]] = defaultdict(list)
+# 匿名评分限流：每 IP 每 demo 10 次/小时 + 每 IP 全局 60 次/小时（实现见 services.ratelimit）
 DEMO_RATE = 10
 GLOBAL_RATE = 60
 
@@ -46,18 +45,10 @@ def _rater_key(user: User | None, device_id: str, ip: str) -> str:
 
 
 def _anon_rate_limit(request: Request, slug: str) -> None:
+    # KB-21：统一走 services.ratelimit（全局 + 单作品两个维度）
     ip = _client_ip(request)
-    now = time.time()
-    _anon_global_hits[ip] = [t for t in _anon_global_hits[ip] if t > now - 3600]
-    if len(_anon_global_hits[ip]) >= GLOBAL_RATE:
-        raise HTTPException(status_code=429, detail="评分过于频繁，请稍后再试", )
-    _anon_global_hits[ip].append(now)
-
-    key = (ip, slug)
-    _anon_demo_hits[key] = [t for t in _anon_demo_hits[key] if t > now - 3600]
-    if len(_anon_demo_hits[key]) >= DEMO_RATE:
-        raise HTTPException(status_code=429, detail=f"该作品每 IP 每小时最多评分 {DEMO_RATE} 次", )
-    _anon_demo_hits[key].append(now)
+    ratelimit.hit(f"rate:{ip}", GLOBAL_RATE, 3600)
+    ratelimit.hit(f"rate:{ip}:{slug}", DEMO_RATE, 3600)
 
 
 def _find_approved_demo(db: Session, slug: str) -> Demo:
@@ -86,12 +77,28 @@ def rate_demo(
     if row is None:
         row = DemoRating(demo_id=demo.id, user_id=user.id if user else None, rater_key=rater_key, score=body.score)
         db.add(row)
-        db.flush()   # 让新行进入事务，聚合才能包含它
+        try:
+            db.flush()   # 让新行进入事务，聚合才能包含它
+        except IntegrityError:
+            # KB-18：并发首评撞 uq_demo_rater → 回滚后按「已有行更新」重走，不再 500
+            db.rollback()
+            demo = _find_approved_demo(db, slug)
+            row = (
+                db.query(DemoRating)
+                .filter(DemoRating.demo_id == demo.id, DemoRating.rater_key == rater_key)
+                .first()
+            )
+            if row is None:
+                raise HTTPException(status_code=409, detail="评分冲突，请重试", )
+            old_score = row.score
+            row.score = body.score
+            row.updated_at = datetime.utcnow()
+            db.flush()
     else:
         row.score = body.score
         row.updated_at = datetime.utcnow()
         db.flush()   # 更新也 flush，确保聚合读到新分数
-    rating_service.apply_rating_delta(demo, old_score, body.score)
+    rating_service.apply_rating_delta(db, demo, old_score, body.score)
     db.commit()
     return rating_service.rating_out(db, demo, rater_key)
 
@@ -112,7 +119,7 @@ def unrate_demo(
         old_score = row.score
         db.delete(row)
         db.flush()   # 让删除立即生效，聚合才能剔除
-        rating_service.apply_rating_delta(demo, old_score, None)
+        rating_service.apply_rating_delta(db, demo, old_score, None)
         db.commit()
     return rating_service.rating_out(db, demo, rater_key)
 

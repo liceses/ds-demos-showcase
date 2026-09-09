@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..database import get_db
 from ..deps import require_admin
-from ..models import Demo, User
+from ..models import Announcement, Demo, User
 from ..schemas import (
     AdminDemoOut,
     AdminStatsOut,
@@ -16,6 +16,7 @@ from ..schemas import (
     DemoCounts,
     DemoCurationIn,
     ReviewAction,
+    SettingsIn,
     SettingsOut,
     StorageStatusOut,
     UserOut,
@@ -24,6 +25,7 @@ from ..serializers import serialize_demo
 from ..services import audit_service
 from ..services import notification_service
 from ..services import oss, settings_service
+from ..services.scope import invalidate_visibility
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -36,11 +38,43 @@ def review_list(db: Session = Depends(get_db), _: User = Depends(require_admin))
 
 @router.post("/review/{slug}")
 def review_demo(slug: str, body: ReviewAction, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """审核作品：approve/reject。
+
+    KB-14：审核是治理动作，同事务落审计；KB-10：通过时才补发公开公告（待审期不发，
+    否则 slug 会随公告泄露）；改状态后立刻失效可见域缓存（astra 域已驳回作品不再能预览）。
+    """
     demo = db.query(Demo).filter(Demo.slug == slug).first()
     if demo is None:
         raise HTTPException(status_code=404, detail="Demo 不存在", )
-    demo.status = "approved" if body.action == "approve" else "rejected"
+    new_status = "approved" if body.action == "approve" else "rejected"
+    if demo.status == new_status:
+        raise HTTPException(status_code=409, detail=f"该作品已是 {new_status} 状态", )
+    before = {"slug": demo.slug, "status": demo.status, "title": demo.title}
+    demo.status = new_status
+    if new_status == "approved":
+        # 待审期没发公告（KB-10），通过时补一条，与直接上传的公告口径一致
+        db.add(Announcement(
+            type="auto",
+            title="新 Demo 发布",
+            content=demo.title,
+            demo_slug=demo.slug,
+            status="published",
+            category="demo",
+            created_by=admin.id,
+        ))
+    audit_service.record(
+        db,
+        action="review",
+        entity_type="demo",
+        entity_id=demo.id,
+        actor_id=admin.id,
+        before=before,
+        after={"slug": demo.slug, "status": new_status},
+        reason=f"审核{'通过' if body.action == 'approve' else '驳回'}：{demo.title}",
+    )
     db.commit()
+    # 预览/下载的可见域缓存立即失效（TTL 300s，不等它过期）
+    invalidate_visibility(demo.slug)
     # 通知作者审核结果
     if demo.author_id:
         notification_service.create(
@@ -55,24 +89,39 @@ def review_demo(slug: str, body: ReviewAction, db: Session = Depends(get_db), ad
 @router.get("/demos", response_model=list[AdminDemoOut])
 def admin_demos(
     sites: str | None = Query(default=None, description="按可见域过滤（deep/astra）"),
+    page: int = Query(default=1, ge=1),
+    page_size: int | None = Query(
+        default=None, ge=1, le=500, description="缺省=全量（前端本地分页）；给了就服务端分页"
+    ),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    """作品全量/分页列表。
+
+    KB-20：改为**轻量序列化**（detail=False）——旧实现对每条作品都查一次时间线、
+    再做两次磁盘遍历（`files_dir.stat()` + `demo_storage_size()` 的 rglob），
+    637 件规模就是 600+ 次查询 + 1200 次磁盘走查。storage_size/inconsistency/timeline
+    没有任何前端消费方，去掉不影响界面。
+    """
     query = db.query(Demo)
     if sites:
         query = query.filter(Demo.sites.contains(sites))
-    demos = query.order_by(Demo.created_at.desc()).all()
-    return [serialize_demo(db, d, detail=True) for d in demos]
+    query = query.order_by(Demo.created_at.desc(), Demo.id.desc())
+    if page_size:
+        query = query.offset((page - 1) * page_size).limit(page_size)
+    demos = query.all()
+    return [serialize_demo(db, d) for d in demos]
 
 
 @router.put("/demos/{slug}/curation")
 def set_demo_curation(
-    slug: str, body: DemoCurationIn, db: Session = Depends(get_db), _: User = Depends(require_admin)
+    slug: str, body: DemoCurationIn, db: Session = Depends(get_db), admin: User = Depends(require_admin)
 ):
     """astra 橱窗策展：发放站点通行证（sites）+ 语言标记（lang）。None 字段保持不变。"""
     demo = db.query(Demo).filter(Demo.slug == slug).first()
     if demo is None:
         raise HTTPException(status_code=404, detail="Demo 不存在", )
+    before = {"slug": demo.slug, "sites": demo.sites, "lang": demo.lang}
     if body.sites is not None:
         picked = set(body.sites)
         if not picked or not picked.issubset({"deep", "astra"}):
@@ -81,6 +130,18 @@ def set_demo_curation(
         demo.sites = ",".join(s for s in ("deep", "astra") if s in picked)
     if body.lang is not None:
         demo.lang = body.lang
+    # KB-14：策展（可见域/语言）是治理动作，同事务留痕
+    if before != {"slug": demo.slug, "sites": demo.sites, "lang": demo.lang}:
+        audit_service.record(
+            db,
+            action="update",
+            entity_type="demo",
+            entity_id=demo.id,
+            actor_id=admin.id,
+            before=before,
+            after={"slug": demo.slug, "sites": demo.sites, "lang": demo.lang},
+            reason=f"策展：sites={demo.sites} lang={demo.lang}",
+        )
     db.commit()
     # 预览门禁缓存立即失效（不必等 60s TTL）
     from ..services.scope import invalidate_visibility
@@ -91,22 +152,26 @@ def set_demo_curation(
 
 @router.get("/users", response_model=list[AdminUserOut])
 def admin_users(db: Session = Depends(get_db), _: User = Depends(require_admin)):
+    """用户列表（含作品数）。KB-19：作品数走一次 GROUP BY 聚合，不再逐用户懒加载 demos。"""
     users = db.query(User).order_by(User.id).all()
-    result = []
-    for u in users:
-        demo_count = sum(1 for d in u.demos)
-        result.append(
-            AdminUserOut(
-                id=u.id,
-                username=u.username,
-                role=u.role,
-                status=u.status,
-                bio=u.bio,
-                created_at=u.created_at,
-                demo_count=demo_count,
-            )
+    counts = dict(
+        db.query(Demo.author_id, func.count(Demo.id))
+        .filter(Demo.author_id.isnot(None))
+        .group_by(Demo.author_id)
+        .all()
+    )
+    return [
+        AdminUserOut(
+            id=u.id,
+            username=u.username,
+            role=u.role,
+            status=u.status,
+            bio=u.bio,
+            created_at=u.created_at,
+            demo_count=int(counts.get(u.id, 0)),
         )
-    return result
+        for u in users
+    ]
 
 
 @router.get("/settings", response_model=SettingsOut)
@@ -119,16 +184,36 @@ def get_settings(db: Session = Depends(get_db), _: User = Depends(require_admin)
 
 
 @router.put("/settings", response_model=SettingsOut)
-def update_settings(body: SettingsOut, db: Session = Depends(get_db), _: User = Depends(require_admin)):
-    settings_service.set_auto_approve(db, body.auto_approve)
-    settings_service.set_auto_approve_public(db, body.auto_approve_public)
-    # fun_mode 仅在显式传入时更新（None = 不动），避免漏带字段被静默重置
-    if body.fun_mode is not None:
-        settings_service.set_fun_mode(db, body.fun_mode)
+def update_settings(body: SettingsIn, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """更新站点设置：缺省字段不改；三项同事务写 + 一条审计（KB-22/KB-17）。"""
+    before = settings_service.snapshot(db)
+    changes = {
+        key: value
+        for key, value in (
+            (settings_service.KEY_AUTO_APPROVE, body.auto_approve),
+            (settings_service.KEY_AUTO_APPROVE_PUBLIC, body.auto_approve_public),
+            (settings_service.KEY_FUN_MODE, body.fun_mode),
+        )
+        if value is not None
+    }
+    if not changes:
+        raise HTTPException(status_code=422, detail="至少提供一个要修改的设置项")
+    after = settings_service.apply(db, changes)
+    audit_service.record(
+        db,
+        action="update",
+        entity_type="setting",
+        entity_id=0,
+        actor_id=admin.id,
+        before=before,
+        after=after,
+        reason="更新站点设置：" + ", ".join(f"{k}={v}" for k, v in sorted(changes.items())),
+    )
+    db.commit()
     return SettingsOut(
-        auto_approve=settings_service.get_auto_approve(db),
-        auto_approve_public=settings_service.get_auto_approve_public(db),
-        fun_mode=settings_service.get_fun_mode(db),
+        auto_approve=after[settings_service.KEY_AUTO_APPROVE],
+        auto_approve_public=after[settings_service.KEY_AUTO_APPROVE_PUBLIC],
+        fun_mode=after[settings_service.KEY_FUN_MODE],
     )
 
 
@@ -149,8 +234,20 @@ def oss_sync_status(_: User = Depends(require_admin)):
     return get_sync_status()
 
 
+_STORAGE_STATUS_TTL = 60.0
+_storage_status_cache: dict = {"ts": 0.0, "value": None}
+
+
 def _storage_status() -> dict:
-    """本地存储规模 + 当前生效模式（oss / local），供 storage-status 与 admin/stats 复用。"""
+    """本地存储规模 + 当前生效模式（oss / local），供 storage-status 与 admin/stats 复用。
+
+    KB-20：结果带 60s 缓存 —— 旧实现每次调用都 `os.walk` 整棵 demos 树并逐个 stat，
+    管理台刷新一次就把磁盘扫一遍。
+    """
+    now = time.time()
+    cached = _storage_status_cache["value"]
+    if cached is not None and now - _storage_status_cache["ts"] < _STORAGE_STATUS_TTL:
+        return dict(cached)
     demos_root = settings.demos_path
     demo_dirs = 0
     files = 0
@@ -164,7 +261,7 @@ def _storage_status() -> dict:
                     size += (Path(root) / name).stat().st_size
                 except OSError:
                     pass
-    return {
+    value = {
         "oss_enabled": oss.enabled(),
         # 模式：oss=OSS 直连（serve_local=false）；oss_backup=本地存储+OSS 备份（serve_local=true）；local=纯本地
         "mode": "oss" if (oss.enabled() and not settings.oss_serve_local) else ("oss_backup" if oss.enabled() else "local"),
@@ -172,6 +269,9 @@ def _storage_status() -> dict:
         "local_files": files,
         "local_size_bytes": size,
     }
+    _storage_status_cache["ts"] = now
+    _storage_status_cache["value"] = value
+    return dict(value)
 
 
 @router.get("/storage-status")

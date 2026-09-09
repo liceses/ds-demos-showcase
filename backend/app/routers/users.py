@@ -5,7 +5,7 @@ from ..database import get_db
 from ..deps import current_user, optional_user, require_admin
 from ..models import Demo, User
 from ..schemas import FollowOut, UserLeaderboardPage, UserPatch, UserProfileOut, UserPublic
-from ..services import community_service
+from ..services import audit_service, community_service
 
 router = APIRouter(tags=["users"])
 
@@ -76,14 +76,27 @@ def list_following(username: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/users/{user_id}", response_model=UserPublic)
-def patch_user(user_id: int, body: UserPatch, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def patch_user(user_id: int, body: UserPatch, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """改用户角色/状态（KB-17：改角色与封禁都是治理动作，同事务落审计）。"""
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="用户不存在")
+    before = {"username": user.username, "role": user.role, "status": user.status}
     if body.role is not None:
         user.role = body.role
     if body.status is not None:
         user.status = body.status
+    if before != {"username": user.username, "role": user.role, "status": user.status}:
+        audit_service.record(
+            db,
+            action="status_set" if body.status is not None else "update",
+            entity_type="user",
+            entity_id=user.id,
+            actor_id=admin.id,
+            before=before,
+            after={"username": user.username, "role": user.role, "status": user.status},
+            reason=f"管理端调整用户 {user.username}：role={user.role} status={user.status}",
+        )
     db.commit()
     db.refresh(user)
     return _user_public(db, user)

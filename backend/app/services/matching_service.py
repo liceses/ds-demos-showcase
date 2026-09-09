@@ -50,6 +50,7 @@ def slugify(s: str) -> str:
 _ALIAS_TTL = 60  # 秒
 _alias_lock = threading.Lock()
 _alias_cache: dict = {"ts": 0.0, "map": {}}
+_alias_pairs_cache: dict = {"ts": 0.0, "pairs": []}
 
 
 def invalidate_alias_cache() -> None:
@@ -57,6 +58,35 @@ def invalidate_alias_cache() -> None:
     with _alias_lock:
         _alias_cache["ts"] = 0.0
         _alias_cache["map"] = {}
+        _alias_pairs_cache["ts"] = 0.0
+        _alias_pairs_cache["pairs"] = []
+
+
+def alias_pairs(db: Session) -> list[tuple[str, int, str]]:
+    """`(规范化键, model_id, resolution)` 列表（60s 缓存，写路径失效）。
+
+    KB-19：给「在任意文本里找已知型号」这类**最长匹配**用 —— 一次查询拿到全部键，
+    避免按作品循环时每次都全表扫 Model 再逐行懒加载 aliases。
+    """
+    now = time.monotonic()
+    with _alias_lock:
+        if _alias_pairs_cache["pairs"] and now - _alias_pairs_cache["ts"] < _ALIAS_TTL:
+            return _alias_pairs_cache["pairs"]
+    pairs: list[tuple[str, int, str]] = []
+    live = Model.status != "deprecated"
+    for model_id, name, resolution in db.query(Model.id, Model.name, Model.resolution).filter(live).all():
+        pairs.append((normalize(name), model_id, resolution))
+    for alias, model_id, resolution in (
+        db.query(ModelAlias.alias, ModelAlias.model_id, Model.resolution)
+        .join(Model, Model.id == ModelAlias.model_id)
+        .filter(Model.status != "deprecated")
+        .all()
+    ):
+        pairs.append((normalize(alias), model_id, resolution))
+    with _alias_lock:
+        _alias_pairs_cache["ts"] = now
+        _alias_pairs_cache["pairs"] = pairs
+    return pairs
 
 
 def _alias_map(db: Session) -> dict[str, int]:

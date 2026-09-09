@@ -71,7 +71,7 @@ def create(
         if confidence is not None and (dup.confidence or 0) < confidence:
             dup.confidence = confidence
             dup.payload = json.dumps(payload, ensure_ascii=False)
-            db.commit()
+            db.flush()  # KB-16：不自行 commit，事务边界归调用方
         return None
 
     s = EntitySuggestion(
@@ -89,7 +89,7 @@ def create(
     if auto_accept and confidence is not None and confidence >= AUTO_ACCEPT:
         return review(db, s, "approve", actor_id=None, actor_type="system")
 
-    db.commit()
+    db.flush()  # KB-16：由调用方 commit（上传 / 巡检 / 批量入队各自的事务里收尾）
     return s
 
 
@@ -139,29 +139,38 @@ def review(
 
 
 def _execute(db: Session, s: EntitySuggestion, payload: dict, actor_id: int | None) -> str:
-    """按 kind 分派到对应 service —— 本函数绝不自己 UPDATE 实体表。"""
+    """按 kind 分派到对应 service —— 本函数绝不自己 UPDATE 实体表。
+
+    KB-16：所有内部 service 调用都传 `commit=False`，实体变更与「建议状态 + 审核审计」
+    在 review() 的同一个事务里提交。旧实现内部各自 commit，中断就会留下
+    「实体已建、建议仍 pending」的假象，再点一次批准会重复建实体。
+    """
     if s.kind == "new_model":
         name = (payload.get("name") or "").strip()
         if not name:
             raise HTTPException(status_code=422, detail="建议缺少 name，无法建实体")
         model, created = model_service.get_or_create_model(db, name, vendor=payload.get("vendor"))
         if created and model.status == "candidate":
-            model_service.model_status_set(db, model, "active", actor_id=actor_id, reason="收件箱批准：新模型")
+            model_service.model_status_set(
+                db, model, "active", actor_id=actor_id, reason="收件箱批准：新模型", commit=False
+            )
         elif not created:
             # 批准时同名实体已存在 → 视作别名归一，避免静默丢建议
-            model_service.alias_add(db, model, name, actor_id=actor_id)
+            model_service.alias_add(db, model, name, actor_id=actor_id, commit=False)
         return f"模型 {name} → {model.slug}"
 
     if s.kind == "alias":
         target = model_service.get_model_or_404(db, payload.get("model_id") or s.ref_id or 0)
         name = (payload.get("alias") or "").strip()
-        added = model_service.alias_add(db, target, name, actor_id=actor_id)
+        added = model_service.alias_add(db, target, name, actor_id=actor_id, commit=False)
         return f"别名 {name} {'归入' if added else '已存在于'} {target.slug}"
 
     if s.kind == "merge_model":
         src = model_service.get_model_or_404(db, payload.get("source_id") or s.ref_id or 0)
         tgt = model_service.get_model_or_404(db, payload.get("target_id") or 0)
-        out = model_service.merge_model(db, src, tgt, dry_run=False, actor_id=actor_id, reason="收件箱批准：模型合并")
+        out = model_service.merge_model(
+            db, src, tgt, dry_run=False, actor_id=actor_id, reason="收件箱批准：模型合并", commit=False
+        )
         return f"合并 {out['source']['slug']} → {out['target']['slug']}，影响 {out['affected_demos']} 个作品"
 
     if s.kind == "new_task":
@@ -176,11 +185,12 @@ def _execute(db: Session, s: EntitySuggestion, payload: dict, actor_id: int | No
             status="active",
             created_by=actor_id,
             reason="收件箱批准：新建题目",
+            commit=False,
         )
         demo_ids = payload.get("demo_ids") or ([s.demo_id] if s.demo_id else [])
         demo_ids = [d for d in demo_ids if d]
         if demo_ids:
-            task_service.attach_demos(db, task, demo_ids, actor_id=actor_id)
+            task_service.attach_demos(db, task, demo_ids, actor_id=actor_id, commit=False)
         return f"题目 {task.slug} 挂 {len(demo_ids)} 个作品"
 
     if s.kind == "task_match":
@@ -188,13 +198,15 @@ def _execute(db: Session, s: EntitySuggestion, payload: dict, actor_id: int | No
         demo_id = payload.get("demo_id") or s.demo_id
         if not demo_id:
             raise HTTPException(status_code=422, detail="建议缺少 demo_id")
-        task_service.attach_demos(db, task, [demo_id], actor_id=actor_id)
+        task_service.attach_demos(db, task, [demo_id], actor_id=actor_id, commit=False)
         return f"作品 {demo_id} 挂入 {task.slug}"
 
     if s.kind == "merge_task":
         src = task_service.get_task_or_404(db, payload.get("source_id") or s.ref_id or 0)
         tgt = task_service.get_task_or_404(db, payload.get("target_id") or 0)
-        out = task_service.merge_task(db, src, tgt, dry_run=False, actor_id=actor_id, reason="收件箱批准：题目合并")
+        out = task_service.merge_task(
+            db, src, tgt, dry_run=False, actor_id=actor_id, reason="收件箱批准：题目合并", commit=False
+        )
         return f"合并《{out['source']['title']}》→《{out['target']['title']}》，迁移 {out['affected_demos']} 个作品"
 
     if s.kind == "retag_demo":

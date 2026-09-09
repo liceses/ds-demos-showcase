@@ -60,24 +60,10 @@ def _reset_inmemory_state() -> None:
     跨用例复用会读到上一个用例的数据。
     """
     from app.routers import demos as _demos
-    from app.routers import forum as _forum
-    from app.routers import ratings as _ratings
-    from app.routers import sessions as _sessions
-    from app.routers import stats as _stats
-    from app.routers import tags as _tags
-    from app.services import cluster_service, matching_service, scope as _scope, visits as _visits
+    from app.services import cluster_service, matching_service, ratelimit, scope as _scope, visits as _visits
 
-    for bucket in (
-        _demos._anon_uploads,
-        _forum._hits,
-        _ratings._anon_demo_hits,
-        _ratings._anon_global_hits,
-        _sessions._hits,
-        _stats._visit_hits,
-        _stats._heartbeat_hits,
-        _tags._suggest_hits,
-    ):
-        bucket.clear()
+    # KB-21：限流统一收口到 services.ratelimit，重置一处即可
+    ratelimit.reset()
     _visits._recent_hits.clear()
     _visits._online.clear()
     _demos._RELATED_CACHE.clear()

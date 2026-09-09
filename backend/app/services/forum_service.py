@@ -17,14 +17,42 @@ BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "example.com", "t
 _URL_RE = re.compile(r"https?://[^\s<>\"'()]+")
 
 
-def topic_out(t: ForumTopic, db: Session | None = None, user_id: int | None = None) -> ForumTopicOut:
+def reply_subtree_ids(db: Session, root_id: int) -> list[int]:
+    """回复子树的 id 集合（含自身）。
+
+    KB-18：`forum_replies.parent_id` 带 `ondelete=CASCADE`，删父回复会连带删掉整棵子树，
+    计数器必须按子树里 normal 回复的条数扣减，而不是固定 -1。
+    """
+    ids = [root_id]
+    frontier = [root_id]
+    guard = 0
+    while frontier and guard < 50:  # 深度上限：正常嵌套远小于此，防脏数据成环
+        guard += 1
+        children = [
+            row[0]
+            for row in db.query(ForumReply.id).filter(ForumReply.parent_id.in_(frontier)).all()
+        ]
+        children = [c for c in children if c not in ids]
+        ids.extend(children)
+        frontier = children
+    return ids
+
+
+def topic_out(
+    t: ForumTopic,
+    db: Session | None = None,
+    user_id: int | None = None,
+    summary=None,
+) -> ForumTopicOut:
+    """主题序列化。KB-19：列表页传入预算好的 `summary`（批量汇总），单条场景才现查。"""
     author = t.author.username if t.author else None
     tags = [x.strip() for x in t.tags.split(",") if x.strip()]
     like_count = 0
     thanks_count = 0
     my_reactions: list[str] = []
-    if db is not None:
+    if summary is None and db is not None:
         summary = community_service.reaction_summary(db, "topic", t.id, user_id)
+    if summary is not None:
         like_count = summary.like_count
         thanks_count = summary.thanks_count
         my_reactions = summary.my_reactions
@@ -52,12 +80,19 @@ def topic_out(t: ForumTopic, db: Session | None = None, user_id: int | None = No
     )
 
 
-def reply_out(r: ForumReply, db: Session | None = None, user_id: int | None = None) -> ForumReplyOut:
+def reply_out(
+    r: ForumReply,
+    db: Session | None = None,
+    user_id: int | None = None,
+    summary=None,
+) -> ForumReplyOut:
+    """回复序列化。KB-19：列表页传入预算好的 `summary`，避免逐行查互动。"""
     like_count = 0
     thanks_count = 0
     my_reactions: list[str] = []
-    if db is not None:
+    if summary is None and db is not None:
         summary = community_service.reaction_summary(db, "reply", r.id, user_id)
+    if summary is not None:
         like_count = summary.like_count
         thanks_count = summary.thanks_count
         my_reactions = summary.my_reactions

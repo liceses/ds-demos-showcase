@@ -34,43 +34,90 @@ def demo_sessions_dir(slug: str) -> Path:
 
 
 def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
+    """解压到 target，带三道闸（KB-11/KB-13）：
+
+    - 成员名含 `..` 直接拒绝（旧实现只做字符串前缀比较，`../x` 会落到同前缀兄弟目录）；
+    - 累计解压字节 / 成员数 / 压缩比超限即中断（zip 炸弹打满磁盘会连带拖死同盘 SQLite）；
+    - 越界判定用 `Path.is_relative_to`，不再用 startswith（后者对同前缀路径失效）。
+    """
+    root = target.resolve()
+    total_bytes = 0
+    members = 0
     for member in zf.infolist():
         raw = member.filename.replace("\\", "/")
         # 跳过目录与隐藏文件
         if raw.endswith("/") or raw.split("/")[-1].startswith("."):
             continue
         parts = [p for p in raw.split("/") if p not in ("", ".")]
+        if any(p == ".." for p in parts):
+            raise HTTPException(status_code=400, detail="zip 中存在非法路径")
+        members += 1
+        if members > settings.zip_max_members:
+            raise HTTPException(
+                status_code=413,
+                detail=f"zip 成员数超过上限（{settings.zip_max_members}）",
+            )
+        total_bytes += int(member.file_size or 0)
+        if total_bytes > settings.zip_max_uncompressed:
+            raise HTTPException(
+                status_code=413,
+                detail=f"zip 解压后体积超过上限（{settings.zip_max_uncompressed // (1024 * 1024)}MB）",
+            )
+        compressed = int(member.compress_size or 0)
+        if compressed and total_bytes / max(compressed, 1) > settings.zip_max_ratio:
+            raise HTTPException(status_code=413, detail="zip 压缩比异常（疑似压缩炸弹）")
         dest = target.joinpath(*parts)
-        if not str(dest.resolve()).startswith(str(target.resolve())):
+        if not dest.resolve().is_relative_to(root):
             raise HTTPException(status_code=400, detail="zip 中存在非法路径")
         dest.parent.mkdir(parents=True, exist_ok=True)
         with zf.open(member) as src, open(dest, "wb") as out:
             shutil.copyfileobj(src, out)
 
 
+def _atomic_replace_dir(target: Path, tmp: Path) -> None:
+    """把 tmp 目录原子换成 target：失败路径不动 target（KB-11）。
+
+    旧实现先 `rmtree(target)` 再校验新 zip —— 坏包/缺 index.html 会把线上作品文件删光。
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    old: Path | None = None
+    if target.exists():
+        old = target.with_name(f".old_{uuid.uuid4().hex[:8]}")
+        target.rename(old)
+    try:
+        tmp.rename(target)
+    except OSError:
+        if old is not None:  # 换名失败：把旧目录放回去，绝不留下「没有文件」的作品
+            old.rename(target)
+        raise
+    if old is not None:
+        shutil.rmtree(old, ignore_errors=True)
+
+
 def extract_zip(zip_bytes: bytes, slug: str, require_index: bool = True) -> None:
     """解压 zip 到 demo files 目录。
     - require_index=True（web 类型）：要求存在 index.html（允许唯一顶层目录包裹）
     - require_index=False（zip 文件包）：不要求 index.html，仅解包单层包裹目录
+    - 先解压到临时目录、全部校验通过后才原子替换（失败不动线上文件）
     """
     validate_slug(slug)
     target = demo_files_dir(slug)
-    if target.exists():
-        shutil.rmtree(target, ignore_errors=True)
-    target.mkdir(parents=True, exist_ok=True)
+    parent = demo_dir(slug)
+    parent.mkdir(parents=True, exist_ok=True)
 
     try:
         zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="zip 文件非法", )
 
-    tmp = target / ".tmp_extract"
-    if tmp.exists():
-        shutil.rmtree(tmp, ignore_errors=True)
+    tmp = parent / f".tmp_extract_{uuid.uuid4().hex[:8]}"
     tmp.mkdir(parents=True, exist_ok=True)
 
     try:
         _safe_extract(zf, tmp)
+    except Exception:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
     finally:
         zf.close()
 
@@ -94,14 +141,17 @@ def extract_zip(zip_bytes: bytes, slug: str, require_index: bool = True) -> None
         top = list(tmp.iterdir())
         root = top[0] if len(top) == 1 and top[0].is_dir() else tmp
 
-    # 拷贝到正式目录
+    # 正式目录只接受 root 的内容：先在 tmp 内展平，再原子替换
+    staged = parent / f".staged_{uuid.uuid4().hex[:8]}"
+    staged.mkdir(parents=True, exist_ok=True)
     for item in root.iterdir():
-        dst = target / item.name
+        dst = staged / item.name
         if item.is_dir():
             shutil.copytree(item, dst, dirs_exist_ok=True)
         else:
             shutil.copy2(item, dst)
     shutil.rmtree(tmp, ignore_errors=True)
+    _atomic_replace_dir(target, staged)
 
     # 若 zip 顶层带 sessions/ 目录，视为会话日志，移动到 sessions 区
     sessions_in = target / "sessions"
@@ -165,14 +215,19 @@ def _offload_sessions_to_oss(slug: str) -> None:
 
 
 def save_single_file(slug: str, ext: str, data: bytes) -> None:
-    """保存单文件 demo（html/svg）到 files 目录。ext: 'html' | 'svg'。"""
+    """保存单文件 demo（html/svg）到 files 目录。ext: 'html' | 'svg'。
+
+    与 extract_zip 同规：先写临时目录再原子替换，写失败不动线上文件。
+    """
     validate_slug(slug)
     target = demo_files_dir(slug)
-    if target.exists():
-        shutil.rmtree(target, ignore_errors=True)
-    target.mkdir(parents=True, exist_ok=True)
+    parent = demo_dir(slug)
+    parent.mkdir(parents=True, exist_ok=True)
+    staged = parent / f".staged_{uuid.uuid4().hex[:8]}"
+    staged.mkdir(parents=True, exist_ok=True)
     name = "index.html" if ext == "html" else "index.svg"
-    (target / name).write_bytes(data)
+    (staged / name).write_bytes(data)
+    _atomic_replace_dir(target, staged)
 
 
 def dir_size(path: Path) -> int:
@@ -192,14 +247,27 @@ def demo_storage_size(slug: str) -> int:
 
 
 def compress_cover(data: bytes) -> tuple[bytes, str]:
-    """把封面压缩为 WebP（最大边 1280、质量 82），返回 (bytes, 'webp')。"""
+    """把封面压缩为 WebP（最大边 1280、质量 82），返回 (bytes, 'webp')。
+
+    KB-11：解码前先限像素（封面接口收 200MB，Pillow 默认只在 >1.78 亿像素时才抛
+    DecompressionBomb，1 亿像素的图足以把进程 RSS 顶到几百 MB）→ 超限直接 413。
+    """
     try:
         from PIL import Image
     except ImportError:
         raise HTTPException(status_code=500, detail="服务端缺少 Pillow，无法处理封面", )
+    limit = settings.cover_max_pixels
     try:
         img = Image.open(io.BytesIO(data))
+        w, h = img.size
+        if w * h > limit:
+            raise HTTPException(
+                status_code=413,
+                detail=f"封面像素过大（{w}x{h}，上限 {limit}）",
+            )
         img.load()
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=400, detail="封面不是有效图片", )
 

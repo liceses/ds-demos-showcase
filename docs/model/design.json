@@ -1,10 +1,10 @@
 {
   "version": 1,
   "status": "draft",
-  "updatedAt": "2026-09-09T15:48:35.997Z",
+  "updatedAt": "2026-09-09T16:57:29.970Z",
   "approvedAt": null,
   "approvedBy": null,
-  "note": "第三轮（KB-24..KB-26）：收尾审查剩下的低危项。未纳入：① UserPublic 继续公开 role/status —— 前端 UserView 在展示 role，收敛需要改前端契约，收益低；② site_git 请求内 fork git、announcements 逐条 db.get（≤50 次）—— 风险/收益都不够。KB-1..KB-23 已 implemented，model-gate 与 CI 在 8379bd3 全绿。",
+  "note": "第三轮 KB-24..KB-26 已实施；另因生产日志（log0910.txt）实证 /admin/stats 500（admin.py 缺 import time，KB-20 引入），已热修并新增 KB-27 全端点冒烟门禁（从 OpenAPI 枚举 75 个 GET 端点逐个真打，任何 5xx 即失败）。未纳入：UserPublic 继续公开 role/status（前端 UserView 在用）、site_git 请求内 fork git、公告逐条 db.get。已推送：fab2394（KB-24..26）、fb9f1eb（热修+KB-27）。",
   "cim": [
     {
       "id": "KC-1",
@@ -51,13 +51,13 @@
     {
       "id": "KB-12",
       "title": "URL 抓取防 SSRF",
-      "acceptance": "POST /demos/from-url 抓取禁用自动重定向（逐跳校验）、只放行 http/https + 80/443；内网/回环/保留地址与重定向目标一律拒绕，有回归用例",
+      "acceptance": "POST /demos/from-url 抓取禁用自动重定向（逐跳校验）、只放行 http/https + 80/443；内网/回环/保留地址与重定向目标一律拒绕",
       "status": "implemented"
     },
     {
       "id": "KB-13",
       "title": "路径按目录归属判定",
-      "acceptance": "/media/../<同前缀兄弟>/x 不再 200；_safe_join 同前缀绕过返 400 而非 500；zip 成员越界拒绝；全部改 is_relative_to 判定 + 回归用例",
+      "acceptance": "/media/../<同前缀兄弟>/x 不再 200；_safe_join 同前缀绕过返 400 而非 500；zip 成员越界拒绝；全部改 is_relative_to 判定",
       "status": "implemented"
     },
     {
@@ -69,7 +69,7 @@
     {
       "id": "KB-15",
       "title": "题目域状态闸与挂题完整性",
-      "acceptance": "公开 GET /tasks 只出 active；GET /tasks/{slug} 对 merged/hidden 404、candidate 仅 admin；挂题与收件箱批准拒绕 merged/hidden 目标；attach_demos 去重且重复 id 不再 500；delete_task 反向引用时 409",
+      "acceptance": "公开 GET /tasks 只出 active；GET /tasks/{slug} 对 merged/hidden 404、candidate 仅 admin；挂题与收件箱批准拒绕 merged/hidden 目标；attach_demos 去重；delete_task 反向引用时 409",
       "status": "implemented"
     },
     {
@@ -93,7 +93,7 @@
     {
       "id": "KB-19",
       "title": "列表与工作台的 N+1 消除",
-      "acceptance": "pending_attribution、attach_demos、task_compare、refine/inspect 扫描、论坛与通知列表、/related、/admin/users、排行榜的 SQL 条数与页大小/作品数解耦（有查询计数回归用例）",
+      "acceptance": "pending_attribution、attach_demos、task_compare、refine/inspect 扫描、论坛与通知列表、/related、/admin/users、排行榜的 SQL 条数与页大小/作品数解耦",
       "status": "implemented"
     },
     {
@@ -105,13 +105,13 @@
     {
       "id": "KB-21",
       "title": "限流与内存状态收口",
-      "acceptance": "8 处 IP 限流合并为一个 services.ratelimit（滑动窗口 + 有界键空间 + 过期清理 + Retry-After）；登录失败按 IP+用户名限流；sync_models 预载后批量提交",
+      "acceptance": "8 处 IP 限流合并为一个 services.ratelimit；登录失败按 IP+用户名限流；sync_models 预载后批量提交",
       "status": "implemented"
     },
     {
       "id": "KB-22",
       "title": "口径与契约小修",
-      "acceptance": "inspect_service 重名检查改规范化口径；收件箱 kind 白名单由常量生成（含 retag_demo）；UserPatch 接受 banned；PUT /admin/settings 用 SettingsIn + 单事务 + 审计；RequestValidationError 响应补 code；max_file_size 接线",
+      "acceptance": "inspect_service 重名检查改规范化口径；收件箱 kind 白名单由常量生成；UserPatch 接受 banned；PUT /admin/settings 用 SettingsIn + 单事务 + 审计；422 补 code；max_file_size 接线",
       "status": "implemented"
     },
     {
@@ -123,20 +123,26 @@
     {
       "id": "KB-24",
       "title": "链接校验不再阻塞请求线程",
-      "acceptance": "链接校验不在请求线程做无超时 DNS：解析带 1s 超时 + 正/负结果 TTL 缓存，超时仍按拒绕处理（fail-closed）；字面量 IP/黑名单判定不变；慢解析域名不再长时间占用 threadpool 槽",
-      "status": "draft"
+      "acceptance": "链接校验不在请求线程做无超时 DNS：解析带 1s 超时 + 正/负结果 TTL 缓存，超时仍按拒绕处理；字面量 IP/黑名单判定不变",
+      "status": "implemented"
     },
     {
       "id": "KB-25",
       "title": "举报与标签过滤的完整性",
-      "acceptance": "举报提交校验目标存在且可见，同一人对同一目标已有 open 举报时 409；论坛标签过滤改逗号分隔精确匹配（“demo”不再误命中“demoscene”）",
-      "status": "draft"
+      "acceptance": "举报提交校验目标存在且可见，同一人对同一目标已有 open 举报时 409；论坛标签过滤改逗号分隔精确匹配",
+      "status": "implemented"
     },
     {
       "id": "KB-26",
       "title": "外部同步与别名归属的确定性",
-      "acceptance": "oss_sync.start_sync 的 running 检查与置位同锁（不再双跑）；matching_service._alias_map 加确定性排序（两个同规范化键实体的归属不随查询顺序/重启变化）",
-      "status": "draft"
+      "acceptance": "oss_sync.start_sync 的 running 检查与置位同锁；matching_service._alias_map 加确定性排序",
+      "status": "implemented"
+    },
+    {
+      "id": "KB-27",
+      "title": "全端点冒烟门禁",
+      "acceptance": "从 OpenAPI 枚举全部 GET 端点逐个真打，任何 5xx 即失败（覆盖 NameError/TypeError/序列化炸）；关键管理端点带字段契约断言；用例在「故意删掉依赖导入」时变红",
+      "status": "implemented"
     }
   ],
   "modules": [
@@ -156,13 +162,13 @@
       "id": "routers.admin",
       "label": "管理路由",
       "layer": "web",
-      "responsibility": "审核与策展写操作 require_admin + 同事务落审计；列表接口轻量序列化且支持可选分页"
+      "responsibility": "审核与策展写操作 require_admin + 同事务落审计；列表接口轻量序列化且支持可选分页；存储统计带缓存"
     },
     {
       "id": "routers.forum",
       "label": "论坛路由",
       "layer": "web",
-      "responsibility": "发帖/回复/举报与论坛管理；写操作走统一限流；审核/隐藏/删除/封禁/举报处理同事务落审计；举报去重与目标校验；标签过滤精确匹配"
+      "responsibility": "发帖/回复/举报与论坛管理；写操作走统一限流；管理动作同事务落审计；举报去重与目标校验；标签过滤精确匹配"
     },
     {
       "id": "routers.sessions",

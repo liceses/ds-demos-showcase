@@ -1,10 +1,10 @@
 {
   "version": 1,
   "status": "draft",
-  "updatedAt": "2026-09-09T15:37:32.102Z",
+  "updatedAt": "2026-09-09T15:48:35.997Z",
   "approvedAt": null,
   "approvedBy": null,
-  "note": "后端收尾轮（KB-10..KB-23）已实施完毕。两处与初稿的差异（均已按代码实际口径写进验收）：① KB-10 未把详情/预览改成“非 approved 一律 404”——匿名上传者需要能预览自己的待审作品，故保留按 slug 的 capability URL 语义，只堵枚举（列表/公告）；astra 视区仍要求 approved。② KB-23 严格模式默认关闭（STRICT_SECRETS=false 只告警不阻断），避免存量部署因默认密钥直接启动失败。",
+  "note": "第三轮（KB-24..KB-26）：收尾审查剩下的低危项。未纳入：① UserPublic 继续公开 role/status —— 前端 UserView 在展示 role，收敛需要改前端契约，收益低；② site_git 请求内 fork git、announcements 逐条 db.get（≤50 次）—— 风险/收益都不够。KB-1..KB-23 已 implemented，model-gate 与 CI 在 8379bd3 全绿。",
   "cim": [
     {
       "id": "KC-1",
@@ -33,25 +33,25 @@
     {
       "id": "KB-1",
       "title": "标签/模型治理修复（KB-1..KB-9）",
-      "acceptance": "标签合并真迁移（单值作品不丢标签）；实体↔词表双向同步；退役值只拦写；tags 域写操作全审计；跨 key 父子 422、删键删值 409；建议绑定作品校验归属；重名 KPI 按规范化口径；模型排序与展示同精度；整包测试 0 failed",
+      "acceptance": "标签合并真迁移；实体↔词表双向同步；退役值只拦写；tags 域写操作全审计；跨 key 父子 422、删键删值 409；建议绑定作品校验归属；重名 KPI 按规范化口径；模型排序与展示同精度；整包测试 0 failed",
       "status": "implemented"
     },
     {
       "id": "KB-10",
       "title": "未上架内容不可枚举",
-      "acceptance": "匿名 GET /demos?status=pending|rejected|空串 不返回非 approved（空串按 approved，非 approved 需 admin，非法值 422）；待审作品不发公开公告（审核通过时补发）；改状态后可见域缓存立即失效；详情/预览/会话日志按 slug 访问保留（匿名上传者要能预览自己的待审作品），但 astra 视区仍要求 approved",
+      "acceptance": "匿名 GET /demos?status=pending|rejected|空串 不返回非 approved（空串按 approved，非 approved 需 admin，非法值 422）；待审作品不发公开公告（审核通过时补发）；改状态后可见域缓存立即失效；详情/预览/会话日志按 slug 访问保留，但 astra 视区仍要求 approved",
       "status": "implemented"
     },
     {
       "id": "KB-11",
       "title": "上传入口资源闸",
-      "acceptance": "请求体分块读取、超限立即 413，鉴权与限流在读文件之前；zip 解压前累计总字节/成员数/压缩比并设阀值；先解压到临时目录、全部校验通过后原子替换（坏 zip/缺 index.html 不再删掉旧文件）；封面解码前限像素并捕 DecompressionBomb",
+      "acceptance": "请求体分块读取、超限立即 413，鉴权与限流在读文件之前；zip 解压前累计总字节/成员数/压缩比并设阀值；先解压到临时目录、全部校验通过后原子替换；封面解码前限像素",
       "status": "implemented"
     },
     {
       "id": "KB-12",
       "title": "URL 抓取防 SSRF",
-      "acceptance": "POST /demos/from-url 抓取禁用自动重定向（或逐跳校验）、只放行 http/https + 80/443、解析出的 IP 直接用于连接；内网/回环/保留地址与重定向目标一律拒绕，有回归用例",
+      "acceptance": "POST /demos/from-url 抓取禁用自动重定向（逐跳校验）、只放行 http/https + 80/443；内网/回环/保留地址与重定向目标一律拒绕，有回归用例",
       "status": "implemented"
     },
     {
@@ -69,25 +69,25 @@
     {
       "id": "KB-15",
       "title": "题目域状态闸与挂题完整性",
-      "acceptance": "公开 GET /tasks 只出 active（其余值 422）；GET /tasks/{slug} 对 merged/hidden 404、candidate 仅 admin；挂题与收件箱批准拒绕 merged/hidden 目标；attach_demos 去重且重复 id 不再 500；delete_task 对被 merged_into 指向或被建议引用时 409",
+      "acceptance": "公开 GET /tasks 只出 active；GET /tasks/{slug} 对 merged/hidden 404、candidate 仅 admin；挂题与收件箱批准拒绕 merged/hidden 目标；attach_demos 去重且重复 id 不再 500；delete_task 反向引用时 409",
       "status": "implemented"
     },
     {
       "id": "KB-16",
       "title": "建议审核的事务边界",
-      "acceptance": "批准一条建议时实体变更与建议状态在**同一事务**提交（中途失败不出现「实体已建、建议仍 pending」）；batch_review 单条失败先回滚再记结果；suggestion_service.create() 不再自行 commit",
+      "acceptance": "批准一条建议时实体变更与建议状态在同一事务提交；batch_review 单条失败先回滚；suggestion_service.create() 不再自行 commit",
       "status": "implemented"
     },
     {
       "id": "KB-17",
       "title": "治理动作留痕扩展",
-      "acceptance": "demo 审核/策展、settings 修改、论坛审核/隐藏/删除/封禁/举报处理、用户 role/status 变更各落一条 audit_log（同事务 + before/after）；审计接口 entity_type/action 白名单由常量生成",
+      "acceptance": "demo 审核/策展、settings 修改、论坛审核/隐藏/删除/封禁/举报处理、用户 role/status 变更各落一条 audit_log；审计接口白名单由常量生成",
       "status": "implemented"
     },
     {
       "id": "KB-18",
       "title": "计数与冗余列一致性",
-      "acceptance": "删除回复按受影响子树数扣减、reply_count 用原子 SQL 增减；评分/声望/收到赞用原子更新；并发唯一约束冲突返回幂等结果而非 500；有级联与并发回归用例",
+      "acceptance": "删除回复按受影响子树数扣减、reply_count 用原子 SQL 增减；评分/声望/收到赞用原子更新；并发唯一约束冲突返回幂等结果而非 500",
       "status": "implemented"
     },
     {
@@ -99,26 +99,44 @@
     {
       "id": "KB-20",
       "title": "管理端列表与统计轻量化",
-      "acceptance": "GET /admin/demos 改为轻量序列化（不再逐条查时间线/走磁盘）且支持可选服务端分页；/admin/stats 的存储统计带缓存；/admin/users 用聚合取数",
+      "acceptance": "GET /admin/demos 轻量序列化 + 可选服务端分页；/admin/stats 存储统计带缓存；/admin/users 用聚合取数",
       "status": "implemented"
     },
     {
       "id": "KB-21",
       "title": "限流与内存状态收口",
-      "acceptance": "8 处 IP 限流合并为一个 services.ratelimit（滑动窗口 + 有界键空间 + 过期清理 + Retry-After）；登录失败按 IP+用户名限流；外部同步 sync_models 预载后批量提交",
+      "acceptance": "8 处 IP 限流合并为一个 services.ratelimit（滑动窗口 + 有界键空间 + 过期清理 + Retry-After）；登录失败按 IP+用户名限流；sync_models 预载后批量提交",
       "status": "implemented"
     },
     {
       "id": "KB-22",
       "title": "口径与契约小修",
-      "acceptance": "inspect_service 重名检查改规范化口径；收件箱 kind 白名单由 SUGGESTION_KINDS 生成（含 retag_demo）；UserPatch 接受 banned 且状态集单一常量；PUT /admin/settings 用 SettingsIn（None=不改）+ 单事务 + 审计；RequestValidationError 响应补 code；max_file_size 接线",
+      "acceptance": "inspect_service 重名检查改规范化口径；收件箱 kind 白名单由常量生成（含 retag_demo）；UserPatch 接受 banned；PUT /admin/settings 用 SettingsIn + 单事务 + 审计；RequestValidationError 响应补 code；max_file_size 接线",
       "status": "implemented"
     },
     {
       "id": "KB-23",
       "title": "安全默认值加固",
-      "acceptance": "默认 JWT 密钥/默认管理员口令在启动时输出醒目告警并写入 /health 的 warnings；ADMIN_INITIAL_PASSWORD/JWT_SECRET 可用环境变量覆盖；可选严格模式（STRICT_SECRETS=true）拒绕默认值启动；登录失败按 IP+用户名限流（本地开发与测试路径不变）",
+      "acceptance": "默认 JWT 密钥/管理员口令启动告警 + /health warnings；ADMIN_INITIAL_PASSWORD/JWT_SECRET 可环境变量覆盖；可选 STRICT_SECRETS；登录失败按 IP+用户名限流",
       "status": "implemented"
+    },
+    {
+      "id": "KB-24",
+      "title": "链接校验不再阻塞请求线程",
+      "acceptance": "链接校验不在请求线程做无超时 DNS：解析带 1s 超时 + 正/负结果 TTL 缓存，超时仍按拒绕处理（fail-closed）；字面量 IP/黑名单判定不变；慢解析域名不再长时间占用 threadpool 槽",
+      "status": "draft"
+    },
+    {
+      "id": "KB-25",
+      "title": "举报与标签过滤的完整性",
+      "acceptance": "举报提交校验目标存在且可见，同一人对同一目标已有 open 举报时 409；论坛标签过滤改逗号分隔精确匹配（“demo”不再误命中“demoscene”）",
+      "status": "draft"
+    },
+    {
+      "id": "KB-26",
+      "title": "外部同步与别名归属的确定性",
+      "acceptance": "oss_sync.start_sync 的 running 检查与置位同锁（不再双跑）；matching_service._alias_map 加确定性排序（两个同规范化键实体的归属不随查询顺序/重启变化）",
+      "status": "draft"
     }
   ],
   "modules": [
@@ -144,7 +162,7 @@
       "id": "routers.forum",
       "label": "论坛路由",
       "layer": "web",
-      "responsibility": "发帖/回复/举报与论坛管理；写操作走统一限流；审核/隐藏/删除/封禁/举报处理同事务落审计；列表批量取互动汇总"
+      "responsibility": "发帖/回复/举报与论坛管理；写操作走统一限流；审核/隐藏/删除/封禁/举报处理同事务落审计；举报去重与目标校验；标签过滤精确匹配"
     },
     {
       "id": "routers.sessions",
@@ -168,13 +186,19 @@
       "id": "services.storage",
       "label": "存储服务",
       "layer": "infrastructure",
-      "responsibility": "zip 解压/封面压缩/文件落盘；解压前累计大小与压缩比、先临时目录后原子替换、路径用 is_relative_to 判定；封面解码前限像素"
+      "responsibility": "zip 解压/封面压缩/文件落盘；解压前累计大小与压缩比、先临时目录后原子替换、路径用 is_relative_to 判定"
     },
     {
       "id": "services.ratelimit",
       "label": "限流服务",
       "layer": "infrastructure",
       "responsibility": "全站 IP/用户维度滑动窗口限流的单一实现：有界键空间、过期清理、429 + Retry-After"
+    },
+    {
+      "id": "services.oss_sync",
+      "label": "OSS 同步",
+      "layer": "infrastructure",
+      "responsibility": "本地与 OSS 一致性补传；启动判定与运行标志同锁，不双跑"
     },
     {
       "id": "services.audit_service",
@@ -186,13 +210,13 @@
       "id": "services.tag_service",
       "label": "Tag 服务",
       "layer": "application",
-      "responsibility": "Tag 域唯一写入口：建/改/删标签键与值、分组、合并（dry_run+影响面）、状态跃迁；每次写同事务落审计；删除前校验子标签与引用"
+      "responsibility": "Tag 域唯一写入口：建/改/删标签键与值、分组、合并（dry_run+影响面）、状态跃迁；每次写同事务落审计"
     },
     {
       "id": "services.model_service",
       "label": "Model 服务",
       "layer": "application",
-      "responsibility": "模型实体 CRUD/别名/合并/状态机 + 与 model: 词表双向同步；归属预填的模型/别名一次取，不按作品循环扫表"
+      "responsibility": "模型实体 CRUD/别名/合并/状态机 + 与 model: 词表双向同步；归属预填的模型/别名一次取"
     },
     {
       "id": "services.task_service",
@@ -210,13 +234,19 @@
       "id": "services.matching_service",
       "label": "匹配服务",
       "layer": "application",
-      "responsibility": "规范化/别名匹配与相似召回；提供规范化键集缓存供最长匹配，避免按作品全表扫"
+      "responsibility": "规范化/别名匹配与相似召回；别名映射按确定性顺序构建"
+    },
+    {
+      "id": "services.forum_service",
+      "label": "论坛服务",
+      "layer": "application",
+      "responsibility": "论坛序列化/可见性/链接安全/新用户审核判定；域名解析带超时与缓存，不在请求线程无界阻塞"
     },
     {
       "id": "services.scope",
       "label": "可见域服务",
       "layer": "application",
-      "responsibility": "Host→视区判定与数据面过滤；公开出口（列表/详情/预览/下载/会话日志）的单一门禁实现，astra 要求已上架"
+      "responsibility": "Host→视区判定与数据面过滤；公开出口的单一门禁实现，astra 要求已上架"
     }
   ],
   "workflows": [
@@ -361,6 +391,28 @@
           "source": "routers.users",
           "target": "services.audit_service",
           "step": 3
+        }
+      ]
+    },
+    {
+      "id": "链接安全",
+      "name": "链接安全",
+      "steps": [
+        {
+          "source": "routers.forum",
+          "target": "services.forum_service",
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "同步单跑",
+      "name": "同步单跑",
+      "steps": [
+        {
+          "source": "routers.admin",
+          "target": "services.oss_sync",
+          "step": 1
         }
       ]
     }

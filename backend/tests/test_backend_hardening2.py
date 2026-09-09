@@ -311,3 +311,135 @@ def test_login_is_rate_limited(client):
         last = client.post("/api/v1/auth/login", json={"username": "nobody-kb21", "password": "wrong-password"})
     assert last is not None and last.status_code == 429, last.status_code if last else None
     ratelimit.reset()
+
+
+# ---------------- KB-24：链接校验不阻塞请求线程 ----------------
+
+
+def test_link_dns_check_is_cached_and_time_bounded(monkeypatch):
+    """慢解析域名最多阻塞 1s 且结果进缓存（修前请求线程里无超时 getaddrinfo）。"""
+    import time as _time
+
+    from app.services import forum_service
+
+    calls = {"n": 0}
+
+    def _slow(*a, **kw):
+        calls["n"] += 1
+        _time.sleep(5)
+        return []
+
+    monkeypatch.setattr(forum_service.socket, "getaddrinfo", _slow)
+    forum_service._dns_cache.clear()
+
+    t0 = _time.time()
+    assert forum_service._host_verdict("kb24-slow.example") is None  # 超时 → fail-closed
+    elapsed = _time.time() - t0
+    assert elapsed < 2.0, f"解析阻塞了 {elapsed:.1f}s（应 ≤1s 超时）"
+
+    # 第二次同域名走缓存，不再调用解析
+    assert forum_service._host_verdict("kb24-slow.example") is None
+    assert calls["n"] == 1, "解析结果没有进缓存"
+    forum_service._dns_cache.clear()
+
+
+def test_link_validation_rejects_private_literal_and_allows_public_text(monkeypatch):
+    """字面量内网地址直接拒；公网域名放行（判定不变）。"""
+    from fastapi import HTTPException
+
+    from app.services import forum_service
+
+    with pytest.raises(HTTPException):
+        forum_service.validate_links("看 http://127.0.0.1:8000/admin")
+    monkeypatch.setattr(forum_service, "_host_verdict", lambda host: False)
+    forum_service.validate_links("参考 https://example.org/paper")
+
+
+# ---------------- KB-25：举报与标签过滤 ----------------
+
+
+def test_report_validates_target_and_dedupes(client, admin_headers, auth_headers):
+    """举报目标必须存在；同一人同目标重复举报 409（修前都能堆）。"""
+    h, name = auth_headers()
+    db = _db()
+    try:
+        u = db.query(User).filter(User.username == name).first()
+        t = ForumTopic(title="KB25 被举报主题", content="x", author_id=u.id, status="normal")
+        db.add(t)
+        db.commit()
+        tid = t.id
+    finally:
+        db.close()
+
+    r = client.post(
+        "/api/v1/forum/reports", headers=h, json={"target_type": "topic", "target_id": 999999, "reason": "x"}
+    )
+    assert r.status_code == 404, r.text
+
+    r = client.post(
+        "/api/v1/forum/reports", headers=h, json={"target_type": "topic", "target_id": tid, "reason": "违规"}
+    )
+    assert r.status_code == 201, r.text
+    r2 = client.post(
+        "/api/v1/forum/reports", headers=h, json={"target_type": "topic", "target_id": tid, "reason": "再举报"}
+    )
+    assert r2.status_code == 409, r2.text
+
+
+def test_forum_tag_filter_is_exact_match(client, admin_headers):
+    """标签过滤精确匹配（修前 ilike 子串："demo" 会命中 "demoscene"）。"""
+    db = _db()
+    try:
+        db.add(ForumTopic(title="KB25 标签A", content="x", author_id=1, tags="demo,特效", status="normal"))
+        db.add(ForumTopic(title="KB25 标签B", content="x", author_id=1, tags="demoscene", status="normal"))
+        db.commit()
+    finally:
+        db.close()
+    r = client.get("/api/v1/forum/topics?tag=demo&page_size=50")
+    assert r.status_code == 200, r.text
+    titles = [i["title"] for i in r.json()["items"]]
+    assert "KB25 标签A" in titles and "KB25 标签B" not in titles, titles
+
+
+# ---------------- KB-26：同步单跑与别名确定性 ----------------
+
+
+def test_start_sync_is_single_flight(monkeypatch):
+    """running 检查与置位同锁：并发两次只有一次启动（修前 TOCTOU 可双跑）。"""
+    import threading as _threading
+    import time as _time
+
+    from app.services import oss_sync
+
+    def _fake_job(force):
+        _time.sleep(0.3)
+        oss_sync._update_job(running=False, finished_at=_time.time())
+
+    monkeypatch.setattr(oss_sync, "run_sync_job", _fake_job)
+    oss_sync._update_job(running=False)
+    assert oss_sync.start_sync() is True
+    assert oss_sync.start_sync() is False, "同一时刻启动了两个同步任务"
+    for _ in range(40):
+        if not oss_sync.get_sync_status().get("running"):
+            break
+        _time.sleep(0.05)
+
+
+def test_alias_map_resolution_is_deterministic(client):
+    """同规范化键的两个实体归属稳定（修前 setdefault 取决于查询顺序）。"""
+    from app.services import matching_service
+
+    db = _db()
+    try:
+        first = Model(slug="kb26-foo-bar-a", name="KB26 FooBar", status="active", resolution="exact")
+        db.add(first)
+        db.flush()
+        second = Model(slug="kb26-foo-bar-b", name="KB26 Foo-Bar", status="active", resolution="exact")
+        db.add(second)
+        db.commit()
+        first_id = first.id
+        matching_service.invalidate_alias_cache()
+        hits = {matching_service.match_model(db, "kb26 foobar").id for _ in range(3)}
+    finally:
+        db.close()
+    assert hits == {first_id}, f"归属不稳定：{hits}"

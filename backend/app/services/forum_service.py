@@ -3,7 +3,11 @@
 import ipaddress
 import re
 import socket
+import threading
+import time
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -15,6 +19,55 @@ from . import community_service
 # 链接域名黑名单
 BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "example.com", "test"}
 _URL_RE = re.compile(r"https?://[^\s<>\"'()]+")
+
+# ---- 域名解析（KB-24）----
+# 旧实现直接在请求线程里 socket.getaddrinfo 且无超时：登录用户贴一个慢解析域名就能
+# 占住一个 threadpool 槽数秒，几十个并发即可拖慢全站。这里改成：小线程池 + 1s 超时 +
+# 正/负结果 TTL 缓存 + 并发闸（通道繁忙时按 fail-closed 处理，不排队）。
+_DNS_TIMEOUT = 1.0
+_DNS_TTL = 300.0
+_DNS_MAX_ENTRIES = 5000
+_dns_lock = threading.Lock()
+_dns_cache: dict[str, tuple[float, bool | None]] = {}
+_dns_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="forum-dns")
+_dns_sem = threading.BoundedSemaphore(4)
+
+
+def _host_verdict(host: str) -> bool | None:
+    """True=内网/保留地址，False=公网，None=解析失败/超时（调用方按 fail-closed 处理）。"""
+    now = time.time()
+    with _dns_lock:
+        hit = _dns_cache.get(host)
+        if hit and hit[0] > now:
+            return hit[1]
+
+    verdict: bool | None = None
+    if not _dns_sem.acquire(blocking=False):
+        verdict = None  # 解析通道繁忙：不排队，直接按无法确认处理
+    else:
+        try:
+            infos = _dns_pool.submit(socket.getaddrinfo, host, None).result(timeout=_DNS_TIMEOUT)
+        except (FutureTimeout, socket.gaierror, OSError, UnicodeError):
+            verdict = None
+        else:
+            verdict = False
+            for info in infos:
+                try:
+                    ip = ipaddress.ip_address(info[4][0])
+                except ValueError:
+                    continue
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    verdict = True
+                    break
+        finally:
+            _dns_sem.release()
+
+    with _dns_lock:
+        if len(_dns_cache) >= _DNS_MAX_ENTRIES:  # 有界：满了先丢最早的一批
+            for key in list(_dns_cache)[: _DNS_MAX_ENTRIES // 5]:
+                _dns_cache.pop(key, None)
+        _dns_cache[host] = (now + _DNS_TTL, verdict)
+    return verdict
 
 
 def reply_subtree_ids(db: Session, root_id: int) -> list[int]:
@@ -130,17 +183,33 @@ def validate_links(text: str) -> None:
             raise HTTPException(status_code=422, detail="无效链接", )
         if host.lower() in BLOCKED_DOMAINS:
             raise HTTPException(status_code=422, detail=f"域名 {host} 被列入黑名单", )
+        # 字面量 IP 直接判定；域名走带超时/缓存的解析（KB-24）
         try:
-            infos = socket.getaddrinfo(host, None)
-        except socket.gaierror:
-            raise HTTPException(status_code=422, detail=f"无法解析链接域名 {host}", )
-        for info in infos:
-            try:
-                ip = ipaddress.ip_address(info[4][0])
-            except ValueError:
-                continue
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            literal = ipaddress.ip_address(host)
+        except ValueError:
+            verdict = _host_verdict(host)
+            if verdict is True:
                 raise HTTPException(status_code=422, detail="链接指向内网/回环/保留地址，禁止", )
+            if verdict is None:
+                raise HTTPException(status_code=422, detail=f"无法解析链接域名 {host}（超时或解析失败）", )
+        else:
+            if literal.is_private or literal.is_loopback or literal.is_link_local or literal.is_reserved:
+                raise HTTPException(status_code=422, detail="链接指向内网/回环/保留地址，禁止", )
+
+
+def validate_report_target(db: Session, target_type: str, target_id: int) -> None:
+    """举报目标必须存在且可见（KB-25）：否则举报队列里堆的是指向空气的条目。"""
+    if target_type == "topic":
+        t = db.get(ForumTopic, target_id)
+        if t is None or t.status == "hidden":
+            raise HTTPException(status_code=404, detail="被举报的主题不存在", )
+        return
+    r = db.get(ForumReply, target_id)
+    if r is None or r.status == "hidden":
+        raise HTTPException(status_code=404, detail="被举报的回复不存在", )
+    topic = db.get(ForumTopic, r.topic_id)
+    if topic is None or topic.status == "hidden":
+        raise HTTPException(status_code=404, detail="被举报的回复不存在", )
 
 
 def needs_review(user: User) -> bool:

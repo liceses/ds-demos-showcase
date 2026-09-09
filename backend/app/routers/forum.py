@@ -102,7 +102,8 @@ def list_topics(
     if category:
         query = query.filter(ForumTopic.category == category)
     if tag:
-        query = query.filter(ForumTopic.tags.ilike(f"%{tag}%"))
+        # KB-25：tags 是逗号分隔列表，必须精确匹配成员（ilike 子串会让 "demo" 命中 "demoscene"）
+        query = query.filter(func.concat(",", ForumTopic.tags, ",").like(f"%,{tag},%"))
     if demo:
         query = query.filter(ForumTopic.demo_slug == demo)
     if kind == "demo":
@@ -294,6 +295,20 @@ def create_report(
     user: User = Depends(current_user),
 ):
     _rate_limit(request, "report", 20, user)
+    # KB-25：目标必须存在且可见；同一人对同一目标已有 open 举报 → 409（不堆重复）
+    forum_service.validate_report_target(db, body.target_type, body.target_id)
+    dup = (
+        db.query(ForumReport)
+        .filter(
+            ForumReport.target_type == body.target_type,
+            ForumReport.target_id == body.target_id,
+            ForumReport.reporter_id == user.id,
+            ForumReport.status == "open",
+        )
+        .first()
+    )
+    if dup is not None:
+        raise HTTPException(status_code=409, detail="你已举报过该内容，管理员正在处理", )
     r = ForumReport(
         target_type=body.target_type,
         target_id=body.target_id,

@@ -102,12 +102,15 @@ def _alias_map(db: Session) -> dict[str, int]:
             return _alias_cache["map"]
     mapping: dict[str, int] = {}
     live = Model.status != "deprecated"
-    for model_id, name in db.query(Model.id, Model.name).filter(live).all():
+    # KB-26：显式 ORDER BY id —— setdefault 的胜负取决于返回顺序，不排序的话
+    # 两个同规范化键实体的归属会随查询计划/重启变化
+    for model_id, name in db.query(Model.id, Model.name).filter(live).order_by(Model.id.asc()).all():
         mapping.setdefault(normalize(name), model_id)
     for alias, model_id in (
         db.query(ModelAlias.alias, ModelAlias.model_id)
         .join(Model, Model.id == ModelAlias.model_id)
         .filter(Model.status != "deprecated")
+        .order_by(ModelAlias.model_id.asc(), ModelAlias.alias.asc())
         .all()
     ):
         mapping.setdefault(normalize(alias), model_id)

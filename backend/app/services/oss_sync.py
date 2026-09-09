@@ -142,9 +142,16 @@ def run_sync_job(force: bool) -> dict:
 
 
 def start_sync(force: bool = False) -> bool:
-    """启动后台同步；若已有任务在跑则返回 False。"""
+    """启动后台同步；若已有任务在跑则返回 False。
+
+    KB-26：检查与「置位」必须在同一把锁里 —— 旧写法检查完就出锁，两个并发请求
+    （例如双击管理台按钮）都能看到 running=False 并各起一个线程。
+    """
     with _job_lock:
         if _job["running"]:
             return False
+        _job["running"] = True
+        _job["force"] = force
+        _job["started_at"] = time.time()
     threading.Thread(target=run_sync_job, args=(force,), daemon=True).start()
     return True

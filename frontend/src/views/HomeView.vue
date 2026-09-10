@@ -3,6 +3,7 @@ defineOptions({ name: 'HomeView' })
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
+import { useTypewriter } from '../composables/useTypewriter'
 import type { Announcement, DemoSummary, ForumTopic, LiveStats, SiteInfo, UserLeaderboardItem } from '../api/types'
 import { funEffective } from '../utils/funMode'
 import { annLabel, annUnreadCount, markAnnouncementsRead } from '../utils/announcement'
@@ -80,34 +81,9 @@ const taglinePhrases = [
   '正在空指针异常…',
   '正在 try catch 一个 try catch…',
 ]
-const tagline = ref('')
 const taglinePool = computed(() => tArr('taglines', taglinePhrases))
-let taglineTimer: ReturnType<typeof setTimeout> | null = null
-let taglineIdx = 0
-let taglineChar = 0
-let taglineDeleting = false
-
-function tickTagline() {
-  const pool = taglinePool.value
-  const phrase = pool[taglineIdx % pool.length]
-  if (!taglineDeleting) {
-    taglineChar++
-    tagline.value = phrase.slice(0, taglineChar)
-    if (taglineChar >= phrase.length) {
-      taglineDeleting = true
-      taglineTimer = setTimeout(tickTagline, 2600)
-      return
-    }
-  } else {
-    taglineChar--
-    tagline.value = phrase.slice(0, taglineChar)
-    if (taglineChar <= 0) {
-      taglineDeleting = false
-      taglineIdx = (taglineIdx + 1) % pool.length
-    }
-  }
-  taglineTimer = setTimeout(tickTagline, taglineDeleting ? 18 : 42)
-}
+// RF-4h：打字机时序抽到 useTypewriter（可单测）；节奏参数即原来的 42/18/2600
+const { text: tagline } = useTypewriter(taglinePool)
 
 /** 原地 Fisher-Yates 洗牌，返回新数组 */
 function shuffle<T>(arr: T[]): T[] {
@@ -281,7 +257,6 @@ async function loadMoreLatest() {
 const { queues, totalMust } = useQueues()
 
 onMounted(async () => {
-  tickTagline()
   try {
     const [g, a, info] = await Promise.all([
       api.listDemos({ status: 'approved', tags: [GRAY_TAG], page: 1, page_size: 6 }),
@@ -332,7 +307,6 @@ onDeactivated(() => {
 })
 onBeforeUnmount(() => {
   stopLiveTimer()
-  if (taglineTimer) clearTimeout(taglineTimer)
   if (forumTimer) clearTimeout(forumTimer)
 })
 </script>

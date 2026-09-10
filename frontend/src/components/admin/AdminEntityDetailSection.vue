@@ -45,6 +45,8 @@ const error = ref('')
 const model = ref<ModelDetail | null>(null)
 const task = ref<AdminTaskDetail | null>(null)
 const tagRow = ref<{ keyLabel: string; value: { id?: number; value: string; description: string; demo_count: number; group?: string | null; status?: string } } | null>(null)
+// RF-4b：Tag 分组草稿（与 tagDescDraft 同范式：草稿≠真值，失败可回滚）
+const groupDraft = ref('')
 const audit = ref<AuditEntry[]>([])
 const works = ref<Array<{ slug: string; title: string; rating_avg?: number | null; status?: string; id?: number }>>([])
 
@@ -122,6 +124,7 @@ async function load() {
       const v = k?.values.find((x) => String(x.id ?? '') === props.id)
       if (!v) throw new Error(t('admin.kc.tagNotFound', '标签值不存在或已被移除'))
       tagRow.value = { keyLabel: k?.label || props.tagKey || '-', value: v }
+      groupDraft.value = v.group || '' // RF-4b：草稿与真值分离，「当前分组」显示服务端真值
       const [a, w] = await Promise.all([
         api.getAudit({ entity_type: 'tag', entity_id: v.id ?? 0, page_size: 20 }).catch(() => ({ items: [] as AuditEntry[] })),
         api.listDemos({ tags: [`${props.tagKey}:${v.value}`], status: 'approved', page_size: 12 }).catch(() => ({ items: [] as DemoSummary[] })),
@@ -185,6 +188,7 @@ async function addAlias() {
     await api.addModelAlias(model.value.slug, a)
     aliasNew.value = ''
     ui.toast(t('admin.kc.aliasAdded', '别名已添加'), 'success')
+    emit('saved') // RF-4b：父级列表的别名计数要跟着变
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -205,6 +209,7 @@ async function removeAlias(alias: string) {
   try {
     await api.removeModelAlias(model.value.slug, alias)
     ui.toast(t('admin.kc.aliasRemoved', '别名已删除'), 'success')
+    emit('saved')
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -242,6 +247,7 @@ async function doTransition() {
       await api.setTagStatus(tagRow.value.value.id, { status: target, reason: transReason.value.trim() || undefined })
     }
     ui.toast(t('admin.kc.transDone', '状态已跃迁并落审计'), 'success')
+    emit('saved') // RF-4b：父级列表的状态列要跟着变
     transOpen.value = false
     await load()
   } catch (e) {
@@ -278,6 +284,7 @@ async function deleteEntity() {
       await api.adminDeleteTask(props.id)
     }
     ui.toast(t('admin.kc.deleteDone', '已删除（零引用实体）'), 'success')
+    emit('saved') // RF-4b：实体没了，父级列表必须刷新
     goTab('entities')
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -287,19 +294,34 @@ async function deleteEntity() {
 }
 
 // ---- 直改：Tag 分组（自由格，既有端点） ----
-async function saveGroup(group: string | null) {
+/**
+ * 保存分组（RF-4b 修 bug）。
+ * 旧实现：输入框与只读的「当前分组」绑的是**同一个对象**（都读 tagRow.value.group），
+ * 一边打字「当前分组」就跟着变 —— 读到的是草稿不是真值；保存失败也不回滚，
+ * 界面会一直显示一个并未落库的分组。
+ * 现在：草稿独立（groupDraft），成功由 load() 拉回服务端真值，失败回滚草稿。
+ */
+async function saveGroup() {
   const v = tagRow.value?.value
   if (!v?.id || saving.value) return
+  const next = groupDraft.value.trim() || null
   saving.value = true
   try {
-    await api.setTagGroup(v.id, group)
+    await api.setTagGroup(v.id, next)
     ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
-    await load()
+    emit('saved')
+    await load() // 真值回填（同一次 load 也会把草稿对齐到服务端结果）
   } catch (e) {
     ui.toast((e as Error).message, 'error')
+    groupDraft.value = v.group || '' // 回滚：别让界面停在一个没落库的分组上
   } finally {
     saving.value = false
   }
+}
+
+/** 放弃改动：草稿回到服务端真值 */
+function resetGroupDraft() {
+  groupDraft.value = tagRow.value?.value.group || ''
 }
 
 function kvOf(tags: { key: string; value: string }[]): { key: string; value: string }[] {
@@ -351,6 +373,7 @@ async function attachPicked() {
     }
     if (okCount > 0) {
       ui.toast(t('admin.kc.attachedN', '已挂载 {n} 件（attach 审计）', { n: okCount }), 'success')
+    emit('saved') // RF-4b：父级列表的作品计数要跟着变
       attachPicks.value = []
       await load()
     }
@@ -383,6 +406,7 @@ async function detachDemo(slug: string) {
       await rewriteDemoTags(slug, (tags) => tags.filter((x) => !(x.key === kv.key && x.value === kv.value)))
     }
     ui.toast(t('admin.kc.detached', '已摘除（detach 审计）'), 'success')
+    emit('saved')
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -433,6 +457,7 @@ async function doMerge() {
   try {
     await api.mergeEntity('tasks', task.value.slug, { target_id: mergePreview.value.target.id, dry_run: false, reason: mergeReason.value || undefined })
     ui.toast(t('admin.kc.mergeDone', '已合并并落审计'), 'success')
+    emit('saved') // RF-4b：合并会改变两侧实体，父级列表必须刷新
     closeMerge()
     await load()
   } catch (e) {
@@ -571,8 +596,10 @@ onMounted(load)
                   </div>
                   <div class="kc-field kc-wide">
                     <span class="kc-k">{{ t('admin.kc.fGroupSet', '改分组') }}</span>
-                    <input v-model="tagRow.value.group" class="input" style="max-width: 180px" :placeholder="t('admin.kc.groupPh', '输入分组名或留空')" />
-                    <button type="button" class="btn btn-sm btn-primary" :disabled="saving" @click="saveGroup(tagRow.value.group || null)">{{ t('admin.kc.save', '保存') }}</button>
+                    <!-- RF-4b：输入框绑草稿，不再与上方只读的「当前分组」同源 -->
+                    <input v-model="groupDraft" class="input" style="max-width: 180px" :placeholder="t('admin.kc.groupPh', '输入分组名或留空')" />
+                    <button type="button" class="btn btn-sm btn-primary" :disabled="saving" @click="saveGroup()">{{ t('admin.kc.save', '保存') }}</button>
+                    <button v-if="groupDraft !== (tagRow.value.group || '')" type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="resetGroupDraft()">{{ t('common.cancel', '取消') }}</button>
                     <span class="hint">{{ t('admin.kc.groupNote', 'PUT /tags/admin/values/{id}/group——既有端点真保存。') }}</span>
                   </div>
                 </template>

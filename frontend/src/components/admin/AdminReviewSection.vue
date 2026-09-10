@@ -1,27 +1,20 @@
 <script setup lang="ts">
 defineOptions({ name: 'AdminReviewSection' })
-import { onMounted, ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import { useUiStore } from '../../stores/ui'
 import LoadingRow from '../LoadingRow.vue'
 import EmptyBox from '../EmptyBox.vue'
 import type { DemoDetail } from '../../api/types'
 
 const ui = useUiStore()
-const pending = ref<DemoDetail[]>([])
-const loading = ref(true)
 
-async function load() {
-  loading.value = true
-  try {
-    pending.value = await api.adminReview()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    loading.value = false
-  }
-}
-
+// RF-3：样板收进 useAdminLoader（失败出口保持 toast：待审列表失败一闪即过）
+const { data: pending, loading } = useAdminLoader({
+  fetcher: () => api.adminReview(),
+  initial: [] as DemoDetail[],
+  errorMode: 'toast',
+})
 async function review(slug: string, action: 'approve' | 'reject') {
   const idx = pending.value.findIndex((d) => d.slug === slug)
   const item = idx >= 0 ? pending.value[idx] : null
@@ -34,8 +27,6 @@ async function review(slug: string, action: 'approve' | 'reject') {
     ui.toast((e as Error).message, 'error')
   }
 }
-
-onMounted(load)
 </script>
 
 <template>

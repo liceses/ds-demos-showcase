@@ -3,17 +3,29 @@
 // 动作清单与实体类型都由接口给（前端不硬编码）—— 上一轮 `attribute` 就是因为
 // 白名单写死在路由里而筛不出来，这里再写死一次等于把同一个坑复制两份。
 defineOptions({ name: 'AdminAuditSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import type { AuditList } from '../../api/types'
 import { fmtTime, auditActionLabel } from '../../utils/adminLabels'
 import LoadingRow from '../LoadingRow.vue'
 import EmptyBox from '../EmptyBox.vue'
 import { t } from '../../i18n'
 
-const data = ref<AuditList | null>(null)
-const loading = ref(true)
-const error = ref('')
+// RF-3：样板收进 useAdminLoader（fetcher 读取当前筛选与页码；翻页/筛选后手动调 load）
+const { data, loading, error, load } = useAdminLoader({
+  fetcher: () =>
+    api.getAudit({
+      action: filters.value.action || undefined,
+      entity_type: filters.value.entity_type || undefined,
+      entity_id: filters.value.entity_id ? Number(filters.value.entity_id) : undefined,
+      q: filters.value.q || undefined,
+      page: page.value,
+      page_size: pageSize,
+    }),
+  initial: null as AuditList | null,
+})
+
 const expanded = ref<Record<number, boolean>>({})
 
 const filters = ref({ action: '', entity_type: '', entity_id: '', q: '' })
@@ -36,26 +48,6 @@ const ACTION_CLASS: Record<string, string> = {
   detach: 'stat-yellow',
   delete: 'stat-red',
 }
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    data.value = await api.getAudit({
-      action: filters.value.action || undefined,
-      entity_type: filters.value.entity_type || undefined,
-      entity_id: filters.value.entity_id ? Number(filters.value.entity_id) : undefined,
-      q: filters.value.q || undefined,
-      page: page.value,
-      page_size: pageSize,
-    })
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
 function search() {
   page.value = 1
   void load()
@@ -71,8 +63,6 @@ function fmt(v: unknown): string {
   if (typeof v === 'string') return v
   return JSON.stringify(v, null, 1)
 }
-
-onMounted(load)
 </script>
 
 <template>

@@ -2,8 +2,9 @@
 // 合并向导（B4）：治理铁律是「先 dry_run 看影响面，确认后才真合」。
 // 界面按这个顺序强制走：选源 → 选目标 → 预览 → 执行。预览不出来的按钮一律禁用。
 defineOptions({ name: 'AdminMergeSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import type { ConflictGroup, EntityConflicts, MergeHistoryItem, MergePreview, UnmergePreview } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import EntityPicker from '../picker/EntityPicker.vue'
@@ -13,17 +14,28 @@ import { t } from '../../i18n'
 
 const ui = useUiStore()
 
+// RF-3：样板收进 useAdminLoader（两个并发请求 → 一次 fetcher 返回，写回既有 ref）
+const conflicts = ref<EntityConflicts | null>(null)
+const history = ref<MergeHistoryItem[]>([])
+const { loading, error, load } = useAdminLoader({
+  fetcher: async () => {
+    const [c, h] = await Promise.all([api.getEntityConflicts(), api.getMergeHistory()])
+    return { c, h: h.items }
+  },
+  initial: { c: null as EntityConflicts | null, h: [] as MergeHistoryItem[] },
+  onLoaded: (r) => {
+    conflicts.value = r.c
+    history.value = r.h
+  },
+})
+
 const kind = ref<'models' | 'tasks'>('models')
 const source = ref<{ id: number; label: string } | null>(null)
 const target = ref<{ id: number; label: string } | null>(null)
 const preview = ref<MergePreview | null>(null)
-const conflicts = ref<EntityConflicts | null>(null)
-const history = ref<MergeHistoryItem[]>([])
 const unPrev = ref<Record<number, UnmergePreview>>({})
 const unBusy = ref<Record<number, boolean>>({})
-const loading = ref(true)
 const busy = ref(false)
-const error = ref('')
 const reason = ref('')
 
 const KIND_PATH = computed(() => (kind.value === 'models' ? 'models' : 'tasks'))
@@ -45,21 +57,6 @@ function pickTarget(p: EntityPick) {
   target.value = { id: p.id ?? 0, label: p.label }
   preview.value = null
 }
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const [c, h] = await Promise.all([api.getEntityConflicts(), api.getMergeHistory()])
-    conflicts.value = c
-    history.value = h.items
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
 async function previewUnmerge(item: MergeHistoryItem) {
   unBusy.value[item.source.id] = true
   try {
@@ -149,8 +146,6 @@ async function doMerge() {
     busy.value = false
   }
 }
-
-onMounted(load)
 </script>
 
 <template>

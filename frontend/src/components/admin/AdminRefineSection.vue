@@ -3,8 +3,9 @@
 // 流程刻意是「预览 → 入队 → 收件箱批准」三步：规则在真实语料上未必准，
 // 所以绝不自动改标签；批准那一步仍然归人（四层治理的最后一道）。
 defineOptions({ name: 'AdminRefineSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import type { TypeDemoPreview } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import LoadingRow from '../LoadingRow.vue'
@@ -13,28 +14,17 @@ import { t } from '../../i18n'
 
 const ui = useUiStore()
 
-const data = ref<TypeDemoPreview | null>(null)
-const loading = ref(false)
+// RF-3：样板收进 useAdminLoader
+const { data, loading, error, load } = useAdminLoader({
+  fetcher: () => api.getTypeDemoPreview({ limit: limit.value, min_confidence: minConfidence.value }),
+  initial: null as TypeDemoPreview | null,
+})
 const queueing = ref(false)
-const error = ref('')
 const minConfidence = ref(0.8) // 仿真校准：0.85+ 基本可信，0.72 档有误判，默认只放干净的一段
 const limit = ref(500)
 
 const demoRow = computed(() => (data.value?.stats.type_dist || []).find((x) => x.value === 'demo'))
 const total = computed(() => data.value?.stats.approved || 0)
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    data.value = await api.getTypeDemoPreview({ limit: limit.value, min_confidence: minConfidence.value })
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
 async function queue() {
   const n = data.value?.proposed ?? 0
   if (!n) return
@@ -55,8 +45,6 @@ async function queue() {
     queueing.value = false
   }
 }
-
-onMounted(load)
 </script>
 
 <template>

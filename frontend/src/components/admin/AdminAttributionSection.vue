@@ -5,8 +5,9 @@
 // 2) 后端归属会回写 model 标签（只改实体表会在作者下次编辑时静默退回兜底位）；
 // 3) 提交前必须看到影响面（多少个作品、从哪迁到哪），确认后才动手。
 defineOptions({ name: 'AdminAttributionSection' })
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import type { AttributionGroup, AttributionPending } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import LoadingRow from '../LoadingRow.vue'
@@ -17,9 +18,18 @@ import { t } from '../../i18n'
 
 const ui = useUiStore()
 
-const data = ref<AttributionPending | null>(null)
-const loading = ref(true)
-const error = ref('')
+// RF-3：样板收进 useAdminLoader；原 load() 里的表单预填走 onLoaded
+const { data, loading, error, load } = useAdminLoader({
+  fetcher: () => api.getAttributionPending(),
+  initial: null as AttributionPending | null,
+  onLoaded: (d) => {
+    if (!d) return
+    for (const g of d.groups) {
+      if (!(g.model.slug in picked)) picked[g.model.slug] = new Set()
+      if (!(g.model.slug in target)) target[g.model.slug] = defaultTarget(g)
+    }
+  },
+})
 const busy = ref<Record<string, boolean>>({})
 /** groupSlug -> 选中作品 id */
 const picked = reactive<Record<string, Set<number>>>({})
@@ -69,23 +79,6 @@ function defaultTarget(g: AttributionGroup): number | null {
   const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]
   return best ? best[0] : null
 }
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    data.value = await api.getAttributionPending()
-    for (const g of data.value.groups) {
-      if (!(g.model.slug in picked)) picked[g.model.slug] = new Set()
-      if (!(g.model.slug in target)) target[g.model.slug] = defaultTarget(g)
-    }
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
 async function submit(g: AttributionGroup) {
   const ids = selectedIds(g.model.slug)
   const tid = target[g.model.slug]
@@ -119,8 +112,6 @@ async function submit(g: AttributionGroup) {
     busy.value[g.model.slug] = false
   }
 }
-
-onMounted(load)
 </script>
 
 <template>

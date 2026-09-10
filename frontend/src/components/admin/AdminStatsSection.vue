@@ -2,15 +2,19 @@
 // 治理体检面板（B4）：看的是**覆盖率与积压**，不是标签数量 ——
 // 概念文档反复强调：标签多不等于治理好，只有「作品被描述到了吗」才算。
 defineOptions({ name: 'AdminStatsSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import type { KnowledgeStats } from '../../api/types'
 import { t } from '../../i18n'
 import LoadingRow from '../LoadingRow.vue'
 
-const data = ref<KnowledgeStats | null>(null)
-const loading = ref(true)
-const error = ref('')
+// RF-3：样板收进 useAdminLoader
+const { data, loading, error, load } = useAdminLoader({
+  fetcher: () => api.getKnowledgeStats(),
+  initial: null as KnowledgeStats | null,
+})
+
 
 const TIER_LABEL: Record<number, string> = {
   1: '核心',
@@ -26,20 +30,6 @@ const coverageRows = computed(() =>
 const backlog = computed(() =>
   Object.entries(data.value?.inbox.pending_actionable || {}).sort((a, b) => b[1] - a[1]),
 )
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    data.value = await api.getKnowledgeStats()
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(load)
 </script>
 
 <template>

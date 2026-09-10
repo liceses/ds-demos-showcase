@@ -3,34 +3,27 @@
 // 内容组新面板——从已上架作品里精选（基座 DemoPicker 添加）→ 排序（上移/下移）→ 置顶 hero → 移除。
 // 首页展示侧：池非空按序展示（hero=第 1 件），池空回落现状随机（本面板即策展编辑入口）。
 defineOptions({ name: 'AdminFeaturedSection' })
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import { useUiStore } from '../../stores/ui'
 import type { AdminFeaturedItem } from '../../api/types'
 import { t } from '../../i18n'
+import LoadingRow from '../LoadingRow.vue'
 // T5·M5-F2：添加入口 = 共享 DemoPicker（kind=demo，manualSlug 兜底手输 slug）
 import EntityPicker from '../picker/EntityPicker.vue'
 import type { EntityPick } from '../picker/pickerSources'
 
 const ui = useUiStore()
 
-const rows = ref<AdminFeaturedItem[]>([])
-const loading = ref(false)
+// RF-3：样板收进 useAdminLoader（失败出口保持 toast）
+const { data: rows, loading, load } = useAdminLoader({
+  fetcher: async () => (await api.listFeatured()).items,
+  initial: [] as AdminFeaturedItem[],
+  errorMode: 'toast',
+})
 const busy = ref<'move' | 'hero' | 'remove' | null>(null)
 const adding = ref(false)
-
-async function load() {
-  loading.value = true
-  try {
-    const pool = await api.listFeatured()
-    rows.value = pool.items
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    loading.value = false
-  }
-}
-
 async function pickToAdd(p: EntityPick) {
   if (adding.value) return
   adding.value = true
@@ -94,8 +87,6 @@ async function remove(item: AdminFeaturedItem) {
     busy.value = null
   }
 }
-
-onMounted(load)
 </script>
 
 <template>
@@ -104,7 +95,8 @@ onMounted(load)
       {{ t('admin.featured.hint', '首页「精选作品」与 hero 大卡 = 本池按序展示（池空时自动回落全量随机，本面板是唯一的策展入口）。只收已上架（approved）作品。') }}
     </p>
 
-    <div v-if="loading && !rows.length" class="loading-row"><span class="spinner"></span> {{ t('admin.featured.loading', '加载精选池…') }}</div>
+    <!-- RF-3：手写 loading-row/spinner 改用现成的 LoadingRow（全仓已有 40 处在用它） -->
+    <LoadingRow v-if="loading && !rows.length" :text="t('admin.featured.loading', '加载精选池…')" />
 
     <div v-else-if="!rows.length" class="card card-default" style="padding: 14px">
       <p class="muted" style="margin: 0 0 10px">

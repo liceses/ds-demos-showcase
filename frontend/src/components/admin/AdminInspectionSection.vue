@@ -3,8 +3,9 @@
 // 三类级别：action（能一键生成候选）/ warn（只能人看）/ info（背景读数）。
 // 关键克制：**没有自动补救动作的项就不给按钮** —— 造假动作比没有动作更坏。
 defineOptions({ name: 'AdminInspectionSection' })
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '../../api'
+import { useAdminLoader } from '../../composables/useAdminLoader'
 import type { InspectionResult } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import LoadingRow from '../LoadingRow.vue'
@@ -12,9 +13,11 @@ import { t } from '../../i18n'
 
 const ui = useUiStore()
 
-const data = ref<InspectionResult | null>(null)
-const loading = ref(true)
-const error = ref('')
+// RF-3：样板收进 useAdminLoader（原 13 份手抄的 loading/error/load/onMounted）
+const { data, loading, error, load } = useAdminLoader({
+  fetcher: () => api.getInspection({ sample_limit: 6 }),
+  initial: null as InspectionResult | null,
+})
 const busy = ref<Record<string, boolean>>({})
 const minConfidence = ref(0.85) // 补值是猜测，门槛比拆分流水线更高；多值收敛是机械判断不受此限
 
@@ -31,19 +34,6 @@ const LEVEL_CLASS: Record<string, string> = {
 
 const actionable = computed(() => (data.value?.checks || []).filter((c) => c.can_queue && c.count > 0))
 const watchList = computed(() => (data.value?.checks || []).filter((c) => !c.can_queue && c.count > 0))
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    data.value = await api.getInspection({ sample_limit: 6 })
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
 async function queue(id: string, label: string, n: number) {
   const ok = await ui.confirm({
     title: t('admin.inspect.confirmTitle', '生成候选？'),
@@ -62,8 +52,6 @@ async function queue(id: string, label: string, n: number) {
     busy.value[id] = false
   }
 }
-
-onMounted(load)
 </script>
 
 <template>

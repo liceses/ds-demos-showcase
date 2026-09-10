@@ -3,6 +3,7 @@
 import { computed, ref, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 import { api } from '../api'
+import { useDebouncedFetch } from './useDebouncedFetch'
 import { t } from '../i18n'
 
 type ChecklistItem = { label: string; done: boolean; step: number; must: boolean }
@@ -63,33 +64,26 @@ export function useUploadPlayable(deps: {
   // 实验编号：幂等键本来就有，给它一个"实验记录"的读法（不改后端语义）
   const expNo = computed(() => (deps.idempotencyKey.value || '').replace(/-/g, '').slice(-6).toUpperCase())
 
-  /** 选中模型后的站内战绩：有趣且真的有用（别在自己没胜算的题上硬拼） */
-  const modelStats = ref<{ name: string; demo_count: number; rating_avg: number | null } | null>(null)
-  const statsLoading = ref(false)
-  let statsTimer: ReturnType<typeof setTimeout> | null = null
-  async function loadStats() {
-    const first = deps.chosenModelNames.value[0]
-    if (!first) {
-      modelStats.value = null
-      return
-    }
-    statsLoading.value = true
-    try {
-      const d = await api.getModel(first)
-      modelStats.value = { name: d.name, demo_count: d.demo_count, rating_avg: d.rating_avg ?? null }
-    } catch {
-      modelStats.value = null // 拉不到就不演，安静退场
-    } finally {
-      statsLoading.value = false
-    }
-  }
-  watch(deps.chosenModelNames as ComputedRef<string[]> & Ref<string[]>, (v) => {
-    if (v.length) {
-      if (statsTimer) clearTimeout(statsTimer)
-      statsTimer = setTimeout(loadStats, 260)
-    } else {
-      modelStats.value = null
-    }
+  /**
+   * 选中模型后的站内战绩：有趣且真的有用（别在自己没胜算的题上硬拼）。
+   * RF-3：改用 useDebouncedFetch（260ms 去抖 + **竞态守卫**）。
+   * 旧实现没有守卫：先选 A 再选 B，A 的响应后到会把标题写成 A、
+   * 数字写成 A 的 —— 用户看着 B 的界面读 A 的战绩。
+   */
+  const { result: modelStats, loading: statsLoading } = useDebouncedFetch<{
+    name: string
+    demo_count: number
+    rating_avg: number | null
+  } | null>({
+    source: () => deps.chosenModelNames.value[0] || '',
+    fetcher: async (name) => {
+      const d = await api.getModel(name)
+      return { name: d.name, demo_count: d.demo_count, rating_avg: d.rating_avg ?? null }
+    },
+    delay: 260,
+    minLength: 1,
+    empty: () => null, // 拉不到/没选模型就不演，安静退场
+    clearOnStart: true,
   })
 
   /** 没灵感就抽一题：把"挑战"这条闭环真正接上（只跳题目页，不自动挂题） */

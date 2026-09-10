@@ -174,7 +174,7 @@ function dropChallenge() {
 // ---------- 挂题（T15 拆分件 useTaskMount；逐字迁出行为不变） ----------
 // 唯一状态源：从题目页带 ?task= 进来、或在这里主动选，都写进 pickedTask（loadChallenge 亦写此源）。
 const {
-  pickedTask, taskQuery, taskHits, taskSearching, taskPickerOpen, runTaskSearch, scheduleTaskSearch, pickTask, clearTask, openTaskPicker, simPct,
+  pickedTask, taskQuery, taskHits, taskSearching, taskPickerOpen, pickTask, clearTask, openTaskPicker, simPct,
 } = useTaskMount({ title, description, prompt, aside })
 
 // ---------- 草稿持久化（T15 拆分件 useUploadDraft；逐字迁出行为不变） ----------
@@ -683,8 +683,6 @@ async function submit() {
           @pick-task="pickTask"
           @clear-task="clearTask"
           @open-task-picker="openTaskPicker"
-          @schedule-task-search="scheduleTaskSearch"
-          @run-task-search="runTaskSearch"
           @add-suggestion="addSuggestion"
           @add-all-suggestions="addAllSuggestions"
           @bring-back-pack="bringBackPack"

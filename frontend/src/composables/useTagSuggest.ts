@@ -1,8 +1,9 @@
 // T15 拆分件（04 §5.4）：useTagSuggest —— 标签建议包规则推导（自 UploadView.vue 逐字迁出，行为不变）
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { Ref } from 'vue'
 import type { DerivedTag } from '../api/types'
 import { api } from '../api'
+import { useDebouncedFetch } from './useDebouncedFetch'
 import { t } from '../i18n'
 
 type SelectedMap = Record<string, { value: string; description: string }[]>
@@ -18,10 +19,7 @@ export function useTagSuggest(deps: {
   aside: (key: string, text: string) => void
 }) {
   const { editSlug, stamp, aside } = deps
-  const pack = ref<DerivedTag[]>([])
-  const packLoading = ref(false)
   const packIgnored = ref(false) // 作者主动收起后不再自动弹
-  let packTimer: ReturnType<typeof setTimeout> | null = null
 
   function isSelectedTag(key: string, value: string) {
     return (deps.selected.value[key] || []).some((x) => x.value === value)
@@ -32,27 +30,26 @@ export function useTagSuggest(deps: {
     pack.value.filter((x) => !isSelectedTag(x.key, x.value) && !(x.key === 'type' && (deps.selected.value['type'] || []).length)),
   )
 
-  async function fetchPack() {
-    const text = `${deps.title.value} ${deps.description.value} ${deps.prompt.value}`.trim()
-    if (text.length < 6 || editSlug) {
-      pack.value = []
-      return
-    }
-    packLoading.value = true
-    try {
-      const r = await api.deriveTags({ title: deps.title.value, description: deps.description.value, prompt: deps.prompt.value, limit: 6 })
-      pack.value = r.items
-    } catch {
-      pack.value = [] // 建议包是增值信息，失败绝不打扰上传流程
-    } finally {
-      packLoading.value = false
-    }
-  }
-
-  function schedulePack() {
-    if (packTimer) clearTimeout(packTimer)
-    packTimer = setTimeout(fetchPack, 700) // 防抖：打字时不打扰，停下再推
-  }
+  /**
+   * §4.2 建议包：输入驱动 + 700ms 去抖 + **竞态守卫**（RF-3 改用 useDebouncedFetch）。
+   * 旧实现在慢网下会串台：标题从 A 改成 B，A 的响应后到会覆盖 B 的建议。
+   * editSlug（编辑既有作品）时不推建议 —— 走 source 返回空串短路，不额外分支。
+   */
+  const { result: pack, loading: packLoading, refresh: refreshPack } = useDebouncedFetch<DerivedTag[]>({
+    source: () => (editSlug ? '' : `${deps.title.value} ${deps.description.value} ${deps.prompt.value}`.trim()),
+    fetcher: async () => {
+      const r = await api.deriveTags({
+        title: deps.title.value,
+        description: deps.description.value,
+        prompt: deps.prompt.value,
+        limit: 6,
+      })
+      return r.items
+    },
+    delay: 700,
+    minLength: 6,
+    empty: () => [], // 建议包是增值信息：不够长/失败一律回落空，绝不打扰上传流程
+  })
 
   function addSuggestion(s: DerivedTag) {
     const list = deps.selected.value[s.key] ? [...deps.selected.value[s.key]] : []
@@ -73,17 +70,16 @@ export function useTagSuggest(deps: {
     aside('pack', t('upload.asPack', '系统查了词表，你签了字 —— 出处就算你的。'))
   }
 
-  watch([deps.title, deps.description, deps.prompt], schedulePack)
 
   /** 建议包被「不用了」收掉后必须还能叫回来（静默永久隐藏是设计失礼） */
   function bringBackPack() {
     packIgnored.value = false
-}
+    void refreshPack()
+  }
 
-/** RF-1：作者点「不用了」——状态归 composable 所有，子组件通过事件请求 */
-function ignorePack() {
-  packIgnored.value = true
-    void fetchPack()
+  /** RF-1：作者点「不用了」——状态归 composable 所有，子组件通过事件请求 */
+  function ignorePack() {
+    packIgnored.value = true
   }
 
   return { pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack, ignorePack }

@@ -3,6 +3,7 @@ defineOptions({ name: 'DemosView' })
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
+import { useLoadGeneration } from '../composables/useLoadGeneration'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
 import { tagLabel, tagStrLabel } from '../utils/funMode'
 import { t, keyLabel, vendorLabel } from '../i18n'
@@ -394,12 +395,26 @@ const facetCount = computed(() => selectedTags.value.length + (modelFilter.value
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
+/**
+ * 世代号：加载期间换筛选必须能重查，而在途的旧响应绝不能污染新列表。
+ *
+ * 旧实现把 `loading` 同时当「UI 态」和「互斥锁」用（`if (loading.value) return`），
+ * 于是出现真实可复现的 bug：首屏 `onMounted` 正在 `load(true)` 时点任一标签芯片 →
+ * `reset()` 直接 return（不清列表也不重查）→ 紧接着 `syncQuery()` 已把 tag 写进 URL →
+ * 路由 watch 触发 `applyRouteQuery()`，而它比较的是**已经改过的 ref** → 判定 changed=false
+ * → 不重查。结果：芯片高亮、URL 是 ?tag=x、列表却是未筛选的旧数据，且不会自行恢复。
+ * 搜索/排序/区间/清空全走同一条路径。
+ *
+ * 正解是世代号（不是简单删掉早退 —— 那样在途响应会把旧页 append 进新列表）。
+ */
+const gen = useLoadGeneration()
+
 async function load(reset = false) {
-  if (loading.value) return
+  const my = gen.next()
+  const p = reset ? 1 : page.value
   loading.value = true
   error.value = ''
   try {
-    const p = reset ? 1 : page.value
     const res = await api.listDemos({
       status: 'approved',
       tags: selectedTags.value,
@@ -409,20 +424,24 @@ async function load(reset = false) {
       page: p,
       page_size: pageSize,
     })
+    if (!gen.isCurrent(my)) return // 作废：已有更新的请求发出/返回，旧结果不许写
     demos.value = reset ? res.items : [...demos.value, ...res.items]
     total.value = res.total
     page.value = p + 1
     hasMore.value = demos.value.length < res.total
   } catch (e) {
+    if (!gen.isCurrent(my)) return
     error.value = (e as Error).message
   } finally {
-    loading.value = false
-    refreshing.value = false
+    if (gen.isCurrent(my)) {
+      loading.value = false
+      refreshing.value = false
+    }
   }
 }
 
 function reset() {
-  if (loading.value) return
+  gen.invalidate() // 作废在途请求（含「加载更多」——否则它的响应会 append 到新筛选的列表上）
   refreshing.value = true
   // 立即清空，显示明确加载态；不回顶，避免点击按钮时滚动条跳动
   demos.value = []

@@ -7,6 +7,7 @@ import { nextTick, ref } from 'vue'
 import { useLocalPagination } from '../src/composables/useLocalPagination'
 import { useDebouncedFetch } from '../src/composables/useDebouncedFetch'
 import { useSelectedTags } from '../src/composables/useSelectedTags'
+import { useLoadGeneration } from '../src/composables/useLoadGeneration'
 import { bodyScrollLockCount, lockBodyScroll, unlockBodyScroll } from '../src/composables/useBodyScrollLock'
 
 describe('useLocalPagination', () => {
@@ -177,5 +178,47 @@ describe('useSelectedTags：已选标签的派生（RF-3c 收敛的四处展平�
     const { list, count, tags, modelNames } = useSelectedTags(ref({}))
     expect([list.value, tags.value, modelNames.value]).toEqual([[], [], []])
     expect(count.value).toBe(0)
+  })
+})
+
+describe('useLoadGeneration：世代号守卫（RF-4a 修掉 DemosView 筛选不刷新的核心不变量）', () => {
+  it('只有最新世代的请求可以写结果', () => {
+    const gen = useLoadGeneration()
+    const a = gen.next()
+    const b = gen.next()
+    expect(gen.isCurrent(a)).toBe(false)
+    expect(gen.isCurrent(b)).toBe(true)
+  })
+
+  it('invalidate 作废所有在途请求（换筛选时不必等旧请求返回）', () => {
+    const gen = useLoadGeneration()
+    const inflight = gen.next()
+    expect(gen.isCurrent(inflight)).toBe(true)
+    gen.invalidate()
+    expect(gen.isCurrent(inflight)).toBe(false)
+    // 紧接着发起的新请求是新世代，允许写
+    const fresh = gen.next()
+    expect(gen.isCurrent(fresh)).toBe(true)
+  })
+
+  it('模拟真实时序：首屏加载中换筛选 → 旧响应被丢弃，新响应胜出', async () => {
+    const gen = useLoadGeneration()
+    let rendered: string[] = []
+    let inflight = 'old'
+
+    async function load(label: string, delayMs: number) {
+      const my = gen.next()
+      inflight = label
+      await new Promise((r) => setTimeout(r, delayMs))
+      if (!gen.isCurrent(my)) return // 守卫
+      rendered = [label]
+    }
+
+    const first = load('首屏', 30) // 在途
+    gen.invalidate() // 用户点标签 → reset()
+    const second = load('筛选后', 5)
+    await Promise.all([first, second])
+    expect(rendered).toEqual(['筛选后']) // 慢的「首屏」后到也没覆盖
+    expect(inflight).toBe('筛选后')
   })
 })

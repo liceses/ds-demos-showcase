@@ -38,10 +38,15 @@ def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
 
     - 成员名含 `..` 直接拒绝（旧实现只做字符串前缀比较，`../x` 会落到同前缀兄弟目录）；
     - 累计解压字节 / 成员数 / 压缩比超限即中断（zip 炸弹打满磁盘会连带拖死同盘 SQLite）；
+    - 压缩比按同一口径相除：整包 = 累计解压 / 累计压缩，单成员 = 本成员解压 / 本成员压缩。
+      旧实现分子取累计字节、分母取「当前这一个成员」的压缩字节，量纲不对齐 —— 那个除法
+      不是压缩比：累计量随遍历单调增长而分母不变，包一大就必然越限，正常作品包一律 413
+      （实测 4.44MB/60 成员的正常包在第 5 个成员处算出 111.5 > 100 被拒）；
     - 越界判定用 `Path.is_relative_to`，不再用 startswith（后者对同前缀路径失效）。
     """
     root = target.resolve()
     total_bytes = 0
+    total_compressed = 0
     members = 0
     for member in zf.infolist():
         raw = member.filename.replace("\\", "/")
@@ -64,8 +69,24 @@ def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
                 detail=f"zip 解压后体积超过上限（{settings.zip_max_uncompressed // (1024 * 1024)}MB）",
             )
         compressed = int(member.compress_size or 0)
-        if compressed and total_bytes / max(compressed, 1) > settings.zip_max_ratio:
-            raise HTTPException(status_code=413, detail="zip 压缩比异常（疑似压缩炸弹）")
+        total_compressed += compressed
+        # 整包口径：正常作品包比值 1~3，上限 100 留足余量，判错也只误伤真炸弹
+        if total_compressed and total_bytes / total_compressed > settings.zip_max_ratio:
+            raise HTTPException(
+                status_code=413,
+                detail=f"zip 压缩比异常（疑似压缩炸弹）：解压 {total_bytes} / 压缩 {total_compressed}",
+            )
+        # 单成员口径：整包口径会被大量正常成员稀释（40MB 零填充 + 400MB 随机数据总比才 ~1.1），
+        # 单成员膨胀比才是高压缩比成员的兜底闸
+        member_size = int(member.file_size or 0)
+        if compressed and member_size / compressed > settings.zip_max_ratio:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"zip 成员膨胀比异常（疑似压缩炸弹）：{raw} "
+                    f"解压 {member_size} / 压缩 {compressed}"
+                ),
+            )
         dest = target.joinpath(*parts)
         if not dest.resolve().is_relative_to(root):
             raise HTTPException(status_code=400, detail="zip 中存在非法路径")

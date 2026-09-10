@@ -5,6 +5,7 @@
 
 import io
 import json
+import os
 import zipfile
 
 import pytest
@@ -187,6 +188,54 @@ def test_extract_zip_rejects_traversal_and_bomb(client, admin_headers, monkeypat
     with pytest.raises(HTTPException) as e2:
         storage.extract_zip(buf2.getvalue(), slug, require_index=True)
     assert e2.value.status_code == 413
+
+
+def test_extract_zip_accepts_normal_archive_with_small_text_members(client, admin_headers):
+    """常规作品包不得被压缩比闸误杀。
+
+    修前分子取「累计解压字节」、分母取「当前这一个成员的压缩字节」，量纲不对齐 —— 那个除法
+    不是压缩比：累计量随遍历单调增长而分母不变，于是包一大就必然越限。实测正常包 4.44MB /
+    60 成员，在第 5 个成员 START.bat 处算出 39682/356 = 111.5 > 100 被 413；连 12KB 的最小
+    demo 包（index.html+main.js+README.md+style.css）也照样被拒 —— 等于所有含小文本文件的
+    包都传不上去。此处按同一口径（累计/累计）复现该形态。
+    """
+    from app.services import storage
+
+    slug = _upload(client, admin_headers, "KB11 常规包探针").json()["slug"]
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("index.html", "<!doctype html><body>ok</body>")
+        zf.writestr("assets/blob.bin", os.urandom(200 * 1024))  # 不可压：整包比 ≈ 1
+        zf.writestr("README.md", "# demo\n")  # 小文本：旧算式在这里炸
+        zf.writestr("START.bat", "@echo off\n")
+
+    storage.extract_zip(buf.getvalue(), slug, require_index=True)
+
+    files_dir = storage.demo_files_dir(slug)
+    assert (files_dir / "index.html").is_file()
+    assert (files_dir / "START.bat").read_text(encoding="utf-8") == "@echo off\n"
+
+
+def test_extract_zip_still_rejects_single_member_bomb(client, admin_headers):
+    """量纲修对之后，真正的炸弹仍须拦下 —— 单成员口径才是兜底闸。
+
+    整包口径会被大量正常成员稀释：此处 4MB 随机数据（压不动）+ 40MB 零填充（压到 ~40KB），
+    整包比仅 ~10.7（远低于上限 100），累计口径完全看不见那颗炸弹；只有「本成员解压/本成员
+    压缩」=~1000 这一条拦得住，且 44MB 总量低于体积闸 500MB。
+    """
+    from app.services import storage
+
+    slug = _upload(client, admin_headers, "KB11 单成员炸弹探针").json()["slug"]
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("index.html", "<!doctype html><body>ok</body>")
+        zf.writestr("assets/blob.bin", os.urandom(4 * 1024 * 1024))  # 稀释整包比
+        zf.writestr("bomb.bin", b"\0" * (40 * 1024 * 1024))  # 单成员膨胀比 ~1000
+    with pytest.raises(HTTPException) as e:
+        storage.extract_zip(buf.getvalue(), slug, require_index=True)
+    assert e.value.status_code == 413
 
 
 # ---------------- KB-13：路径归属判定 ----------------

@@ -20,6 +20,7 @@ import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo 
 import { useUiStore } from '../../stores/ui'
 import EntityStamp from '../EntityStamp.vue'
 import AdminEntityAuditTimeline from './AdminEntityAuditTimeline.vue'
+import AdminEntityLifecycleSection from './AdminEntityLifecycleSection.vue'
 import AdminEntityWorksSection from './AdminEntityWorksSection.vue'
 import LoadingRow from '../LoadingRow.vue'
 // T5·M5-F2：DemoPicker 多选挂载（datalist 手输 slug 退役）
@@ -55,9 +56,6 @@ const editForm = ref<{ name?: string; vendor?: string; description?: string; tit
 const saving = ref(false)
 const aliasNew = ref('')
 const busyAlias = ref(false)
-const transOpen = ref(false)
-const transStatus = ref('')
-const transReason = ref('')
 // M3-B5 Task 挂摘/合并两步流状态（T5·M5-F2：datalist 手输 slug → DemoPicker 多选，chips 挂载）
 const mergeOpen = ref(false)
 const mergeTargetPick = ref<EntityPick | null>(null)
@@ -96,7 +94,6 @@ async function load() {
   loading.value = true
   error.value = ''
   editing.value = false
-  transOpen.value = false
   audit.value = []
   works.value = []
   try {
@@ -216,15 +213,9 @@ async function removeAlias(alias: string) {
   }
 }
 
-// ---- 直改：状态跃迁（受限格：Model/Task 均理由必填+影响面+二次确认；TaskUpdateIn.reason 已落地=协作项②闭环） ----
-function openTransition() {
-  transStatus.value = entityStatus.value || ''
-  transReason.value = ''
-  transOpen.value = !transOpen.value
-}
-
-async function doTransition() {
-  const target = transStatus.value
+// ---- 直改：状态跃迁（RF-4c：表单态归 AdminEntityLifecycleSection，这里只做确认+写库+刷新） ----
+async function doTransition(payload: { to: string; reason: string }) {
+  const target = payload.to
   if (!target || target === entityStatus.value) return
   const impact = demoTotal.value ?? 0
   const ok = await ui.confirm({
@@ -236,17 +227,17 @@ async function doTransition() {
   saving.value = true
   try {
     if (props.type === 'model' && model.value) {
-      await api.setModelStatus(model.value.slug, { status: target, reason: transReason.value.trim() || undefined })
+      await api.setModelStatus(model.value.slug, { status: target, reason: payload.reason || undefined })
     } else if (props.type === 'task' && task.value) {
       // M3-B5 解锁：TaskUpdateIn.reason 入参已落地（协作项②闭环）——跃迁理由随 update 审计
-      await api.updateTask(task.value.slug, { status: target, reason: transReason.value.trim() || undefined })
+      await api.updateTask(task.value.slug, { status: target, reason: payload.reason || undefined })
     } else if (props.type === 'tag' && tagRow.value?.value.id) {
       // T3·M5-B2 解锁：PUT /admin/entities/tag/{id}/status——独立端点+status_set 审计（协作项③闭环）
-      await api.setTagStatus(tagRow.value.value.id, { status: target, reason: transReason.value.trim() || undefined })
+      await api.setTagStatus(tagRow.value.value.id, { status: target, reason: payload.reason || undefined })
     }
     ui.toast(t('admin.kc.transDone', '状态已跃迁并落审计'), 'success')
     emit('saved') // RF-4b：父级列表的状态列要跟着变
-    transOpen.value = false
+    lifecycleRef.value?.close() // RF-4c：收起子组件的跃迁表单
     await load()
   } catch (e) {
     ui.toast((e as Error).message, 'error')
@@ -401,12 +392,45 @@ async function saveTagDesc() {
 watch(() => [props.type, props.id, props.tagKey], () => {
   void load()
   closeMerge()
-  transOpen.value = false
 })
 /**
  * ⑤ 子组件挂摘所需的标签坐标（从原 currentTagKV 平移过来）：
  * Model 用 model:<name>；Tag 用 <tagKey>:<value>；Task 不走这条（用 attach 端点）。
  */
+const lifecycleRef = ref<{ close: () => void } | null>(null)
+
+/** ③ 生命周期：按实体类型算好子组件需要的档位/文案（原来散在三套重复模板里） */
+const lifecycleStatuses = computed(() => {
+  if (props.type === 'model') return modelStatuses
+  if (props.type === 'task') return taskStatuses
+  return tagStatuses
+})
+const lifecycleNote = computed(() => {
+  if (props.type === 'model') {
+    return t('admin.kc.transitionNote', '受限操作：理由必填+影响面预览+二次确认；跃迁后状态条硬切、审计时间线顶部插入新行。')
+  }
+  if (props.type === 'task') {
+    return t('admin.kc.transTaskNote', '可选档=candidate/active/merged/hidden（后端 pattern 现值）；deprecated 档待后端扩展（协作清单#2）。')
+  }
+  return t(
+    'admin.kc.transTagNote',
+    '可选档=candidate/active/deprecated（独立端点 PUT /admin/entities/tag/{id}/status）；理由必填，落 status_set 审计。',
+  )
+})
+const lifecycleImpact = computed(() => {
+  if (props.type === 'model') {
+    return t('admin.kc.transImpact', '影响面：该模型关联作品 {n} 件', { n: demoTotal.value ?? 0 })
+  }
+  if (props.type === 'task') {
+    return t('admin.kc.transTaskImpact', '理由随 update 落审计（TaskUpdateIn.reason）；影响面：该题挂载作品 {n} 件', {
+      n: task.value?.demos?.length ?? 0,
+    })
+  }
+  return t('admin.kc.transTagImpact', '影响面：该标签关联作品 {n} 件；废弃后公开词表/详情/作品卡同步隐去（可复活）。', {
+    n: demoTotal.value ?? 0,
+  })
+})
+
 const worksTagKV = computed(() => {
   if (props.type === 'model' && model.value) return { key: 'model', value: model.value.name }
   if (props.type === 'tag' && props.tagKey && tagRow.value) return { key: props.tagKey, value: tagRow.value.value.value }
@@ -589,102 +613,21 @@ onMounted(load)
         </template>
       </section>
 
-      <!-- ③ 生命周期（状态机条+跃迁表单；Tag 无状态字段=待后端） -->
-      <section class="kc-zone">
-        <h3 class="kc-zone-title">{{ t('admin.kc.zLifecycle', '③ 生命周期') }}</h3>
-        <template v-if="props.type === 'model'">
-          <div class="kc-states">
-            <template v-for="(s, i) in modelStatuses" :key="s">
-              <span class="kc-state" :class="{ on: entityStatus === s }">{{ statusZh[s] }}</span>
-              <span v-if="i < modelStatuses.length - 1" class="kc-state-line" aria-hidden="true">—</span>
-            </template>
-          </div>
-          <div v-if="!transOpen" class="kc-rel-row">
-            <button type="button" class="btn btn-sm btn-primary" @click="openTransition">{{ t('admin.kc.transition', '状态跃迁…') }}</button>
-            <!-- KB-31：零引用实体才允许删除（有引用时后端 409，这里直接不显示以免误导） -->
-            <button v-if="canDeleteEntity" type="button" class="btn btn-sm btn-danger" :disabled="saving" @click="deleteEntity">{{ t('admin.kc.deleteEntity', '删除该模型') }}</button>
-            <span class="hint">{{ t('admin.kc.transitionNote', '受限操作：理由必填+影响面预览+二次确认；跃迁后状态条硬切、审计时间线顶部插入新行。') }}</span>
-          </div>
-          <div v-else class="kc-trans">
-            <label class="kc-field"><span class="kc-k">{{ t('admin.kc.transTo', '跃迁到') }}</span>
-              <select v-model="transStatus" class="input" style="max-width: 180px">
-                <option v-for="s in modelStatuses" :key="s" :value="s" :disabled="s === entityStatus">{{ statusZh[s] }}{{ s === entityStatus ? '（当前）' : '' }}</option>
-              </select>
-            </label>
-            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（必填）') }}</span><textarea v-model="transReason" class="input" rows="2" :placeholder="t('admin.kc.transReasonPh', '为什么跃迁——会进入审计时间线')" /></label>
-            <div class="kc-field kc-wide">
-              <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
-              <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="transOpen = false">{{ t('common.cancel', '取消') }}</button>
-              <span class="hint">{{ t('admin.kc.transImpact', '影响面：该模型关联作品 {n} 件', { n: demoTotal ?? 0 }) }}</span>
-            </div>
-          </div>
-        </template>
-        <template v-else-if="props.type === 'task'">
-          <div class="kc-states">
-            <template v-for="(s, i) in taskStatuses" :key="s">
-              <span class="kc-state" :class="{ on: entityStatus === s }">{{ statusZh[s] }}</span>
-              <span v-if="i < taskStatuses.length - 1" class="kc-state-line" aria-hidden="true">—</span>
-            </template>
-          </div>
-          <div v-if="!transOpen" class="kc-rel-row">
-            <button type="button" class="btn btn-sm btn-primary" @click="openTransition">{{ t('admin.kc.transition', '状态跃迁…') }}</button>
-            <!-- KB-31：零挂载题目才允许删除 -->
-            <button v-if="canDeleteEntity" type="button" class="btn btn-sm btn-danger" :disabled="saving" @click="deleteEntity">{{ t('admin.kc.deleteEntityTask', '删除该题目') }}</button>
-            <span class="hint">{{ t('admin.kc.transTaskNote', '可选档=candidate/active/merged/hidden（后端 pattern 现值）；deprecated 档待后端扩展（协作清单#2）。') }}</span>
-          </div>
-          <div v-else class="kc-trans">
-            <label class="kc-field"><span class="kc-k">{{ t('admin.kc.transTo', '跃迁到') }}</span>
-              <select v-model="transStatus" class="input" style="max-width: 180px">
-                <option v-for="s in taskStatuses" :key="s" :value="s" :disabled="s === entityStatus">{{ statusZh[s] }}{{ s === entityStatus ? '（当前）' : '' }}</option>
-              </select>
-            </label>
-            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（必填）') }}</span><textarea
-              v-model="transReason"
-              class="input"
-              rows="2"
-              style="max-width: 420px"
-              :placeholder="t('admin.kc.transReasonPh', '为什么跃迁——会进入审计时间线')"
-            ></textarea></label>
-            <div class="kc-field kc-wide">
-              <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
-              <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="transOpen = false">{{ t('common.cancel', '取消') }}</button>
-              <span class="hint">{{ t('admin.kc.transTaskImpact', '理由随 update 落审计（TaskUpdateIn.reason）；影响面：该题挂载作品 {n} 件', { n: task?.demos?.length ?? 0 }) }}</span>
-            </div>
-          </div>
-        </template>
-        <template v-else>
-          <!-- T3·M5-B2：Tag 状态机条解锁（置灰解除——协作项③闭环：列+独立端点+读口过滤齐备） -->
-          <div class="kc-states">
-            <template v-for="(s, i) in tagStatuses" :key="s">
-              <span class="kc-state" :class="{ on: entityStatus === s }">{{ statusZh[s] }}</span>
-              <span v-if="i < tagStatuses.length - 1" class="kc-state-line" aria-hidden="true">—</span>
-            </template>
-          </div>
-          <div v-if="!transOpen" class="kc-rel-row">
-            <button type="button" class="btn btn-sm btn-primary" @click="openTransition">{{ t('admin.kc.transition', '状态跃迁…') }}</button>
-            <span class="hint">{{ t('admin.kc.transTagNote', '可选档=candidate/active/deprecated（独立端点 PUT /admin/entities/tag/{id}/status）；理由必填，落 status_set 审计。') }}</span>
-          </div>
-          <div v-else class="kc-trans">
-            <label class="kc-field"><span class="kc-k">{{ t('admin.kc.transTo', '跃迁到') }}</span>
-              <select v-model="transStatus" class="input" style="max-width: 180px">
-                <option v-for="s in tagStatuses" :key="s" :value="s" :disabled="s === entityStatus">{{ statusZh[s] }}{{ s === entityStatus ? '（当前）' : '' }}</option>
-              </select>
-            </label>
-            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（必填）') }}</span><textarea
-              v-model="transReason"
-              class="input"
-              rows="2"
-              style="max-width: 420px"
-              :placeholder="t('admin.kc.transReasonPh', '为什么跃迁——会进入审计时间线')"
-            ></textarea></label>
-            <div class="kc-field kc-wide">
-              <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
-              <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="transOpen = false">{{ t('common.cancel', '取消') }}</button>
-              <span class="hint">{{ t('admin.kc.transTagImpact', '影响面：该标签关联作品 {n} 件；废弃后公开词表/详情/作品卡同步隐去（可复活）。', { n: demoTotal ?? 0 }) }}</span>
-            </div>
-          </div>
-        </template>
-      </section>
+      <!-- ③ 生命周期（RF-4c 拆出：三实体状态条+跃迁表单合一，仅剩一套模板） -->
+      <AdminEntityLifecycleSection
+        ref="lifecycleRef"
+        :statuses="lifecycleStatuses"
+        :status="entityStatus"
+        :status-zh="statusZh"
+        :note="lifecycleNote"
+        :impact-text="lifecycleImpact"
+        :require-target="props.type !== 'model'"
+        :can-delete="canDeleteEntity"
+        :delete-label="props.type === 'model' ? t('admin.kc.deleteEntity', '删除该模型') : t('admin.kc.deleteEntityTask', '删除该题目')"
+        :busy="saving"
+        @transition="doTransition"
+        @delete="deleteEntity"
+      />
 
       <!-- ④ 审计时间线（RF-4c 拆出：纯展示，无本地状态） -->
       <AdminEntityAuditTimeline :audit="audit" />
@@ -774,34 +717,7 @@ onMounted(load)
   cursor: pointer;
   padding: 0 0 0 4px;
 }
-.kc-states {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.kc-state {
-  border: 2px solid var(--ink, #000);
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--ink-soft, #555);
-  background: var(--paper, #fff);
-}
-.kc-state.on {
-  background: var(--ink, #000);
-  color: var(--paper, #fff);
-}
-.kc-state-line {
-  color: var(--ink-soft, #555);
-}
-.kc-trans {
-  border: 2px solid var(--ink, #000);
-  padding: 12px;
-  display: grid;
-  gap: 8px;
-}
+/* ③ 的状态机条/跃迁表单样式已随组件拆到 AdminEntityLifecycleSection */
 .kc-disabled {
   opacity: 0.55;
   cursor: not-allowed;

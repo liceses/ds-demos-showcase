@@ -4,7 +4,8 @@ export interface User {
   id: number
   username: string
   role: 'user' | 'admin'
-  status: 'active' | 'suspended' | 'deleted'
+  /** KB-32：banned 是论坛封禁端点写入的状态（PATCH /users 也接受） */
+  status: 'active' | 'suspended' | 'banned' | 'deleted'
   bio: string
   created_at: string
   demo_count?: number
@@ -135,6 +136,15 @@ export interface DemoTaskBrief {
   id: number
   slug: string
   title: string
+}
+
+/** KB-29：卡片专用轻量作品元信息（GET /demos/{slug}/meta）。后端该口**不增加 view_count**，
+ *  字段刚好够 Markdown 内嵌卡 / 论坛 chip / 帖子侧栏卡使用。 */
+export interface DemoMeta {
+  slug: string
+  title: string
+  cover_url: string
+  author: string | null
 }
 
 /** v2：模型列表项 */

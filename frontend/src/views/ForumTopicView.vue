@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
-import type { DemoDetail, ForumReply, ForumTopic, UserProfile } from '../api/types'
+import type { DemoMeta, ForumReply, ForumTopic, UserProfile } from '../api/types'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import MarkdownEditor from '../components/MarkdownEditor.vue'
 import { errorMessage } from '../utils/error'
@@ -20,7 +20,7 @@ const ui = useUiStore()
 
 const topic = ref<ForumTopic | null>(null)
 const replies = ref<ForumReply[]>([])
-const demoCard = ref<DemoDetail | null>(null)
+const demoCard = ref<DemoMeta | null>(null)
 const demoCardLoading = ref(false)
 const loading = ref(true)
 const error = ref('')
@@ -49,7 +49,7 @@ async function load() {
     if (tp?.demo_slug) {
       demoCardLoading.value = true
       try {
-        demoCard.value = await api.getDemo(tp.demo_slug)
+        demoCard.value = await api.demoMeta(tp.demo_slug)
       } catch {
         demoCard.value = null
       } finally {

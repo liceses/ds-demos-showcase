@@ -1177,6 +1177,12 @@ export const en = {
       capped: 'Showing the top {n} by usage — type a keyword to see all',
       noMatch: 'No matching value, try another keyword',
       noneYet: 'No values yet',
+      // KB-30：models.dev 同步入口
+      syncModels: 'Sync from models.dev',
+      syncing: 'Syncing…',
+      syncHint: 'Pull the models.dev dictionary: new models go to the pending tag-value queue, existing ones get their vendor group refreshed.',
+      syncDone: 'Synced: scanned {total} models, {n} new pending suggestions, {m} groups updated',
+      syncNone: 'No new models — the word list is already up to date',
     },
     actCreate: 'create',
     actUpdate: 'edit',
@@ -1453,6 +1459,16 @@ export const en = {
       modelCreate: 'Create model',
       modelCreated: 'Model created: {name} (synced into the word list — authors can pick it right away)',
       modelCreateNote: 'Creates the model: fixed value too (authors can select it when uploading) and writes one audit row; a name/alias clash tells you to merge instead.',
+      // KB-31 零引用实体删除
+      kindModel: 'model',
+      kindTask: 'task',
+      deleteEntity: 'Delete this model',
+      deleteEntityTask: 'Delete this task',
+      deleteTitle: 'Delete {kind} "{name}"?',
+      deleteMsg:
+        'This {kind} has zero references, so it is safe to delete. The action cannot be undone (one audit row is written). If you may want to keep the name, merge it or set its status to deprecated instead.',
+      deleteDo: 'Delete',
+      deleteDone: 'Deleted (zero-reference entity)',
     },
     attr: {
       hint: 'A fallback slot is not the end state: move these works back to a real model.',

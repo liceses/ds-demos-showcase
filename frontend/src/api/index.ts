@@ -8,10 +8,10 @@ import type {
   Announcement,
   AnnouncementInput,
   AuthResponse,
-  Comment,
   CreateDemoFromUrlPayload,
   CreateDemoPayload,
   DemoCreateResult,
+  DemoMeta,
   CurationResult,
   DemoDetail,
   DemoListParams,
@@ -203,6 +203,12 @@ const realApi = {
   },
   async getDemo(slug: string): Promise<DemoDetail> {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}`)
+    return data
+  },
+  /** KB-29：卡片专用轻量口（不增加 view_count）。凡「只要 slug/title/封面/作者」的
+   *  卡片场景都必须用它 —— 用 getDemo 会顺手把该作品的浏览量刷上去。 */
+  async demoMeta(slug: string): Promise<DemoMeta> {
+    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/meta`)
     return data
   },
   async getRelated(slug: string): Promise<DemoSummary[]> {
@@ -425,15 +431,20 @@ const realApi = {
   },
 
   // ---------- 评论 ----------
-  async listComments(slug: string): Promise<Comment[]> {
-    const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/comments`)
+  /** KB-31：删除零引用实体（有引用/挂载时后端 409，文案直接透传给用户）。 */
+  async adminDeleteModel(ident: string): Promise<void> {
+    await http.delete(`/admin/models/${encodeURIComponent(ident)}`)
+  },
+  async adminDeleteTask(ident: string): Promise<void> {
+    await http.delete(`/admin/tasks/${encodeURIComponent(ident)}`)
+  },
+  /** KB-30：从 models.dev 同步模型字典（新模型进待审建议）。
+   *  后端要抓外部网络（最长 30s），这里单独放宽超时，否则前端 15s 先断、后端还在跑。 */
+  async syncModels(): Promise<{ providers: number; total_models: number; new_pending: number; updated_group: number; note: string }> {
+    const { data } = await http.post('/tags/admin/sync-models', undefined, { timeout: 60000 })
     return data
   },
-  async postComment(slug: string, content: string, parent_id?: number | null): Promise<Comment> {
-    const { data } = await http.post(`/demos/${encodeURIComponent(slug)}/comments`, { content, parent_id })
-    return data
-  },
-
+  // KB-33：旧评论通道已废弃（后端 410 迁论坛），这里不再暴露必失败的包装。
   // ---------- Session Logs ----------
   async listSessionLogs(slug: string): Promise<SessionLog[]> {
     const { data } = await http.get(`/demos/${encodeURIComponent(slug)}/session-logs`)

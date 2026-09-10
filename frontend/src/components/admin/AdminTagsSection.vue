@@ -169,6 +169,32 @@ const aiResult = ref<{ key: string; value: string; reason: string }[]>([])
 const aiChecked = ref<Record<string, boolean>>({})
 const aiNote = ref('')
 const aiLoading = ref(false)
+// KB-30：models.dev 同步状态（后端要抓外部网络，最长 30s，前端单独放宽超时）
+const syncingModels = ref(false)
+
+async function syncModelsFromDev() {
+  if (syncingModels.value) return
+  syncingModels.value = true
+  try {
+    const r = await api.syncModels()
+    ui.toast(
+      t('admin.tags.syncDone', '同步完成：扫描 {total} 个型号，新增 {n} 条待审建议，更新 {m} 条分组', {
+        total: r.total_models,
+        n: r.new_pending,
+        m: r.updated_group,
+      }),
+      'success',
+    )
+    // 新模型落在「固定值申请」待审队列里，顺势把用户带到那里
+    tagSub.value = 'review'
+    await loadSuggestions()
+    if (r.new_pending === 0) ui.toast(t('admin.tags.syncNone', '没有新模型（词表已是最新）'), 'info')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    syncingModels.value = false
+  }
+}
 
 async function loadSuggestions() {
   try {
@@ -283,6 +309,17 @@ onMounted(() => {
     <div v-if="!only" class="filter-row" style="margin-bottom: 14px">
       <button class="tab" :class="{ active: tagSub === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
       <button class="tab" :class="{ active: tagSub === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">固定值申请 / AI</button>
+      <!-- KB-30：models.dev 一键同步（新模型进待审建议；后端抓网络最长 30s，期间禁用按钮） -->
+      <button
+        class="btn btn-secondary"
+        type="button"
+        style="margin-left: auto"
+        :disabled="syncingModels"
+        :title="t('admin.tags.syncHint', '拉取 models.dev 模型字典：新模型进「固定值申请」待审，已有模型更新厂商分组')"
+        @click="syncModelsFromDev"
+      >
+        {{ syncingModels ? t('admin.tags.syncing', '同步中…') : t('admin.tags.syncModels', '从 models.dev 同步') }}
+      </button>
     </div>
 
     <template v-if="tagSub === 'keys'">

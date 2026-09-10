@@ -35,6 +35,11 @@
   background: var(--yellow);
   color: var(--on-accent, #000);
 }
+/* KB-32：封禁态（banned）此前没有样式，用户列表里显示成无底色 */
+.status-banned {
+  background: var(--red);
+  color: var(--on-accent, #000);
+}
 .status-deleted {
   background: var(--ink);
   color: var(--paper);

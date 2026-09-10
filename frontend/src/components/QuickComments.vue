@@ -32,7 +32,7 @@ async function load() {
   try {
     const [res, d] = await Promise.all([
       api.listForumTopics({ demo: props.slug, page_size: 1 }),
-      api.getDemo(props.slug).catch(() => null),
+      api.demoMeta(props.slug).catch(() => null),
     ])
     topic.value = res.items[0] || null
     demoTitle.value = d?.title || props.slug

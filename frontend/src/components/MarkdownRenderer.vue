@@ -122,7 +122,7 @@ function scanLinks() {
       if (!demoCache.has(slug)) {
         demoCache.set(
           slug,
-          api.getDemo(slug).then((d) => ({ slug: d.slug, title: d.title, author: d.author, cover_url: d.cover_url })).catch(() => null),
+          api.demoMeta(slug).then((d) => ({ slug: d.slug, title: d.title, author: d.author ?? 'public', cover_url: d.cover_url })).catch(() => null),
         )
       }
       demoCache.get(slug)!.then((d) => {

@@ -3,7 +3,7 @@ defineOptions({ name: 'ForumListView' })
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
-import type { DemoDetail, ForumTopic } from '../api/types'
+import type { DemoMeta, ForumTopic } from '../api/types'
 import PaginationBar from '../components/PaginationBar.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
@@ -23,7 +23,7 @@ const tagFilter = ref('')
 const stickyFilter = ref(false)
 const participatedFilter = ref(false)
 const followedFilter = ref(false)
-const demoCards = ref<Record<string, DemoDetail | null>>({})
+const demoCards = ref<Record<string, DemoMeta | null>>({})
 const hotTopics = ref<ForumTopic[]>([])
 const sideOpen = ref(true)
 
@@ -68,7 +68,7 @@ async function loadDemoChips() {
   await Promise.all(
     slugs.map(async (slug) => {
       try {
-        demoCards.value[slug] = await api.getDemo(slug)
+        demoCards.value[slug] = await api.demoMeta(slug)
       } catch {
         demoCards.value[slug] = null
       }

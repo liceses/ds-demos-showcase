@@ -70,6 +70,33 @@ async function toggleUser(u: AdminUser, field: 'role' | 'status') {
   }
 }
 
+/** KB-32：封禁/解封走**专用端点**（POST /forum/admin/users/{uid}/ban，带审计留痕）。
+ *  「停用」是 status=suspended（可自助恢复），「封禁」是 status=banned 且写审计 ——
+ *  两者语义不同，所以给封禁单独一个按钮而不是复用上面的状态切换。 */
+async function toggleBan(u: AdminUser) {
+  const toBanned = u.status !== 'banned'
+  const ok = await ui.confirm({
+    title: toBanned ? `封禁 ${u.username}？` : `解封 ${u.username}？`,
+    message: toBanned
+      ? `${u.username} 将被封禁：无法登录、发帖与上传（已发布内容保留）；本次操作会写入审计日志。`
+      : `${u.username} 将恢复为正常用户（status=active）。`,
+    confirmText: toBanned ? '封禁' : '解封',
+    danger: toBanned,
+  })
+  if (!ok) return
+  try {
+    if (toBanned) {
+      await api.adminBanUser(u.id)
+    } else {
+      await api.updateUser(u.id, { status: 'active' })
+    }
+    ui.toast(`${u.username}：${toBanned ? '已封禁' : '已解封'}`, 'success')
+    await loadUsers()
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -107,6 +134,15 @@ onMounted(loadUsers)
               <!-- 按钮写"目标态"而不是"切换"：管理员该在点之前就知道会发生什么 -->
               <button class="btn btn-sm btn-outline" type="button" @click="toggleUser(u, 'role')">{{ u.role === 'admin' ? '取消管理员' : '设为管理员' }}</button>
               <button class="btn btn-sm btn-dark" type="button" @click="toggleUser(u, 'status')">{{ u.status === 'active' ? '停用' : '启用' }}</button>
+              <!-- KB-32：封禁/解封（带审计的专用端点；管理员不可封禁，后端 400 文案透传） -->
+              <button
+                v-if="u.role !== 'admin'"
+                class="btn btn-sm btn-danger"
+                type="button"
+                @click="toggleBan(u)"
+              >
+                {{ u.status === 'banned' ? '解封' : '封禁' }}
+              </button>
             </td>
           </tr>
           <tr v-if="!filtered.length"><td colspan="5" style="text-align:center">没有匹配的用户</td></tr>

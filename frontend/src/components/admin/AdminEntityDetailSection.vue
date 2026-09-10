@@ -251,6 +251,41 @@ async function doTransition() {
   }
 }
 
+// ---- KB-31：零引用实体删除（后端只为「无引用」放行，有引用返回 409） ----
+const canDeleteEntity = computed(
+  () => (props.type === 'model' || props.type === 'task') && demoTotal.value === 0 && !!entityStatus.value,
+)
+
+async function deleteEntity() {
+  if (!canDeleteEntity.value || saving.value) return
+  const kind = props.type === 'model' ? t('admin.kc.kindModel', '模型') : t('admin.kc.kindTask', '题目')
+  const ok = await ui.confirm({
+    title: t('admin.kc.deleteTitle', '删除{kind}「{name}」？', { kind, name: entityName.value || props.id }),
+    message: t(
+      'admin.kc.deleteMsg',
+      '该{kind}当前零引用，可以安全删除；操作不可撤销（会写一条审计）。若日后还想保留名字，请改用「合并」或改状态为已退役。',
+      { kind },
+    ),
+    confirmText: t('admin.kc.deleteDo', '删除'),
+    danger: true,
+  })
+  if (!ok) return
+  saving.value = true
+  try {
+    if (props.type === 'model') {
+      await api.adminDeleteModel(props.id)
+    } else {
+      await api.adminDeleteTask(props.id)
+    }
+    ui.toast(t('admin.kc.deleteDone', '已删除（零引用实体）'), 'success')
+    goTab('entities')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
 // ---- 直改：Tag 分组（自由格，既有端点） ----
 async function saveGroup(group: string | null) {
   const v = tagRow.value?.value
@@ -617,6 +652,8 @@ onMounted(load)
           </div>
           <div v-if="!transOpen" class="kc-rel-row">
             <button type="button" class="btn btn-sm btn-primary" @click="openTransition">{{ t('admin.kc.transition', '状态跃迁…') }}</button>
+            <!-- KB-31：零引用实体才允许删除（有引用时后端 409，这里直接不显示以免误导） -->
+            <button v-if="canDeleteEntity" type="button" class="btn btn-sm btn-danger" :disabled="saving" @click="deleteEntity">{{ t('admin.kc.deleteEntity', '删除该模型') }}</button>
             <span class="hint">{{ t('admin.kc.transitionNote', '受限操作：理由必填+影响面预览+二次确认；跃迁后状态条硬切、审计时间线顶部插入新行。') }}</span>
           </div>
           <div v-else class="kc-trans">
@@ -642,6 +679,8 @@ onMounted(load)
           </div>
           <div v-if="!transOpen" class="kc-rel-row">
             <button type="button" class="btn btn-sm btn-primary" @click="openTransition">{{ t('admin.kc.transition', '状态跃迁…') }}</button>
+            <!-- KB-31：零挂载题目才允许删除 -->
+            <button v-if="canDeleteEntity" type="button" class="btn btn-sm btn-danger" :disabled="saving" @click="deleteEntity">{{ t('admin.kc.deleteEntityTask', '删除该题目') }}</button>
             <span class="hint">{{ t('admin.kc.transTaskNote', '可选档=candidate/active/merged/hidden（后端 pattern 现值）；deprecated 档待后端扩展（协作清单#2）。') }}</span>
           </div>
           <div v-else class="kc-trans">

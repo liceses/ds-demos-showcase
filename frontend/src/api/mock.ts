@@ -8,12 +8,12 @@ import type {
   Announcement,
   AnnouncementInput,
   AuthResponse,
-  Comment,
   CreateDemoFromUrlPayload,
   CreateDemoPayload,
   DemoCreateResult,
   CurationResult,
   DemoDetail,
+  DemoMeta,
   DemoListParams,
   AdminFeaturedItem,
   FeaturedPool,
@@ -392,34 +392,6 @@ cards.forEach((v,i)=>{const d=document.createElement('div');d.className='cell';d
   },
 ]
 
-const comments: Record<string, Comment[]> = {
-  demo_粒子星空: [
-    { id: 1, demo_id: 1, user_id: 2, username: 'tester', parent_id: null, content: '背景特效很漂亮，适合做首页底纹。', created_at: '2025-03-01T10:00:00Z', children: [
-      { id: 2, demo_id: 1, user_id: 3, username: 'alice', parent_id: 1, content: '是的，鼠标扰动效果很细腻。', created_at: '2025-03-01T11:00:00Z' },
-    ] },
-    { id: 3, demo_id: 1, user_id: 3, username: 'alice', parent_id: null, content: '想看生成会话日志，学习一下实现思路。', created_at: '2025-03-02T09:00:00Z' },
-  ],
-  demo_霓虹时钟: [
-    { id: 4, demo_id: 2, user_id: 2, username: 'tester', parent_id: null, content: '霓虹感很强，字体如果再粗一点更带感。', created_at: '2025-03-02T13:00:00Z' },
-  ],
-  demo_贪吃蛇: [
-    { id: 5, demo_id: 3, user_id: 2, username: 'tester', parent_id: null, content: '手感不错，就是速度有点快。', created_at: '2025-03-03T16:00:00Z', children: [
-      { id: 6, demo_id: 3, user_id: 3, username: 'alice', parent_id: 5, content: '按 R 可以重开，速度是故意的 :)', created_at: '2025-03-03T17:00:00Z' },
-    ] },
-    { id: 7, demo_id: 3, user_id: 1, username: 'admin', parent_id: null, content: '已收录到首页推荐。', created_at: '2025-03-04T08:00:00Z' },
-  ],
-  demo_打字机效果: [
-    { id: 8, demo_id: 4, user_id: 1, username: 'admin', parent_id: null, content: '排版很干净。', created_at: '2025-03-04T19:00:00Z' },
-  ],
-  demo_音频可视化: [
-    { id: 9, demo_id: 5, user_id: 2, username: 'tester', parent_id: null, content: '颜色块很活泼。', created_at: '2025-03-05T09:00:00Z' },
-  ],
-  demo_记忆翻牌: [
-    { id: 10, demo_id: 6, user_id: 3, username: 'alice', parent_id: null, content: '配对逻辑没问题，希望加计时。', created_at: '2025-03-06T12:00:00Z', children: [
-      { id: 11, demo_id: 6, user_id: 1, username: 'admin', parent_id: 10, content: '已记入 TODO。', created_at: '2025-03-06T13:00:00Z' },
-    ] },
-  ],
-}
 
 const sessionLogs: Record<string, SessionLog[]> = {
   demo_粒子星空: [{ id: 1, filename: '生成会话.md', file_size: 1840, created_at: '2025-03-01T09:00:00Z' }],
@@ -1009,6 +981,14 @@ export const mockApi = {
     const start = (page - 1) * page_size
     const pageItems = items.slice(start, start + page_size)
     return { items: pageItems, total, page, page_size }
+  },
+
+  /** KB-29：卡片专用轻量口（真接口不增 view_count，mock 同口径） */
+  async demoMeta(slug: string): Promise<DemoMeta> {
+    await delay(60)
+    const d = findDemo(slug)
+    if (!d) throw new Error('Demo 不存在')
+    return { slug: d.slug, title: d.title, cover_url: d.cover_url, author: d.author ?? 'public' }
   },
 
   async getDemo(slug: string): Promise<DemoDetail> {
@@ -1900,6 +1880,26 @@ export const mockApi = {
     mockModels.unshift(row)
     return { id: row.id, slug: row.slug, name: row.name, vendor: row.vendor, status: row.status }
   },
+  /** KB-31：删除零引用实体（有引用时真接口 409，mock 同口径） */
+  async adminDeleteModel(ident: string): Promise<void> {
+    await delay(120)
+    const i = mockModels.findIndex((m) => m.slug === ident || m.name === ident)
+    if (i < 0) throw new Error('模型不存在')
+    if (mockModels[i].demo_count > 0) throw new Error(`该模型仍有 ${mockModels[i].demo_count} 个作品引用，请使用合并而不是删除`)
+    mockModels.splice(i, 1)
+  },
+  async adminDeleteTask(ident: string): Promise<void> {
+    await delay(120)
+    const i = mockTasks.findIndex((t) => t.slug === ident)
+    if (i < 0) throw new Error('题目不存在')
+    if ((mockTasks[i].demo_count || 0) > 0) throw new Error('该题目仍挂着作品，请使用合并或下架')
+    mockTasks.splice(i, 1)
+  },
+  /** KB-30：models.dev 同步（mock 只回一个可读结果） */
+  async syncModels(): Promise<{ providers: number; total_models: number; new_pending: number; updated_group: number; note: string }> {
+    await delay(600)
+    return { providers: 12, total_models: 240, new_pending: 3, updated_group: 5, note: '新模型已写入 pending 建议，需人工审核后生效' }
+  },
   async adminListEntityTasks(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminTaskList> {
     await delay(160)
     const items = mockTasks.filter((x) => (!params.q || x.title.includes(params.q)) && (!params.status || x.status === params.status))
@@ -2288,36 +2288,7 @@ export const mockApi = {
     if (d) d.download_count += 1
   },
 
-  // ---------- 评论 ----------
-  async listComments(slug: string): Promise<Comment[]> {
-    await delay()
-    return clone(comments[slug] || [])
-  },
-
-  async postComment(slug: string, content: string, parent_id?: number | null): Promise<Comment> {
-    await delay(200)
-    if (!currentUser) throw new Error('请先登录')
-    const list = comments[slug] || (comments[slug] = [])
-    const comment: Comment = {
-      id: Math.max(0, ...Object.values(comments).flat().map((c) => c.id)) + 1,
-      demo_id: findDemo(slug) ? 0 : 0,
-      user_id: currentUser.id,
-      username: currentUser.username,
-      parent_id: parent_id ?? null,
-      content,
-      created_at: new Date().toISOString(),
-      children: [],
-    }
-    if (parent_id) {
-      const parent = findComment(list, parent_id)
-      if (!parent) throw new Error('父评论不存在')
-      parent.children = parent.children || []
-      parent.children.push(comment)
-    } else {
-      list.push(comment)
-    }
-    return clone(comment)
-  },
+  // KB-33：旧评论通道已废弃（后端 410 迁论坛），mock 不再提供这两个接口。
 
   // ---------- Session Logs ----------
   async listSessionLogs(slug: string): Promise<SessionLog[]> {
@@ -2554,13 +2525,3 @@ export const mockApi = {
   },
 }
 
-function findComment(list: Comment[], id: number): Comment | null {
-  for (const c of list) {
-    if (c.id === id) return c
-    if (c.children) {
-      const found = findComment(c.children, id)
-      if (found) return found
-    }
-  }
-  return null
-}

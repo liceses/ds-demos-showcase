@@ -1445,6 +1445,14 @@ export const en = {
       taskCreate: 'Create task',
       taskCreated: 'Task created: {slug}',
       taskCreateNote: 'Admin direct-create takes effect immediately (audited) — not via the candidate queue; user proposals still go through task candidates.',
+      // KB-28 管理端直建模型（建完同步 model 固定值，作者可直接选用）
+      newModel: 'New model',
+      modelNamePh: 'Model name (required, e.g. dsv4-flash)',
+      modelVendorPh: 'Optional, e.g. DeepSeek',
+      modelDescPh: 'One-line description (optional; also written into the tag word list)',
+      modelCreate: 'Create model',
+      modelCreated: 'Model created: {name} (synced into the word list — authors can pick it right away)',
+      modelCreateNote: 'Creates the model: fixed value too (authors can select it when uploading) and writes one audit row; a name/alias clash tells you to merge instead.',
     },
     attr: {
       hint: 'A fallback slot is not the end state: move these works back to a real model.',

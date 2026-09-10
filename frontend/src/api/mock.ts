@@ -1873,6 +1873,33 @@ export const mockApi = {
     const count = (s: string) => mockModels.filter((m) => m.status === s).length
     return { items: items.map((m) => ({ ...m })), total: items.length, status_counts: { candidate: count('candidate'), active: count('active'), unverified: count('unverified'), deprecated: count('deprecated') } }
   },
+  /** KB-28：与真接口同口径（重名 409；建完进 mock 池，列表与选择器立即可见） */
+  async adminCreateModel(payload: { name: string; vendor?: string; description?: string; status?: string }): Promise<{ id: number; slug: string; name: string; vendor?: string | null; status: string }> {
+    await delay(200)
+    const name = payload.name.trim()
+    if (!name) throw new Error('名称不能为空')
+    if (mockModels.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+      throw new Error(`模型「${name}」已存在（或其别名已指向某实体），请改用合并或加别名`)
+    }
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `model-${mockModels.length + 1}`
+    const row: ModelSummary = {
+      id: Math.max(0, ...mockModels.map((m) => m.id)) + 1,
+      slug,
+      name,
+      vendor: payload.vendor?.trim() || null,
+      status: payload.status || 'active',
+      resolution: 'exact',
+      description: payload.description || '',
+      demo_count: 0,
+      rating_avg: null,
+      score: null,
+      votes: 0,
+      sample_level: 'none',
+      created_at: new Date().toISOString(),
+    }
+    mockModels.unshift(row)
+    return { id: row.id, slug: row.slug, name: row.name, vendor: row.vendor, status: row.status }
+  },
   async adminListEntityTasks(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminTaskList> {
     await delay(160)
     const items = mockTasks.filter((x) => (!params.q || x.title.includes(params.q)) && (!params.status || x.status === params.status))

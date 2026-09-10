@@ -652,6 +652,17 @@ const realApi = {
     const { data } = await http.get('/admin/models', { params })
     return data
   },
+  /** KB-28：管理端新建模型实体（POST /admin/models）。后端同时把 model:<name> 写入词表，
+   *  所以建完立即可在上传选择器里选到；重名或别名冲突返回 409。 */
+  async adminCreateModel(payload: {
+    name: string
+    vendor?: string
+    description?: string
+    status?: string
+  }): Promise<{ id: number; slug: string; name: string; vendor?: string | null; status: string }> {
+    const { data } = await http.post('/admin/models', payload)
+    return data
+  },
   async adminListEntityTasks(params: { q?: string; status?: string; page_size?: number } = {}): Promise<AdminTaskList> {
     const { data } = await http.get('/admin/tasks', { params })
     return data

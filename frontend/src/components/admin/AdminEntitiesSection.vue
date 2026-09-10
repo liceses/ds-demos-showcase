@@ -63,6 +63,42 @@ async function createTask() {
   }
 }
 
+// KB-28 管理员新建模型（POST /admin/models）：此前模型只能靠上传自动建候选，管理端没有入口。
+// 后端建实体的同时把 model:<name> 写进词表（KB-2），所以建完即可被作者在上传选择器选到。
+const modelFormOpen = ref(false)
+const modelForm = ref({ name: '', vendor: '', description: '', status: 'active' })
+const savingModel = ref(false)
+const modelErr = ref('')
+
+async function createModel() {
+  const name = modelForm.value.name.trim()
+  if (!name || savingModel.value) return
+  savingModel.value = true
+  modelErr.value = ''
+  try {
+    const created = await api.adminCreateModel({
+      name,
+      vendor: modelForm.value.vendor.trim() || undefined,
+      description: modelForm.value.description.trim() || undefined,
+      status: modelForm.value.status,
+    })
+    ui.toast(t('admin.kc.modelCreated', '模型已创建：{name}（已同步进词表，作者可直接选用）', { name: created.name }), 'success')
+    modelForm.value = { name: '', vendor: '', description: '', status: 'active' }
+    modelFormOpen.value = false
+    if (facet.value !== 'model') {
+      setFacet('model')
+    } else {
+      await load()
+    }
+    // 建完直接进详情，省一次点击
+    void router.replace({ query: { tab: 'entities', type: 'model', id: created.slug } })
+  } catch (e) {
+    modelErr.value = (e as Error).message
+  } finally {
+    savingModel.value = false
+  }
+}
+
 /** 详情模式：?tab=entities&type=<type>&id=<ident>[&key=<key>]（深链可分享/刷新不丢） */
 const detail = computed(() => {
   const type = String(route.query.type || '')
@@ -230,11 +266,33 @@ watch(
           <option value="">{{ t('admin.entities.statusAll', '全部状态') }}</option>
           <option v-for="(n, s) in statusCounts" :key="s" :value="s">{{ statusLabel(String(s)) }} <template v-if="n">({{ n }})</template></option>
         </select>
-        <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>        <!-- M3-B2 管理员直建题目入口（02 P1 管理员侧解法）：与 task_proposal 候选制并存——直建=即时生效，用户提议=候选审批 -->        <button class="btn btn-sm btn-primary" type="button" @click="taskFormOpen = !taskFormOpen">+ {{ t('admin.kc.newTask', '新建题目') }}</button>      </div>      <!-- 建题表单：初始挂载=demo_slugs DemoPicker 多选（t11 端点落地，M3-B5 解锁，T5·M5-F2 收编选择器；未知 slug fail-fast 整批 404 不留空题） -->      <div v-if="taskFormOpen" class="kc-task-form card card-default" style="margin-bottom: 14px">        <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span><input v-model="taskForm.title" class="input" style="max-width: 260px" :placeholder="t('admin.kc.taskTitlePh', '题目名称（必填）')" /></label>          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><input v-model="taskForm.category" class="input" style="max-width: 160px" :placeholder="t('admin.kc.taskCatPh', '可选，对齐 category 标签值')" /></label>        </div>        <label class="kc-block"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><textarea v-model="taskForm.description" class="input" rows="2" :placeholder="t('admin.kc.taskDescPh', '题面口径/评测说明（可选）')" /></label>        <div class="kc-field kc-wide" style="margin: 8px 0">
+        <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>        <!-- M3-B2 管理员直建题目入口（02 P1 管理员侧解法）：与 task_proposal 候选制并存——直建=即时生效，用户提议=候选审批 -->        <button class="btn btn-sm btn-primary" type="button" @click="taskFormOpen = !taskFormOpen">+ {{ t('admin.kc.newTask', '新建题目') }}</button>        <!-- KB-28：模型页的直建入口（后端 POST /admin/models；建完即写词表） -->        <button v-if="facet === 'model'" class="btn btn-sm btn-primary" type="button" @click="modelFormOpen = !modelFormOpen">+ {{ t('admin.kc.newModel', '新建模型') }}</button>      </div>      <!-- 建题表单：初始挂载=demo_slugs DemoPicker 多选（t11 端点落地，M3-B5 解锁，T5·M5-F2 收编选择器；未知 slug fail-fast 整批 404 不留空题） -->      <div v-if="taskFormOpen" class="kc-task-form card card-default" style="margin-bottom: 14px">        <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span><input v-model="taskForm.title" class="input" style="max-width: 260px" :placeholder="t('admin.kc.taskTitlePh', '题目名称（必填）')" /></label>          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><input v-model="taskForm.category" class="input" style="max-width: 160px" :placeholder="t('admin.kc.taskCatPh', '可选，对齐 category 标签值')" /></label>        </div>        <label class="kc-block"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><textarea v-model="taskForm.description" class="input" rows="2" :placeholder="t('admin.kc.taskDescPh', '题面口径/评测说明（可选）')" /></label>        <div class="kc-field kc-wide" style="margin: 8px 0">
           <span class="kc-k">{{ t('admin.kc.attachInit', '初始挂载') }}</span>
           <EntityPicker v-model="attachPicks" kind="demo" mode="dropdown" multiple manual-slug :placeholder="t('admin.kc.attachInitPh', '搜作品名/作者/slug 多选（可选）…')" />
           <span class="hint">{{ t('admin.kc.attachNote2', 'demo_slugs 建题即挂（slug 先解析后建题，未知整批 404 不留空题）。') }}</span>
         </div>        <div v-if="taskErr" class="notice notice-error">{{ taskErr }}</div>        <div class="filter-row" style="margin: 0; flex-wrap: wrap">          <button type="button" class="btn btn-sm btn-primary" :disabled="savingTask || !taskForm.title.trim()" @click="createTask">{{ savingTask ? t('admin.kc.saving', '创建中…') : t('admin.kc.taskCreate', '创建题目') }}</button>          <button type="button" class="btn btn-sm btn-outline" :disabled="savingTask" @click="taskFormOpen = false">{{ t('common.cancel', '取消') }}</button>          <span class="hint">{{ t('admin.kc.taskCreateNote', '管理员直建=即时生效（落审计），不经候选队列；用户出题仍走题目候选审批。') }}</span>        </div>      </div>
+
+      <!-- KB-28 新建模型表单：名称必填；厂商决定 family 兜底节点；建完同步词表 + 落审计 -->
+      <div v-if="modelFormOpen && facet === 'model'" class="kc-task-form card card-default" style="margin-bottom: 14px">
+        <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">
+          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span><input v-model="modelForm.name" class="input" style="max-width: 260px" :placeholder="t('admin.kc.modelNamePh', '型号名（必填，如 dsv4-flash）')" @keyup.enter="createModel" /></label>
+          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fVendor', '厂商') }}</span><input v-model="modelForm.vendor" class="input" style="max-width: 180px" :placeholder="t('admin.kc.modelVendorPh', '可选，如 DeepSeek')" /></label>
+          <label class="kc-inline"><span class="kc-k">{{ t('admin.kc.fStatus', '状态') }}</span>
+            <select v-model="modelForm.status" class="input" style="max-width: 160px">
+              <option value="active">{{ statusLabel('active') }}</option>
+              <option value="unverified">{{ statusLabel('unverified') }}</option>
+              <option value="candidate">{{ statusLabel('candidate') }}</option>
+            </select>
+          </label>
+        </div>
+        <label class="kc-block"><span class="kc-k">{{ t('admin.kc.fDesc', '简介') }}</span><textarea v-model="modelForm.description" class="input" rows="2" :placeholder="t('admin.kc.modelDescPh', '一句话说明（可选，会写进词表介绍）')" /></label>
+        <div v-if="modelErr" class="notice notice-error">{{ modelErr }}</div>
+        <div class="filter-row" style="margin: 0; flex-wrap: wrap">
+          <button type="button" class="btn btn-sm btn-primary" :disabled="savingModel || !modelForm.name.trim()" @click="createModel">{{ savingModel ? t('admin.kc.saving', '创建中…') : t('admin.kc.modelCreate', '创建模型') }}</button>
+          <button type="button" class="btn btn-sm btn-outline" :disabled="savingModel" @click="modelFormOpen = false">{{ t('common.cancel', '取消') }}</button>
+          <span class="hint">{{ t('admin.kc.modelCreateNote', '建完即同步 model 固定值（作者上传时可选到），并落一条审计；重名或别名冲突会提示改用合并。') }}</span>
+        </div>
+      </div>
 
       <div v-if="error" class="notice notice-error">{{ error }}</div>
       <LoadingRow v-if="loading && !rows.length" :text="t('admin.entities.loading', '加载实体…')" />

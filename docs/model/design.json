@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "status": "draft",
-  "updatedAt": "2026-09-10T06:56:09.813Z",
-  "approvedAt": null,
-  "approvedBy": null,
-  "note": "KB-28：管理面板-知识-新建模型。后端 POST /api/v1/admin/models 早已存在（KB-2 已保证同步建词表值），缺的是前端入口 —— 工作台只有「新建题目」，api/index.ts 也没有 adminCreateModel，所以「不能直接加模型」。本轮只动前端：api 层新增 adminCreateModel（真接口 + mock 同步）、工作台按钮与内联表单、en/zh 文案；无新端点、无表结构变更。",
+  "status": "implemented",
+  "updatedAt": "2026-09-10T07:12:26.958Z",
+  "approvedAt": "2026-09-10T07:12:16.970Z",
+  "approvedBy": "user",
+  "note": "",
   "cim": [
     {
       "id": "KC-1",
@@ -64,7 +64,7 @@
       "id": "KB-14",
       "title": "随机排序遵守筛选",
       "acceptance": "sort=random 与 tag/q/model/author/task/rounds/platform 组合时 items 全部落在筛选集内且 total 一致；随机缓存键含筛选指纹",
-      "status": "draft"
+      "status": "implemented"
     },
     {
       "id": "KB-15",
@@ -148,7 +148,7 @@
       "id": "KB-28",
       "title": "知识工作台新建模型",
       "acceptance": "管理面板-知识-模型页有「新建模型」入口；表单含名称（必填）/厂商/描述/状态（默认 active）；提交调 POST /admin/models，成功 toast + 刷新列表 + 选中新实体；重名或别名冲突显示 409 文案；新建后该型号立即可在上传选择器选到（词表同步）",
-      "status": "draft"
+      "status": "implemented"
     }
   ],
   "modules": [

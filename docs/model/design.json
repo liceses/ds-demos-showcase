@@ -1,183 +1,219 @@
 {
   "version": 1,
   "status": "draft",
-  "updatedAt": "2026-09-10T08:44:25.750Z",
+  "updatedAt": "2026-09-10T09:05:27.892Z",
   "approvedAt": null,
   "approvedBy": null,
-  "note": "KB-29..KB-33：修「后端有、前端没接好」。① 卡片类调用错用完整详情（实测 4 处只用 slug/title/cover_url/author，正是 /demos/{slug}/meta 的字段集），副作用是每开一个含作品链接的页面就推高该作品 view_count；② models.dev 同步（POST /tags/admin/sync-models）前端无包装，而 fetchModels 有包装无人调；③ 零引用实体删除端点无 UI；④ 封禁端点（带审计）有包装无人用；⑤ 评论遗留包装 listComments/postComment 必失败（后端 410）。不做：/demos/from-url 普通用户入口（产品决策待定）。此前 KC-1..KB-28 均已 implemented。",
+  "note": "RF-1..RF-6：对整个前端（202 文件/32,316 行）分阶段重构。体检证据：无 ESLint、12 个单测、5 个死组件（0 import）、22 个 admin 面板各写样板而 useListPage 抽象已存在却没推广、i18n 1306 处双份文案、CSS 74 文件同名类多文件重复定义（.markdown-body×33 等）、类型逃逸仅 19 处（非主要矛盾）、astra/ 健康不动。顺带修三处实证缺陷：DemosView 筛选不刷新的真 bug（loading 被当互斥锁 + reset 早退）、三处防抖缺竞态守卫（旧响应覆盖新结果，模型战绩显示别的模型名）、adminQueues 6/7 队列不报错（错误态冒充空态）。不做：框架/状态库/路由重写、设计系统重做。既有 KC-1..KB-33 全部 implemented（见 KB-1 条目汇总）。",
   "cim": [
     {
       "id": "KC-1",
       "title": "单一知识工作台",
-      "acceptance": "/admin 知识中心只留一个入口「知识」；Model/Task/Tag 在同一页切换",
+      "acceptance": "单一知识工作台：Model/Task/Tag 同页切换",
       "status": "implemented"
     },
     {
       "id": "KC-2",
       "title": "看→选→改→存",
-      "acceptance": "左栏浏览与搜索；点行选中实体；右栏表单直改；一个保存按钮落库+审计",
+      "acceptance": "左栏看+选、右栏表单直改、单保存落库+审计",
       "status": "implemented"
     },
     {
       "id": "KC-3",
       "title": "内容自由、身份有闸",
-      "acceptance": "内容字段直改即生效；合并/改 slug/批量归属/状态跃迁必须 dry_run+影响面；无物理删除按钮",
+      "acceptance": "内容字段直改即生效；身份操作必须 dry_run+影响面",
       "status": "implemented"
     },
     {
       "id": "KC-4",
       "title": "队列只消化不改字段",
-      "acceptance": "待办在概览台；批准后深链回该实体；队列里不出现字段编辑器",
+      "acceptance": "待办在概览台；批准后深链回实体",
       "status": "implemented"
     },
     {
       "id": "KB-1",
-      "title": "标签/模型治理修复（KB-1..KB-9）",
-      "acceptance": "标签合并真迁移；实体↔词表双向同步；退役值只拦写；tags 域写入全审计；跨 key 父子 422；重名 KPI 按规范化口径",
+      "title": "标签/模型治理（KB-1..9）",
+      "acceptance": "标签/模型治理修复（KB-1..KB-9）：合并真迁移、双写、退役只拦写、写入全审计",
       "status": "implemented"
     },
     {
       "id": "KB-10",
       "title": "未上架内容不可枚举",
-      "acceptance": "匿名不能枚举非 approved 作品（空串按 approved、非 approved 仅 admin）；待审不发公开公告；改状态后可见域缓存立即失效",
+      "acceptance": "匿名不能枚举非 approved；待审不发公告；可见域缓存即时失效",
       "status": "implemented"
     },
     {
       "id": "KB-11",
       "title": "上传入口资源闸",
-      "acceptance": "分块读取超限即 413；zip 解压前计大小/成员数/压缩比；先临时目录后原子替换；封面解码前限像素",
+      "acceptance": "分块读取超限 413；zip 大小/数量/压缩比阀值；解压临时目录+原子替换",
       "status": "implemented"
     },
     {
       "id": "KB-12",
       "title": "URL 抓取防 SSRF",
-      "acceptance": "from-url 抓取逐跳校验、只放行 http/https + 80/443；内网/重定向目标一律拒",
+      "acceptance": "抓取逐跳校验、只放行 http/https + 80/443",
       "status": "implemented"
     },
     {
       "id": "KB-13",
-      "title": "路径按目录归属判定",
-      "acceptance": "/media 与 _safe_join 同前缀绕过不再 200/500；zip 成员越界拒绝",
+      "title": "路径按目录归属",
+      "acceptance": "路径判定统一 is_relative_to；同前缀绕过不再 200/500",
       "status": "implemented"
     },
     {
       "id": "KB-14",
       "title": "随机排序遵守筛选",
-      "acceptance": "sort=random 与各筛选组合时 items 落在筛选集内且 total 一致",
+      "acceptance": "sort=random 与各筛选组合时 items 落在筛选集内",
       "status": "draft"
     },
     {
       "id": "KB-15",
-      "title": "题目域状态闸与挂题完整性",
-      "acceptance": "公开 /tasks 只出 active；merged/hidden 404；挂题拒 merged/hidden；attach 去重；delete 反向引用 409",
+      "title": "题目域状态闸",
+      "acceptance": "题目域状态闸；挂题去重；删题反向引用 409",
       "status": "implemented"
     },
     {
       "id": "KB-16",
-      "title": "建议审核的事务边界",
-      "acceptance": "批准建议时实体变更与建议状态同事务；batch_review 失败先回滚；create 只 flush",
+      "title": "建议审核事务边界",
+      "acceptance": "建议审核实体与状态同事务；失败先回滚",
       "status": "implemented"
     },
     {
       "id": "KB-17",
-      "title": "治理动作留痕扩展",
-      "acceptance": "demo 审核/策展、settings、论坛管理动作、用户角色状态变更均同事务落审计；白名单由常量生成",
+      "title": "治理动作留痕",
+      "acceptance": "demo/设置/论坛/用户管理动作全留痕；白名单常量单一来源",
       "status": "implemented"
     },
     {
       "id": "KB-18",
-      "title": "计数与冗余列一致性",
-      "acceptance": "删回复按子树扣减、reply_count 原子增减；评分/声望原子更新；并发冲突幂等返回",
+      "title": "计数一致性",
+      "acceptance": "计数原子化；级联删除按子树扣减；并发冲突幂等",
       "status": "implemented"
     },
     {
       "id": "KB-19",
-      "title": "列表与工作台的 N+1 消除",
-      "acceptance": "归属/挂题/对比/巡检/论坛/通知/related/admin-users/排行榜 SQL 条数与页大小解耦",
+      "title": "N+1 消除",
+      "acceptance": "归属/挂题/列表/榜单 SQL 条数与页大小解耦",
       "status": "implemented"
     },
     {
       "id": "KB-20",
-      "title": "管理端列表与统计轻量化",
-      "acceptance": "/admin/demos 轻量序列化+可选分页；存储统计带缓存；/admin/users 聚合取数",
+      "title": "管理端轻量化",
+      "acceptance": "/admin/demos 轻量序列化+分页；存储统计缓存；用户列表聚合",
       "status": "implemented"
     },
     {
       "id": "KB-21",
-      "title": "限流与内存状态收口",
-      "acceptance": "8 处限流合并为 services.ratelimit（有界键空间+Retry-After）；登录失败限流；sync_models 批量提交",
+      "title": "限流收口",
+      "acceptance": "限流收口 services.ratelimit；登录限流；同步批量",
       "status": "implemented"
     },
     {
       "id": "KB-22",
-      "title": "口径与契约小修",
-      "acceptance": "巡检重名口径；kind 白名单由常量生成；UserPatch 接受 banned；settings 用 SettingsIn+审计；422 补 code",
+      "title": "口径小修",
+      "acceptance": "口径与契约小修（重名口径/kind 白名单/banned/SettingsIn/422 code）",
       "status": "implemented"
     },
     {
       "id": "KB-23",
-      "title": "安全默认值加固",
-      "acceptance": "默认密钥/口令启动告警 + /health warnings；ADMIN_INITIAL_PASSWORD 可覆盖；可选 STRICT_SECRETS",
+      "title": "安全默认值",
+      "acceptance": "默认密钥/口令告警 + 环境变量覆盖 + 可选严格模式",
       "status": "implemented"
     },
     {
       "id": "KB-24",
-      "title": "链接校验不阻塞请求线程",
-      "acceptance": "链接校验 1s 超时 + 结果缓存，超时 fail-closed",
+      "title": "链接校验不阻塞",
+      "acceptance": "链接校验 1s 超时+缓存，超时 fail-closed",
       "status": "implemented"
     },
     {
       "id": "KB-25",
-      "title": "举报与标签过滤的完整性",
-      "acceptance": "举报校验目标+同人去重 409；论坛标签精确匹配",
+      "title": "举报与标签",
+      "acceptance": "举报去重 409；标签精确匹配",
       "status": "implemented"
     },
     {
       "id": "KB-26",
       "title": "同步与别名确定性",
-      "acceptance": "oss_sync 启动判定同锁；别名映射确定性排序",
+      "acceptance": "oss_sync 同锁；别名映射确定性排序",
       "status": "implemented"
     },
     {
       "id": "KB-27",
       "title": "全端点冒烟门禁",
-      "acceptance": "全 GET 端点冒烟，任何 5xx 即失败；关键管理端点带契约断言",
+      "acceptance": "全 GET 端点冒烟，任何 5xx 即失败",
       "status": "implemented"
     },
     {
       "id": "KB-28",
-      "title": "知识工作台新建模型",
-      "acceptance": "知识工作台模型页提供「新建模型」入口（名称/厂商/简介/状态），建完即同步词表且可直接选用",
+      "title": "新建模型入口",
+      "acceptance": "知识工作台可新建模型（建完即入词表）",
       "status": "implemented"
     },
     {
       "id": "KB-29",
-      "title": "卡片类调用改走轻量 meta",
-      "acceptance": "作品预览卡片（Markdown 内嵌链接、论坛列表 chip、论坛帖侧栏、快速评论）改走 GET /demos/{slug}/meta；打开这些页面不再推高被链接作品的 view_count；卡片字段不变",
-      "status": "draft"
+      "title": "卡片轻量化",
+      "acceptance": "4 处卡片改走 /demos/{slug}/meta；不再推高浏览量",
+      "status": "implemented"
     },
     {
       "id": "KB-30",
-      "title": "管理台一键同步模型词表",
-      "acceptance": "管理台标签页提供「从 models.dev 同步」按钮：调 POST /tags/admin/sync-models；有 loading 与结果提示（新增 N 条待审/更新 M 条）；失败有明确文案",
-      "status": "draft"
+      "title": "模型词表同步入口",
+      "acceptance": "models.dev 一键同步按钮，结果进待审队列",
+      "status": "implemented"
     },
     {
       "id": "KB-31",
-      "title": "零引用实体删除入口",
-      "acceptance": "零引用实体（模型 demo_count=0 / 题目无挂载）在检视器提供删除入口：二次确认后调 DELETE /admin/models|tasks/{ident}；409 文案原样展示；成功后回列表刷新",
-      "status": "draft"
+      "title": "零引用实体删除",
+      "acceptance": "零引用实体删除入口（二次确认，409 透传）",
+      "status": "implemented"
     },
     {
       "id": "KB-32",
-      "title": "用户封禁入口",
-      "acceptance": "用户列表提供封禁/解封按钮，走 POST /forum/admin/users/{uid}/ban（带审计）；管理员不可封禁（400 透传）；状态即时刷新",
-      "status": "draft"
+      "title": "封禁入口",
+      "acceptance": "用户封禁/解封入口（专用端点带审计）",
+      "status": "implemented"
     },
     {
       "id": "KB-33",
       "title": "前端死代码清理",
-      "acceptance": "删除评论遗留包装（listComments/postComment 及其 mock/类型引用，后端已 410）；api 层不再暴露必失败调用",
+      "acceptance": "删评论遗留包装（后端已 410）",
+      "status": "implemented"
+    },
+    {
+      "id": "RF-1",
+      "title": "重构安全网（ESLint + 单测）",
+      "acceptance": "ESLint（eslint+plugin-vue+@typescript-eslint，先只开 error 级）接入 ci.yml 成第四道门；补纯逻辑单测（utils/composables 纯函数/i18n 键完整性/api 路径拼装）；单测 12 → ≥40；lint 与 test 本地与 CI 全绿",
+      "status": "draft"
+    },
+    {
+      "id": "RF-2",
+      "title": "清死代码 + 修无争议缺陷",
+      "acceptance": "删 5 个零引用组件与死 API 包装；修 HomeView 定时器泄漏（离开首页不再被 router.push 抢导航）；adminQueues 7 个队列都上报 error（接口挂了不再显示为 0 件待办）；新增 useBodyScrollLock（搜索/全屏 iframe/详情底栏不再互踩）",
+      "status": "draft"
+    },
+    {
+      "id": "RF-3",
+      "title": "采纳既有抽象",
+      "acceptance": "useListPage/useAdminList 推广到 22 个 admin 面板（删各自 loading/error/load/onMounted 样板）；新增 useDebouncedFetch（内建竞态守卫）并先迁缺守卫的 3 处（useTagSuggest/useTaskMount/useUploadPlayable）；新增 useSelectedTags 收敛 5 份派生",
+      "status": "draft"
+    },
+    {
+      "id": "RF-4",
+      "title": "拆上帝组件",
+      "acceptance": "DemosView 拆 useDemoFilters + utils/demoFacets，并用世代号修掉「首屏加载期间点筛选/搜索/排序/清空不刷新」的真 bug（不得只删早退）；HomeView 拆打字机与区块；DemoView 首屏并行请求+推荐流竞态守卫+v-for 内 filter 改 computed；SearchOverlay 改 v-for 单模板+一次 groupBy；AdminEntityDetailSection 按 Model/Task/Tag 拆表单",
+      "status": "draft"
+    },
+    {
+      "id": "RF-5",
+      "title": "契约与文案收敛",
+      "acceptance": "mock.ts 从 2419 行手写镜像降为最小契约 mock + 类型约束防漂移；i18n 中文收敛为 zh 单一来源并加键完整性测试；api/index.ts 按资源拆分、index 聚合导出且保留现有调用面",
+      "status": "draft"
+    },
+    {
+      "id": "RF-6",
+      "title": "CSS 收敛",
+      "acceptance": "合并同页分层 CSS（demo-detail/demo-view/demo-next、home/home-lobby、forum/forum-lite、upload×4、skeleton×2、markdown×2）；消除同名类多文件重复定义；stylelint 加规则防新增覆盖；人工抽查首页/列表/详情/上传/论坛/管理台六面视觉无回退",
       "status": "draft"
     }
   ],
@@ -186,61 +222,85 @@
       "id": "fe:api",
       "label": "前端 API 层",
       "layer": "web",
-      "responsibility": "后端契约唯一封装：读写方法在此声明，组件不拼 URL；不留必失败的遗留调用"
+      "responsibility": "后端契约唯一封装；按资源拆分、index 聚合；不留必失败调用"
     },
     {
-      "id": "fe:components/admin/AdminEntitiesSection",
-      "label": "知识工作台",
+      "id": "fe:api/mock",
+      "label": "前端 Mock",
       "layer": "web",
-      "responsibility": "左栏看+选、右栏改+存；顶部提供新建模型/新建题目入口"
+      "responsibility": "只保留离线演示必需的最小契约 mock，类型约束防漂移"
+    },
+    {
+      "id": "fe:composables",
+      "label": "前端 composables",
+      "layer": "web",
+      "responsibility": "可测复用状态层：列表分页/防抖+竞态/body 滚动锁/选中标签派生；不依赖组件实例"
+    },
+    {
+      "id": "fe:utils",
+      "label": "前端 utils",
+      "layer": "web",
+      "responsibility": "纯函数层（厂商/时间/分组/深度链接），可被 vitest 直接断言"
+    },
+    {
+      "id": "fe:i18n",
+      "label": "前端 i18n",
+      "layer": "web",
+      "responsibility": "中文单一来源；键完整性有测试门禁"
+    },
+    {
+      "id": "fe:styles",
+      "label": "前端样式层",
+      "layer": "web",
+      "responsibility": "tokens→base→components→layouts→pages 单向依赖，禁止页面互相覆盖"
+    },
+    {
+      "id": "fe:views/DemosView",
+      "label": "作品列表页",
+      "layer": "web",
+      "responsibility": "筛选/搜索/排序/无限滚动；并发用世代号控制，筛选变更必定重查"
     },
     {
       "id": "fe:components/admin/AdminEntityDetailSection",
       "label": "实体检视器",
       "layer": "web",
-      "responsibility": "内容表单+保存；身份操作（状态/别名/合并/删除）收进详情，删除仅对零引用实体开放且二次确认"
+      "responsibility": "Model/Task/Tag 三套表单拆为子组件；身份操作独立成块（删除仅对零引用开放）"
     },
     {
-      "id": "fe:components/admin/AdminTagsSection",
-      "label": "标签管理",
+      "id": "fe:api/http",
+      "label": "HTTP 客户端",
       "layer": "web",
-      "responsibility": "键/值/分组维护与合并；models.dev 同步入口（结果进待审建议）"
+      "responsibility": "axios 实例与响应拦截：超时、401 跳登录、错误归一为 Error(message,{cause:code})"
     },
     {
-      "id": "fe:components/admin/AdminUsersSection",
-      "label": "用户管理",
+      "id": "fe:api/types",
+      "label": "契约类型",
       "layer": "web",
-      "responsibility": "用户列表/角色/状态；封禁走专用端点（带审计），管理员不可封禁"
+      "responsibility": "与后端 schema 对齐的类型定义；禁止同实体多份定义"
     },
     {
-      "id": "fe:views/ForumTopicView",
-      "label": "论坛主题页",
+      "id": "fe:router",
+      "label": "前端路由",
       "layer": "web",
-      "responsibility": "帖子正文/回复/侧栏；侧栏作品卡走轻量 meta"
+      "responsibility": "路由表（可零 DOM 导入供快照测试）+ 鉴权守卫 + 滚动/打点行为"
     },
     {
-      "id": "fe:views/ForumListView",
-      "label": "论坛列表页",
+      "id": "fe:stores/auth",
+      "label": "认证状态",
       "layer": "web",
-      "responsibility": "主题列表与作品 chip；chip 取数走轻量 meta"
+      "responsibility": "当前用户与登录态；不重复存储其他域数据"
     },
     {
-      "id": "fe:components/MarkdownRenderer",
-      "label": "Markdown 渲染器",
+      "id": "fe:stores/ui",
+      "label": "UI 状态",
       "layer": "web",
-      "responsibility": "正文渲染与 /demo/xxx 内嵌卡片；卡片取数走轻量 meta"
-    },
-    {
-      "id": "fe:components/QuickComments",
-      "label": "快速评论",
-      "layer": "web",
-      "responsibility": "作品页评论区；只需标题时走轻量 meta"
+      "responsibility": "toast/confirm 宿主与主题等全局 UI 态"
     },
     {
       "id": "routers.demos",
       "label": "作品路由",
       "layer": "web",
-      "responsibility": "列表/详情/上传/更新/下载；meta 口专供卡片且不增浏览计数"
+      "responsibility": "列表/详情/上传/更新/下载；meta 口专供卡片不增浏览计数"
     },
     {
       "id": "routers.admin_entities",
@@ -258,31 +318,31 @@
       "id": "routers.forum",
       "label": "论坛路由",
       "layer": "web",
-      "responsibility": "论坛读写与管理；封禁用户写审计"
-    },
-    {
-      "id": "routers.tasks",
-      "label": "题目路由",
-      "layer": "web",
-      "responsibility": "公开题目只出 active；管理端全状态"
+      "responsibility": "论坛读写与管理；封禁写审计"
     },
     {
       "id": "routers.admin",
       "label": "管理路由",
       "layer": "web",
-      "responsibility": "审核与策展写操作 require_admin + 审计；列表轻量序列化"
+      "responsibility": "审核与策展写操作 + 审计；列表轻量序列化"
+    },
+    {
+      "id": "routers.tasks",
+      "label": "题目路由",
+      "layer": "web",
+      "responsibility": "公开只出 active；管理端全状态"
     },
     {
       "id": "routers.sessions",
       "label": "会话日志路由",
       "layer": "web",
-      "responsibility": "轨迹出口与详情共用可见域门禁 + 限流"
+      "responsibility": "轨迹出口共用可见域门禁 + 限流"
     },
     {
       "id": "routers.users",
       "label": "用户路由",
       "layer": "web",
-      "responsibility": "主页/关注/榜单；管理端改角色状态留痕"
+      "responsibility": "主页/关注/榜单；管理端改动留痕"
     },
     {
       "id": "services.model_service",
@@ -294,31 +354,19 @@
       "id": "services.tag_service",
       "label": "Tag 服务",
       "layer": "application",
-      "responsibility": "Tag 域唯一写入口：键值/分组/合并/状态；同事务审计"
+      "responsibility": "Tag 域唯一写入口；同事务审计"
     },
     {
       "id": "services.task_service",
       "label": "Task 服务",
       "layer": "application",
-      "responsibility": "题目 CRUD/挂摔/合并；拒 merged/hidden；批量挂题去重"
+      "responsibility": "题目 CRUD/挂摔/合并；拒 merged/hidden；批量去重"
     },
     {
       "id": "services.suggestion_service",
       "label": "建议服务",
       "layer": "application",
       "responsibility": "统一收件箱；批准与状态同事务；create 只 flush"
-    },
-    {
-      "id": "services.matching_service",
-      "label": "匹配服务",
-      "layer": "application",
-      "responsibility": "规范化/别名匹配与相似召回；确定性排序"
-    },
-    {
-      "id": "services.forum_service",
-      "label": "论坛服务",
-      "layer": "application",
-      "responsibility": "论坛序列化/可见性/链接安全/审核判定"
     },
     {
       "id": "services.audit_service",
@@ -330,54 +378,22 @@
       "id": "services.storage",
       "label": "存储服务",
       "layer": "infrastructure",
-      "responsibility": "zip 解压/封面压缩/落盘；临时目录+原子替换+路径归属判定"
+      "responsibility": "zip 解压/封面/落盘；临时目录+原子替换+路径归属"
     },
     {
       "id": "services.ratelimit",
       "label": "限流服务",
       "layer": "infrastructure",
-      "responsibility": "滑动窗口限流单一实现：有界键空间 + Retry-After"
-    },
-    {
-      "id": "services.oss_sync",
-      "label": "OSS 同步",
-      "layer": "infrastructure",
-      "responsibility": "本地与 OSS 补传；启动判定同锁不双跑"
+      "responsibility": "滑动窗口限流单一实现；有界键空间"
     },
     {
       "id": "services.scope",
       "label": "可见域服务",
       "layer": "application",
-      "responsibility": "Host→视区判定与数据面过滤；公开出口单一门禁"
+      "responsibility": "Host→视区与数据面过滤；公开出口单一门禁"
     }
   ],
   "workflows": [
-    {
-      "id": "卡片轻量化",
-      "name": "卡片轻量化",
-      "steps": [
-        {
-          "source": "fe:views/ForumTopicView",
-          "target": "fe:api",
-          "step": 1
-        },
-        {
-          "source": "fe:components/MarkdownRenderer",
-          "target": "fe:api",
-          "step": 2
-        },
-        {
-          "source": "fe:views/ForumListView",
-          "target": "fe:api",
-          "step": 3
-        },
-        {
-          "source": "fe:components/QuickComments",
-          "target": "fe:api",
-          "step": 4
-        }
-      ]
-    },
     {
       "id": "看选改存",
       "name": "看选改存",
@@ -411,67 +427,23 @@
       ]
     },
     {
-      "id": "实体删除",
-      "name": "实体删除",
+      "id": "卡片轻量化",
+      "name": "卡片轻量化",
       "steps": [
         {
-          "source": "fe:components/admin/AdminEntityDetailSection",
+          "source": "fe:views/ForumTopicView",
           "target": "fe:api",
           "step": 1
-        }
-      ]
-    },
-    {
-      "id": "身份闸",
-      "name": "身份闸",
-      "steps": [
-        {
-          "source": "routers.admin_entities",
-          "target": "services.model_service",
-          "step": 1
         },
         {
-          "source": "routers.admin_entities",
-          "target": "services.task_service",
+          "source": "fe:components/MarkdownRenderer",
+          "target": "fe:api",
           "step": 2
-        }
-      ]
-    },
-    {
-      "id": "标签合并",
-      "name": "标签合并",
-      "steps": [
-        {
-          "source": "routers.tags",
-          "target": "services.tag_service",
-          "step": 1
         },
         {
-          "source": "services.tag_service",
-          "target": "services.model_service",
-          "step": 2
-        }
-      ]
-    },
-    {
-      "id": "实体词表同步",
-      "name": "实体词表同步",
-      "steps": [
-        {
-          "source": "services.model_service",
-          "target": "services.tag_service",
-          "step": 1
-        }
-      ]
-    },
-    {
-      "id": "重名口径",
-      "name": "重名口径",
-      "steps": [
-        {
-          "source": "services.suggestion_service",
-          "target": "services.matching_service",
-          "step": 1
+          "source": "fe:views/ForumListView",
+          "target": "fe:api",
+          "step": 3
         }
       ]
     },
@@ -488,22 +460,22 @@
           "source": "routers.sessions",
           "target": "services.scope",
           "step": 2
-        },
-        {
-          "source": "routers.tasks",
-          "target": "services.task_service",
-          "step": 3
         }
       ]
     },
     {
-      "id": "上传资源闸",
-      "name": "上传资源闸",
+      "id": "治理留痕",
+      "name": "治理留痕",
       "steps": [
         {
-          "source": "routers.demos",
-          "target": "services.storage",
+          "source": "routers.admin_entities",
+          "target": "services.audit_service",
           "step": 1
+        },
+        {
+          "source": "routers.forum",
+          "target": "services.audit_service",
+          "step": 2
         }
       ]
     },
@@ -520,53 +492,27 @@
           "source": "routers.forum",
           "target": "services.ratelimit",
           "step": 2
-        },
-        {
-          "source": "routers.sessions",
-          "target": "services.ratelimit",
-          "step": 3
         }
       ]
     },
     {
-      "id": "治理留痕",
-      "name": "治理留痕",
+      "id": "标签合并",
+      "name": "标签合并",
       "steps": [
         {
-          "source": "routers.admin",
-          "target": "services.audit_service",
-          "step": 1
-        },
-        {
-          "source": "routers.forum",
-          "target": "services.audit_service",
-          "step": 2
-        },
-        {
-          "source": "routers.users",
-          "target": "services.audit_service",
-          "step": 3
-        }
-      ]
-    },
-    {
-      "id": "链接安全",
-      "name": "链接安全",
-      "steps": [
-        {
-          "source": "routers.forum",
-          "target": "services.forum_service",
+          "source": "routers.tags",
+          "target": "services.tag_service",
           "step": 1
         }
       ]
     },
     {
-      "id": "同步单跑",
-      "name": "同步单跑",
+      "id": "上传资源闸",
+      "name": "上传资源闸",
       "steps": [
         {
-          "source": "routers.admin",
-          "target": "services.oss_sync",
+          "source": "routers.demos",
+          "target": "services.storage",
           "step": 1
         }
       ]

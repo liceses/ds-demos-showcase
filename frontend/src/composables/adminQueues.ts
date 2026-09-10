@@ -47,16 +47,20 @@ export function refreshQueues(): Promise<void> {
     const set = (k: QueueKey, n: number, err = '') => {
       queues.value[k] = { count: n, loading: false, error: err }
     }
-    set('review', stats.status === 'fulfilled' ? stats.value.demos.pending : 0, stats.status === 'rejected' ? String(stats.reason) : '')
+    // RF-2：每个队列都必须上报失败原因 —— 原先只有 review 传了 reason，
+    // 其余 6 个队列在接口挂掉时显示为「0 件待办」，管理员据此判断后台没事（错误态冒充空态）。
+    const why = (r: PromiseSettledResult<unknown>) => (r.status === 'rejected' ? String(r.reason) : '')
+    set('review', stats.status === 'fulfilled' ? stats.value.demos.pending : 0, why(stats))
     // 两表分计：inbox=EntitySuggestion，tagreq=TagValueSuggestion（并语义在概览台合成，不并表）
-    set('inbox', knowledge.status === 'fulfilled' ? knowledge.value.inbox.pending : 0)
-    set('tagreq', tagSugg.status === 'fulfilled' ? tagSugg.value.length : 0)
+    set('inbox', knowledge.status === 'fulfilled' ? knowledge.value.inbox.pending : 0, why(knowledge))
+    set('tagreq', tagSugg.status === 'fulfilled' ? tagSugg.value.length : 0, why(tagSugg))
     // 题目候选 = 未覆盖的可成题簇（exact + similar）
     set(
       'clusters',
       clusters.status === 'fulfilled'
         ? (clusters.value.stats.exact_clusters ?? 0) + (clusters.value.stats.similar_clusters ?? 0)
         : 0,
+      why(clusters),
     )
     if (inspection.status === 'fulfilled') {
       const checks = inspection.value.checks
@@ -66,9 +70,10 @@ export function refreshQueues(): Promise<void> {
       set('attribution', pickCheck(checks, 'model_fallback'))
       set('wordlist', pickCheck(checks, 'fixed_no_desc'))
     } else {
-      set('refine', 0)
-      set('attribution', 0)
-      set('wordlist', 0)
+      const reason = why(inspection)
+      set('refine', 0, reason)
+      set('attribution', 0, reason)
+      set('wordlist', 0, reason)
     }
     // 细分面板的预览数（含置信度门槛）另算一次，不与巡检共用 → 这里保持 0 让面板自己显示
     inflight = null

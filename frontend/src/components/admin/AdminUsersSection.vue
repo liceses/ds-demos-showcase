@@ -145,7 +145,9 @@ onMounted(loadUsers)
               </button>
             </td>
           </tr>
-          <tr v-if="!filtered.length"><td colspan="5" style="text-align:center">没有匹配的用户</td></tr>
+          <!-- RF-2：空态要判「分页后」的数组（判 filtered 会在页码越界时判不出，
+               出现表体空白且无文案；页码夹取见 useLocalPagination） -->
+          <tr v-if="!paged.length"><td colspan="5" style="text-align:center">没有匹配的用户</td></tr>
         </tbody>
       </table>
     </div>

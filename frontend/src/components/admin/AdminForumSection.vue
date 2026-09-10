@@ -130,10 +130,10 @@ async function forumReviewReply(r: ForumReply, action: 'approve' | 'reject') {
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
 
-async function forumHandleReport(r: ForumReport, action: 'handle' | 'ignore') {
+async function forumHandleReport(r: ForumReport, action: 'resolve' | 'dismiss') {
   try {
     await api.handleForumReport(r.id, action)
-    ui.toast(action === 'handle' ? '已处理' : '已忽略', 'success')
+    ui.toast(action === 'resolve' ? '已处理' : '已忽略', 'success')
     await loadForumReports()
   } catch (e) { ui.toast((e as Error).message, 'error') }
 }
@@ -255,11 +255,11 @@ onMounted(() => {
             <tr v-for="r in forumReports" :key="r.id">
               <td>{{ r.target_type }} #{{ r.target_id }}</td>
               <td style="max-width: 320px; overflow-wrap: anywhere">{{ r.reason }}</td>
-              <td><span class="ann-status" :class="'status-' + (r.status === 'pending' ? 'draft' : r.status)">{{ r.status }}</span></td>
+              <td><span class="ann-status" :class="'status-' + (r.status === 'open' ? 'draft' : r.status)">{{ r.status }}</span></td>
               <td>{{ parseDate(r.created_at).toLocaleString('zh-CN') }}</td>
               <td>
-                <button v-if="r.status === 'pending'" class="btn btn-sm btn-primary" type="button" @click="forumHandleReport(r, 'handle')">处理</button>
-                <button v-if="r.status === 'pending'" class="btn btn-sm btn-dark" type="button" @click="forumHandleReport(r, 'ignore')">忽略</button>
+                <button v-if="r.status === 'open'" class="btn btn-sm btn-primary" type="button" @click="forumHandleReport(r, 'resolve')">处理</button>
+                <button v-if="r.status === 'open'" class="btn btn-sm btn-dark" type="button" @click="forumHandleReport(r, 'dismiss')">忽略</button>
                 <span v-else class="muted">已处理</span>
               </td>
             </tr>

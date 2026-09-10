@@ -8,7 +8,6 @@ import type {
   Announcement,
   AnnouncementInput,
   AuthResponse,
-  CreateDemoFromUrlPayload,
   CreateDemoPayload,
   DemoCreateResult,
   CurationResult,
@@ -37,7 +36,6 @@ import type {
   Tag,
   TagKeyInfo,
   TagKeyValue,
-  TagGroupDistribution,
   TagMergeResult,
   TagMergeInput,
   TagSuggestion,
@@ -101,7 +99,7 @@ const forumReplies: ForumReply[] = [
 ]
 
 const forumReports: ForumReport[] = [
-  { id: 1, target_type: 'topic', target_id: 2, reason: '疑似违规内容', status: 'pending', reporter_id: 3, created_at: '2026-08-04T10:00:00Z' },
+  { id: 1, target_type: 'topic', target_id: 2, reason: '疑似违规内容', status: 'open', reporter_id: 3, created_at: '2026-08-04T10:00:00Z' },
 ]
 
 const notifications: Notification[] = [
@@ -801,18 +799,6 @@ export const mockApi = {
     await delay()
     const all: TagSuggestion[] = mockTagSuggestions
     return clone(status ? all.filter((s) => s.status === status) : all)
-  },
-  async listTagGroups(key: string): Promise<TagGroupDistribution> {
-    await delay()
-    const k = tagKeys.find((x) => x.key === key)
-    const values = k?.values || []
-    const map = new Map<string, number>()
-    let ungrouped = 0
-    for (const v of values) {
-      if (v.group) map.set(v.group, (map.get(v.group) || 0) + 1)
-      else ungrouped++
-    }
-    return { key, groups: [...map.entries()].map(([group, count]) => ({ group, count })), ungrouped }
   },
   async renameTagGroup(key: string, group: string, newGroup: string): Promise<{ updated: number; new_group: string }> {
     await delay()
@@ -2140,12 +2126,6 @@ export const mockApi = {
     const i = forumReplies.findIndex((x) => x.id === id)
     if (i >= 0) forumReplies.splice(i, 1)
   },
-  async getReactionSummary(targetType: 'topic' | 'reply', targetId: number): Promise<ReactionSummary> {
-    await delay()
-    const items = targetType === 'topic' ? forumTopics : forumReplies
-    const it = items.find((x) => x.id === targetId) as any
-    return { target_type: targetType, target_id: targetId, like_count: it?.like_count ?? 0, thanks_count: it?.thanks_count ?? 0, my_reactions: it?.my_reactions ?? [] }
-  },
   async toggleReaction(targetType: 'topic' | 'reply', targetId: number, reactionType: 'like' | 'thanks'): Promise<ReactionSummary & { active: boolean }> {
     await delay()
     const items = targetType === 'topic' ? forumTopics : forumReplies
@@ -2215,16 +2195,16 @@ export const mockApi = {
     await delay()
     return clone(forumReports)
   },
-  async handleForumReport(id: number, action: 'handle' | 'ignore'): Promise<ForumReport> {
+  async handleForumReport(id: number, action: 'resolve' | 'dismiss'): Promise<ForumReport> {
     await delay()
     const r = forumReports.find((x) => x.id === id)
     if (!r) throw new Error('举报不存在')
-    r.status = action === 'handle' ? 'handled' : 'ignored'
+    r.status = action === 'resolve' ? 'resolved' : 'dismissed'
     return clone(r)
   },
   async createForumReport(payload: ForumReportInput): Promise<ForumReport> {
     await delay()
-    const r: ForumReport = { id: Math.max(0, ...forumReports.map((x) => x.id)) + 1, target_type: payload.target_type, target_id: payload.target_id, reason: payload.reason, status: 'pending', reporter_id: 2, created_at: new Date().toISOString() }
+    const r: ForumReport = { id: Math.max(0, ...forumReports.map((x) => x.id)) + 1, target_type: payload.target_type, target_id: payload.target_id, reason: payload.reason, status: 'open', reporter_id: 2, created_at: new Date().toISOString() }
     forumReports.push(r)
     return clone(r)
   },
@@ -2256,12 +2236,6 @@ export const mockApi = {
 
 
 
-  async createDemoFromUrl(_payload: CreateDemoFromUrlPayload): Promise<DemoCreateResult> {
-    await delay(400)
-    const id = mockDemoIdSeq++
-    const slug = 'url-' + Math.random().toString(16).slice(2, 10)
-    return { id, slug, status: 'pending', created: true }
-  },
   async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {
     await delay(400)
     onProgress?.(100)

@@ -209,10 +209,16 @@ const entryCounts = computed<Record<string, number | null>>(() => ({
 // 论坛斜角入口（T9 逐字恢复自 52421e5~1，M1-2 移除的原件；常驻=fixed 右缘常显）
 const router = useRouter()
 const forumEntering = ref(false)
+// RF-2：这个 500ms 过渡定时器原先没保存 id —— 在它触发前切走路由/关页，
+// 回调仍会 router.push('/forum')，把用户的导航意图抢掉。现在可取消。
+let forumTimer: ReturnType<typeof setTimeout> | null = null
 function enterForum() {
   if (forumEntering.value) return
   forumEntering.value = true
-  setTimeout(() => router.push('/forum'), 500)
+  forumTimer = setTimeout(() => {
+    forumTimer = null
+    router.push('/forum')
+  }, 500)
 }
 onActivated(() => {
   forumEntering.value = false
@@ -317,10 +323,17 @@ onActivated(() => {
 })
 onDeactivated(() => {
   stopLiveTimer()
+  // RF-2：keep-alive 页面切走即取消论坛入口的过渡定时器（否则 500ms 后仍会抢导航）
+  if (forumTimer) {
+    clearTimeout(forumTimer)
+    forumTimer = null
+  }
+  forumEntering.value = false
 })
 onBeforeUnmount(() => {
   stopLiveTimer()
   if (taglineTimer) clearTimeout(taglineTimer)
+  if (forumTimer) clearTimeout(forumTimer)
 })
 </script>
 

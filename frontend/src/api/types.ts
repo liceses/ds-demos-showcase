@@ -65,11 +65,6 @@ export interface TagSuggestion {
   created_at: string
 }
 
-export interface TagGroupDistribution {
-  key: string
-  groups: { group: string; count: number }[]
-  ungrouped: number
-}
 
 export interface TagMergeResult {
   merged: number
@@ -614,16 +609,6 @@ export interface Paginated<T> {
   page_size: number
 }
 
-export interface Comment {
-  id: number
-  demo_id: number
-  user_id: number
-  username: string
-  parent_id: number | null
-  content: string
-  created_at: string
-  children?: Comment[]
-}
 
 export interface SessionLog {
   id: number
@@ -730,22 +715,6 @@ export interface CreateDemoPayload {
   force?: boolean
 }
 
-export interface CreateDemoFromUrlPayload {
-  title: string
-  description?: string
-  tags?: TagInput[]
-  demo_type?: 'web' | 'zip' | 'link'
-  external_url?: string
-  prompt?: string
-  video_url?: string
-  zip_url?: string
-  cover_url?: string
-  upload_code?: string
-  idempotency_key?: string
-  /** v2 B4′：挑战的题目 slug（只生成挂题候选） */
-  task?: string
-  force?: boolean
-}
 
 export interface UpdateDemoPayload {
   title?: string
@@ -843,7 +812,7 @@ export interface ForumReport {
   target_type: 'topic' | 'reply'
   target_id: number
   reason: string
-  status: 'pending' | 'handled' | 'ignored'
+  status: 'open' | 'resolved' | 'dismissed'
   reporter_id: number
   created_at: string
 }
@@ -910,12 +879,6 @@ export interface UserPublic {
   demo_count: number
 }
 
-export interface ForumTopicCard {
-  id: number
-  title: string
-  author: string
-  reply_count: number
-}
 
 export interface Announcement {
   id: number

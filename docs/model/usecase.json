@@ -228,7 +228,6 @@
           "supportModules": [
             "fe:views/ForumNewView",
             "fe:views/ForumTopicView",
-            "fe:components/ForumThread",
             "routers.forum"
           ],
           "rationale": "/forum/new、/forum/topic/:id + POST /topics、/{tid}/replies、/reactions、/reports"

@@ -121,36 +121,6 @@
 }
 /* 滚动条统一使用浏览器原生样式 */
 
-/* ---------- 底部公告分块（项目/系统） ---------- */
-.ann-blocks {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  padding-top: 8px;
-}
-.ann-block {
-  border: var(--border-w) solid var(--ink);
-  background: var(--paper);
-  box-shadow: 8px 8px 0 0 var(--ink);
-  padding: 18px;
-}
-.ann-block-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 3px solid var(--ink);
-}
-.ann-block-title {
-  font-size: 16px;
-}
-.ann-block-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 .ann-item {
   display: flex;
   align-items: flex-start;

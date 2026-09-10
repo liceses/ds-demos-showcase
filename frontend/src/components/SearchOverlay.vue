@@ -7,6 +7,7 @@
 // 整屏位移会在视口底缘露出旧页撕裂带，故「落下回弹」收缩到内容面板）；面板=b-stamp-drop 350ms 落下回弹一次，
 // 关闭 0ms 硬切对称；reduced-motion 全退场。
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { lockBodyScroll, unlockBodyScroll } from '../composables/useBodyScrollLock'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
 import type { DemoSummary, ModelSummary, TaskSummary } from '../api/types'
@@ -43,7 +44,6 @@ const activeIdx = ref(-1)
 
 let seq = 0 // 竞态守卫：每次触发 ++，过期响应整包丢弃
 let timer: ReturnType<typeof setTimeout> | undefined
-let prevOverflow = ''
 
 const term = computed(() => q.value.trim())
 
@@ -197,14 +197,14 @@ function onWinKey(e: KeyboardEvent) {
 
 watch(searchOpen, (open) => {
   if (open) {
-    prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden' // 全屏覆盖层期间锁定背后滚动
+    // RF-2：走引用计数锁 —— 旧写法保存/还原 body.overflow，会与全屏 iframe 互相踩
+    lockBodyScroll() // 全屏覆盖层期间锁定背后滚动
     void nextTick(() => {
       inputEl.value?.focus()
       inputEl.value?.select()
     })
   } else {
-    document.body.style.overflow = prevOverflow
+    unlockBodyScroll()
     if (timer) {
       clearTimeout(timer)
       timer = undefined
@@ -221,7 +221,7 @@ watch(activeIdx, (i) => {
 onMounted(() => document.addEventListener('keydown', onWinKey))
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onWinKey)
-  if (searchOpen.value) document.body.style.overflow = prevOverflow
+  if (searchOpen.value) unlockBodyScroll()
   if (timer) clearTimeout(timer)
 })
 </script>

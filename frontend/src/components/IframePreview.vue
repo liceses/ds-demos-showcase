@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useUiStore } from '../stores/ui'
+import { lockBodyScroll, unlockBodyScroll } from '../composables/useBodyScrollLock'
 
 const props = defineProps<{
   src?: string
@@ -122,20 +123,22 @@ async function toggleIframeFullscreen() {
     // 环境（如外层预览面板沙箱未放行 allow="fullscreen"）拒绝 iframe 全屏：
     // 不再静默，降级为网页全屏覆盖层并明确告知原因
     webFullscreen.value = true
-    document.body.style.overflow = 'hidden'
+    lockBodyScroll()
     ui.toast(`iframe 全屏被浏览器拒绝（${reason}），已切换为网页全屏`, 'info')
   }
 }
 
 async function toggleWebFullscreen() {
   webFullscreen.value = !webFullscreen.value
-  document.body.style.overflow = webFullscreen.value ? 'hidden' : ''
+  // RF-2：走引用计数锁，避免卸载时把别人的锁（如搜索覆盖层）一起清掉
+  if (webFullscreen.value) lockBodyScroll()
+  else unlockBodyScroll()
 }
 
 function exitWebFullscreen() {
   if (webFullscreen.value) {
     webFullscreen.value = false
-    document.body.style.overflow = ''
+    unlockBodyScroll()
   }
 }
 
@@ -163,7 +166,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('message', onMessage)
   window.removeEventListener('keydown', onKeydown)
-  document.body.style.overflow = ''
+  // RF-2：只释放自己持有的那一次锁（旧写法无条件清空，会解掉搜索覆盖层等别人的锁）
+  if (webFullscreen.value) unlockBodyScroll()
 })
 </script>
 

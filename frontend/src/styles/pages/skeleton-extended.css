@@ -1,28 +1,3 @@
-/* ---------- 骨架屏占位 ---------- */
-.skeleton-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-}
-.skeleton-card {
-  border: 3px solid var(--ink);
-  background: var(--paper);
-  padding: 10px;
-  box-shadow: 4px 4px 0 0 var(--ink);
-}
-.skeleton-block {
-  background: var(--paper-deep);
-  border: 2px solid var(--ink);
-  margin-bottom: 10px;
-}
-.skeleton-line {
-  height: 12px;
-  background: var(--paper-deep);
-  border: 1px solid var(--ink);
-  margin-bottom: 8px;
-}
-
-﻿
 /* 标签合并弹窗 */
 .tag-merge-modal {
   position: fixed;

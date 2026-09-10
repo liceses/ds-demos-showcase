@@ -8,7 +8,6 @@ import type {
   Announcement,
   AnnouncementInput,
   AuthResponse,
-  CreateDemoFromUrlPayload,
   CreateDemoPayload,
   DemoCreateResult,
   DemoMeta,
@@ -36,7 +35,6 @@ import type {
   Tag,
   TagKeyInfo,
   TagKeyValue,
-  TagGroupDistribution,
   TagMergeResult,
   TagMergeInput,
   TagSuggestion,
@@ -123,10 +121,6 @@ const realApi = {
   },
   async listTagSuggestions(status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
     const { data } = await http.get('/tags/admin/suggestions', { params: status ? { status } : {} })
-    return data
-  },
-  async listTagGroups(key: string): Promise<TagGroupDistribution> {
-    const { data } = await http.get('/tags/admin/groups', { params: { key } })
     return data
   },
   async renameTagGroup(key: string, group: string, newGroup: string): Promise<{ updated: number; new_group: string }> {
@@ -256,10 +250,6 @@ const realApi = {
       return null
     }
   },
-  async getReactionSummary(targetType: 'topic' | 'reply', targetId: number): Promise<ReactionSummary> {
-    const { data } = await http.get('/forum/reactions/summary', { params: { target_type: targetType, target_id: targetId } })
-    return data
-  },
   async toggleReaction(targetType: 'topic' | 'reply', targetId: number, reactionType: 'like' | 'thanks'): Promise<ReactionSummary & { active: boolean }> {
     const { data } = await http.post('/forum/reactions', { target_type: targetType, target_id: targetId, reaction_type: reactionType })
     return data
@@ -338,7 +328,7 @@ const realApi = {
     const { data } = await http.get('/forum/admin/reports')
     return data
   },
-  async handleForumReport(id: number, action: 'handle' | 'ignore'): Promise<ForumReport> {
+  async handleForumReport(id: number, action: 'resolve' | 'dismiss'): Promise<ForumReport> {
     const { data } = await http.post(`/forum/admin/reports/${id}/handle`, { action })
     return data
   },
@@ -393,10 +383,6 @@ const realApi = {
           }
         : undefined,
     })
-    return data
-  },
-  async createDemoFromUrl(payload: CreateDemoFromUrlPayload): Promise<DemoCreateResult> {
-    const { data } = await http.post('/demos/from-url', payload, { timeout: 120000 })
     return data
   },
   async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {

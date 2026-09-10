@@ -20,12 +20,11 @@ import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo 
 import { useUiStore } from '../../stores/ui'
 import EntityStamp from '../EntityStamp.vue'
 import AdminEntityAuditTimeline from './AdminEntityAuditTimeline.vue'
+import AdminEntityRelationSection from './AdminEntityRelationSection.vue'
 import AdminEntityLifecycleSection from './AdminEntityLifecycleSection.vue'
 import AdminEntityWorksSection from './AdminEntityWorksSection.vue'
 import LoadingRow from '../LoadingRow.vue'
 // T5·M5-F2：DemoPicker 多选挂载（datalist 手输 slug 退役）
-import EntityPicker from '../picker/EntityPicker.vue'
-import type { EntityPick } from '../picker/pickerSources'
 import { t } from '../../i18n'
 
 const props = defineProps<{
@@ -54,14 +53,6 @@ const works = ref<Array<{ slug: string; title: string; rating_avg?: number | nul
 const editing = ref(false)
 const editForm = ref<{ name?: string; vendor?: string; description?: string; title?: string; category?: string }>({})
 const saving = ref(false)
-const aliasNew = ref('')
-const busyAlias = ref(false)
-// M3-B5 Task 挂摘/合并两步流状态（T5·M5-F2：datalist 手输 slug → DemoPicker 多选，chips 挂载）
-const mergeOpen = ref(false)
-const mergeTargetPick = ref<EntityPick | null>(null)
-const mergeReason = ref('')
-const mergePreview = ref<{ source: { id: number; slug: string; title: string }; target: { id: number; slug: string; title: string }; affected_demos: number } | null>(null)
-const mergeBusy = ref(false)
 // Tag description 直改状态（①tag.description 白名单解锁）
 const tagDescEditing = ref(false)
 const tagDescDraft = ref('')
@@ -174,45 +165,6 @@ async function saveEdit() {
   }
 }
 
-// ---- 直改：Model 别名增/删（Alias 自由格：别名只是指向，可重建） ----
-async function addAlias() {
-  const a = aliasNew.value.trim()
-  if (!a || !model.value || busyAlias.value) return
-  busyAlias.value = true
-  try {
-    await api.addModelAlias(model.value.slug, a)
-    aliasNew.value = ''
-    ui.toast(t('admin.kc.aliasAdded', '别名已添加'), 'success')
-    emit('saved') // RF-4b：父级列表的别名计数要跟着变
-    await load()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    busyAlias.value = false
-  }
-}
-
-async function removeAlias(alias: string) {
-  if (!model.value || busyAlias.value) return
-  const ok = await ui.confirm({
-    title: t('admin.kc.aliasRemoveTitle', '删除别名？'),
-    message: t('admin.kc.aliasRemoveMsg', '「{alias}」将不再指向 {name}。别名只是指向关系，可随时重建。', { alias, name: model.value.name }),
-    confirmText: t('admin.kc.aliasRemove', '删除别名'),
-  })
-  if (!ok) return
-  busyAlias.value = true
-  try {
-    await api.removeModelAlias(model.value.slug, alias)
-    ui.toast(t('admin.kc.aliasRemoved', '别名已删除'), 'success')
-    emit('saved')
-    await load()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    busyAlias.value = false
-  }
-}
-
 // ---- 直改：状态跃迁（RF-4c：表单态归 AdminEntityLifecycleSection，这里只做确认+写库+刷新） ----
 async function doTransition(payload: { to: string; reason: string }) {
   const target = payload.to
@@ -313,58 +265,6 @@ function resetGroupDraft() {
   groupDraft.value = tagRow.value?.value.group || ''
 }
 
-// ---- M3-B5 Task 合并两步流（⑥：显式 dry_run:true 预览 → 确认后显式 false——缺省 false 的坑已规避） ----
-function pickMergeTarget(p: EntityPick) {
-  mergeTargetPick.value = p
-  mergePreview.value = null
-}
-
-async function dryRunMerge() {
-  if (!task.value || mergeBusy.value) return
-  const rawId = mergeTargetPick.value?.id
-  if (rawId == null) {
-    ui.toast(t('admin.kc.mergePickFirst', '请先用选择器挑目标题目'), 'error')
-    return
-  }
-  mergeBusy.value = true
-  try {
-    const preview = await api.mergeEntity('tasks', task.value.slug, { target_id: rawId, dry_run: true, reason: mergeReason.value || undefined })
-    mergePreview.value = preview as unknown as { source: { id: number; slug: string; title: string }; target: { id: number; slug: string; title: string }; affected_demos: number }
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    mergeBusy.value = false
-  }
-}
-
-function closeMerge() {
-  mergeOpen.value = false
-  mergePreview.value = null
-  mergeTargetPick.value = null
-}
-
-async function doMerge() {
-  if (!task.value || !mergePreview.value || mergeBusy.value) return
-  const ok = await ui.confirm({
-    title: t('admin.kc.mergeConfirmTitle', '确认合并？'),
-    message: t('admin.kc.mergeConfirmMsg', '《{from}》并入《{to}》：{n} 件作品迁移 + 源标 merged（可 unmerge 回溯）。', { from: mergePreview.value.source.title, to: mergePreview.value.target.title, n: mergePreview.value.affected_demos }),
-    confirmText: t('admin.kc.mergeDo', '执行合并'),
-  })
-  if (!ok) return
-  mergeBusy.value = true
-  try {
-    await api.mergeEntity('tasks', task.value.slug, { target_id: mergePreview.value.target.id, dry_run: false, reason: mergeReason.value || undefined })
-    ui.toast(t('admin.kc.mergeDone', '已合并并落审计'), 'success')
-    emit('saved') // RF-4b：合并会改变两侧实体，父级列表必须刷新
-    closeMerge()
-    await load()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    mergeBusy.value = false
-  }
-}
-
 // ---- M3-B5 Tag description 直改（①tag.description 白名单） ----
 function startTagDesc() {
   tagDescDraft.value = tagRow.value?.value.description || ''
@@ -391,12 +291,17 @@ async function saveTagDesc() {
 
 watch(() => [props.type, props.id, props.tagKey], () => {
   void load()
-  closeMerge()
 })
 /**
  * ⑤ 子组件挂摘所需的标签坐标（从原 currentTagKV 平移过来）：
  * Model 用 model:<name>；Tag 用 <tagKey>:<value>；Task 不走这条（用 attach 端点）。
  */
+/** ② 子组件改动了关系（别名/合并）：重拉详情 + 通知更上层刷新列表 */
+async function onRelationChanged() {
+  emit('saved')
+  await load()
+}
+
 const lifecycleRef = ref<{ close: () => void } | null>(null)
 
 /** ③ 生命周期：按实体类型算好子组件需要的档位/文案（原来散在三套重复模板里） */
@@ -556,62 +461,19 @@ onMounted(load)
         </div>
       </section>
 
-      <!-- ② 关系（P3 从别名表+合并历史聚合读；P4 换统一 Relation 端点） -->
-      <section class="kc-zone">
-        <h3 class="kc-zone-title">{{ t('admin.kc.zRelations', '② 关系') }}</h3>
-        <template v-if="props.type === 'model'">
-          <div class="kc-rel-row">
-            <span class="kc-k">{{ t('admin.kc.fAliases', '别名') }}</span>
-            <span v-for="a in model?.aliases || []" :key="a" class="tag-chip mode-open">
-              {{ a }}
-              <button type="button" class="kc-chip-x" :aria-label="t('admin.kc.aliasRemove', '删除别名')" @click="removeAlias(a)">×</button>
-            </span>
-            <input v-model="aliasNew" class="input" style="max-width: 200px" :placeholder="t('admin.kc.aliasPh', '新增别名…')" @keyup.enter="addAlias" />
-            <button type="button" class="btn btn-sm btn-outline" :disabled="busyAlias || !aliasNew.trim()" @click="addAlias">{{ t('admin.kc.aliasAdd', '添加') }}</button>
-          </div>
-          <div class="kc-rel-row">
-            <span class="kc-k">{{ t('admin.kc.fMergedInto', 'merged_into') }}</span>
-            <span class="mono">{{ model?.merged_into ?? '—' }}</span>
-            <button type="button" class="btn btn-sm btn-primary" @click="goTab('merge')">{{ t('admin.kc.mergeGo', '合并向导 →') }}</button>
-          </div>
-        </template>
-        <template v-else-if="props.type === 'task'">
-          <div class="kc-rel-row">
-            <span class="kc-k">{{ t('admin.kc.fMergedInto', 'merged_into') }}</span>
-            <span class="mono">{{ task?.merged_into_id ?? '—' }}</span>
-            <button v-if="!mergeOpen" type="button" class="btn btn-sm btn-primary" @click="mergeOpen = true">{{ t('admin.kc.mergeGo', '合并向导 →') }}</button>
-          </div>
-          <div v-if="mergeOpen" class="kc-trans">
-            <div class="kc-field kc-wide">
-              <span class="kc-k">{{ t('admin.kc.mergeTarget', '合并到') }}</span>
-              <EntityPicker
-                kind="task"
-                mode="dropdown"
-                :selected-id="mergeTargetPick?.id"
-                :exclude-id="task?.id"
-                :placeholder="t('admin.kc.mergeTargetPh', '搜题名 / slug 选目标…')"
-                @pick="pickMergeTarget"
-              />
-              <span v-if="mergeTargetPick" class="mono">{{ mergeTargetPick.label }}</span>
-            </div>
-            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.mergeReason', '理由（可选）') }}</span><input v-model="mergeReason" class="input" :placeholder="t('admin.kc.transTagReasonPh', '会进入审计时间线')" /></label>
-            <div class="kc-field kc-wide">
-              <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy || mergeTargetPick == null || mergePreview != null" @click="dryRunMerge">{{ t('admin.kc.mergePreview', 'dry_run 预览') }}</button>
-              <button type="button" class="btn btn-sm btn-primary" :disabled="mergeBusy || mergePreview == null" @click="doMerge">{{ t('admin.kc.mergeConfirm', '确认合并') }}</button>
-              <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy" @click="closeMerge">{{ t('common.cancel', '取消') }}</button>
-            </div>
-            <div v-if="mergePreview" class="hint">
-              {{ t('admin.kc.mergePreviewMsg', '预览：《{from}》→《{to}》，{n} 件作品将随迁。确认后显式 dry_run=false 执行；合并可 unmerge 回溯。', { from: mergePreview.source.title, to: mergePreview.target.title, n: mergePreview.affected_demos }) }}
-            </div>
-          </div>
-        </template>
-        <template v-else>
-          <div class="kc-rel-row">
-            <span class="kc-k">{{ t('admin.kc.fGroup', '分组') }}</span>
-            <span>{{ tagRow?.value.group || '—' }}</span>
-          </div>
-        </template>
-      </section>
+      <!-- ② 关系（RF-4c 拆出：别名/merged_into/合并两步流/分组） -->
+      <AdminEntityRelationSection
+        :type="props.type"
+        :model-slug="model?.slug"
+        :aliases="model?.aliases || []"
+        :model-merged-into="model?.merged_into ?? null"
+        :task-slug="task?.slug"
+        :task-id="task?.id ?? null"
+        :task-merged-into="task?.merged_into_id ?? null"
+        :tag-group="tagRow?.value.group ?? null"
+        @changed="onRelationChanged"
+        @go-merge="goTab('merge')"
+      />
 
       <!-- ③ 生命周期（RF-4c 拆出：三实体状态条+跃迁表单合一，仅剩一套模板） -->
       <AdminEntityLifecycleSection
@@ -710,14 +572,7 @@ onMounted(load)
   flex-wrap: wrap;
   padding: 6px 0;
 }
-.kc-chip-x {
-  border: none;
-  background: none;
-  font-weight: 900;
-  cursor: pointer;
-  padding: 0 0 0 4px;
-}
-/* ③ 的状态机条/跃迁表单样式已随组件拆到 AdminEntityLifecycleSection */
+/* ② 的别名 chip 样式已随组件拆到 AdminEntityRelationSection */
 .kc-disabled {
   opacity: 0.55;
   cursor: not-allowed;

@@ -1367,6 +1367,7 @@ export const en = {
       detachNoEntity: 'Cannot detach from this entity',
       fGroupCurrent: 'Current group',
       mergeReason: 'Reason (optional)',
+      mergeNeedTarget: 'Pick a target task first (it must carry an id)',
       transTagReasonPh: 'Why this transition — goes into the audit timeline',
       transTagNote:
         'Options: candidate/active/deprecated (dedicated endpoint PUT /admin/entities/tag/{id}/status); a reason is required and writes one status_set audit row.',

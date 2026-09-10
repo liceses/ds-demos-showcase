@@ -5,7 +5,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
 import { useLoadGeneration } from '../composables/useLoadGeneration'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
-import { tagLabel, tagStrLabel } from '../utils/funMode'
+import { tagLabel } from '../utils/funMode'
+import { guessVendor } from '../utils/tagGroups'
+import { chipLabel, intBounds, intBoundsOf, quickPresets, vendorDot } from '../utils/demoFacets'
+import type { QuickPreset } from '../utils/demoFacets'
 import { t, keyLabel, vendorLabel } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
@@ -108,25 +111,8 @@ function hiddenCount(k: FilterGroup) {
   return isCollapsed(k) ? Math.max(0, k.values.length - COLLAPSED_SHOW) : 0
 }
 
-// model 厂商分组（与上传页一致）
-const VENDOR_PREFIX: [string, string][] = [
-  ['dsv', 'DeepSeek'],
-  ['deepseek', 'DeepSeek'],
-  ['gpt', 'OpenAI'],
-  ['o1', 'OpenAI'],
-  ['o3', 'OpenAI'],
-  ['claude', 'Anthropic'],
-  ['gemini', 'Google'],
-  ['qwen', '阿里'],
-  ['doubao', '字节'],
-]
-function guessVendor(value: string): string {
-  const v = value.toLowerCase()
-  for (const [prefix, name] of VENDOR_PREFIX) {
-    if (v.startsWith(prefix)) return name
-  }
-  return '其他'
-}
+// model 厂商分组：RF-4d 改用 utils/tagGroups 的共享实现
+// （原先是与 TagPicker 逐字重复的一份 16 行前缀表，加厂商必须同时改两处）
 function vendorGroupsOf(k: FilterGroup) {
   const map = new Map<string, { value: string; count: number; description?: string }[]>()
   for (const v of k.values) {
@@ -142,15 +128,6 @@ function isVendorCollapsed(group: string) {
 }
 function toggleVendor(group: string) {
   vendorExpanded.value = { ...vendorExpanded.value, [group]: !isVendorCollapsed(group) }
-}
-const VENDOR_DOT: Record<string, string> = {
-  DeepSeek: 'var(--teal)',
-  OpenAI: 'var(--ink)',
-  Anthropic: 'var(--red)',
-  Google: 'var(--mint)',
-  阿里: 'var(--yellow)',
-  字节: 'var(--paper)',
-  其他: '#999',
 }
 
 // ---------- M1-A 分面抽屉（03 §4.2）：筛选收起为按钮 / 抽屉可钉住 / 移动 bottom-sheet ----------
@@ -305,37 +282,7 @@ function techValues(g: FilterGroup) {
   return g.values.filter((v) => v.value.toLowerCase().includes(qs))
 }
 
-// 数值键：快捷档（三分位，尾档开放 N+）+ 自定义滑条并存（03 §4.2-4：把构造范围的复杂度转给系统）
-type QuickPreset = { label: string; lo: number; hi: number }
-function intBoundsOf(min: number | null | undefined, max: number | null | undefined, rawValues: { value: string }[]) {
-  const nums = rawValues.map((v) => Number.parseInt(v.value, 10)).filter(Number.isFinite) as number[]
-  const hasRange = min != null && max != null
-  const lo = min ?? (nums.length ? Math.min(...nums) : 0)
-  let hi = max ?? (nums.length ? Math.max(...nums) : lo + 8)
-  // 保底三档只在无后端范围时兜（min=max=3 的真实数据不该长出「5+」这种超数据档位）
-  if (!hasRange) hi = Math.max(hi, lo + 2)
-  return { lo, hi }
-}
-function intBounds(k: FilterGroup) {
-  return intBoundsOf(k.min, k.max, k.values)
-}
-function quickPresets(k: FilterGroup): QuickPreset[] {
-  const { lo, hi } = intBounds(k)
-  const span = hi - lo + 1
-  if (span < 3) return []
-  const third = Math.max(1, Math.ceil(span / 3))
-  const e1 = lo + third
-  const e2 = lo + 2 * third
-  const out: QuickPreset[] = []
-  if (e1 <= hi) out.push({ label: `${lo}-${e1 - 1}`, lo, hi: e1 - 1 })
-  if (e2 <= hi) {
-    out.push({ label: `${e1}-${e2 - 1}`, lo: e1, hi: e2 - 1 })
-    out.push({ label: `${e2}+`, lo: e2, hi })
-  } else if (e1 <= hi) {
-    out.push({ label: `${e1}+`, lo: e1, hi })
-  }
-  return out
-}
+// 数值键：快捷档与范围计算已下沉到 utils/demoFacets（可单测）
 const intRange = ref<Record<string, { lo: number; hi: number }>>({})
 
 function activeRangeOf(k: FilterGroup) {
@@ -374,15 +321,7 @@ function clearTags() {
   syncQuery()
 }
 
-// 已选 chips 摘要条（03 §4.2-1：条件可读可删，不用记）：
-// 键值摘要 + 数值范围走「key lo-hi」空格形（含糊的冒号不利于范围读法）；模型实体 chip 用 teal 章区分
-function chipLabel(s: string): string {
-  const i = s.indexOf(':')
-  if (i < 0) return tagStrLabel(s)
-  const v = s.slice(i + 1)
-  if (/^-?\d+(-\d+)?$/.test(v)) return s.slice(0, i) + ' ' + v
-  return tagStrLabel(s)
-}
+// 已选 chips 摘要（03 §4.2-1）已下沉到 utils/demoFacets.chipLabel
 function clearModelFilter() {
   modelFilter.value = ''
   reset()
@@ -808,7 +747,7 @@ onBeforeUnmount(() => observer?.disconnect())
                   <template v-else>
                     <div v-for="vg in modelVendors" :key="vg.group" class="vendor-strip">
                       <span class="vendor-strip-head" role="button" @click="toggleVendor(vg.group)">
-                        <span class="vendor-dot" :style="{ background: VENDOR_DOT[vg.group] || '#999' }"></span>
+                        <span class="vendor-dot" :style="{ background: vendorDot(vg.group) }"></span>
                         <span class="vendor-strip-name">{{ vendorLabel(vg.group) }}</span>
                         <span class="vendor-strip-toggle">{{ vendorOpen(vg.group) ? t('demos.collapse', '收起') : t('demos.expand', '展开') }}</span>
                       </span>

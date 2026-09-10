@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
+import { useLoadGeneration } from '../composables/useLoadGeneration'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
 import type { DemoDetail, DemoSummary, SamePromptResult, SessionLog, TaskDetail } from '../api/types'
@@ -277,6 +278,10 @@ async function loadSameTask() {
 }
 
 // 相关推荐：候选池 + 本地换一批（不重复）
+// RF-4f：模板里两处内联 filter（每次重渲染都重建数组，还会影响 diff key 稳定性）改为 computed
+const sameTaskOthers = computed(() => (sameTask.value?.demos || []).filter((d) => d.slug !== slug))
+const tagsForDisplay = computed(() => (demo.value?.tags || []).filter((x) => x.key !== 'model' || !hasModelEntity.value))
+
 const RELATED_BATCH = 6
 const relatedPool = ref<DemoSummary[]>([])
 const relatedShown = ref<DemoSummary[]>([])
@@ -299,17 +304,24 @@ function drawRelated() {
   }
 }
 
+// RF-4f：推荐流也要竞态守卫 —— drawRelated 在池子将尽时会再触发一次 loadRelated，
+// 「换一批」按钮也可能并发触发；两个在途 getRelated 后到者会覆盖 relatedPool，
+// 而 relatedSeen 只增不减 → 池子变空/重复、hasMore 语义失效。
+const relatedGen = useLoadGeneration()
+
 async function loadRelated() {
+  const my = relatedGen.next()
   relatedLoading.value = true
   try {
     const pool = await api.getRelated(slug)
+    if (!relatedGen.isCurrent(my)) return // 已有更新的请求：旧响应丢弃，别覆盖池子
     // 合并新池，去重
     const seen = new Set(relatedSeen.value)
     relatedPool.value = pool.filter((d) => !seen.has(d.slug))
   } catch {
     /* 推荐失败静默 */
   } finally {
-    relatedLoading.value = false
+    if (relatedGen.isCurrent(my)) relatedLoading.value = false
   }
 }
 
@@ -317,13 +329,16 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
+    // RF-4f：两个请求互不依赖，原先串行白多一个 RTT。
+    // 这里刻意不用 Promise.all —— 日志是次要信息，不该让详情等它：
+    // 先把日志请求发出去，详情一到就赋值渲染，再 await 日志。
+    const logsPromise = api.listSessionLogs(slug).catch(() => [] as SessionLog[])
     demo.value = await api.getDemo(slug)
-    sessionLogs.value = await api.listSessionLogs(slug).catch(() => [])
+    sessionLogs.value = await logsPromise
     void loadSamePrompt()
     void loadSameTask()
     await loadRelated()
     drawRelated()
-    if (!relatedShown.value.length && relatedPool.value.length) drawRelated()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -503,7 +518,7 @@ onMounted(load)
 
           <div v-if="demo.tags.length" class="dv-group dv-tags">
             <RouterLink
-              v-for="tg in demo.tags.filter((x) => x.key !== 'model' || !hasModelEntity)"
+              v-for="tg in tagsForDisplay"
               :key="tg.key + ':' + tg.value"
               class="tag-chip"
               :class="tg.key === 'author' ? 'yellow' : tg.key === 'model' ? 'teal' : ''"
@@ -678,7 +693,7 @@ onMounted(load)
       </p>
       <div class="task-lines">
         <RouterLink
-          v-for="d in sameTask.demos.filter((x) => x.slug !== slug)"
+          v-for="d in sameTaskOthers"
           :key="d.slug"
           class="task-line"
           :to="`/demo/${d.slug}`"

@@ -983,6 +983,10 @@ export const mockApi = {
     if (!d) throw new Error('Demo 不存在')
     d.view_count += 1
     const out = clone(d)
+    // 夹具不逐条写 demo_type（与 site_info 里 demos_by_type 的 `d.demo_type || 'web'` 同口径）：
+    // detail 这处漏了缺省 → demo_type 为 undefined → 详情页落到「外部链接」分支，
+    // 带 previewHtml 的夹具在 mock 下永远看不到预览（键盘焦点提示也就无从演）。
+    out.demo_type = out.demo_type || 'web'
     out.timeline = [
       {
         id: 1,

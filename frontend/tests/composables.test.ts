@@ -5,6 +5,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { useLocalPagination } from '../src/composables/useLocalPagination'
+import { useDebouncedFetch } from '../src/composables/useDebouncedFetch'
 import { bodyScrollLockCount, lockBodyScroll, unlockBodyScroll } from '../src/composables/useBodyScrollLock'
 
 describe('useLocalPagination', () => {
@@ -86,5 +87,57 @@ describe('useBodyScrollLock：引用计数式全局滚动锁', () => {
     unlockBodyScroll()
     unlockBodyScroll()
     expect(bodyScrollLockCount()).toBe(0)
+  })
+})
+
+describe('useDebouncedFetch：竞态守卫（RF-3 修掉的三处串台 bug 的核心断言）', () => {
+  it('慢的旧响应后到时被丢弃，不覆盖新结果', async () => {
+    vi.useFakeTimers()
+    const query = ref('')
+    const resolvers: ((v: string) => void)[] = []
+    const { result } = useDebouncedFetch<string>({
+      source: () => query.value,
+      fetcher: (k) => new Promise<string>((resolve) => resolvers.push(() => resolve(`result:${k}`))),
+      delay: 100,
+      empty: () => '',
+    })
+
+    query.value = 'first'
+    await vi.advanceTimersByTimeAsync(120) // 第一次请求发出（未返回）
+    query.value = 'second'
+    await vi.advanceTimersByTimeAsync(120) // 第二次请求发出（未返回）
+    expect(resolvers).toHaveLength(2)
+
+    resolvers[1]() // 后发的先回
+    await Promise.resolve()
+    await nextTick()
+    expect(result.value).toBe('result:second')
+
+    resolvers[0]() // 先发的后回 —— 无守卫时这里会把界面写回 first
+    await Promise.resolve()
+    await nextTick()
+    expect(result.value).toBe('result:second')
+
+    vi.useRealTimers()
+  })
+
+  it('输入短于 minLength 时不发请求并清空结果', async () => {
+    vi.useFakeTimers()
+    const query = ref('a')
+    let calls = 0
+    const { result } = useDebouncedFetch<string>({
+      source: () => query.value,
+      fetcher: async (k) => {
+        calls++
+        return `r:${k}`
+      },
+      delay: 50,
+      minLength: 3,
+      empty: () => '',
+    })
+    await vi.advanceTimersByTimeAsync(80)
+    expect(calls).toBe(0)
+    expect(result.value).toBe('')
+    vi.useRealTimers()
   })
 })

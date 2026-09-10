@@ -4,15 +4,6 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { routes } from '../src/router/routes'
 
-const ROOT = 'src'
-function* files(dir: string): Generator<string> {
-  for (const e of readdirSync(dir)) {
-    const p = dir + '/' + e
-    if (statSync(p).isDirectory()) yield* files(p)
-    else if (/\.(css|vue|ts)$/.test(e) && !e.endsWith('.d.ts') && !p.includes('router')) yield p
-  }
-}
-
 // ---------- ① token 完备性：所有 var(--x) 无回落引用断言已定义（防再犯闸） ----------
 describe('token 完备性', () => {
   it('所有 var(--x) 无回落引用均已定义（带回落的引用=容错口径不拦）', () => {

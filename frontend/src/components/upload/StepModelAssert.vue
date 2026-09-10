@@ -17,7 +17,6 @@ defineProps<{
   unknownValue: string
   guessValue: string
   modelUncertain: boolean
-  fbVendorOpen: boolean
   stamped: Record<string, boolean>
   modelStats: { name: string; demo_count: number; rating_avg: number | null } | null
   statsLoading: boolean

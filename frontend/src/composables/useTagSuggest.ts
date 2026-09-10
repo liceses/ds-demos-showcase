@@ -78,8 +78,13 @@ export function useTagSuggest(deps: {
   /** 建议包被「不用了」收掉后必须还能叫回来（静默永久隐藏是设计失礼） */
   function bringBackPack() {
     packIgnored.value = false
+}
+
+/** RF-1：作者点「不用了」——状态归 composable 所有，子组件通过事件请求 */
+function ignorePack() {
+  packIgnored.value = true
     void fetchPack()
   }
 
-  return { pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack }
+  return { pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack, ignorePack }
 }

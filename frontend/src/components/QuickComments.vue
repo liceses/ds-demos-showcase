@@ -142,7 +142,7 @@ onMounted(load)
           </div>
         </template>
         <template v-else>
-          <p class="muted" style="margin: 0 0 8px">{{ t('forum.loginToReply', '登录后才能评论') }}</p>
+          <p class="muted" style="margin: 0 0 8px">{{ t('forum.loginToComment', '登录后才能评论') }}</p>
           <RouterLink class="btn btn-outline" :to="`/login?redirect=${route.fullPath}`">{{ t('auth.toLogin', '去登录') }}</RouterLink>
         </template>
       </div>

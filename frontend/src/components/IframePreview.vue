@@ -50,6 +50,10 @@ html,body{max-width:100%;overflow-x:hidden}
 canvas,img,video{max-width:100%;height:auto}
 </style>`
 
+// 收尾标签拼接而成：源码里一旦出现裸的收尾序列，.vue 的 script 块会被 SFC 解析器提前截断；
+// 而写成 \/ 转义又会触发 no-useless-escape 误报 —— 拼接是同时满足两者的唯一写法。
+const CLOSE_SCRIPT = '</scr' + 'ipt>'
+
 const RESIZE_SCRIPT = `<script>
 /* dsh auto-resize */
 !function(){
@@ -67,7 +71,7 @@ const RESIZE_SCRIPT = `<script>
   setTimeout(report,120);
   setInterval(report,1000);
 }();
-<\/script>`
+${CLOSE_SCRIPT}`
 
 const finalSrcdoc = computed(() => {
   const html = props.srcdoc || ''

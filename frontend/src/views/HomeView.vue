@@ -463,7 +463,7 @@ onBeforeUnmount(() => {
         <div class="section-head">
           <h2 class="section-title">{{ t('home.latest.title', '最新上传') }}</h2>
         </div>
-        <div v-if="!latest.length && latestBusy" class="loading-row"><span class="spinner"></span> {{ t('home.latest.loading', '加载最新…') }}</div>
+        <div v-if="!latest.length && latestBusy" class="loading-row"><span class="spinner"></span> {{ t('home.latest.loading', '加载中…') }}</div>
         <div v-else-if="!latest.length" class="empty-box">{{ t('home.latest.empty', '还没有新上传') }}</div>
         <div v-else class="latest-list">
           <RouterLink v-for="d in latest" :key="d.slug" class="latest-row" :to="`/demo/${d.slug}`">

@@ -3,7 +3,7 @@
  * 双滑块范围选择（新野兽派）
  * modelValue: { lo, hi }，lo <= hi 自动约束
  */
-const props = withDefaults(defineProps<{ min: number; max: number; step?: number }>(), { step: 1 })
+withDefaults(defineProps<{ min: number; max: number; step?: number }>(), { step: 1 })
 const model = defineModel<{ lo: number; hi: number }>({ required: true })
 
 function onLo(e: Event) {

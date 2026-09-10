@@ -21,7 +21,7 @@ const emit = defineEmits<{ go: [step: number]; toggleAside: [] }>()
       <b>{{ rank.label }}</b><span class="uw-rank-hint">{{ rank.hint }}</span>
     </span>
     <span class="uw-dash-lead">
-      <b>{{ mustDone }}</b>/{{ mustTotal }} {{ t('upload.dashMust', '必答已就绪') }} · {{ allDone }}/{{ checklist.length }} {{ t('upload.dashAll', '项已填') }}
+      <b>{{ mustDone }}</b>/{{ mustTotal }} {{ t('upload.dashMust', '必答已就绪') }} · {{ allDone }}/{{ checklist.length }} {{ t('upload.dashFilled', '项已填') }}
     </span>
     <span class="uw-dash-bar" role="progressbar" :aria-valuenow="barPct" aria-valuemin="0" aria-valuemax="100" :aria-label="t('upload.dashAll', '完成度')"><i :style="{ width: barPct + '%' }"></i></span>
     <button

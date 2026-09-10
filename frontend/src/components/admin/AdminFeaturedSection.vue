@@ -134,7 +134,7 @@ onMounted(load)
           :placeholder="t('admin.featured.addPh', '搜作品名 / 作者 / slug，选中即加入…')"
           @pick="pickToAdd"
         />
-        <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNote', '新件排在池尾；可在行内上移/置顶调整。重复加入会被后端拒绝。') }}</p>
+        <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNoteInline', '新件排在池尾；可在行内上移/置顶调整。重复加入会被后端拒绝。') }}</p>
       </div>
 
       <div class="feat-list">

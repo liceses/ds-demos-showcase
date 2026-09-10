@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run clean && vue-tsc -b && vite build",
+    "lint": "eslint src tests",
     "lint:css": "stylelint \"src/styles/**/*.css\"",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
@@ -27,13 +28,17 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260817.1",
     "@types/node": "^24.13.3",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "^10.11.0",
     "stylelint": "17.15.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vitest": "5.0.0",
+    "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^3.3.8"
   }
 }
-

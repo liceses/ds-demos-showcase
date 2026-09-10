@@ -59,19 +59,15 @@ export const en = {
     agentHintPrefix: 'AI auto-upload: read ',
     agentHintSuffix: ' then publish',
     entries: {
-      lib: { title: 'Works', desc: 'Search · filter · everything' },
-      explore: { title: 'Explore', desc: 'Models / tasks / tags in one door' },
-      tags: { title: 'Tags', desc: 'Fixed / open / numeric dimensions' },
-      rank: { title: 'Leaderboard', desc: 'Masterpiece / disaster verdicts' },
-      upload: { title: 'Submit', desc: 'Upload your AI web demo' },
-      ann: { title: 'Announcements', desc: 'Project / system · latest news' },
-      enter: 'Enter →',
-      view: 'View →',
+      lib: { title: 'Works' },
+      explore: { title: 'Explore' },
+      tags: { title: 'Tags' },
+      rank: { title: 'Leaderboard' },
+      upload: { title: 'Submit' },
+      ann: { title: 'Announcements' },
     },
     count: {
       demos: '{n} demos',
-      tagValues: '{n} tag values',
-      uploads7d: '{n} in 7d',
     },
     featured: 'Featured',
     shuffle: 'Shuffle',
@@ -112,7 +108,7 @@ export const en = {
       pending: 'items waiting',
     },
     forum: 'Forum →',
-    ann: { project: 'Project announcements', system: 'System announcements' },
+    ann: { system: 'System announcements' },
   },
 
   adminQueues: {
@@ -364,7 +360,7 @@ export const en = {
     },
   },
 
-  // M2-3 全局搜索覆盖层（03 §12.1）：三域并行 Top5 + ⇅/↵/Esc + 诚实空态；⌕/​/​/⌘K 入口
+  // M2-3 全局搜索覆盖层（03 §12.1）：三域并行 Top5 + ⇅/↵/Esc + 诚实空态；⌕///⌘K 入口
   search: {
     title: 'Global search',
     placeholder: 'Search works / models / tasks…',
@@ -666,6 +662,8 @@ export const en = {
     replyPlaceholder: 'Markdown supported…',
     submitReply: 'Post reply',
     loginToReply: 'Log in to reply',
+      loginToComment: 'Log in to comment',
+      hot: 'Hot',
     author: 'Author',
     reputationN: 'Rep {n}',
     followersN: '{n} followers',
@@ -780,6 +778,7 @@ export const en = {
     packFoot: 'Rule-derived, reference only — hover a chip for the evidence, skipping costs you nothing.',
     // —— 三步向导 ——
     dashMust: 'required done',
+      dashFilled: 'items filled',
     dashAll: 'fields filled',
     dashRequired: 'Required',
     dashBetter: 'Worth adding',
@@ -1158,6 +1157,7 @@ export const en = {
       loading: 'Loading pool…',
       poolEmpty: 'Pool is empty — the home page currently falls back to random from all published works (60s batch + “Shuffle”). Adding the first item switches it to curated mode.',
       addPh: 'Search published works by title / author / slug — pick to add…',
+      addNoteInline: 'New items go to the pool tail; reorder them inline below. Duplicates are rejected by the backend.',
       count: '{n} in pool',
       addNote: 'New items go to the end of the pool — use ↑/pin below to reorder. Duplicates are rejected.',
       hero: 'Home hero',
@@ -1361,6 +1361,16 @@ export const en = {
       saveNote: 'Saving writes a server-side audit entry (before/after/actor); renaming auto-converts the old name into an alias.',
       saveNoteTask: 'PUT /admin/tasks/{ident}: changes land an update audit entry.',
       fName: 'Name',
+      fTaskTitle: 'Title',
+      fTaskDesc: 'Task brief',
+      detachNoEntity: 'Cannot detach from this entity',
+      fGroupCurrent: 'Current group',
+      mergeReason: 'Reason (optional)',
+      transTagReasonPh: 'Why this transition — goes into the audit timeline',
+      transTagNote:
+        'Options: candidate/active/deprecated (dedicated endpoint PUT /admin/entities/tag/{id}/status); a reason is required and writes one status_set audit row.',
+      transTagImpact:
+        'Impact: {n} works use this tag; once deprecated it disappears from the public word list, detail pages and cards (it can be revived).',
       fIdent: 'Identifier',
       fStatus: 'Status',
       fVendor: 'Vendor',

@@ -22,11 +22,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: 安装依赖
         run: npm ci
+      - name: 四步门 ⓞ 代码规范（eslint，RF-1 新增）
+        run: npm run lint
       - name: 三步门 ① 类型检查
         run: npm run typecheck
       - name: 三步门 ② CSS 守护（stylelint）
         run: npm run lint:css
-      - name: 冒烟三件（token/对比度/路由快照）
+      - name: 冒烟三件（token/对比度/路由快照）+ i18n 词表完整性
         run: npm run test
       - name: 三步门 ③ 构建
         run: npm run build

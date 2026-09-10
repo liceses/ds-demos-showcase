@@ -379,7 +379,7 @@ async function detachDemo(slug: string) {
       await api.detachTaskDemoBySlug(task.value.slug, slug)
     } else {
       const kv = currentTagKV()
-      if (!kv) throw new Error(t('admin.kc.attachNoEntity', '当前实体无法摘除'))
+      if (!kv) throw new Error(t('admin.kc.detachNoEntity', '当前实体无法摘除'))
       await rewriteDemoTags(slug, (tags) => tags.filter((x) => !(x.key === kv.key && x.value === kv.value)))
     }
     ui.toast(t('admin.kc.detached', '已摘除（detach 审计）'), 'success')
@@ -506,9 +506,9 @@ onMounted(load)
               </div>
             </template>
             <template v-else-if="editing && props.type === 'task'">
-              <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fName', '题名') }}</span><input v-model="editForm.title" class="input" /></label>
+              <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fTaskTitle', '题名') }}</span><input v-model="editForm.title" class="input" /></label>
               <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><input v-model="editForm.category" class="input" /></label>
-              <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><textarea v-model="editForm.description" class="input" rows="2" /></label>
+              <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fTaskDesc', '题面描述') }}</span><textarea v-model="editForm.description" class="input" rows="2" /></label>
               <div class="kc-field kc-wide">
                 <button type="button" class="btn btn-sm btn-primary" :disabled="saving" @click="saveEdit">{{ t('admin.kc.save', '保存') }}</button>
                 <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="editing = false">{{ t('common.cancel', '取消') }}</button>
@@ -544,7 +544,7 @@ onMounted(load)
               </template>
               <template v-else-if="props.type === 'task'">
                 <div class="kc-field"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><span>{{ task?.category || '—' }}</span></div>
-                <div class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fDesc', '题面描述') }}</span><span>{{ task?.description || '—' }}</span></div>
+                <div class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fTaskDesc', '题面描述') }}</span><span>{{ task?.description || '—' }}</span></div>
                 <div class="kc-field kc-wide">
                   <span class="kc-k">{{ t('admin.kc.fPrompt', 'canonical prompt') }}</span>
                   <span class="kc-pending">{{ t('admin.kc.pendingPrompt', '不可直改（核对过 PATCH 白名单）：现库无独立题面字段，「题面摘录」派生自首件作品提示词；如需独立题面=加列协作项') }}</span>
@@ -566,7 +566,7 @@ onMounted(load)
                 </div>
                 <template v-if="tagRow">
                   <div class="kc-field">
-                    <span class="kc-k">{{ t('admin.kc.fGroup', '当前分组') }}</span>
+                    <span class="kc-k">{{ t('admin.kc.fGroupCurrent', '当前分组') }}</span>
                     <span>{{ tagRow.value.group || t('admin.kc.noGroup', '（无分组）') }}</span>
                   </div>
                   <div class="kc-field kc-wide">
@@ -621,7 +621,7 @@ onMounted(load)
               />
               <span v-if="mergeTargetPick" class="mono">{{ mergeTargetPick.label }}</span>
             </div>
-            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.transReason', '理由（可选）') }}</span><input v-model="mergeReason" class="input" :placeholder="t('admin.kc.transReasonPh', '会进入审计时间线')" /></label>
+            <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.mergeReason', '理由（可选）') }}</span><input v-model="mergeReason" class="input" :placeholder="t('admin.kc.transTagReasonPh', '会进入审计时间线')" /></label>
             <div class="kc-field kc-wide">
               <button type="button" class="btn btn-sm btn-outline" :disabled="mergeBusy || mergeTargetPick == null || mergePreview != null" @click="dryRunMerge">{{ t('admin.kc.mergePreview', 'dry_run 预览') }}</button>
               <button type="button" class="btn btn-sm btn-primary" :disabled="mergeBusy || mergePreview == null" @click="doMerge">{{ t('admin.kc.mergeConfirm', '确认合并') }}</button>
@@ -694,7 +694,7 @@ onMounted(load)
               class="input"
               rows="2"
               style="max-width: 420px"
-              :placeholder="t('admin.kc.transReasonPh', '跃迁理由——写入审计时间线')"
+              :placeholder="t('admin.kc.transReasonPh', '为什么跃迁——会进入审计时间线')"
             ></textarea></label>
             <div class="kc-field kc-wide">
               <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>
@@ -726,7 +726,7 @@ onMounted(load)
               class="input"
               rows="2"
               style="max-width: 420px"
-              :placeholder="t('admin.kc.transReasonPh', '跃迁理由——写入审计时间线')"
+              :placeholder="t('admin.kc.transReasonPh', '为什么跃迁——会进入审计时间线')"
             ></textarea></label>
             <div class="kc-field kc-wide">
               <button type="button" class="btn btn-sm btn-primary" :disabled="saving || !transStatus || !transReason.trim()" @click="doTransition">{{ t('admin.kc.transGo', '执行跃迁') }}</button>

@@ -113,7 +113,7 @@ const {
 
 // ---------- §4.2 标签建议包（T15 拆分件 useTagSuggest；逐字迁出行为不变） ----------
 const {
-  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack,
+  pack, packLoading, packIgnored, packVisible, addSuggestion, addAllSuggestions, bringBackPack, ignorePack,
 } = useTagSuggest({ editSlug, title, description, prompt, selected, stamp, aside })
 
 // 向导状态机（T15 拆分件 useUploadWizard）
@@ -688,6 +688,7 @@ async function submit() {
           @add-suggestion="addSuggestion"
           @add-all-suggestions="addAllSuggestions"
           @bring-back-pack="bringBackPack"
+          @ignore-pack="ignorePack"
           @draw-task="drawTask"
           @cover-change="onCoverChange"
           @clear-cover="clearCover"

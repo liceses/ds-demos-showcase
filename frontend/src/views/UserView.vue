@@ -32,7 +32,7 @@ async function toggleFollow() {
     profile.value.is_following = r.following
     profile.value.follower_count = r.followers_count
     profile.value.following_count = r.following_count
-  } catch (e) {
+  } catch {
     // 静默
   }
 }

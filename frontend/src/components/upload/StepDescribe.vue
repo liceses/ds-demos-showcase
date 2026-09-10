@@ -55,6 +55,8 @@ defineProps<{
   selectedCount: number
 }>()
 const emit = defineEmits<{
+  // RF-1：packIgnored 是父级状态，子组件只能请求，不能直改 prop
+  ignorePack: []
   pickTask: [x: TaskSuggestItem]
   clearTask: []
   openTaskPicker: []
@@ -192,7 +194,7 @@ function onTaskEntityPick(p: EntityPick) {
         <b>{{ t('upload.packTitle', '根据你的描述，这些标签可能合适') }}</b>
         <span v-if="packLoading" class="muted mono">…</span>
         <button class="btn btn-sm btn-primary" type="button" @click="emit('addAllSuggestions')">{{ t('upload.packAll', '全部收下') }}</button>
-        <button class="btn btn-sm btn-outline" type="button" @click="packIgnored = true">{{ t('upload.packHide', '不用了') }}</button>
+        <button class="btn btn-sm btn-outline" type="button" @click="emit('ignorePack')">{{ t('upload.packHide', '不用了') }}</button>
       </div>
       <div class="pack-list">
         <button v-for="s in packVisible" :key="s.key + ':' + s.value" type="button" class="pack-chip" :title="`${s.reason}（${t('upload.packConf', '置信')} ${Math.round(s.confidence * 100)}%）`" @click="emit('addSuggestion', s)">

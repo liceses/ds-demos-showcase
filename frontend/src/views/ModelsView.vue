@@ -29,7 +29,7 @@ const sorts = [
   { key: 'demos', label: () => t('models.sortDemos', '作品最多') },
   { key: 'score', label: () => t('models.sortRating', '社区分最高') },
   { key: 'votes', label: () => t('models.sortVotes', '最多票') },
-  { key: 'new', label: () => t('models.sortNew', '最新收录') },
+  { key: 'new', label: () => t('models.sortNew', '最新') },
   { key: 'name', label: () => t('models.sortName', '名称') },
 ] as const
 

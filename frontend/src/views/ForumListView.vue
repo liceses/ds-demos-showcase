@@ -138,7 +138,7 @@ watch(
       <span class="forum-toolbar-sep" aria-hidden="true"></span>
       <div class="tabs forum-sort-group" style="margin: 0">
         <button class="tab" :class="{ active: sort === 'newest' }" type="button" @click="sort = 'newest'; apply()">{{ t('demos.newest', '最新') }}</button>
-        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">{{ t('demos.hot', '热门') }}</button>
+        <button class="tab" :class="{ active: sort === 'popular' }" type="button" @click="sort = 'popular'; apply()">{{ t('forum.hot', '热门') }}</button>
         <button class="tab" :class="{ active: sort === 'replies' }" type="button" @click="sort = 'replies'; apply()">{{ t('forum.sortReplies', '回复') }}</button>
         <button class="tab" :class="{ active: sort === 'hot' }" type="button" @click="sort = 'hot'; apply()">{{ t('forum.sortHeat', '热度') }}</button>
         <button class="btn btn-sm btn-outline" type="button" @click="sideOpen = !sideOpen">{{ sideOpen ? t('forum.hideSide', '收起侧栏') : t('forum.showSide', '展开侧栏') }}</button>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 defineOptions({ name: 'DemosView' })
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useLoadGeneration } from '../composables/useLoadGeneration'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
 import { tagLabel } from '../utils/funMode'
 import { guessVendor } from '../utils/tagGroups'
 import { chipLabel, intBounds, intBoundsOf, quickPresets, vendorDot } from '../utils/demoFacets'
+import { useDemoFilters } from '../composables/useDemoFilters'
 import type { QuickPreset } from '../utils/demoFacets'
 import { t, keyLabel, vendorLabel } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
@@ -18,32 +18,25 @@ import TagTip from '../components/TagTip.vue'
 
 const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
-const selectedTags = ref<string[]>([])
-const q = ref('')
-// v2：模型实体过滤（?model=slug，来自模型页「查看全部」）
-const modelFilter = ref('')
-const submittedQ = ref('')
-const sort = ref<'newest' | 'popular' | 'random'>('newest')
-const cardMode = ref<'normal' | 'prompt'>(localStorage.getItem('ds_card_mode') === 'prompt' ? 'prompt' : 'normal')
-const route = useRoute()
-const router = useRouter()
 
-// 状态同步到 URL query（搜索/标签/排序可分享、可刷新还原）
-function syncQuery() {
-  const query: Record<string, string> = {}
-  if (submittedQ.value) query.q = submittedQ.value
-  if (selectedTags.value.length) query.tag = selectedTags.value.join(',')
-  if (modelFilter.value) query.model = modelFilter.value
-  if (sort.value !== 'newest') query.sort = sort.value
-  router.replace({ query })
-}
+// RF-4e：筛选状态 + URL 双向同步抽到 useDemoFilters（可单测；onChange 即原来的 reset()）
+const {
+  selectedTags,
+  q,
+  submittedQ,
+  modelFilter,
+  sort,
+  cardMode,
+  intRange,
+  facetCount,
+  syncQuery,
+  applyRouteQuery,
+  apply: applyFilters,
+  setCardMode,
+  initIntRanges,
+} = useDemoFilters({ onChange: () => reset() })
 
-function setCardMode(m: 'normal' | 'prompt') {
-  if (cardMode.value === m) return
-  cardMode.value = m
-  localStorage.setItem('ds_card_mode', m)
-  reset()
-}
+
 const page = ref(1)
 const pageSize = 12
 const total = ref(0)
@@ -283,7 +276,6 @@ function techValues(g: FilterGroup) {
 }
 
 // 数值键：快捷档与范围计算已下沉到 utils/demoFacets（可单测）
-const intRange = ref<Record<string, { lo: number; hi: number }>>({})
 
 function activeRangeOf(k: FilterGroup) {
   return selectedTags.value.find((t) => t.startsWith(k.key + ':')) || ''
@@ -298,14 +290,12 @@ function applyIntRange(k: FilterGroup) {
   if (r.lo <= r.hi) {
     selectedTags.value.push(`${k.key}:${r.lo}-${r.hi}`)
   }
-  reset()
-  syncQuery()
+  applyFilters()
 }
 function clearIntRange(k: FilterGroup) {
   intRange.value = { ...intRange.value, [k.key]: intBounds(k) }
   selectedTags.value = selectedTags.value.filter((t) => !t.startsWith(k.key + ':'))
-  reset()
-  syncQuery()
+  applyFilters()
 }
 function applyPreset(k: FilterGroup, p: QuickPreset) {
   intRange.value = { ...intRange.value, [k.key]: { lo: p.lo, hi: p.hi } }
@@ -317,19 +307,14 @@ function applyPreset(k: FilterGroup, p: QuickPreset) {
 function clearTags() {
   selectedTags.value = []
   modelFilter.value = ''
-  reset()
-  syncQuery()
+  applyFilters()
 }
 
 // 已选 chips 摘要（03 §4.2-1）已下沉到 utils/demoFacets.chipLabel
 function clearModelFilter() {
   modelFilter.value = ''
-  reset()
-  syncQuery()
+  applyFilters()
 }
-
-// 筛选计数（按钮「筛选(N)」与抽屉头「已选 N」同一口径：标签键值 + 模型实体）
-const facetCount = computed(() => selectedTags.value.length + (modelFilter.value ? 1 : 0))
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -394,8 +379,7 @@ function toggleTag(tg: string) {
   const i = selectedTags.value.indexOf(tg)
   if (i >= 0) selectedTags.value.splice(i, 1)
   else selectedTags.value.push(tg)
-  reset()
-  syncQuery()
+  applyFilters()
 }
 // 抽屉内点值 = 应用即收（移动端）：打上一个条件就回列表看结果（03 §4.2-6）。
 // 只在「新增」时收——取消勾选是整理动作，留在抽屉里继续调更顺
@@ -406,8 +390,7 @@ function pickTag(tg: string) {
 }
 
 function applySort() {
-  reset()
-  syncQuery()
+  applyFilters()
 }
 
 // 显式提交搜索：只有回车 / 点「搜索」才触发请求
@@ -422,8 +405,7 @@ function submitSearch() {
     return
   }
   submittedQ.value = next
-  reset()
-  syncQuery()
+  applyFilters()
 }
 
 function clearSearch() {
@@ -465,29 +447,6 @@ const askForumTo = computed(() => {
   return { path: '/forum/new', query: { title } }
 })
 
-/** 从 URL query 还原筛选状态；返回"是否真的变了"。
- *  必须幂等：本页自己也会写 query（第 34 行），监听器不能把自家写入再当成一次新导航。 */
-function applyRouteQuery(): boolean {
-  const qq = typeof route.query.q === 'string' ? route.query.q : ''
-  const tagQ = typeof route.query.tag === 'string' ? route.query.tag : ''
-  const modelQ = typeof route.query.model === 'string' ? route.query.model : ''
-  const sortQ = route.query.sort === 'popular' || route.query.sort === 'random' ? (route.query.sort as 'popular' | 'random') : sort.value
-  const nextTags = tagQ ? tagQ.split(',').filter(Boolean) : selectedTags.value
-  const changed =
-    qq !== submittedQ.value ||
-    modelQ !== modelFilter.value ||
-    sortQ !== sort.value ||
-    nextTags.join(',') !== selectedTags.value.join(',')
-  if (!changed) return false
-  if (qq) {
-    q.value = qq
-    submittedQ.value = qq
-  }
-  if (tagQ) selectedTags.value = nextTags
-  modelFilter.value = modelQ
-  sort.value = sortQ
-  return true
-}
 
 onMounted(async () => {
   // 从 URL query 还原状态
@@ -497,9 +456,7 @@ onMounted(async () => {
   } catch {
     tagKeys.value = []
   }
-  for (const k of tagKeys.value) {
-    if (k.mode === 'int' && !intRange.value[k.key]) intRange.value[k.key] = intBoundsOf(k.min, k.max, k.values)
-  }
+  initIntRanges(tagKeys.value, intBoundsOf)
   await load(true)
   observer = new IntersectionObserver(
     (entries) => {
@@ -514,13 +471,6 @@ onMounted(async () => {
   if (sentinel.value) observer.observe(sentinel.value)
 })
 
-// pageKey 不再包含 query（同路径换筛选不重挂），所以外部链接跳来本页时靠这里同步
-watch(
-  () => [route.query.q, route.query.tag, route.query.model, route.query.sort].join('|'),
-  () => {
-    if (applyRouteQuery()) reset()
-  },
-)
 
 onBeforeUnmount(() => observer?.disconnect())
 </script>

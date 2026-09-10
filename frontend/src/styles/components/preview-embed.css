@@ -1,5 +1,6 @@
 /* ---------- iframe 预览 ---------- */
 .preview-shell {
+  position: relative;
   width: 100%;
   min-width: 0;
 }
@@ -11,5 +12,21 @@
   border: var(--border-w) solid var(--ink);
   background: var(--paper);
   display: block;
+}
+
+/* 键盘焦点提示（坑五）：跨源 iframe 未持焦点时 demo 收不到键盘（WASD 失效）。
+   pointer-events:none —— 点击必须穿透到 iframe 本身，只有真实点击浏览器才交焦点。 */
+.preview-focus-hint {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  padding: 4px 10px;
+  background: var(--yellow);
+  color: var(--on-accent, #000);
+  border: 3px solid var(--ink);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
 }
 

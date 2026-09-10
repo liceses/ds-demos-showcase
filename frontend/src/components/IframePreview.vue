@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useUiStore } from '../stores/ui'
+import { t } from '../i18n'
 import { lockBodyScroll, unlockBodyScroll } from '../composables/useBodyScrollLock'
 
 const props = defineProps<{
@@ -17,6 +18,36 @@ const ui = useUiStore()
 const frame = ref<HTMLIFrameElement | null>(null)
 const autoHeight = ref<number | null>(null)
 const webFullscreen = ref(false)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 键盘焦点（docs/预览架构与排坑记录.md 坑五）：demo 的 WASD 等操作依赖 iframe 内
+// window 的 keydown，而键盘事件只送到「持有焦点的文档」。跨源预览 iframe 默认没有焦点，
+// 于是 WASD 静默失效（点一下预览才恢复）。实测结论（CDP 探针，Edge 152）：
+//   · 父页面持焦点 → iframe 内的 keydown 监听收不到（input.keys 无变化）
+//   · 用户真实点击预览 → 焦点进入 iframe → 按键生效
+//   · 程序化 iframe.focus() → document.hasFocus() 变 true，但按键仍不生效 ⇒ 不可依赖
+// 因此这里**不抢焦点**，只做诚实提示：提示层 pointer-events:none，点击穿透到 iframe
+// 本身（真实点击＝浏览器原生交焦点）。判定式=父文档 activeElement 指向 iframe 元素，
+// 事件只作触发器（window focus/blur + document focusin/focusout + 指针按下后校准）。
+const kbFocused = ref(false)
+const frameLoaded = ref(false)
+/** 触屏无键盘：不显示该提示（(hover:none) 与站点触屏判定同源） */
+const hoverCapable = !matchMedia('(hover: none)').matches
+const showFocusHint = computed(() => hoverCapable && frameLoaded.value && !kbFocused.value)
+
+function syncFocus() {
+  kbFocused.value = !!frame.value && document.activeElement === frame.value
+}
+function onShellPointerDown() {
+  // 指针按下之后浏览器才执行「聚焦」默认动作：本帧末 + 稍后各校准一次（不引轮询）
+  setTimeout(syncFocus, 0)
+  setTimeout(syncFocus, 150)
+}
+function onFrameLoad() {
+  frameLoaded.value = true
+  syncFocus()
+  emit('loaded')
+}
 
 // sandbox：预览源与本站不同源（如 demo.deepdemos.top / OSS 直链）时，加 allow-same-origin，
 // 让 demo 的 localStorage / 相对 fetch / Worker 可用且彼此隔离在预览源内；
@@ -165,18 +196,28 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener('message', onMessage)
   window.addEventListener('keydown', onKeydown)
+  // 焦点进出预览（含焦点移到 iframe / 回到父页面 / 切走窗口）都要重算提示
+  window.addEventListener('focus', syncFocus)
+  window.addEventListener('blur', syncFocus)
+  document.addEventListener('focusin', syncFocus)
+  document.addEventListener('focusout', syncFocus)
+  syncFocus()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('message', onMessage)
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('focus', syncFocus)
+  window.removeEventListener('blur', syncFocus)
+  document.removeEventListener('focusin', syncFocus)
+  document.removeEventListener('focusout', syncFocus)
   // RF-2：只释放自己持有的那一次锁（旧写法无条件清空，会解掉搜索覆盖层等别人的锁）
   if (webFullscreen.value) unlockBodyScroll()
 })
 </script>
 
 <template>
-  <div class="preview-shell" :class="{ 'web-fullscreen': webFullscreen }">
+  <div class="preview-shell" :class="{ 'web-fullscreen': webFullscreen }" @pointerdown="onShellPointerDown">
     <iframe
       ref="frame"
       class="preview-frame"
@@ -189,8 +230,12 @@ onBeforeUnmount(() => {
       allow="fullscreen"
       loading="eager"
       @dblclick="toggleIframeFullscreen"
-      @load="emit('loaded')"
+      @load="onFrameLoad"
     ></iframe>
+    <!-- 键盘焦点提示（坑五）：pointer-events:none，点击穿透到 iframe —— 真实点击才交得出焦点 -->
+    <div v-if="showFocusHint" class="preview-focus-hint mono" aria-hidden="true">
+      {{ t('demo.previewKbHint', '点击预览后，键盘操作才生效') }}
+    </div>
     <div class="preview-hint mono">
       {{ webFullscreen ? '按 G / ESC 退出网页全屏' : '按 F 全屏 · 按 G 网页全屏 · ESC 退出' }}
     </div>

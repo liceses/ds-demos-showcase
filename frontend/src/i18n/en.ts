@@ -568,6 +568,7 @@ export const en = {
     openExternal: 'Open in external browser',
     tapToPlay: 'Tap to play',
     playHint: 'Tap to play preview',
+    previewKbHint: 'Click the preview to use the keyboard',
     barFullscreen: 'Fullscreen',
     barExitFs: 'Exit fullscreen',
     barRestart: 'Replay',

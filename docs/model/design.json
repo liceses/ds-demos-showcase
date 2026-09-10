@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "status": "draft",
-  "updatedAt": "2026-09-10T09:05:27.892Z",
-  "approvedAt": null,
-  "approvedBy": null,
-  "note": "RF-1..RF-6：对整个前端（202 文件/32,316 行）分阶段重构。体检证据：无 ESLint、12 个单测、5 个死组件（0 import）、22 个 admin 面板各写样板而 useListPage 抽象已存在却没推广、i18n 1306 处双份文案、CSS 74 文件同名类多文件重复定义（.markdown-body×33 等）、类型逃逸仅 19 处（非主要矛盾）、astra/ 健康不动。顺带修三处实证缺陷：DemosView 筛选不刷新的真 bug（loading 被当互斥锁 + reset 早退）、三处防抖缺竞态守卫（旧响应覆盖新结果，模型战绩显示别的模型名）、adminQueues 6/7 队列不报错（错误态冒充空态）。不做：框架/状态库/路由重写、设计系统重做。既有 KC-1..KB-33 全部 implemented（见 KB-1 条目汇总）。",
+  "status": "approved",
+  "updatedAt": "2026-09-10T12:54:30.671Z",
+  "approvedAt": "2026-09-10T12:54:30.671Z",
+  "approvedBy": "user",
+  "note": "",
   "cim": [
     {
       "id": "KC-1",
@@ -64,7 +64,7 @@
       "id": "KB-14",
       "title": "随机排序遵守筛选",
       "acceptance": "sort=random 与各筛选组合时 items 落在筛选集内",
-      "status": "draft"
+      "status": "approved"
     },
     {
       "id": "KB-15",
@@ -184,37 +184,37 @@
       "id": "RF-1",
       "title": "重构安全网（ESLint + 单测）",
       "acceptance": "ESLint（eslint+plugin-vue+@typescript-eslint，先只开 error 级）接入 ci.yml 成第四道门；补纯逻辑单测（utils/composables 纯函数/i18n 键完整性/api 路径拼装）；单测 12 → ≥40；lint 与 test 本地与 CI 全绿",
-      "status": "draft"
+      "status": "approved"
     },
     {
       "id": "RF-2",
       "title": "清死代码 + 修无争议缺陷",
       "acceptance": "删 5 个零引用组件与死 API 包装；修 HomeView 定时器泄漏（离开首页不再被 router.push 抢导航）；adminQueues 7 个队列都上报 error（接口挂了不再显示为 0 件待办）；新增 useBodyScrollLock（搜索/全屏 iframe/详情底栏不再互踩）",
-      "status": "draft"
+      "status": "approved"
     },
     {
       "id": "RF-3",
       "title": "采纳既有抽象",
       "acceptance": "useListPage/useAdminList 推广到 22 个 admin 面板（删各自 loading/error/load/onMounted 样板）；新增 useDebouncedFetch（内建竞态守卫）并先迁缺守卫的 3 处（useTagSuggest/useTaskMount/useUploadPlayable）；新增 useSelectedTags 收敛 5 份派生",
-      "status": "draft"
+      "status": "approved"
     },
     {
       "id": "RF-4",
       "title": "拆上帝组件",
       "acceptance": "DemosView 拆 useDemoFilters + utils/demoFacets，并用世代号修掉「首屏加载期间点筛选/搜索/排序/清空不刷新」的真 bug（不得只删早退）；HomeView 拆打字机与区块；DemoView 首屏并行请求+推荐流竞态守卫+v-for 内 filter 改 computed；SearchOverlay 改 v-for 单模板+一次 groupBy；AdminEntityDetailSection 按 Model/Task/Tag 拆表单",
-      "status": "draft"
+      "status": "approved"
     },
     {
       "id": "RF-5",
       "title": "契约与文案收敛",
       "acceptance": "mock.ts 从 2419 行手写镜像降为最小契约 mock + 类型约束防漂移；i18n 中文收敛为 zh 单一来源并加键完整性测试；api/index.ts 按资源拆分、index 聚合导出且保留现有调用面",
-      "status": "draft"
+      "status": "approved"
     },
     {
       "id": "RF-6",
       "title": "CSS 收敛",
       "acceptance": "合并同页分层 CSS（demo-detail/demo-view/demo-next、home/home-lobby、forum/forum-lite、upload×4、skeleton×2、markdown×2）；消除同名类多文件重复定义；stylelint 加规则防新增覆盖；人工抽查首页/列表/详情/上传/论坛/管理台六面视觉无回退",
-      "status": "draft"
+      "status": "approved"
     }
   ],
   "modules": [

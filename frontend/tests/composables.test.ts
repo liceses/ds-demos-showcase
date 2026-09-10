@@ -6,6 +6,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { useLocalPagination } from '../src/composables/useLocalPagination'
 import { useDebouncedFetch } from '../src/composables/useDebouncedFetch'
+import { useSelectedTags } from '../src/composables/useSelectedTags'
 import { bodyScrollLockCount, lockBodyScroll, unlockBodyScroll } from '../src/composables/useBodyScrollLock'
 
 describe('useLocalPagination', () => {
@@ -139,5 +140,42 @@ describe('useDebouncedFetch：竞态守卫（RF-3 修掉的三处串台 bug 的�
     expect(calls).toBe(0)
     expect(result.value).toBe('')
     vi.useRealTimers()
+  })
+})
+
+describe('useSelectedTags：已选标签的派生（RF-3c 收敛的四处展平）', () => {
+  it('展平成带 key 的行，count 与 tags 串同源', () => {
+    const selected = ref({
+      model: [{ value: 'dsv4-flash', description: '' }],
+      type: [{ value: 'demo', description: '' }, { value: 'game', description: '' }],
+    })
+    const { list, count, tags, modelNames, valuesOf } = useSelectedTags(selected)
+    expect(count.value).toBe(3)
+    expect(list.value.map((r) => `${r.key}:${r.value}`)).toEqual(['model:dsv4-flash', 'type:demo', 'type:game'])
+    expect(tags.value).toEqual(['model:dsv4-flash', 'type:demo', 'type:game'])
+    expect(modelNames.value).toEqual(['dsv4-flash'])
+    expect(valuesOf('type')).toEqual(['demo', 'game'])
+    expect(valuesOf('nope')).toEqual([])
+  })
+
+  it('has 判定按 key 限定（不同 key 的同名值不互相命中）', () => {
+    const selected = ref({ model: [{ value: 'demo' }], type: [{ value: 'demo' }] })
+    const { has } = useSelectedTags(selected)
+    expect(has('type', 'demo')).toBe(true)
+    expect(has('model', 'demo')).toBe(true)
+    expect(has('preset', 'demo')).toBe(false)
+  })
+
+  it('toMap 与 list 往返一致（v-model setter 依赖这个不变量）', () => {
+    const selected = ref({ model: [{ value: 'a', description: 'x' }] })
+    const { list, toMap } = useSelectedTags(selected)
+    const back = toMap(list.value)
+    expect(back).toEqual({ model: [{ value: 'a', description: 'x' }] })
+  })
+
+  it('空 map 不报错（派生值都为空）', () => {
+    const { list, count, tags, modelNames } = useSelectedTags(ref({}))
+    expect([list.value, tags.value, modelNames.value]).toEqual([[], [], []])
+    expect(count.value).toBe(0)
   })
 })

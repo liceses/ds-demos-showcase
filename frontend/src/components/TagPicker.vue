@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { useTagsStore } from '../stores/tags'
 import { t } from '../i18n'
+import { useSelectedTags } from '../composables/useSelectedTags'
 import TagTip from './TagTip.vue'
 import type { TagKeyInfo, TagKeyValue } from '../api/types'
 import { tagLabel } from '../utils/funMode'
@@ -105,10 +106,8 @@ function clearAll() {
 const inputs = ref<Record<string, { value: string; description: string }>>({})
 const tagErrors = ref<Record<string, string>>({})
 
-const selectedCount = computed(() => Object.values(selected.value).reduce((n, arr) => n + arr.length, 0))
-const selectedList = computed(() =>
-  Object.values(selected.value).flat().map((p) => ({ key: p.key, value: p.value, description: p.description })),
-)
+// RF-3c：与上传页/向导共用同一份派生（原先三处各展平一遍）
+const { count: selectedCount, list: selectedList } = useSelectedTags(selected)
 
 const searchActive = computed(() => tagSearch.value.trim().length > 0)
 // §4.5 tier 驱动：核心键（tier1，如 model）排在最前并标「必选」，扩展键沉底

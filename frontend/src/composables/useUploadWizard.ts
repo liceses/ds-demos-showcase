@@ -5,6 +5,7 @@ import type { ComputedRef, Ref } from 'vue'
 import type { TagKeyInfo } from '../api/types'
 import { t } from '../i18n'
 import { tagLabel } from '../utils/funMode'
+import { useSelectedTags } from './useSelectedTags'
 
 type DemoType = 'web' | 'zip' | 'link'
 type SelectedMap = Record<string, { value: string; description: string }[]>
@@ -168,7 +169,7 @@ export function useUploadWizard(deps: {
       { label: t('upload.sumTitle', '标题'), value: deps.title.value || '—', step: 3 },
       { label: t('upload.sumDesc', '描述'), value: deps.description.value || '—', step: 3 },
       { label: t('upload.sumPrompt', '提示词'), value: clip(deps.prompt.value), mono: true, step: 3 },
-      { label: t('upload.sumTags', '标签'), value: selectedList.value.map((s) => `${s.key}:${s.value}`).join(' · ') || '—', step: 3 },
+      { label: t('upload.sumTags', '标签'), value: selectedTagPairs.value.join(' · ') || '—', step: 3 },
     ]
   })
 
@@ -187,11 +188,8 @@ export function useUploadWizard(deps: {
   const typeLabelNow = computed(() => typeOptions.value.find((o) => o.value === deps.demoType.value)?.label || deps.demoType.value)
   const barPct = computed(() => Math.round((allDone.value / Math.max(1, checklist.value.length)) * 100))
 
-  const selectedList = computed(() =>
-    Object.entries(deps.selected.value).flatMap(([key, values]) =>
-      values.map((x) => ({ key, value: x.value, description: x.description })),
-    ),
-  )
+  // RF-3c：与上传页/TagPicker 共用同一份派生（原先三处各展平一遍）
+  const { list: selectedList, tags: selectedTagPairs } = useSelectedTags(deps.selected)
 
   // 步骤 2 的型号搜索：只搜精确型号，兜底值不混进主路径（它们各有独立出口）
   const modelQuery = ref('')

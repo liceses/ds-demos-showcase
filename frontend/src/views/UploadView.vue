@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
+import { useSelectedTags } from '../composables/useSelectedTags'
 import { useAuthStore } from '../stores/auth'
 import { useTagsStore } from '../stores/tags'
 import { useUiStore } from '../stores/ui'
@@ -55,20 +56,19 @@ const selected = ref<Record<string, { value: string; description: string }[]>>({
 const initialTagsKey = ref('')
 const tagsOpen = ref(false)
 
+// RF-3c：展平/计数/型号名统一由 useSelectedTags 派生（原先四处各写一遍）
+const {
+  list: selectedTagList,
+  count: selectedCount,
+  modelNames: chosenModelNames,
+  toMap: selectedToMap,
+} = useSelectedTags(selected)
 const selectedTags = computed<TagPick[]>({
-  get: () =>
-    Object.entries(selected.value).flatMap(([key, values]) =>
-      values.map((x) => ({ key, value: x.value, description: x.description })),
-    ),
+  get: () => selectedTagList.value as TagPick[],
   set: (arr) => {
-    const map: Record<string, { value: string; description: string }[]> = {}
-    for (const t of arr) {
-      ;(map[t.key] = map[t.key] || []).push({ value: t.value, description: t.description || '' })
-    }
-    selected.value = map
+    selected.value = selectedToMap(arr)
   },
 })
-const selectedCount = computed(() => Object.values(selected.value).reduce((n, arr) => n + arr.length, 0))
 // 上传场景标签申请（闭环 A）：TagPicker 在 defer 模式下把新 fixed 值留本地待审（此数组为受控源），
 // 不入 selected/tags JSON；createDemo 成功拿到 demo_id 后，再逐个 suggestTagValue，然后清空。
 const pendingTagApplies = ref<TagPick[]>([])
@@ -85,7 +85,6 @@ const modelUncertain = computed(() =>
 )
 const modelHint = ref('')
 // chosenModelNames：selected['model'] 的派生（useUploadPlayable 与 useUploadWizard 共同消费）
-const chosenModelNames = computed(() => (selected.value['model'] || []).map((m) => m.value))
 /** 标签至少 1 个：与后端 `_require_model_tag`/tags≥1 同规则（模型已含在 tags 内时自然满足）——
  *  提前声明：useUploadWizard 的 readyToSubmit 以 dep 消费 */
 const tagsOk = computed(() => selectedCount.value >= 1)

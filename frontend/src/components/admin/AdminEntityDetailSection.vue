@@ -18,9 +18,9 @@ import { useRouter } from 'vue-router'
 import { api } from '../../api'
 import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
-import EntityStamp from '../EntityStamp.vue'
 import AdminEntityAuditTimeline from './AdminEntityAuditTimeline.vue'
 import AdminEntityRelationSection from './AdminEntityRelationSection.vue'
+import AdminEntitySummarySection from './AdminEntitySummarySection.vue'
 import AdminEntityLifecycleSection from './AdminEntityLifecycleSection.vue'
 import AdminEntityWorksSection from './AdminEntityWorksSection.vue'
 import LoadingRow from '../LoadingRow.vue'
@@ -45,18 +45,11 @@ const error = ref('')
 const model = ref<ModelDetail | null>(null)
 const task = ref<AdminTaskDetail | null>(null)
 const tagRow = ref<{ keyLabel: string; value: { id?: number; value: string; description: string; demo_count: number; group?: string | null; status?: string } } | null>(null)
-// RF-4b：Tag 分组草稿（与 tagDescDraft 同范式：草稿≠真值，失败可回滚）
-const groupDraft = ref('')
 const audit = ref<AuditEntry[]>([])
 const works = ref<Array<{ slug: string; title: string; rating_avg?: number | null; status?: string; id?: number }>>([])
 
-const editing = ref(false)
-const editForm = ref<{ name?: string; vendor?: string; description?: string; title?: string; category?: string }>({})
 const saving = ref(false)
 // Tag description 直改状态（①tag.description 白名单解锁）
-const tagDescEditing = ref(false)
-const tagDescDraft = ref('')
-const tagDescSaving = ref(false)
 
 const statusZh: Record<string, string> = {
   candidate: '候选',
@@ -84,7 +77,6 @@ function goTab(tab: string) {
 async function load() {
   loading.value = true
   error.value = ''
-  editing.value = false
   audit.value = []
   works.value = []
   try {
@@ -110,7 +102,6 @@ async function load() {
       const v = k?.values.find((x) => String(x.id ?? '') === props.id)
       if (!v) throw new Error(t('admin.kc.tagNotFound', '标签值不存在或已被移除'))
       tagRow.value = { keyLabel: k?.label || props.tagKey || '-', value: v }
-      groupDraft.value = v.group || '' // RF-4b：草稿与真值分离，「当前分组」显示服务端真值
       const [a, w] = await Promise.all([
         api.getAudit({ entity_type: 'tag', entity_id: v.id ?? 0, page_size: 20 }).catch(() => ({ items: [] as AuditEntry[] })),
         api.listDemos({ tags: [`${props.tagKey}:${v.value}`], status: 'approved', page_size: 12 }).catch(() => ({ items: [] as DemoSummary[] })),
@@ -122,46 +113,6 @@ async function load() {
     error.value = (e as Error).message
   } finally {
     loading.value = false
-  }
-}
-
-// ---- 直改：自由字段编辑（保存即服务端审计） ----
-function startEdit() {
-  if (props.type === 'model' && model.value) {
-    editForm.value = { name: model.value.name, vendor: model.value.vendor || '', description: model.value.description || '' }
-  } else if (props.type === 'task' && task.value) {
-    editForm.value = { title: task.value.title, description: task.value.description || '', category: task.value.category || '' }
-  }
-  editing.value = true
-}
-
-async function saveEdit() {
-  if (saving.value) return
-  saving.value = true
-  try {
-    if (props.type === 'model' && model.value) {
-      await api.updateModel(model.value.slug, {
-        name: editForm.value.name?.trim(),
-        vendor: editForm.value.vendor || undefined,
-        description: editForm.value.description || '',
-      })
-      ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
-      emit('saved')
-    } else if (props.type === 'task' && task.value) {
-      await api.updateTask(task.value.slug, {
-        title: editForm.value.title?.trim(),
-        description: editForm.value.description || '',
-        category: editForm.value.category || null,
-      })
-      ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
-      emit('saved')
-    }
-    editing.value = false
-    await load()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    saving.value = false
   }
 }
 
@@ -234,7 +185,6 @@ async function deleteEntity() {
   }
 }
 
-// ---- 直改：Tag 分组（自由格，既有端点） ----
 /**
  * 保存分组（RF-4b 修 bug）。
  * 旧实现：输入框与只读的「当前分组」绑的是**同一个对象**（都读 tagRow.value.group），
@@ -242,53 +192,6 @@ async function deleteEntity() {
  * 界面会一直显示一个并未落库的分组。
  * 现在：草稿独立（groupDraft），成功由 load() 拉回服务端真值，失败回滚草稿。
  */
-async function saveGroup() {
-  const v = tagRow.value?.value
-  if (!v?.id || saving.value) return
-  const next = groupDraft.value.trim() || null
-  saving.value = true
-  try {
-    await api.setTagGroup(v.id, next)
-    ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
-    emit('saved')
-    await load() // 真值回填（同一次 load 也会把草稿对齐到服务端结果）
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-    groupDraft.value = v.group || '' // 回滚：别让界面停在一个没落库的分组上
-  } finally {
-    saving.value = false
-  }
-}
-
-/** 放弃改动：草稿回到服务端真值 */
-function resetGroupDraft() {
-  groupDraft.value = tagRow.value?.value.group || ''
-}
-
-// ---- M3-B5 Tag description 直改（①tag.description 白名单） ----
-function startTagDesc() {
-  tagDescDraft.value = tagRow.value?.value.description || ''
-  tagDescEditing.value = true
-}
-
-async function saveTagDesc() {
-  const v = tagRow.value?.value
-  const tagId = v?.id
-  if (!tagId || tagDescSaving.value) return
-  tagDescSaving.value = true
-  try {
-    await api.patchEntity('tag', tagId, { description: tagDescDraft.value })
-    ui.toast(t('admin.kc.saved', '已保存（服务端已落审计）'), 'success')
-    tagDescEditing.value = false
-    emit('saved')
-    await load()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    tagDescSaving.value = false
-  }
-}
-
 watch(() => [props.type, props.id, props.tagKey], () => {
   void load()
 })
@@ -296,6 +199,12 @@ watch(() => [props.type, props.id, props.tagKey], () => {
  * ⑤ 子组件挂摘所需的标签坐标（从原 currentTagKV 平移过来）：
  * Model 用 model:<name>；Tag 用 <tagKey>:<value>；Task 不走这条（用 attach 端点）。
  */
+/** ① 子组件写完自由字段/描述/分组：重拉详情 + 通知更上层刷新列表 */
+async function onSummarySaved() {
+  emit('saved')
+  await load()
+}
+
 /** ② 子组件改动了关系（别名/合并）：重拉详情 + 通知更上层刷新列表 */
 async function onRelationChanged() {
   emit('saved')
@@ -361,105 +270,22 @@ onMounted(load)
     <LoadingRow v-if="loading" :text="t('admin.kc.loading', '加载实体详情…')" />
 
     <template v-else>
-      <!-- ① 概要（含直改表单） -->
-      <section class="kc-zone">
-        <div class="kc-zone-head">
-          <h3 class="kc-zone-title">{{ t('admin.kc.zSummary', '① 概要') }}</h3>
-          <button v-if="props.type !== 'tag' && !editing" type="button" class="btn btn-sm btn-primary" @click="startEdit">{{ t('admin.kc.edit', '编辑') }}</button>
-        </div>
-        <div class="kc-summary">
-          <EntityStamp :name="entityName" />
-          <div class="kc-fields">
-            <!-- 编辑态：自由字段（既有端点直改） -->
-            <template v-if="editing && props.type === 'model'">
-              <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span><input v-model="editForm.name" class="input" /></label>
-              <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fVendor', '厂商') }}</span><input v-model="editForm.vendor" class="input" :placeholder="t('admin.kc.vendorPh', '可留空')" /></label>
-              <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fDesc', '描述') }}</span><textarea v-model="editForm.description" class="input" rows="2" /></label>
-              <div class="kc-field kc-wide">
-                <button type="button" class="btn btn-sm btn-primary" :disabled="saving" @click="saveEdit">{{ t('admin.kc.save', '保存') }}</button>
-                <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="editing = false">{{ t('common.cancel', '取消') }}</button>
-                <span class="hint">{{ t('admin.kc.saveNote', '保存即服务端审计（before/after/操作者）；改名会自动把旧名转为别名。') }}</span>
-              </div>
-            </template>
-            <template v-else-if="editing && props.type === 'task'">
-              <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fTaskTitle', '题名') }}</span><input v-model="editForm.title" class="input" /></label>
-              <label class="kc-field"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><input v-model="editForm.category" class="input" /></label>
-              <label class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fTaskDesc', '题面描述') }}</span><textarea v-model="editForm.description" class="input" rows="2" /></label>
-              <div class="kc-field kc-wide">
-                <button type="button" class="btn btn-sm btn-primary" :disabled="saving" @click="saveEdit">{{ t('admin.kc.save', '保存') }}</button>
-                <button type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="editing = false">{{ t('common.cancel', '取消') }}</button>
-                <span class="hint">{{ t('admin.kc.saveNoteTask', 'PUT /admin/tasks/{ident}：变更落 update 审计。') }}</span>
-              </div>
-            </template>
-            <!-- 只读态 -->
-            <template v-else>
-              <div class="kc-field">
-                <span class="kc-k">{{ t('admin.kc.fName', '名称') }}</span>
-                <b>{{ entityName }}</b>
-                <span v-if="props.type === 'tag'" class="kc-pending">{{ t('admin.kc.tagRenamePending', 'value 本体改名=微合并语义（别名+重定向）——端点待后端，不提供假改名。') }}</span>
-              </div>
-              <div class="kc-field">
-                <span class="kc-k">{{ t('admin.kc.fIdent', '标识') }}</span>
-                <span class="mono">{{ props.type === 'tag' ? `${props.tagKey}:${tagRow?.value.value}` : props.id }}</span>
-                <!-- Model slug=受限：仅合并流程内改（06 A2.2），详情只读+深链 -->
-                <button v-if="props.type === 'model'" type="button" class="btn btn-sm btn-outline" @click="goTab('merge')">{{ t('admin.kc.slugViaMerge', 'slug 在合并向导内可改 →') }}</button>
-              </div>
-              <div class="kc-field">
-                <span class="kc-k">{{ t('admin.kc.fStatus', '状态') }}</span>
-                <span v-if="entityStatus" class="cluster-badge" :class="entityStatus === 'active' ? 'cb-exact' : 'cb-fuzzy'">{{ statusZh[entityStatus] || entityStatus }}</span>
-                <span v-else class="kc-pending" :title="t('admin.kc.noStatusTip', 'Tag 现库无状态字段——需后端加字段+端点（协作清单#3）')">{{ t('admin.kc.noStatus', '无状态字段（待后端）') }}</span>
-              </div>
-              <template v-if="props.type === 'model'">
-                <div class="kc-field"><span class="kc-k">{{ t('admin.kc.fVendor', '厂商') }}</span><span>{{ model?.vendor || '—' }}</span></div>
-                <div class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fDesc', '描述') }}</span><span>{{ model?.description || '—' }}</span></div>
-                <div class="kc-field">
-                  <span class="kc-k">{{ t('admin.kc.fResolution', 'resolution') }}</span>
-                  <span class="mono">{{ model?.resolution || '—' }}</span>
-                  <button type="button" class="btn btn-sm btn-outline" @click="goTab('attribution')">{{ t('admin.kc.resolutionViaAttr', '揭晓走归属工作台 →') }}</button>
-                </div>
-              </template>
-              <template v-else-if="props.type === 'task'">
-                <div class="kc-field"><span class="kc-k">{{ t('admin.kc.fCat', '分类') }}</span><span>{{ task?.category || '—' }}</span></div>
-                <div class="kc-field kc-wide"><span class="kc-k">{{ t('admin.kc.fTaskDesc', '题面描述') }}</span><span>{{ task?.description || '—' }}</span></div>
-                <div class="kc-field kc-wide">
-                  <span class="kc-k">{{ t('admin.kc.fPrompt', 'canonical prompt') }}</span>
-                  <span class="kc-pending">{{ t('admin.kc.pendingPrompt', '不可直改（核对过 PATCH 白名单）：现库无独立题面字段，「题面摘录」派生自首件作品提示词；如需独立题面=加列协作项') }}</span>
-                </div>
-              </template>
-              <template v-else>
-                <div class="kc-field">
-                  <span class="kc-k">{{ t('admin.kc.fDesc', '描述') }}</span>
-                  <template v-if="tagDescEditing">
-                    <input v-model="tagDescDraft" class="input" style="max-width: 260px" />
-                    <button type="button" class="btn btn-sm btn-primary" :disabled="tagDescSaving" @click="saveTagDesc">{{ t('admin.kc.save', '保存') }}</button>
-                    <button type="button" class="btn btn-sm btn-outline" :disabled="tagDescSaving" @click="tagDescEditing = false">{{ t('common.cancel', '取消') }}</button>
-                  </template>
-                  <template v-else>
-                    <span>{{ tagRow?.value.description || '—' }}</span>
-                    <button type="button" class="btn btn-sm btn-outline" @click="startTagDesc">{{ t('admin.kc.edit', '编辑') }}</button>
-                    <span class="hint">{{ t('admin.kc.tagDescNote', 'PATCH /admin/entities/tag/{id}——白名单直改，落审计。') }}</span>
-                  </template>
-                </div>
-                <template v-if="tagRow">
-                  <div class="kc-field">
-                    <span class="kc-k">{{ t('admin.kc.fGroupCurrent', '当前分组') }}</span>
-                    <span>{{ tagRow.value.group || t('admin.kc.noGroup', '（无分组）') }}</span>
-                  </div>
-                  <div class="kc-field kc-wide">
-                    <span class="kc-k">{{ t('admin.kc.fGroupSet', '改分组') }}</span>
-                    <!-- RF-4b：输入框绑草稿，不再与上方只读的「当前分组」同源 -->
-                    <input v-model="groupDraft" class="input" style="max-width: 180px" :placeholder="t('admin.kc.groupPh', '输入分组名或留空')" />
-                    <button type="button" class="btn btn-sm btn-primary" :disabled="saving" @click="saveGroup()">{{ t('admin.kc.save', '保存') }}</button>
-                    <button v-if="groupDraft !== (tagRow.value.group || '')" type="button" class="btn btn-sm btn-outline" :disabled="saving" @click="resetGroupDraft()">{{ t('common.cancel', '取消') }}</button>
-                    <span class="hint">{{ t('admin.kc.groupNote', 'PUT /tags/admin/values/{id}/group——既有端点真保存。') }}</span>
-                  </div>
-                </template>
-              </template>
-              <div class="kc-field"><span class="kc-k">{{ t('admin.kc.fDemos', '关联作品') }}</span><span class="mono">{{ demoTotal ?? '—' }}</span></div>
-            </template>
-          </div>
-        </div>
-      </section>
+      <!-- ① 概要（RF-4c 拆出：编辑表单/标识/状态/Tag 描述与分组就地编辑） -->
+      <AdminEntitySummarySection
+        :type="props.type"
+        :id="props.id"
+        :tag-key="props.tagKey"
+        :model="model"
+        :task="task"
+        :tag-row="tagRow"
+        :entity-name="entityName"
+        :entity-status="entityStatus"
+        :status-zh="statusZh"
+        :demo-total="demoTotal"
+        @saved="onSummarySaved"
+        @go-merge="goTab('merge')"
+        @go-attribution="goTab('attribution')"
+      />
 
       <!-- ② 关系（RF-4c 拆出：别名/merged_into/合并两步流/分组） -->
       <AdminEntityRelationSection
@@ -506,76 +332,3 @@ onMounted(load)
     </template>
   </div>
 </template>
-
-<style scoped>
-/* ---- M3-3 实体详情五区+直改权（admin scoped 纪律：styles/ 零新增块）---- */
-.kc-zone {
-  margin-bottom: 22px;
-}
-.kc-zone-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: space-between;
-}
-.kc-zone-title {
-  font-size: 14px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: var(--border-w, 4px) solid var(--ink, #000);
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-  flex: 1 1 auto;
-}
-.kc-summary {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-.kc-fields {
-  flex: 1 1 260px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 8px 16px;
-}
-.kc-field {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.kc-wide {
-  grid-column: 1 / -1;
-}
-.kc-k {
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft, #555);
-}
-/* 无端点字段的诚实标注：置灰+虚线下划 */
-.kc-pending {
-  color: var(--ink-soft, #555);
-  font-size: 12px;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-}
-.kc-rel-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 6px 0;
-}
-/* ② 的别名 chip 样式已随组件拆到 AdminEntityRelationSection */
-.kc-disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-/* ④⑤ 的样式已随组件拆到 AdminEntityAuditTimeline / AdminEntityWorksSection */
-</style>

@@ -640,7 +640,14 @@ function ensureAttribution(): AttributionGroup[] {
 const curationMap = new Map<string, { sites: string[]; lang: 'zh' | 'en' }>()
 // 首页策展池（07 §2.2 mock 态记忆）：池序 entries（真实后端以 demo 主键为操作键，mock 用合成 id 模拟）
 let featuredNextId = 5000
-const featuredEntries: { id: number; slug: string }[] = []
+// RF-5a：原先这里是空数组 —— 于是 mock 模式下首页策展池恒为空（只能看「池空回落随机」），
+// 后台「精选管理」面板也永远是空的，整条策展流离线无法演示。
+// 补三条与 demo 夹具同 slug 的初始池（顺序即 hero→尾部）。
+const featuredEntries: { id: number; slug: string }[] = [
+  { id: 1, slug: 'demo_粒子星空' },
+  { id: 2, slug: 'demo_霓虹时钟' },
+  { id: 3, slug: 'demo_贪吃蛇' },
+]
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T
@@ -793,6 +800,9 @@ export const mockApi = {
       demo_id: payload.demo_id ?? null,
       created_at: new Date().toISOString(),
     }
+    // RF-5a：真正入队 —— 原实现只造了个对象就返回，于是「上传时申请新固定值」在 mock 模式下
+    // 管理端永远看不到（真实后端是落 pending 队列，管理员在「固定值申请」里审）
+    mockTagSuggestions.unshift(s)
     return clone(s)
   },
   async listTagSuggestions(status?: 'pending' | 'approved' | 'rejected'): Promise<TagSuggestion[]> {
@@ -917,15 +927,32 @@ export const mockApi = {
   // ---------- Demo ----------
   async listDemos(params: DemoListParams = {}): Promise<Paginated<DemoSummary>> {
     await delay()
-    const { tags: tagFilters = [], q = '', sort = 'newest', page = 1, page_size = 20, status = 'approved', featured } = params
+    // RF-5a：补上真接口支持的 author/model/task 三个筛选（原先静默丢弃 → mock 模式给假结论），
+    // 并把 featured 从「提前 return 绕过其余筛选」改为「在既有查询上收窄」
+    // （后端 demos.py:438 的语义：只出 featured 行，status/q/可见域照常生效）
+    const {
+      tags: tagFilters = [],
+      q = '',
+      sort = 'newest',
+      page = 1,
+      page_size = 20,
+      status = 'approved',
+      featured,
+      author,
+      model,
+      task,
+    } = params
     let items = [...demos, ...(status === 'pending' ? pendingDemos : [])].filter((d) => !status || d.status === status)
-    if (featured === 1) {
-      // 首页策展池：只出池内行并按池序（hero=首件），与真实后端语义一致
-      const idx = new Map(featuredEntries.map((e, i) => [e.slug, i]))
-      const pool = items.filter((d) => idx.has(d.slug)).sort((a, b) => idx.get(a.slug)! - idx.get(b.slug)!)
-      const total = pool.length
-      const start = (page - 1) * page_size
-      return { items: pool.slice(start, start + page_size), total, page, page_size }
+    if (author) {
+      // 与后端一致：author=public 是「所有未注册上传」的虚拟身份
+      items = author === 'public' ? items.filter((d) => d.author === 'public') : items.filter((d) => d.author === author)
+    }
+    if (model) {
+      items = items.filter((d) => d.tags.some((x) => tagOf(x) === `model:${model}`))
+    }
+    if (task) {
+      // mock 的作品夹具没有题目关联，这里如实返回空（而不是忽略参数给假结果）
+      items = items.filter((d) => (d.tasks || []).some((x) => x.slug === task))
     }
     if (tagFilters.length) {
       items = items.filter((d) => tagFilters.every((tf) => d.tags.some((t) => tagOf(t) === tf)))
@@ -938,6 +965,14 @@ export const mockApi = {
           d.description.toLowerCase().includes(lower) ||
           d.tags.some((t) => tagOf(t).toLowerCase().includes(lower)),
       )
+    }
+    if (featured === 1) {
+      // 首页策展池：只出池内行（在既有筛选结果上收窄），并按池序（hero=首件）
+      const idx = new Map(featuredEntries.map((e, i) => [e.slug, i]))
+      items = items.filter((d) => idx.has(d.slug)).sort((a, b) => idx.get(a.slug)! - idx.get(b.slug)!)
+      const total = items.length
+      const start = (page - 1) * page_size
+      return { items: items.slice(start, start + page_size), total, page, page_size }
     }
     // 稳定排序：主键 + 次级键（同时间/同热度时按 slug 兜底），保证刷新后顺序可复现
     const bySlug = (a: DemoDetail, b: DemoDetail) => a.slug.localeCompare(b.slug)
@@ -1092,6 +1127,12 @@ export const mockApi = {
       if (range === 'all') return true
       return now - new Date(d.created_at).getTime() <= (range === 'week' ? week : month)
     })
+    // RF-5a：与后端 ratings.py:149 对齐 —— 质量榜（avg/god/ghost/net）排除 0 评。
+    // 原实现把 0 评作品也排进榜（还会因为 rating_avg 缺省 0 而垫底出现在榜尾），
+    // 与真接口「没证据不上榜」的口径相反。
+    if (sort === 'avg' || sort === 'god' || sort === 'ghost' || sort === 'net') {
+      items = items.filter((d) => (d.rating_count || 0) > 0)
+    }
     if (sort === 'god') items.sort((a, b) => (b.rating_god || 0) - (a.rating_god || 0))
     else if (sort === 'ghost') items.sort((a, b) => (b.rating_ghost || 0) - (a.rating_ghost || 0))
     else if (sort === 'count') items.sort((a, b) => (b.rating_count || 0) - (a.rating_count || 0))
@@ -2055,8 +2096,14 @@ export const mockApi = {
     if (demo) items = items.filter((t) => t.demo_slug === demo)
     if (params.kind === 'demo') items = items.filter((t) => !!t.demo_slug)
     if (params.kind === 'general') items = items.filter((t) => !t.demo_slug)
-    if (sort === 'popular') items.sort((a, b) => b.view_count - a.view_count)
-    else items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.sticky) - Number(a.sticky) || b.created_at.localeCompare(a.created_at))
+    // RF-5a：与后端 forum.py:126-136 对齐 —— popular=浏览、replies=回复数、
+    // hot=回复数+浏览/50（时间衰减用 created_at 兜底）；原先 replies/hot 都被静默降级成置顶排序
+    const byPinned = (a: ForumTopic, b: ForumTopic) => Number(b.sticky) - Number(a.sticky) || b.created_at.localeCompare(a.created_at)
+    if (sort === 'popular') items.sort((a, b) => b.view_count - a.view_count || byPinned(a, b))
+    else if (sort === 'replies') items.sort((a, b) => b.reply_count - a.reply_count || byPinned(a, b))
+    else if (sort === 'hot')
+      items.sort((a, b) => b.reply_count + b.view_count / 50 - (a.reply_count + a.view_count / 50) || byPinned(a, b))
+    else items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || byPinned(a, b))
     const start = (page - 1) * page_size
     return { items: clone(items.slice(start, start + page_size)), total: items.length, page, page_size }
   },

@@ -37,8 +37,9 @@ services:
       # 代价：malloc 锁竞争略升（当前 CPU ~1%，可忽略）。
       MALLOC_ARENA_MAX: "2"
       MALLOC_TRIM_THRESHOLD_: "131072"
-    # 不给上限 = 一次 200MB 上传（_read_limited 整包读进内存，峰值 400~600MB）
-    # 在无 swap 的 2G 机上直接把 backend 送给 OOM killer（表现又是 502）。
+    # 不给上限 = 并发大上传能把 backend 送给 OOM killer（表现又是 502）。
+    # KB-11 已把 _read_limited 改成分块读取、超限立刻 413（不再"先全量读进来再判大小"），
+    # 但**合法**的 200MB 上传在成功路径上仍会整包驻留内存（分块累积 + 拼接 ≈ 2× 体积）。
     # 有天花板才既能兜住、又能把问题暴露出来，而不是拖死整台机器（含 docker build 自身）。
     mem_limit: 768m
     logging:

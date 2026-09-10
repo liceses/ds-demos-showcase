@@ -33,13 +33,26 @@ const inputEl = ref<HTMLInputElement | null>(null)
 const q = ref('')
 const searching = ref(false)
 const hasSearched = ref(false)
-const demoItems = ref<DemoSummary[]>([])
-const modelItems = ref<ModelSummary[]>([])
-const taskItems = ref<TaskSummary[]>([])
-const demoTotal = ref(0)
-const modelTotal = ref(0)
-const taskTotal = ref(0)
-const failed = ref({ demos: false, models: false, tasks: false })
+// RF-4g：三域结果原先由 6 个 ref + 1 个 failed 承载（同一份数据的三种投影），
+// 现在收敛成一份 domains；展平与分组都由 computed 派生（一次 groupBy，不再 5 次 filter）。
+const DOMAIN_ORDER = ['demos', 'models', 'tasks'] as const
+type DomainKey = (typeof DOMAIN_ORDER)[number]
+interface DomainState {
+  items: SearchRow[]
+  total: number
+  failed: boolean
+}
+const domains = ref<Record<DomainKey, DomainState>>({
+  demos: { items: [], total: 0, failed: false },
+  models: { items: [], total: 0, failed: false },
+  tasks: { items: [], total: 0, failed: false },
+})
+/** 分组标题的 i18n key/中文（模板里一次 v-for 用） */
+const DOMAIN_LABEL: Record<DomainKey, { key: string; zh: string }> = {
+  demos: { key: 'search.groupDemos', zh: '作品' },
+  models: { key: 'search.groupModels', zh: '模型' },
+  tasks: { key: 'search.groupTasks', zh: '题目' },
+}
 const activeIdx = ref(-1)
 
 let seq = 0 // 竞态守卫：每次触发 ++，过期响应整包丢弃
@@ -47,45 +60,53 @@ let timer: ReturnType<typeof setTimeout> | undefined
 
 const term = computed(() => q.value.trim())
 
+function demoRow(d: DemoSummary, idx: number): SearchRow {
+  const meta = d.rating_count
+    ? `${d.author} · ★${(d.rating_avg ?? 0).toFixed(1)}(${d.rating_count})`
+    : d.author
+  return { key: `demo:${d.slug}`, group: 'demos', idx, path: `/demo/${d.slug}`, title: d.title, meta }
+}
+function modelRow(m: ModelSummary, idx: number): SearchRow {
+  const meta = [m.vendor || '', t('search.worksN', '{n} 作品', { n: m.demo_count })].filter(Boolean).join(' · ')
+  return { key: `model:${m.slug}`, group: 'models', idx, path: `/models/${m.slug}`, title: modelDisplay(m), meta }
+}
+function taskRow(k: TaskSummary, idx: number): SearchRow {
+  return {
+    key: `task:${k.slug}`,
+    group: 'tasks',
+    idx,
+    path: `/tasks/${k.slug}`,
+    title: k.title,
+    meta: t('search.worksN', '{n} 作品', { n: k.demo_count }),
+  }
+}
+
+/** 展平并在展平序上重编号（activeIdx / so-opt-N 都依赖这个全局序号） */
 const rows = computed<SearchRow[]>(() => {
   const out: SearchRow[] = []
-  for (const d of demoItems.value) {
-    const meta = d.rating_count
-      ? `${d.author} · ★${(d.rating_avg ?? 0).toFixed(1)}(${d.rating_count})`
-      : d.author
-    out.push({ key: `demo:${d.slug}`, group: 'demos', idx: out.length, path: `/demo/${d.slug}`, title: d.title, meta })
-  }
-  for (const m of modelItems.value) {
-    const meta = [m.vendor || '', t('search.worksN', '{n} 作品', { n: m.demo_count })].filter(Boolean).join(' · ')
-    out.push({ key: `model:${m.slug}`, group: 'models', idx: out.length, path: `/models/${m.slug}`, title: modelDisplay(m), meta })
-  }
-  for (const k of taskItems.value) {
-    out.push({
-      key: `task:${k.slug}`,
-      group: 'tasks',
-      idx: out.length,
-      path: `/tasks/${k.slug}`,
-      title: k.title,
-      meta: t('search.worksN', '{n} 作品', { n: k.demo_count }),
-    })
+  for (const g of DOMAIN_ORDER) {
+    for (const r of domains.value[g].items) out.push({ ...r, idx: out.length })
   }
   return out
 })
-const groupDemos = computed(() => rows.value.filter((r) => r.group === 'demos'))
-const groupModels = computed(() => rows.value.filter((r) => r.group === 'models'))
-const groupTasks = computed(() => rows.value.filter((r) => r.group === 'tasks'))
+
+/** 模板只渲染这一份分组视图（原先三段模板各 filter 一次 + anyResult 再 filter 一次） */
+const groups = computed(() =>
+  DOMAIN_ORDER.map((key) => ({
+    key,
+    labelKey: DOMAIN_LABEL[key].key,
+    labelZh: DOMAIN_LABEL[key].zh,
+    total: domains.value[key].total,
+    failed: domains.value[key].failed,
+    items: rows.value.filter((r) => r.group === key),
+  })),
+)
 const activeRow = computed(() => (activeIdx.value >= 0 ? rows.value[activeIdx.value] ?? null : null))
 const anyResult = computed(() => rows.value.length > 0)
-const allFailed = computed(() => failed.value.demos && failed.value.models && failed.value.tasks)
+const allFailed = computed(() => DOMAIN_ORDER.every((g) => domains.value[g].failed))
 
 function resetResults() {
-  demoItems.value = []
-  modelItems.value = []
-  taskItems.value = []
-  demoTotal.value = 0
-  modelTotal.value = 0
-  taskTotal.value = 0
-  failed.value = { demos: false, models: false, tasks: false }
+  for (const g of DOMAIN_ORDER) domains.value[g] = { items: [], total: 0, failed: false }
   activeIdx.value = -1
 }
 
@@ -114,18 +135,16 @@ async function run() {
   ])
   if (my !== seq) return // 竞态守卫：期间用户又输入/关闭了 → 本次响应作废
   searching.value = false
+  // 赋值处就转成 SearchRow（idx 由上面的展平统一重编号，这里给 0 占位）
   if (d.status === 'fulfilled') {
-    demoItems.value = d.value.items
-    demoTotal.value = d.value.total
-  } else failed.value.demos = true
+    domains.value.demos = { items: d.value.items.map((x) => demoRow(x, 0)), total: d.value.total, failed: false }
+  } else domains.value.demos = { items: [], total: 0, failed: true }
   if (m.status === 'fulfilled') {
-    modelItems.value = m.value.items
-    modelTotal.value = m.value.total
-  } else failed.value.models = true
+    domains.value.models = { items: m.value.items.map((x) => modelRow(x, 0)), total: m.value.total, failed: false }
+  } else domains.value.models = { items: [], total: 0, failed: true }
   if (k.status === 'fulfilled') {
-    taskItems.value = k.value.items
-    taskTotal.value = k.value.total
-  } else failed.value.tasks = true
+    domains.value.tasks = { items: k.value.items.map((x) => taskRow(x, 0)), total: k.value.total, failed: false }
+  } else domains.value.tasks = { items: [], total: 0, failed: true }
   activeIdx.value = rows.value.length ? 0 : -1 // 首条预选：↵ 即走
 }
 
@@ -277,60 +296,15 @@ onBeforeUnmount(() => {
 
           <!-- 结果：三域分组（组间 2px 实线分割，节奏靠线不靠盒） -->
           <template v-else-if="anyResult">
-            <section v-if="groupDemos.length" class="so-group">
+            <!-- RF-4g：三域共用一段模板（原先逐字重复三段 15 行）；一次 groupBy 出 groups -->
+            <section v-for="g in groups" v-show="g.items.length || g.failed" :key="g.key" class="so-group">
               <h3 class="so-kicker">
-                {{ t('search.groupDemos', '作品') }}
-                <span class="so-count mono">{{ demoTotal }}</span>
-                <span v-if="failed.demos" class="so-count mono">{{ t('search.groupFailed', '该域查询失败') }}</span>
+                {{ t(g.labelKey, g.labelZh) }}
+                <span class="so-count mono">{{ g.total }}</span>
+                <span v-if="g.failed" class="so-count mono">{{ t('search.groupFailed', '该域查询失败') }}</span>
               </h3>
               <RouterLink
-                v-for="r in groupDemos"
-                :id="`so-opt-${r.idx}`"
-                :key="r.key"
-                class="so-item"
-                :class="{ 'so-item--active': r.idx === activeIdx }"
-                role="option"
-                :aria-selected="r.idx === activeIdx"
-                :to="r.path"
-                @mouseenter="activeIdx = r.idx"
-                @click="closeSearch()"
-              >
-                <span class="so-item-title">{{ r.title }}</span>
-                <span class="so-item-meta">{{ r.meta }}</span>
-              </RouterLink>
-            </section>
-
-            <section v-if="groupModels.length || failed.models" class="so-group">
-              <h3 class="so-kicker">
-                {{ t('search.groupModels', '模型') }}
-                <span class="so-count mono">{{ modelTotal }}</span>
-                <span v-if="failed.models" class="so-count mono">{{ t('search.groupFailed', '该域查询失败') }}</span>
-              </h3>
-              <RouterLink
-                v-for="r in groupModels"
-                :id="`so-opt-${r.idx}`"
-                :key="r.key"
-                class="so-item"
-                :class="{ 'so-item--active': r.idx === activeIdx }"
-                role="option"
-                :aria-selected="r.idx === activeIdx"
-                :to="r.path"
-                @mouseenter="activeIdx = r.idx"
-                @click="closeSearch()"
-              >
-                <span class="so-item-title">{{ r.title }}</span>
-                <span class="so-item-meta">{{ r.meta }}</span>
-              </RouterLink>
-            </section>
-
-            <section v-if="groupTasks.length || failed.tasks" class="so-group">
-              <h3 class="so-kicker">
-                {{ t('search.groupTasks', '题目') }}
-                <span class="so-count mono">{{ taskTotal }}</span>
-                <span v-if="failed.tasks" class="so-count mono">{{ t('search.groupFailed', '该域查询失败') }}</span>
-              </h3>
-              <RouterLink
-                v-for="r in groupTasks"
+                v-for="r in g.items"
                 :id="`so-opt-${r.idx}`"
                 :key="r.key"
                 class="so-item"

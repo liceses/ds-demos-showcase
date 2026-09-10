@@ -19,12 +19,12 @@ import { api } from '../../api'
 import type { AdminTaskDetail, AuditEntry, DemoSummary, ModelDetail, TagKeyInfo } from '../../api/types'
 import { useUiStore } from '../../stores/ui'
 import EntityStamp from '../EntityStamp.vue'
+import AdminEntityAuditTimeline from './AdminEntityAuditTimeline.vue'
+import AdminEntityWorksSection from './AdminEntityWorksSection.vue'
 import LoadingRow from '../LoadingRow.vue'
 // T5·M5-F2：DemoPicker 多选挂载（datalist 手输 slug 退役）
 import EntityPicker from '../picker/EntityPicker.vue'
 import type { EntityPick } from '../picker/pickerSources'
-import { auditActionLabel, fmtTime } from '../../utils/adminLabels'
-import { tagsForWrite } from '../../utils/entityDeepLink'
 import { t } from '../../i18n'
 
 const props = defineProps<{
@@ -59,8 +59,6 @@ const transOpen = ref(false)
 const transStatus = ref('')
 const transReason = ref('')
 // M3-B5 Task 挂摘/合并两步流状态（T5·M5-F2：datalist 手输 slug → DemoPicker 多选，chips 挂载）
-const attachBusy = ref(false)
-const attachPicks = ref<EntityPick[]>([])
 const mergeOpen = ref(false)
 const mergeTargetPick = ref<EntityPick | null>(null)
 const mergeReason = ref('')
@@ -324,97 +322,6 @@ function resetGroupDraft() {
   groupDraft.value = tagRow.value?.value.group || ''
 }
 
-function kvOf(tags: { key: string; value: string }[]): { key: string; value: string }[] {
-  return tags.map((x) => ({ key: x.key, value: x.value }))
-}
-
-async function rewriteDemoTags(slug: string, mutate: (tags: { key: string; value: string }[]) => { key: string; value: string }[]) {
-  const demo = await api.getDemo(slug)
-  const next = mutate(kvOf(demo.tags || []))
-  const write = tagsForWrite(next)
-  if (!write.some((x) => x.startsWith('model:'))) {
-    throw new Error(t('admin.kc.needModelTag', '作品必须保留至少一个 model 标签（不确定就用 model:unspecified）'))
-  }
-  await api.updateDemo(slug, { tags: write })
-}
-
-function currentTagKV(): { key: string; value: string } | null {
-  if (props.type === 'model' && model.value) return { key: 'model', value: model.value.name }
-  if (props.type === 'tag' && props.tagKey && tagRow.value) return { key: props.tagKey, value: tagRow.value.value.value }
-  return null
-}
-
-// ---- 挂摘：Task 走 /admin/tasks/{id}/demos；Model/Tag 走 PUT /demos/{slug} 改 tags（既有端点，无新表） ----
-async function attachPicked() {
-  const picks = attachPicks.value
-  if (!picks.length || attachBusy.value) return
-  attachBusy.value = true
-  let okCount = 0
-  let firstErr = ''
-  try {
-    for (const p of picks) {
-      const s = (p.slug || (p.label || '').trim()) as string
-      if (!s) continue
-      try {
-        if (props.type === 'task' && task.value) {
-          await api.attachTaskDemoBySlug(task.value.slug, s)
-        } else {
-          const kv = currentTagKV()
-          if (!kv) throw new Error(t('admin.kc.attachNoEntity', '当前实体无法挂载'))
-          await rewriteDemoTags(s, (tags) => {
-            if (tags.some((x) => x.key === kv.key && x.value === kv.value)) return tags
-            return [...tags, kv]
-          })
-        }
-        okCount++
-      } catch (e) {
-        if (!firstErr) firstErr = (e as Error).message
-      }
-    }
-    if (okCount > 0) {
-      ui.toast(t('admin.kc.attachedN', '已挂载 {n} 件（attach 审计）', { n: okCount }), 'success')
-    emit('saved') // RF-4b：父级列表的作品计数要跟着变
-      attachPicks.value = []
-      await load()
-    }
-    if (firstErr) ui.toast(firstErr, 'error')
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    attachBusy.value = false
-  }
-}
-
-async function detachDemo(slug: string) {
-  if (attachBusy.value) return
-  const ok = await ui.confirm({
-    title: t('admin.kc.detachTitle', '摘除作品？'),
-    message:
-      props.type === 'task'
-        ? t('admin.kc.detachMsg', '《{slug}》将从本题的归属列表移除（detach 审计；可重新挂载）。', { slug })
-        : t('admin.kc.detachTagMsg', '《{slug}》将去掉本实体标签（PUT /demos 改 tags；可重新挂载）。', { slug }),
-    confirmText: t('admin.kc.detach', '摘除'),
-  })
-  if (!ok) return
-  attachBusy.value = true
-  try {
-    if (props.type === 'task' && task.value) {
-      await api.detachTaskDemoBySlug(task.value.slug, slug)
-    } else {
-      const kv = currentTagKV()
-      if (!kv) throw new Error(t('admin.kc.detachNoEntity', '当前实体无法摘除'))
-      await rewriteDemoTags(slug, (tags) => tags.filter((x) => !(x.key === kv.key && x.value === kv.value)))
-    }
-    ui.toast(t('admin.kc.detached', '已摘除（detach 审计）'), 'success')
-    emit('saved')
-    await load()
-  } catch (e) {
-    ui.toast((e as Error).message, 'error')
-  } finally {
-    attachBusy.value = false
-  }
-}
-
 // ---- M3-B5 Task 合并两步流（⑥：显式 dry_run:true 预览 → 确认后显式 false——缺省 false 的坑已规避） ----
 function pickMergeTarget(p: EntityPick) {
   mergeTargetPick.value = p
@@ -493,10 +400,25 @@ async function saveTagDesc() {
 
 watch(() => [props.type, props.id, props.tagKey], () => {
   void load()
-  attachPicks.value = []
   closeMerge()
   transOpen.value = false
 })
+/**
+ * ⑤ 子组件挂摘所需的标签坐标（从原 currentTagKV 平移过来）：
+ * Model 用 model:<name>；Tag 用 <tagKey>:<value>；Task 不走这条（用 attach 端点）。
+ */
+const worksTagKV = computed(() => {
+  if (props.type === 'model' && model.value) return { key: 'model', value: model.value.name }
+  if (props.type === 'tag' && props.tagKey && tagRow.value) return { key: props.tagKey, value: tagRow.value.value.value }
+  return null
+})
+
+/** 子组件挂摘成功：重拉详情 + 通知更上层（原 emit('saved') 语义） */
+async function onWorksChanged() {
+  emit('saved')
+  await load()
+}
+
 onMounted(load)
 </script>
 
@@ -764,52 +686,18 @@ onMounted(load)
         </template>
       </section>
 
-      <!-- ④ 审计时间线 -->
-      <section class="kc-zone">
-        <h3 class="kc-zone-title">{{ t('admin.kc.zAudit', '④ 审计时间线') }}</h3>
-        <div v-if="!audit.length" class="muted">{{ t('admin.kc.noAudit', '暂无该实体的审计记录') }}</div>
-        <ul v-else class="kc-audit">
-          <li v-for="a in audit" :key="a.id">
-            <span class="mono kc-time">{{ fmtTime(a.created_at) }}</span>
-            <span class="mono">{{ a.actor }}</span>
-            <span class="kc-act">{{ auditActionLabel(a) }}</span>
-            <span class="muted">{{ a.reason || `${a.entity_type}#${a.entity_id}` }}</span>
-          </li>
-        </ul>
-      </section>
+      <!-- ④ 审计时间线（RF-4c 拆出：纯展示，无本地状态） -->
+      <AdminEntityAuditTimeline :audit="audit" />
 
-      <!-- ⑤ 关联作品：三实体都可挂摘（Task=attach 端点；Model/Tag=PUT /demos tags） -->
-      <section class="kc-zone">
-        <h3 class="kc-zone-title">{{ t('admin.kc.zWorks', '⑤ 关联作品') }}</h3>
-        <div class="kc-rel-row">
-          <EntityPicker
-            v-model="attachPicks"
-            kind="demo"
-            mode="dropdown"
-            multiple
-            manual-slug
-            :placeholder="t('admin.kc.attachSlugPh2', '搜作品名 / 作者 / slug 选入，逐个可挂载…')"
-          />
-          <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy || !attachPicks.length" @click="attachPicked">
-            {{ attachBusy ? t('admin.kc.attaching', '挂载中…') : t('admin.kc.attachAdd', '挂载选中') }}
-          </button>
-          <span class="hint">{{
-            props.type === 'task'
-              ? t('admin.kc.attachNote', '按 slug 逐个挂载（attach 审计，未知 slug 单项失败不影响其余）；点 ✕ 可摘除选中。')
-              : t('admin.kc.attachTagNote', '挂摘走 PUT /demos/{slug} 改 tags（保留键由服务端重挂；必须留下至少一个 model 标签）。')
-          }}</span>
-        </div>
-        <div v-if="!works.length" class="muted">{{ t('admin.kc.noWorks', '没有关联作品') }}</div>
-        <ul v-else class="kc-works">
-          <li v-for="d in works" :key="d.slug">
-            <RouterLink :to="`/demo/${d.slug}`" class="kc-work-link">{{ d.title }}</RouterLink>
-            <span class="muted mono">{{ d.slug }}</span>
-            <span v-if="d.status && d.status !== 'approved'" class="cluster-badge cb-fuzzy">{{ d.status }}</span>
-            <span v-if="d.rating_avg != null" class="mini-stat"><b>{{ d.rating_avg.toFixed(1) }}</b></span>
-            <button type="button" class="btn btn-sm btn-outline" :disabled="attachBusy" @click="detachDemo(d.slug)">{{ t('admin.kc.detach', '摘除') }}</button>
-          </li>
-        </ul>
-      </section>
+      <!-- ⑤ 关联作品（RF-4c 拆出；:key 让实体切换时重挂，重置挂载选择） -->
+      <AdminEntityWorksSection
+        :key="`${props.type}:${props.id}`"
+        :type="props.type"
+        :task-slug="task?.slug"
+        :tag-kv="worksTagKV"
+        :works="works"
+        @changed="onWorksChanged"
+      />
     </template>
   </div>
 </template>
@@ -918,40 +806,5 @@ onMounted(load)
   opacity: 0.55;
   cursor: not-allowed;
 }
-.kc-audit {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.kc-audit li {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 0;
-  border-bottom: 2px solid var(--ink, #000);
-  font-size: 13px;
-  align-items: baseline;
-}
-.kc-works {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.kc-works li {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 6px 0;
-  border-bottom: 2px solid var(--ink, #000);
-}
-.kc-work-link {
-  color: var(--ink, #000);
-  font-weight: 700;
-  text-decoration: none;
-}
-@media (hover: hover) {
-  .kc-work-link:hover {
-    text-decoration: underline;
-  }
-}
+/* ④⑤ 的样式已随组件拆到 AdminEntityAuditTimeline / AdminEntityWorksSection */
 </style>

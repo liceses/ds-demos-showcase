@@ -30,3 +30,12 @@
   margin-bottom: 24px;
 }
 
+/* P0-4 归位：移动端工具条竖排。.search-box 的 @720 覆盖**不在这里**——
+   本文件与 pages/about.css 都定义了 .search-box，而 about.css 导入更晚、才是 max-width 的胜者，
+   放进本文件会让它的 base 反过来压住媒体规则（媒体查询无特异性加成）。 */
+@media (max-width: 720px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

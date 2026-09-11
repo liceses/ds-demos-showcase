@@ -189,7 +189,7 @@ onMounted(async () => {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-@media (min-width: 720.02px) {
+@media (min-width: 721px) { /* P0-3 断点收缝：720.02 → 721 */
   .nf-grid {
     grid-template-columns: repeat(4, 1fr);
   }

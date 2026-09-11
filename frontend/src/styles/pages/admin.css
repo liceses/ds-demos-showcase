@@ -49,3 +49,13 @@
   cursor: not-allowed;
 }
 
+/* P0-4 归位：@480 统计卡（原链尾文件） */
+@media (max-width: 480px) {
+  .dash-stats {
+    gap: 10px;
+  }
+  .stat-card {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+}

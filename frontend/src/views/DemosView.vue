@@ -970,7 +970,7 @@ span.fp-group-head {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (min-width: 720.02px) {
+@media (min-width: 721px) { /* P0-3 断点收缝：720.02 → 721（与 max-720 互补，不留缝隙） */
   /* 桌面：组头已有 OR 注，行内不重复 */
   .fp-grammar-or-line {
     display: none;

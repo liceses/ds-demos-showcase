@@ -181,7 +181,7 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
-@media (max-width: 719px) {
+@media (max-width: 720px) { /* P0-3 断点收缝：719 → 720 */
   .theme-options {
     grid-template-columns: 1fr;
   }

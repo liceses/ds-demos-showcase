@@ -100,3 +100,9 @@
   width: 100%;
 }
 
+/* P0-4 归位：移动端触达下限 40px（原链尾文件与 .tag-chip 合写，此处拆分到各自所有者） */
+@media (max-width: 720px) {
+  .btn {
+    min-height: 40px;
+  }
+}

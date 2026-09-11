@@ -55,3 +55,10 @@
   margin-bottom: 0;
 }
 
+/* P0-4 归位：@480 巨字降档。特异性 (0,2,0) 高于 responsive-v1 的 .huge (0,1,0)，
+   HomeView 的 scoped 版本 (0,3,0) 仍照旧压过本规则。 */
+@media (max-width: 480px) {
+  .page-hero .huge {
+    font-size: 40px;
+  }
+}

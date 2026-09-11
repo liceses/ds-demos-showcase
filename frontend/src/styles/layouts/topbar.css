@@ -68,3 +68,13 @@
    组件自带 scoped 样式（components/AppTabBar.vue），全局零残留。
    <720 顶栏降级（.topnav-desktop 隐藏）见 pages/_mobile-responsive.css）
    ============================================================ */
+
+/* P0-4 归位（原 pages/_mobile-responsive.css 链尾劫持）：移动端隐藏桌面导航。
+   注意：原文件里同段的 `.topbar { flex-direction: row; align-items: center; flex-wrap: nowrap }`
+   未随迁 —— 顶栏实际是 App.vue scoped 的 display:grid（scoped 特异性更高），
+   而 flex-direction/flex-wrap 对 grid 容器无效、align-items:center 与 scoped 值重复，整条是惰性规则。 */
+@media (max-width: 720px) {
+  .topnav-desktop {
+    display: none;
+  }
+}

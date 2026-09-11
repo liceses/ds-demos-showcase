@@ -772,8 +772,10 @@ onBeforeUnmount(() => {
 .strip-item:active {
   transform: translate(1px, 1px);
 }
-/* 移动 375（05 §5.1）：hero 单列、条带横滚、CTA 全宽 */
-@media (max-width: 719px) {
+/* 移动 375（05 §5.1）：hero 单列、条带横滚、CTA 全宽
+   P0-3 断点收缝：719 → 720（原 719 与全站 720 差 1px，形成「719 不生效、720 也不生效」
+   的缝隙档；现统一 max-720 / min-721 两值） */
+@media (max-width: 720px) {
   .hub-hero {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
@@ -833,8 +835,9 @@ onBeforeUnmount(() => {
   min-width: 0;
   align-self: stretch;
 }
-/* sticky 只在宽屏生效；窄屏侧栏自然沉到主列后（03 §3.2 移动线框顺序） */
-@media (min-width: 1024px) {
+/* sticky 只在宽屏生效；窄屏侧栏自然沉到主列后（03 §3.2 移动线框顺序）
+   P0-3：1024 → 1025，与上面的 max-1024 严丝合缝（消除 1024 两个规则同时命中的重叠） */
+@media (min-width: 1025px) {
   .hub-side {
     position: sticky;
     top: 86px; /* 顶栏高度 + 间距 */
@@ -1021,8 +1024,10 @@ onBeforeUnmount(() => {
   border: 2px solid var(--ink, #000);
   background: var(--paper-deep, #f2eee6);
 }
-/* 窄屏：侧栏沉到主列后（03 §3.2 移动线框顺序），去 sticky */
-@media (max-width: 1023px) {
+/* 窄屏：侧栏沉到主列后（03 §3.2 移动线框顺序），去 sticky
+   P0-3 断点收缝：1023 → 1024（与 admin-shell/demo-detail/skeleton-extended 的 ≤1024
+   折叠档对齐；原来 1024 这一档只有本页算桌面，其余页面都算折叠，级联自相矛盾） */
+@media (max-width: 1024px) {
   .hub-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;

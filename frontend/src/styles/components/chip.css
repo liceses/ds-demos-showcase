@@ -43,3 +43,9 @@
   opacity: 0.7;
 }
 
+/* P0-4 归位：移动端触达下限 40px（原链尾文件） */
+@media (max-width: 720px) {
+  .tag-chip {
+    min-height: 40px;
+  }
+}

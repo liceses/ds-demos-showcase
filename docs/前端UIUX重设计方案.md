@@ -221,6 +221,33 @@
 
 ---
 
+## 8. P0 执行记录（已完成）
+
+采用「**干净 profile + 截图哈希比对**」作为验收手段（浏览器 profile 里累积的 localStorage 会让同一页面在两次运行间变化，脏 profile 的对照会产出假回归）。
+
+| 提交 | 内容 | 验收 |
+|---|---|---|
+| `e9d571f` | P0-1 清死：删 `announcement.css`/`comments.css`/`home-lobby.css` + 4 处死规则 | 首页/探索/排行榜干净 profile 逐字节相同 |
+| `0862f2c` | P0-2 令牌：`--sp-*`/`--fs-*`/`--w-*`/`--z-*`/`--tabbar-h`；23 处 z-index 入表；`tests/tokens.test.ts` 4 例门禁 | 21 页对照：差异页经「同代码三次独立干净 profile」判定为固有抖动 |
+| `P0-3` | 断点收缝：`719→720`、`720.02→721`、`1023→1024`、`1024→1025` | 边界实测：720 走移动档 / 721 走桌面档；1024 折叠 / 1025 桌面，无缝隙无重叠 |
+| `P0-4` | 拆 `_mobile-responsive.css`（导入序 **#72、最后**）的劫持，按所有者归位 9 个文件 | 逐条 computed 复核（§下表）；稳定页逐字节相同 |
+
+**P0-1 修正了审计的一个错误**：`sample-cred.css` **不是死文件** —— 类名由 `utils/modelDisplay.ts:41-44` 的 `sampleClass()` 动态返回，`ModelDetailView.vue:137` / `ModelsView.vue:115` 在用。审计的字符串反查漏了动态类名。同理只删了 `demos-ledger.css` 里零命中的 4 个类，保留仍在用的 `mode-dot*`/`tag-strip-toggle`/`tag-suggest-*`。
+
+**P0-4 归位的三条级联纪律**（写进代码注释）：
+1. 媒体查询**不提供特异性加成** → 归位后的文件「导入序 ≥ 原竞争者」才不改变胜者。
+2. `.search-box` 有**两个** base 定义（`toolbar.css:9` 与 `about.css:156`），后者导入更晚才是胜者 → `@720` 覆盖必须落在 `about.css`；放进 `toolbar.css` 会被 base 反压。
+3. 被删的 `@720 .topbar{flex-direction/flex-wrap}` 是**惰性规则**：顶栏实际是 `App.vue` scoped 的 `display:grid`（scoped 特异性更高），`flex-direction`/`flex-wrap` 对 grid 容器无效，`align-items:center` 与 scoped 重复。实测确认：`display:grid`、`flex-direction:row`（默认）、`flex-wrap:wrap`（默认）。
+
+**截图工具的两个坑（已修，影响所有后续视觉验收）**：
+- 「等图片解码」的 `Promise.all` 没有兜底超时：`loading=lazy` 且不在视口内的图永远不触发 load/error → 截图流程**永久挂住**。已加 2.5s 兜底 + CDP 命令 20s 超时。
+- 浏览器 profile 复用会累积 localStorage，制造假回归；固定调试端口会被上一轮残留进程占住 → 已改为**每次唯一 profile + 随机端口 + 结果写文件**（`process.exit` 会截断管道里的 stdout，不能靠 stdout 传结果）。
+
+**页面固有抖动清单（视觉验收时必须扣除）**：`/demo/*`（作品详情，docH 在 3405/3428/3436 间浮动）、`/about`（关于页）、`/leaderboard`（偶发）—— 同代码三次独立干净 profile 分别产出 3/3/2 种结果。
+
+
+---
+
 ## 附：本次审计的自我纠正（避免误报进方案）
 
 - `/forum/topic/99999` 在 **mock** 下渲染空白 → 真实后端显示「主题不存在或未上线」。**非线上 bug**，是 mock 不抛错。

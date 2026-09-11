@@ -27,3 +27,11 @@
   box-shadow: var(--sh-off-md) 0 0 var(--yellow); /* R2 单源（原 4px 4px） */
 }
 
+/* P0-4 归位：移动端 Tab 条横滚 */
+@media (max-width: 720px) {
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}

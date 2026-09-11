@@ -1,8 +1,16 @@
 /* ---------- Tab ---------- */
+/* P2-c 容器收敛：`.tabs` 与 `.filter-row`（toolbar.css）原先只差 margin-bottom(20/24) 与
+   align-items —— 站内实际写法是「.tab 也放在 .filter-row 里」（7 个文件 15 处），
+   两种容器混用却没有布局差别。现在两者共用同一套盒模型（gap 8 / wrap / 居中 / 底距 20），
+   于是"放哪个容器"不再影响渲染。
+   注意：**容器统一不等于形态统一** —— 论坛列表头刻意让"范围组用 chip、排序组用 tab"
+   （C4/t6-M5-U4 裁决，见 pages/forum.css 该段注释），那是两组不同性质单选的分域手法，
+   P2-c 不动它。 */
 .tabs {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
   margin-bottom: 20px;
 }
 .tab {

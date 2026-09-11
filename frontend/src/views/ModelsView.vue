@@ -68,7 +68,7 @@ onMounted(load)
 
   <section class="section" style="padding-top: 8px">
     <div class="toolbar">
-      <div class="search-box" style="flex: 1; max-width: 320px">
+      <div class="search-box search-box--grow search-box--sm">
         <input
           v-model="q"
           class="input"

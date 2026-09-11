@@ -90,7 +90,7 @@ onMounted(async () => {
         >
           {{ f === 'all' ? t('tags.all', '全部') : modeLabel(f) }}
         </button>
-        <div class="search-box tag-pane-search" style="flex: 1; max-width: 320px; margin-left: auto">
+        <div class="search-box tag-pane-search search-box--grow search-box--sm" style="margin-left: auto">
           <input v-model="tagSearch" class="input" type="search" :placeholder="t('tags.searchPlaceholder', '搜索标签键 / 值…')" />
         </div>
       </div>

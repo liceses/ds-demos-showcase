@@ -127,10 +127,15 @@ watch(
 
   <section class="forum-section">
     <div class="forum-toolbar">
-      <div class="search-box" style="flex: 1; max-width: 320px">
+      <div class="search-box search-box--grow search-box--sm">
         <input v-model="q" class="input" type="search" :placeholder="t('forum.searchPlaceholder', '搜索主题…（回车提交）')" @keyup.enter="apply" />
         <button class="btn btn-secondary search-submit" type="button" @click="apply">{{ t('demos.search', '搜索') }}</button>
       </div>
+      <!-- P2-c 判定：这里**不是**"两套语汇混用"，而是 C4（t6 M5-U4）的刻意裁决 ——
+           范围/分类组用 chip 语汇（反色章选中）、排序/视图组用 tab 语汇（黄影章选中），
+           中间加 2px 竖分隔，为的是"同行不再双份 .tab 双活态抢眼"（见 forum.css 该段注释）。
+           P2-c 只统一了两种容器的盒模型（.tabs 与 .filter-row 现在同套布局），
+           不改这里的形态分工 —— 形态差异在这里承载的是"两组不同性质的单选"。 -->
       <div class="forum-scope" role="group" :aria-label="t('forum.scopeAria', '范围')">
         <button class="tag-chip" :class="{ active: scope === 'general' }" type="button" :aria-pressed="scope === 'general'" @click="scope = 'general'; apply()">{{ t('forum.scopeGeneral', '综合') }}</button>
         <button class="tag-chip" :class="{ active: scope === 'demo' }" type="button" :aria-pressed="scope === 'demo'" @click="scope = 'demo'; apply()">{{ t('forum.scopeDemo', '作品讨论') }}</button>

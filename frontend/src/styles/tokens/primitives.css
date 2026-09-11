@@ -123,6 +123,14 @@
   --w-wide: min(1440px, calc(100% - 32px)); /* 大屏列表/表格/后台主区 */
   --w-read: min(760px, calc(100% - 32px));  /* 阅读与表单（关于正文/登录/上传列） */
 
+  /* ---------- 搜索框宽度三档（P2-c 收敛） ----------
+     收敛前：.search-box 的 max-width 在 toolbar.css(420px) 与 pages/about.css(560px) 里
+     各写一次（后者导入更晚才是胜者），页面再用内联 style 覆盖成 320/260 ——
+     同一个盒子三处定义 + 5 处内联。现在真源只有下面三档，页面用修饰类取用。 */
+  --w-search: 560px;
+  --w-search-sm: 320px;
+  --w-search-xs: 260px;
+
   /* ---------- 底栏高度与占位（P1「底栏契约」的数据源） ----------
      现状：56px 硬编码在 AppTabBar.vue，页内 fixed 条各自 bottom:0 → 移动端
      作品详情动作条与筛选 sheet 被底栏压住（实测：两者 top/bottom 完全重合）。

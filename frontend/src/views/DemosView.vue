@@ -456,7 +456,7 @@ onBeforeUnmount(() => observer?.disconnect())
     </div>
 
     <div class="toolbar">
-      <div class="search-box" style="flex: 1">
+      <div class="search-box search-box--grow">
         <input
           v-model="q"
           class="input"

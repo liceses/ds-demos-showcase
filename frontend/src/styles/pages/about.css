@@ -153,11 +153,12 @@
 }
 
 /* 显式提交搜索按钮 */
+/* P2-c：max-width 已归位到 components/toolbar.css（那里才是 .search-box 的结构所有者；
+   原先两处各写一次 420/560 并靠导入序取胜）。本处只留布局属性。 */
 .search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 560px;
 }
 .search-box .input {
   padding-right: 12px;

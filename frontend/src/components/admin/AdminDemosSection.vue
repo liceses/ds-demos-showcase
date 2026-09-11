@@ -126,7 +126,7 @@ onMounted(load)
 <template>
   <div>
     <div class="filter-row" style="margin-bottom: 14px">
-      <div class="search-box" style="flex: 1">
+      <div class="search-box search-box--grow">
         <input v-model="demoQuery" class="input" type="search" placeholder="搜索标题 / 作者 / slug / 标签…" @input="demoPage = 1" />
         <span class="search-icon">Q</span>
       </div>

@@ -72,6 +72,9 @@ const TAB_GROUPS: { label: string; tabs: AdminTab[] }[] = [
     label: '知识中心',
     tabs: [
       { key: 'entities', label: t('admin.nav.knowledge', '知识') },
+      // P4：组件（AdminAliasesSection）与 ALL_TABS('aliases') 一直都在，只是导航里没入口 ——
+      // 唯一能改模型 slug 的界面因此只能靠手打 ?tab=aliases 到达。
+      { key: 'aliases', label: '模型别名' },
     ],
   },
   {

@@ -753,6 +753,7 @@ export const en = {
     commitHint: 'Generates a “demo updated” announcement and a timeline entry',
     keepOld: 'Keep the current version as a standalone old-version page (applies when uploading a new zip)',
     viewDup: 'View existing demo →',
+    forceSubmit: 'Content unchanged — submit anyway',
     updated: 'Updated — announcement generated.',
     pending: 'Submitted, waiting for admin review.',
     uploaded: 'Uploaded.',

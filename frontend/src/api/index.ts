@@ -385,7 +385,12 @@ const realApi = {
     })
     return data
   },
-  async updateDemo(slug: string, payload: UpdateDemoPayload, onProgress?: (percent: number) => void): Promise<void> {
+  async updateDemo(
+    slug: string,
+    payload: UpdateDemoPayload,
+    onProgress?: (percent: number) => void,
+    force = false,
+  ): Promise<void> {
     const form = new FormData()
     if (payload.title) form.append('title', payload.title)
     if (payload.description !== undefined) form.append('description', payload.description)
@@ -398,7 +403,9 @@ const realApi = {
     if (payload.file) form.append('file', payload.file)
     if (payload.commit_message) form.append('commit_message', payload.commit_message)
     if (payload.keep_old_version) form.append('keep_old_version', 'true')
-    await http.put(`/demos/${encodeURIComponent(slug)}`, form, {
+    // P4：编辑路径原先拿不到 force —— 与新建路径不对称，导致"重复内容 409"只能改内容绕开。
+    // 后端 PUT /demos/{slug} 接受 force=1（demos.py），这里按需带上（默认不带，保持原行为）。
+    await http.put(`/demos/${encodeURIComponent(slug)}${force ? '?force=1' : ''}`, form, {
       timeout: 120000,
       onUploadProgress: onProgress
         ? (e) => {

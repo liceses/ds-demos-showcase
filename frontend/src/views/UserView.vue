@@ -4,6 +4,8 @@ import { api } from '../api'
 import { parseDate, currentLocale } from '../utils/time'
 import type { DemoSummary, User, UserProfile } from '../api/types'
 import { useAuthStore } from '../stores/auth'
+import { useUiStore } from '../stores/ui'
+import { errorMessage } from '../utils/error'
 import { useNotificationsStore } from '../stores/notifications'
 import { useQueues } from '../composables/adminQueues'
 import { openSearch } from '../composables/useSearch'
@@ -16,6 +18,7 @@ import PageHero from '../components/PageHero.vue'
 
 const props = defineProps<{ username: string }>()
 const auth = useAuthStore()
+const ui = useUiStore()
 // M2-1 「我的」内聚页内承接（03 §10.2）：通知（未读红点镜像，铃铛同源 notifications store
 // 单一口径，startPolling 幂等）/ 设置 / 工作台(admin，徽章走 adminQueues 同源) / 退出。
 const notif = useNotificationsStore()
@@ -46,8 +49,10 @@ async function toggleFollow() {
     profile.value.is_following = r.following
     profile.value.follower_count = r.followers_count
     profile.value.following_count = r.following_count
-  } catch {
-    // 静默
+  } catch (e) {
+    // P4：原先是 catch { // 静默 } —— 关注失败时按钮点了没反应、状态也不回滚，
+    // 用户只会以为"点了没用"。改为报错（不擅自改本地状态：服务端没成功就不该显示已关注）。
+    ui.toast(errorMessage(e), 'error')
   }
 }
 

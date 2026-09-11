@@ -44,6 +44,8 @@ const submitting = ref(false)
 const uploadProgress = ref(0)
 const error = ref('')
 const dupSlug = ref<string | null>(null)
+// P4：编辑态下的重复内容 —— 允许"仍要提交"（带 force=1）
+const dupInEdit = ref(false)
 const success = ref<{ slug: string; status: string; created?: boolean } | null>(null)
 const idempotencyKey = ref('')
 const uploadCode = ref('')
@@ -349,7 +351,7 @@ const hasChanges = computed(() => {
   )
 })
 
-async function submit() {
+async function submit(force = false) {
   // 防抖：提交中忽略重复触发（连点 / 回车连按）
   if (submitting.value) return
   // 向导门禁：先定位到第一个不满足的必答步，把错误带到问题现场（而不是只弹一条横幅）
@@ -417,6 +419,7 @@ async function submit() {
           keep_old_version: keepOldVersion.value,
         },
         onProgress,
+        force,
       )
       success.value = { slug: editSlug, status: 'updated' }
     } else {
@@ -471,6 +474,9 @@ async function submit() {
     // 409 内容重复：后端 detail 含 /demo/<slug>，解析出已有 demo 供跳转
     const m = /\/demo\/([^/\s]+)/.exec((e as Error).message)
     dupSlug.value = m ? m[1] : null
+    // P4：编辑路径原先没有 bypass —— 与新建路径不对称（POST 一直带 force=1），
+    // 于是"我要更新这件、内容确实没大改"会被 409 卡死。这里给出第二个出口。
+    dupInEdit.value = !!(m && editSlug)
   } finally {
     submitting.value = false
   }
@@ -548,7 +554,9 @@ async function submit() {
         />
         <p v-if="lastAside" class="uw-aside" aria-live="polite">{{ lastAside }}</p>
 
-        <form class="form-stack" @submit.prevent="submit">
+        <!-- P4：写成 submit() 而不是 submit —— submit 现在带 force 参数，
+             直接绑会把 submit 事件当 force 传进去（永远是 truthy），等于编辑一律强推。 -->
+        <form class="form-stack" @submit.prevent="submit()">
         <!-- v2 B4′：挑战上下文（跨步保留，因为题面同时喂给标题与提示词） -->
         <div v-if="challenge && !challengeOff" class="card card-mint challenge-card">
           <div class="filter-row" style="margin-bottom: 6px">
@@ -698,6 +706,8 @@ async function submit() {
           :review-rows="reviewRows"
           :error="error"
           :dup-slug="dupSlug"
+          :dup-in-edit="dupInEdit"
+          @force-submit="submit(true)"
           :success="success"
           :challenge="challenge"
           :challenge-off="challengeOff"

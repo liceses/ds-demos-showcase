@@ -14,6 +14,8 @@ defineProps<{
   reviewRows: ReviewRow[]
   error: string
   dupSlug: string | null
+  /** P4：编辑态下的"内容重复"—— 提供 force 提交出口（后端 PUT 支持 force=1，前端原先从不发） */
+  dupInEdit?: boolean
   success: { slug: string; status: string; created?: boolean } | null
   challenge: { slug: string; title: string; description?: string; demos_total?: number } | null
   challengeOff: boolean
@@ -21,7 +23,7 @@ defineProps<{
   submitting: boolean
   uploadProgress: number
 }>()
-const emit = defineEmits<{ go: [step: number]; reset: [] }>()
+const emit = defineEmits<{ go: [step: number]; reset: []; forceSubmit: [] }>()
 </script>
 
 <template>
@@ -41,6 +43,11 @@ const emit = defineEmits<{ go: [step: number]; reset: [] }>()
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
         <span>{{ error }}</span>
         <RouterLink v-if="dupSlug" class="btn btn-sm btn-outline" :to="`/demo/${dupSlug}`">{{ t('upload.viewDup', '查看已有 Demo →') }}</RouterLink>
+        <!-- P4：编辑已有作品时，重复内容 409 原先只能"去看已有那件"或自己改内容 ——
+             新建路径一直带 force=1，编辑路径却没有。这里补上与新建对称的出口。 -->
+        <button v-if="dupInEdit" type="button" class="btn btn-sm btn-secondary" @click="emit('forceSubmit')">
+          {{ t('upload.forceSubmit', '内容没变，仍要提交') }}
+        </button>
       </div>
     </div>
     <div v-if="success" class="notice notice-success">

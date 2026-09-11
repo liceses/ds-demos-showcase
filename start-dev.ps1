@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
   一键启动 DS 展示站开发环境（后端 + 前端）。
 .DESCRIPTION
@@ -44,13 +44,34 @@ function Stop-NodeOnPort([int]$Port) {
 }
 
 # ---------- 1. 后端依赖 ----------
+# 预检（自愈）：venv 的**解释器必须能真正 import 依赖**。
+# 为什么需要这一步：`uv venv --python <版本>` 会在本机没有该版本时**自动下载**
+# 一个托管解释器并装对应 ABI 的编译扩展（如 cp314 的 _pydantic_core.*.pyd）。
+# 若之后 venv 又被另一个解释器（如 python -m venv，3.12）覆盖重建，
+# site-packages 里的旧 ABI 二进制会**原地残留**，症状是启动即崩、且报错极具误导性：
+#   ModuleNotFoundError: No module named 'pydantic_core._pydantic_core'
+# （包目录在、只有里面的 .pyd 与解释器版本不匹配。）
+# 这里发现不匹配就整目录重建 + 重装一次，避免"能装不能跑"。
+function Test-BackendDeps {
+  param([string]$Python)
+  if (-not (Test-Path $Python)) { return $false }
+  & $Python -c "import pydantic_core, fastapi, sqlalchemy" 2>$null
+  return ($LASTEXITCODE -eq 0)
+}
+
 if (-not $SkipInstall) {
+  if ((Test-Path $BackendPython) -and -not (Test-BackendDeps $BackendPython)) {
+    Write-Host "[1/4] 检测到 venv 依赖不可用（常见于 venv 被跨 Python 版本重建、残留旧 ABI 的 .pyd）——重建 ..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force (Join-Path $Backend ".venv") -ErrorAction SilentlyContinue
+  }
   if (-not (Test-Path $BackendPython)) {
     Write-Host "[1/4] 创建后端虚拟环境并安装依赖 ..." -ForegroundColor Cyan
     if (Get-Command uv -ErrorAction SilentlyContinue) {
       Push-Location $Backend
       try {
-        uv venv .venv --python 3.14
+        # 不写死 --python 3.14：本机没装时 uv 会静默下载一个，随后极易与系统解释器混用。
+        # 交给 uv 选默认解释器（与随后的安装保持一致），版本一致性由上面的预检兜底。
+        uv venv .venv
         uv pip install --python .venv\Scripts\python.exe -r requirements.txt
       } finally {
         Pop-Location

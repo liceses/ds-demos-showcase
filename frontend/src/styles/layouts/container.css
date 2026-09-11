@@ -1,6 +1,15 @@
 /* ---------- 通用容器 ---------- */
+/* P3：三档页宽走令牌（tokens/primitives.css）——
+   此前全站只有一条 min(1280px, 100%-32px)，1920 屏上左右各空 320px，
+   而"窄列"（关于正文 640 / 名单 720 / 表单 440）又各写各的内联 max-width。
+   现在：默认 --w-page；列表/网格页用 .container--wide（页面由路由 meta.wide 声明）；
+   阅读与表单用 --w-read。 */
 .container {
-  width: min(1280px, calc(100% - 32px));
+  width: var(--w-page);
   margin: 0 auto;
 }
 
+/* 大屏列表/网格：仅在 ≥1440 生效（更窄的屏上 --w-wide 与 --w-page 等价，无需媒体查询） */
+.container--wide {
+  width: var(--w-wide);
+}

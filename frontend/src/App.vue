@@ -207,7 +207,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <main class="container" :class="{ 'forum-container': route.meta.forum }" style="flex: 1">
+    <!-- P3 页宽三档：默认 --w-page(1280)；列表/网格页由路由 meta.wide 开 .container--wide
+         （≥1440 起生效 --w-wide）；阅读与表单页各自用 --w-read 收窄。 -->
+    <main class="container" :class="{ 'forum-container': route.meta.forum, 'container--wide': route.meta.wide }" style="flex: 1">
       <RouterView v-slot="{ Component }">
         <!-- P2-1 页面转场（04 §2.3.1 可抄范式）：Transition 必须包在 KeepAlive 外层，
              mode="out-in" = 旧页 0ms 硬切消失（.page-leave-active transition:none）+ 新页 stamp-lite 250ms 登场；

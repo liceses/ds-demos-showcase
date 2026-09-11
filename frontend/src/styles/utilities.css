@@ -42,3 +42,11 @@
   text-decoration-thickness: 4px;
 }
 
+/* P3：阅读/表单列宽真源（--w-read）。原先这类"窄列"散在各处内联或页面 CSS：
+   关于正文 640、名单 720、上传列 760、设置卡 440 —— 四条数字四个来源。
+   双类名（特异性 0,2,0）是刻意的：设置页的 .auth-card 来自**更晚导入**的
+   components/form-page.css（.auth-card{max-width:440px}），单类名的 .read-col
+   会被它压住 —— 实测该卡仍 440，与同页 760 的外观卡对不齐。 */
+.read-col.read-col {
+  max-width: var(--w-read);
+}

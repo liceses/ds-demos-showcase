@@ -104,7 +104,7 @@ onBeforeUnmount(() => {
   </PageHero>
 
   <section class="section" style="padding-top: 8px">
-    <div class="auth-card card card-coral" style="padding: 24px">
+    <div class="auth-card card card-coral read-col" style="padding: 24px">
       <h2 style="margin-bottom: 12px">{{ t('settings.changePwd', '修改密码') }}</h2>
       <form class="form-stack" @submit.prevent="submitPassword">
         <label class="field">
@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
   </section>
 
   <section class="section" style="padding-top: 0">
-    <div class="appearance-card card card-default">
+    <div class="appearance-card card card-default read-col">
       <h2 style="margin-bottom: 6px">{{ t('settings.appearanceTitle', '外观与主题') }}</h2>
       <p class="appearance-desc">
         {{ t('settings.appearanceDesc', '选择立即生效并保存在本设备；「跟随系统」随设备深浅色偏好自动换肤。') }}

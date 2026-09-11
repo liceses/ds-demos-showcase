@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 720px;
+  max-width: var(--w-read); /* P3：名单列宽并到 --w-read（原 720 字面量） */
 }
 .fl-row {
   display: flex;

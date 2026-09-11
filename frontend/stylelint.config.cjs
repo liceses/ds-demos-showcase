@@ -30,8 +30,14 @@ module.exports = {
       'box-shadow': [/^inset/i],
     },
     // ---- 50% 律断点白名单（error：480/640/720/1024/1280；hover/reduced-motion 特性查询不在其列）----
+    // P1 修正：键原为 `width`，而该键只匹配**范围语法** `@media (width >= 997px)`——
+    //   全站真实写法是 `min-width`/`max-width`，实测 `@media (max-width:999px)` 与
+    //   `(min-width:998px)` 都**不被校验** → 这条 error 级守护清单此前对全站 0 生效
+    //   （P0-3 手工收缝 719/720/720.02 与 1023/1024/1025 时它一声没响）。
+    //   现改为同时校验 min-/max-width，并把 720/1024 的**互补值** 721/1025 列入
+    //   （互补写法是消除「缝隙档」的标准手法：max-720 配 min-721，不留 720~721 之间的空洞）。
     'media-feature-name-value-allowed-list': {
-      width: ['480px', '640px', '720px', '1024px', '1280px'],
+      '/^(min|max)-width$/': ['480px', '640px', '720px', '721px', '1024px', '1025px', '1280px'],
     },
     // ---- 嵌套深度 3 ----
     'max-nesting-depth': 3,

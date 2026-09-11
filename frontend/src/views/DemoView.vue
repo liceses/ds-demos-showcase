@@ -415,6 +415,24 @@ onMounted(load)
         <button v-if="fsActive" class="dv-fs-exit" type="button" @click="toggleFullscreen">
           {{ t('demo.barExitFs', '退出全屏') }}
         </button>
+        <!-- P1 补入口（用户报「移动端没有全屏按钮」顺带暴露的真实缺口）：
+             全屏此前只有 ≤720 的动作条按钮 + iframe 拿到焦点后按 F —— 桌面端**没有任何可见入口**
+             （旧样式 .preview-fullscreen-btn 还留在 responsive-v1.css 里，但模板零引用，是死 CSS）。
+             这里在预览右上角补一个常驻控件：指针设备悬停/聚焦时浮现（预览保持干净），
+             触屏设备常驻可见；≤720 由动作条提供（那条更常驻），本控件让位不重复。 -->
+        <button
+          v-if="demo.demo_type === 'web' && previewArmed && !fsActive"
+          class="dv-fs-enter"
+          type="button"
+          :title="t('demo.fsTip', '全屏预览（快捷键 F）')"
+          :aria-label="t('demo.barFullscreen', '全屏')"
+          @click="toggleFullscreen"
+        >
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+            <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <span>{{ t('demo.barFullscreen', '全屏') }}</span>
+        </button>
         <!-- iframe 懒挂载：预览进视口才加载，移动端/长页面不必为一块看不见的区域付渲染与流量 -->
         <!-- M0-B 预览三态：触屏默认海报点击播放；桌面进视口自动挂载（既有懒挂载逻辑不变） -->
         <template v-if="demo.demo_type === 'web'">
@@ -996,7 +1014,7 @@ onMounted(load)
   position: absolute;
   top: 8px;
   right: 8px;
-  z-index: 3;
+  z-index: var(--z-local);
   min-height: 44px; /* 触达底线 */
   padding: 6px 12px;
   font: inherit;
@@ -1012,6 +1030,40 @@ onMounted(load)
   transform: translate(2px, 2px);
   box-shadow: none;
   transition-duration: 0ms;
+}
+/* P1 全屏入口（与 .dv-fs-exit 同角同位、互斥显示：进入前见它、进入后见退出把手）
+   **常驻可见，不做悬停浮现** —— 实测：预览区被 iframe 完全覆盖，指针落在 iframe 上时
+   父级 hover 链为空（.dv-stage:hover === false，而悬停右侧事实卡时链正常），
+   靠 :hover 显形的控件在这个位置**永远不会出现**（等于没补）。
+   ≤720 让位给动作条的常驻「全屏」，避免同一动作两个入口。 */
+.dv-fs-enter {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: var(--z-local);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--paper, #fff);
+  color: var(--ink, #000);
+  border: var(--border-w, 4px) solid var(--ink, #000);
+  box-shadow: 4px 4px 0 0 var(--ink, #000);
+  cursor: pointer;
+}
+.dv-fs-enter:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+/* ≤720：动作条 5 键里有常驻「全屏」，这里让位（同一个动作用两个入口=噪音） */
+@media (max-width: 720px) {
+  .dv-fs-enter {
+    display: none;
+  }
 }
 
 /* ★评分滚达闪档：黄底一闪（峰终：给分入口有可感回应）；reduced-motion 退场 */

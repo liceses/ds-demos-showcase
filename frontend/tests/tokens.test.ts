@@ -18,11 +18,11 @@ const TOKEN_FILES = ['src/styles/tokens/primitives.css', 'src/styles/tokens/sema
 /** 布局令牌命名空间（色彩/阴影/边框令牌不在此测试范围） */
 const NAMESPACES = ['--z-', '--sp-', '--fs-', '--w-', '--tabbar-']
 
-/** 允许保留字面量的局部层叠：作品详情预览内部的纯局部抬升（5 / 3）。
- *  它们不参与全局层表（父级已建立层叠上下文），改动前需读上下文。
- *  筛选抽屉的 44/45/46 已在 P1 收进 `calc(var(--z-sheet) - N)` —— 因为它们在移动端
- *  必须压过底栏（900），不再是"局部"问题。 */
-const ALLOWED_LOCAL_Z = new Set(['5', '3'])
+/** 允许保留字面量的局部层叠：作品详情预览内部的纯局部抬升（5）。
+ *  它不参与全局层表（父级已建立层叠上下文），改动前需读上下文。
+ *  筛选抽屉的 44/45/46 已在 P1 收进 `calc(var(--z-sheet) - N)`（移动端必须压过底栏 900，
+ *  不再是"局部"问题）；全屏控件原为字面量 3，P1 起改用 `var(--z-local)`。 */
+const ALLOWED_LOCAL_Z = new Set(['5'])
 
 function* files(dir: string): Generator<string> {
   for (const e of readdirSync(dir)) {

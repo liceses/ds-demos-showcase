@@ -82,12 +82,10 @@
 .preview-shell .preview-frame {
   transition: height var(--b-dur) var(--b-ease);
 }
-.preview-fullscreen-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: var(--z-local);
-}
+/* P1 清死：这里原有 `.preview-fullscreen-btn { position:absolute; top:12px; right:12px;
+   z-index: var(--z-local) }`，全仓 .vue 搜不到该类名 → 历史遗留的死样式。
+   真正在用的全屏控件是 DemoView 的 .dv-fs-enter / .dv-fs-exit（scoped，与 stageEl
+   的全屏逻辑同处）；桌面端"找不到全屏入口"正是这个死类造成的假象。 */
 
 /* 预览提示与默认高度（追加覆盖） */
 .preview-hint {

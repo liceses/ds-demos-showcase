@@ -571,6 +571,7 @@ export const en = {
     previewKbHint: 'Click the preview to use the keyboard',
     barFullscreen: 'Fullscreen',
     barExitFs: 'Exit fullscreen',
+    fsTip: 'Fullscreen preview (shortcut: F)',
     barRestart: 'Replay',
     barExternal: 'External',
     barRate: 'Rate',

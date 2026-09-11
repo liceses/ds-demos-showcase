@@ -334,7 +334,7 @@ onMounted(() => {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  z-index: 60;
+  z-index: var(--z-dropdown);
   min-width: 180px;
   display: flex;
   flex-direction: column;

@@ -72,12 +72,14 @@ onMounted(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 900; /* 弹层之下（modal 1000/toast 1100），内容之上 */
+    z-index: var(--z-tabbar); /* 弹层之下（modal 1000/toast 1100），内容之上 */
     display: flex;
     align-items: stretch;
     background: var(--paper, #fff);
     border-top: var(--border-w, 4px) solid var(--ink, #000);
     padding-bottom: env(safe-area-inset-bottom); /* iPhone 底部横条（03 §10.2） */
+    /* P0-2：高度真源 = tokens/primitives.css 的 --tabbar-h（.tb 的 min-height 引用它）；
+       P1 底栏占位契约会让页内同高 fixed 条统一 bottom: var(--tabbar-h-safe)。 */
   }
 }
 .tb {
@@ -86,7 +88,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 56px; /* ≥44 触达线（03 §10.1），留余量 */
+  min-height: var(--tabbar-h); /* ≥44 触达线（03 §10.1），留余量；P0-2 起高度入令牌 */
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;

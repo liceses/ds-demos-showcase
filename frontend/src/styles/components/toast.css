@@ -3,7 +3,7 @@
   position: fixed;
   right: 18px;
   bottom: 18px;
-  z-index: 1100;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 10px;

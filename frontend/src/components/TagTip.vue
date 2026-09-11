@@ -116,7 +116,7 @@ function closeAndBlur(e: KeyboardEvent) {
   position: absolute;
   left: 0;
   top: calc(100% + 6px);
-  z-index: 60; /* token 化前的临时层级（对齐 --z-modal 段位） */
+  z-index: var(--z-dropdown); /* token 化前的临时层级（对齐 --z-modal 段位） */
   max-width: 260px;
   padding: 8px 10px;
   border: 2px solid var(--ink, #000);

@@ -753,6 +753,8 @@ onBeforeUnmount(() => observer?.disconnect())
 .facet-backdrop {
   position: fixed;
   inset: 0;
+  /* P0-2：44/45/46 是抽屉内部相对序（遮罩<浮层<底部 sheet），刻意保留字面量——
+     局部层叠不进全局层表（token 见 tokens/primitives.css 的 --z-*）。 */
   z-index: 44;
   background: rgba(0, 0, 0, 0.32);
 }
@@ -826,7 +828,7 @@ onBeforeUnmount(() => observer?.disconnect())
   color: var(--paper, #fff);
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: var(--z-overlay);
 }
 .fp-title {
   font-family: var(--font-heading, sans-serif);

@@ -359,7 +359,7 @@ onBeforeUnmount(() => {
 .so {
   position: fixed;
   inset: 0;
-  z-index: 1050; /* 压过 modal/drawer 1000，让 toast(1100) 仍在其上 */
+  z-index: var(--z-search); /* 压过 modal/drawer 1000，让 toast(1100) 仍在其上 */
   background: var(--paper, #fff);
   overflow-y: auto;
   overscroll-behavior: contain;

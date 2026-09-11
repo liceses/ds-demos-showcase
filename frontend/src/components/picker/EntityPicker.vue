@@ -391,7 +391,7 @@ onBeforeUnmount(() => {
 /* 浮层三律形态：2px 实线描边 + 纯色底（不做 4px 硬影盒）；b-stamp-drop 入场由全局动效类提供时用 0ms 硬切兜底 */
 .picker-panel {
   position: absolute;
-  z-index: 60;
+  z-index: var(--z-dropdown);
   left: 0;
   right: 0;
   top: calc(100% + 4px);

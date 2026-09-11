@@ -386,7 +386,7 @@
   left: 0;
   width: 50%;
   height: 100%;
-  z-index: 2;
+  z-index: var(--z-overlay);
   background: var(--ink);
   color: var(--paper);
   display: flex;

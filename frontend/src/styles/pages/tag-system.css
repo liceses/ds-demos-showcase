@@ -100,7 +100,7 @@
   text-transform: uppercase;
   transform: rotate(-6deg);
   box-shadow: 3px 3px 0 0 var(--ink);
-  z-index: 2;
+  z-index: var(--z-overlay);
 }
 .tag-panel-head {
   display: flex;
@@ -437,7 +437,7 @@
 .tag-modal {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: var(--z-sheet);
   display: flex;
   align-items: center;
   justify-content: center;

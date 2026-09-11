@@ -1,5 +1,5 @@
 /* ---------- 侧滑"瞄一眼"抽屉（Demo 页第 3 期） ---------- */
-.peek-root { position: fixed; inset: 0; z-index: 80; }
+.peek-root { position: fixed; inset: 0; z-index: var(--z-drawer); }
 .peek-mask { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
 .peek-panel {
   position: absolute;

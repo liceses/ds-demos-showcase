@@ -920,7 +920,7 @@ onMounted(load)
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 60; /* 与 dv-rail 同段位：peek(z80)/toast(z1100) 仍在之上 */
+    z-index: var(--z-dropdown); /* 与 dv-rail 同段位：peek(z80)/toast(z1100) 仍在之上 */
     border-top: var(--border-w, 4px) solid var(--ink, #000);
     background: var(--paper, #fff);
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -976,7 +976,7 @@ onMounted(load)
 .dv-stage--fs {
   position: fixed;
   inset: 0;
-  z-index: 1050;
+  z-index: var(--z-search);
   max-height: none;
   overflow: auto;
   background: var(--paper, #fff);

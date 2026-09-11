@@ -195,7 +195,7 @@
   position: fixed;
   right: -68px;
   top: 30%;
-  z-index: 900;
+  z-index: var(--z-float);
   transform: rotate(-6deg);
   padding: 12px 80px 12px 16px;
   /* T16（M4-2a）：牛皮纸件跨主题常驻（首页右缘），原绑 --ink 在墨黑主题翻成暖白——
@@ -219,7 +219,7 @@
 .forum-takeover {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: var(--z-forum);
   background: var(--paper-forum);
   display: flex;
   align-items: center;

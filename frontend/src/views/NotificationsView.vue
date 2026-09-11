@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useNotificationsStore } from '../stores/notifications'
 import { parseDate, currentLocale } from '../utils/time'
 import { t } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 defineOptions({ name: 'NotificationsView' })
 
@@ -45,10 +46,10 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('notifications.eyebrow', '通知') }}</span>
-    <h1 class="huge">{{ t('notifications.title', '通知中心') }}</h1>
-  </section>
+    <h1 class="page-title">{{ t('notifications.title', '通知中心') }}</h1>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div class="filter-row" style="margin-bottom: 14px">

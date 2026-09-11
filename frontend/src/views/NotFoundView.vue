@@ -80,7 +80,9 @@ onMounted(async () => {
 
 <template>
   <div class="route-page">  <section class="empty-box nf">
-    <h1 class="huge">404</h1>
+    <!-- P2-b：404 不是品牌页，标题从 115px 巨字收进功能页档（.page-title 已独立成类，
+         原先它只作为 .page-hero--compact 的后代选择器存在，所以这页只能用 .huge） -->
+    <h1 class="page-title">404</h1>
     <p class="sub" style="margin: 12px auto 20px; max-width: 360px">{{ t('notFound.sub', '页面不存在，可能已被移动或删除。') }}</p>
     <RouterLink class="btn btn-primary" to="/">{{ t('notFound.back', '返回首页') }}</RouterLink>
 

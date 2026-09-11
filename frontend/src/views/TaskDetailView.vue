@@ -10,6 +10,7 @@ import { parseDate, currentLocale } from '../utils/time'
 import { tagLabel } from '../utils/funMode'
 import { t } from '../i18n'
 import EntityStamp from '../components/EntityStamp.vue'
+import PageHero from '../components/PageHero.vue'
 // 作品瀑布已被证据表取代（DemoCard / MasonryGrid 因此不再需要）
 
 const route = useRoute()
@@ -69,11 +70,11 @@ const chainStat = computed(() => {
   <section v-else-if="error" class="empty-box">{{ error }}</section>
 
   <template v-else-if="task">
-    <section class="page-hero" style="padding-bottom: 20px">
+    <PageHero tight>
       <div class="model-hero-head">
         <EntityStamp :name="task.title" size="lg" />
         <div>
-          <h1 class="huge" style="margin-top: 0">{{ task.title }}</h1>
+          <h1 class="page-title">{{ task.title }}</h1>
           <div class="filter-row" style="margin-top: 6px; gap: 8px">
             <span v-if="task.category" class="mini-stat"><b>{{ task.category }}</b> {{ t('tasks.category', '分类') }}</span>
             <span class="mini-stat"><b>{{ task.demos_total }}</b> {{ t('tasks.entries', '作品') }}</span>
@@ -82,7 +83,7 @@ const chainStat = computed(() => {
         </div>
       </div>
       <p v-if="task.description" class="sub" style="margin-top: 10px">{{ task.description }}</p>
-    </section>
+    </PageHero>
 
     <!-- 题面块：这道题到底让你做什么 —— 原来页面上完全看不到 -->
     <section v-if="task.chain && task.chain.brief" class="section" style="padding-top: 4px">

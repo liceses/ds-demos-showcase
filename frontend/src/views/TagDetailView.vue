@@ -9,6 +9,7 @@ import MasonryGrid from '../components/MasonryGrid.vue'
 import TagGroupBox from '../components/TagGroupBox.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
+import PageHero from '../components/PageHero.vue'
 
 const props = defineProps<{ k: string; v: string }>()
 
@@ -59,14 +60,16 @@ onMounted(async () => {
       </template>
     </div>
 
-    <section class="page-hero" style="padding-bottom: 20px">
+    <PageHero tight>
       <div class="filter-row" style="margin: 0 0 12px">
         <span v-if="keyDef" class="mode-badge" :class="'mode-badge-' + keyDef.mode">
           {{ keyLabel(keyDef.key, keyDef.label) }} · {{ modeLabel(keyDef.mode) }}
         </span>
-        <span class="eyebrow">{{ t('tagDetail.eyebrow', '标签详情') }}</span>
+        <span class="eyebrow">{{ t('tagDetail.eyebrow', '标签详情') }} <code>{{ tag.key }}</code></span>
       </div>
-      <h1 class="huge">{{ tag.key }}:{{ tagLabel(tag.value) }}</h1>
+      <!-- P2-b：主标题改为**人读的值标签**，机器标识（键名）降为上方 eyebrow 里的 code。
+           原先这里把内部标识当标题渲染成一行 115px 的「model:dsv4」——那是把内部标识端给用户。 -->
+      <h1 class="page-title">{{ tagLabel(tag.value) }}</h1>
       <p class="sub">
         <template v-if="keyDef">{{ keyDef.description || '' }}</template>
         <template v-if="valueInfo?.description"><br />{{ valueInfo.description }}</template>
@@ -77,7 +80,7 @@ onMounted(async () => {
         <span class="mini-stat"><b>{{ sameKeyValues.length }}</b> {{ t('tagDetail.sameKey', '同键值') }}</span>
         <RouterLink v-if="forumCount > 0" class="mini-stat" :to="`/forum?tag=${tag.key}:${tag.value}`">{{ t('tagDetail.related', '相关讨论 {n} →', { n: forumCount }) }}</RouterLink>
       </div>
-    </section>
+    </PageHero>
 
     <section v-if="sameKeyValues.length > 1" class="section" style="padding-top: 8px">
       <div class="section-head">

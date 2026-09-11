@@ -15,6 +15,7 @@ import { t } from '../i18n'
 import EntityStamp from '../components/EntityStamp.vue'
 import DemoCard from '../components/DemoCard.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import PageHero from '../components/PageHero.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,11 +111,11 @@ watch(() => route.params.slug, load, { immediate: true })
   </section>
 
   <template v-else-if="model">
-    <section class="page-hero" style="padding-bottom: 20px">
+    <PageHero tight>
       <div class="model-hero-head">
         <EntityStamp :name="model.name" :vendor="model.vendor" size="lg" />
         <div>
-          <h1 class="huge" style="margin-top: 0">{{ tagLabel(model.name) }}</h1>
+          <h1 class="page-title">{{ tagLabel(model.name) }}</h1>
           <div class="filter-row" style="margin-top: 6px; gap: 8px">
             <span v-if="model.vendor" class="mini-stat"><b>{{ model.vendor }}</b> {{ t('models.vendor', '厂商') }}</span>
             <span v-if="model.status !== 'active'" class="mode-badge" :class="entityStatusClass(model.status)">
@@ -125,7 +126,7 @@ watch(() => route.params.slug, load, { immediate: true })
         </div>
       </div>
       <p v-if="model.description" class="sub" style="margin-top: 10px">{{ model.description }}</p>
-    </section>
+    </PageHero>
 
     <!-- 档案统计：分数是"事实的摘要"（收缩社区分），必须与票数、样本档同屏 -->
     <div class="dash-stats">

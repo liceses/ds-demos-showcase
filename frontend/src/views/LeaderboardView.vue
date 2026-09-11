@@ -11,6 +11,7 @@ import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { useListPage } from '../composables/useListPage'
 import { t } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 // —— 双榜 + URL 即状态（照 AdminView/DemosView 惯例）：?tab=works|users&sort=…&range=all|week|month
 // 同路径只改 query 不触发重挂（App.vue pageKey 用 path），所以自己 watch query 同步。
@@ -121,11 +122,11 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero page-hero--compact">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('app.nav.leaderboard', '排行榜') }}</span>
     <h1 class="page-title">{{ t('leaderboard.title', '神鬼榜') }}</h1>
     <p class="sub">{{ tab === 'users' ? t('leaderboard.usersSub', '谁在给这个社区添砖加瓦——声望、获赞与作品说话。') : t('leaderboard.sub', '用「神作 / 鬼作」两极语义给作品投票，看看大家的口碑。') }}</p>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div class="filter-row" style="margin-bottom: 8px">

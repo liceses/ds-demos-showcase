@@ -8,6 +8,7 @@ import AdminStatsSection from '../components/admin/AdminStatsSection.vue'
 import { useQueues, type QueueKey } from '../composables/adminQueues'
 import { t } from '../i18n'
 import type { AdminStats } from '../api/types'
+import PageHero from '../components/PageHero.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -184,10 +185,10 @@ onMounted(() => {
 
 <template>
 
-  <div>  <section class="page-hero">
+  <div>  <PageHero>
     <span class="eyebrow">管理后台</span>
-    <h1 class="huge">管理</h1>
-  </section>
+    <h1 class="page-title">管理</h1>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <!-- 第 1 期壳层：左侧两级导航（带队列徽章 + 可搜索 + ↑↓ 键切换），窄屏退化为下拉 -->

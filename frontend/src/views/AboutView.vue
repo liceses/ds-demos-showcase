@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { t } from '../i18n'
 import type { SiteInfo, SiteStats, SponsorBoard, ThanksBoard, LiveStats } from '../api/types'
+import PageHero from '../components/PageHero.vue'
 
 const stats = ref<SiteStats | null>(null)
 const info = ref<SiteInfo | null>(null)
@@ -52,11 +53,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('about.eyebrow', '关于本站') }}</span>
-    <h1 class="huge">{{ t('about.eyebrow', '关于本站') }}</h1>
+    <h1 class="page-title">{{ t('about.eyebrow', '关于本站') }}</h1>
     <p class="sub">{{ t('about.heroSub', '一个由 AI 模型生成的网页 Demo 作品集 —— 每个作品都附带生成会话日志与版本时间线，过程全透明。') }}</p>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="error" class="notice notice-error">{{ error }}</div>

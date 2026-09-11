@@ -12,6 +12,7 @@ import EntityStamp from '../components/EntityStamp.vue'
 import TagGroupBox from '../components/TagGroupBox.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
+import PageHero from '../components/PageHero.vue'
 
 const data = ref<ExploreResult | null>(null)
 const loading = ref(true)
@@ -56,7 +57,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero page-hero--compact">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('explore.eyebrow', '探索') }}</span>
     <h1 class="page-title">{{ t('explore.title', '探索') }}</h1>
     <p class="sub">{{ t('explore.sub', '按模型看它做过什么，按题目看同一句话不同模型的回答，按标签看题材分布。') }}</p>
@@ -65,7 +66,7 @@ onMounted(load)
       <span class="tag-stat"><b>{{ data?.tasks_total ?? 0 }}</b> {{ t('explore.tasksN', '道题目') }}</span>
       <span class="tag-stat"><b>{{ totalWorks }}</b> {{ t('explore.worksN', '个作品') }}</span>
     </div>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="error" class="notice notice-error">{{ error }}</div>

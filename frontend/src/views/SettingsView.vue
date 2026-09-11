@@ -4,6 +4,7 @@ import { api } from '../api'
 import { t } from '../i18n'
 import { getChosenTheme, getEffectiveTheme, setTheme } from '../utils/theme'
 import type { EffectiveTheme, ThemeChoice } from '../utils/theme'
+import PageHero from '../components/PageHero.vue'
 
 // 修改密码表单
 const oldPassword = ref('')
@@ -96,11 +97,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('settings.eyebrow', '账户设置') }}</span>
-    <h1 class="huge">{{ t('settings.title', '设置') }}</h1>
+    <h1 class="page-title">{{ t('settings.title', '设置') }}</h1>
     <p class="sub">{{ t('settings.sub', '修改你的登录密码。密码修改后，下次登录请使用新密码。') }}</p>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div class="auth-card card card-coral" style="padding: 24px">

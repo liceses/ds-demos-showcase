@@ -12,6 +12,7 @@ import PaginationBar from '../components/PaginationBar.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { useListPage } from '../composables/useListPage'
+import PageHero from '../components/PageHero.vue'
 
 const q = ref('')
 const sort = ref<'demos' | 'newest'>('demos')
@@ -34,14 +35,14 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero page-hero--compact">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('tasks.eyebrow', '题目图鉴') }}</span>
     <h1 class="page-title">{{ t('tasks.title', '题目') }}</h1>
     <p class="sub">{{ t('tasks.sub', '同一道题，不同模型各交了什么 —— 题目是本站的比较单位。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ total }}</b> {{ t('tasks.count', '道题目') }}</span>
     </div>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div class="toolbar">

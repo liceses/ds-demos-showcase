@@ -6,6 +6,7 @@ import TagGroupBox from '../components/TagGroupBox.vue'
 import type { TagKeyInfo } from '../api/types'
 import { tagLabel } from '../utils/funMode'
 import { t, modeLabel, keyLabel } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 const tagsStore = useTagsStore()
 const keys = computed(() => tagsStore.keys)
@@ -63,15 +64,15 @@ onMounted(async () => {
       <span>{{ t('tags.title', '标签') }}</span>
     </nav>
   </div>
-  <section class="page-hero">
+  <PageHero>
     <span class="eyebrow">{{ t('tags.eyebrow', '标签系统') }}</span>
-    <h1 class="huge">{{ t('tags.title', '标签') }}</h1>
+    <h1 class="page-title">{{ t('tags.title', '标签') }}</h1>
     <p class="sub">{{ t('tags.sub', '每个标签键定义一类属性：固定值是客观事实，开放值由用户创造，数字值是量化参数。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ keys.length }}</b> {{ t('tags.keys', '标签键') }}</span>
       <span class="tag-stat"><b>{{ keys.reduce((n, k) => n + k.values.length, 0) }}</b> {{ t('tags.values', '标签值') }}</span>
     </div>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('tags.loading', '加载标签…') }}</div>

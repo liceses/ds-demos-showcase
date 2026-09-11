@@ -9,6 +9,7 @@ import { useQueues } from '../composables/adminQueues'
 import { openSearch } from '../composables/useSearch'
 import DemoCard from '../components/DemoCard.vue'
 import { t } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 const props = defineProps<{ username: string }>()
 const auth = useAuthStore()
@@ -60,9 +61,9 @@ onMounted(async () => {
   <section v-else-if="error" class="empty-box">{{ error }}</section>
 
   <template v-else-if="user">
-    <section class="page-hero">
+    <PageHero>
       <span class="eyebrow">{{ t('user.eyebrow', '用户主页') }}</span>
-      <h1 class="huge">{{ user.username }}</h1>
+      <h1 class="page-title">{{ user.username }}</h1>
       <p class="sub">{{ user.bio || t('user.noBio', '这个人很懒，还没有写简介。') }}</p>
       <div class="filter-row" style="margin-top: 16px">
         <span class="mini-stat"><b>{{ user.demo_count }}</b> {{ t('home.demos', 'Demo') }}</span>
@@ -95,7 +96,7 @@ onMounted(async () => {
           @click="toggleFollow"
         >{{ profile.is_following ? t('user.followingBtn', '已关注') : t('user.followBtn', '关注') }}</button>
       </div>
-    </section>
+    </PageHero>
 
     <section class="section">
       <div class="section-head">

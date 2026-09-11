@@ -16,6 +16,7 @@ import MasonryGrid from '../components/MasonryGrid.vue'
 import PromptDemoCard from '../components/PromptDemoCard.vue'
 import RangeSlider from '../components/RangeSlider.vue'
 import TagTip from '../components/TagTip.vue'
+import PageHero from '../components/PageHero.vue'
 
 const demos = ref<DemoSummary[]>([])
 const tagKeys = ref<TagKeyInfo[]>([])
@@ -424,12 +425,12 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero page-hero--compact">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('app.nav.demos', '作品库') }}</span>
     <h1 class="page-title">{{ t('app.nav.demos', '作品库') }}</h1>
     <p class="sub">{{ t('demos.sub', '搜索、筛选、浏览全部 AI 网页 Demo —— 支持按标签与热度检索。') }}</p>
     <span class="mini-stat"><b>{{ total }}</b> {{ t('demos.works', '件作品') }}</span>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <!-- 视图栏：模式轨道 + 排序，独立一行，不与搜索/标签混排 -->

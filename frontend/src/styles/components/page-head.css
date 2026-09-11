@@ -1,9 +1,7 @@
 /* ---------- 页面头部 ---------- */
+/* 品牌/首屏 hero 的基准（首页 hero-v2 自持变体，不挂本档） */
 .page-hero {
   padding: 48px 0 36px;
-}
-.page-hero .title {
-  margin-top: 16px;
 }
 .page-hero .sub {
   max-width: 640px;
@@ -11,6 +9,7 @@
   font-size: 15px;
   line-height: 1.7;
 }
+/* P2-b 清死：原 `.page-hero .title { margin-top: 16px }` 全仓 `class="title"` 零命中，已删 */
 
 /* ---------- 区块 ---------- */
 .section {
@@ -28,20 +27,15 @@
   font-size: 26px;
 }
 
-/* t6 M5-U3（C3 重裁，08 §3）：目录/列表页「页眉行」——巨标题降档、内容前置、留白给内容首屏。
-   适用 = models/explore/leaderboard/demos 四个列表页；首页 hero（品牌位）不挂本档。 */
+/* ------------------------------------------------------------
+   P2-b：功能页页头统一档（由 <PageHero> 产出，全站唯一实现）
+   收敛前这里是两套档位并存：`.huge`（clamp(44px,8vw,120px)，1440 屏实测 115.2px）
+   用在 16 个页面，紧凑档只用 5 个列表页，各页自己写 section/eyebrow/h1/sub。
+   D2 决策（用户已批）：巨字只留首页品牌封面，功能页统一走本档 ——
+   登录/404/上传/标签/模型详情/用户主页那一排 115px 巨标题已收进 42px。
+   ------------------------------------------------------------ */
 .page-hero--compact {
   padding: 14px 0 12px;
-}
-.page-hero--compact .page-title {
-  display: block;
-  margin-top: 8px;
-  font-family: var(--font-body);
-  font-size: clamp(28px, 4vw, 42px);
-  font-weight: 900;
-  line-height: 1.0;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
 }
 .page-hero--compact .sub {
   max-width: 620px;
@@ -54,11 +48,26 @@
   margin-top: 8px;
   margin-bottom: 0;
 }
+/* 详情页变体：底部收紧 + 标题零上边距（等价于原先散在各页的内联 style="padding-bottom: 20px"
+   与 h1 上的 style="margin-top: 0"，原先 4 个详情页各写一遍） */
+.page-hero--tight {
+  padding-bottom: 20px;
+}
+.page-hero--tight .page-title {
+  margin-top: 0;
+}
 
-/* P0-4 归位：@480 巨字降档。特异性 (0,2,0) 高于 responsive-v1 的 .huge (0,1,0)，
-   HomeView 的 scoped 版本 (0,3,0) 仍照旧压过本规则。 */
-@media (max-width: 480px) {
-  .page-hero .huge {
-    font-size: 40px;
-  }
+/* 页标题：P2-b 起**独立成类**。原先它只作为 `.page-hero--compact .page-title` 的后代选择器
+   存在，404 这类没有 hero 的页面用不上，于是 404 只能继续挂 115px 的 .huge。
+   字号走 P0-2 建的令牌 --fs-title-compact（= 原来的 clamp(28px,4vw,42px)），
+   以后调档只改这一处。 */
+.page-title {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-size: var(--fs-title-compact);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
 }

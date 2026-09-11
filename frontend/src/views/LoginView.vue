@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { t } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -31,10 +32,10 @@ async function submit() {
 
 <template>
 
-  <div>  <section class="page-hero">
+  <div>  <PageHero>
     <span class="eyebrow">{{ t('auth.eyebrow', '账户') }}</span>
-    <h1 class="huge">{{ t('auth.login', '登录') }}</h1>
-  </section>
+    <h1 class="page-title">{{ t('auth.login', '登录') }}</h1>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div class="auth-card card card-coral" style="padding: 24px">

@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { DemoSummary } from '../api/types'
 import DemoCard from '../components/DemoCard.vue'
 import { t } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 const demos = ref<DemoSummary[]>([])
 const loading = ref(true)
@@ -22,14 +23,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('public.eyebrow', '公开用户') }}</span>
-    <h1 class="huge">{{ t('public.eyebrow', '公开用户') }}</h1>
+    <h1 class="page-title">{{ t('public.eyebrow', '公开用户') }}</h1>
     <p class="sub">{{ t('public.sub', '未注册用户（含 AI agent）上传的全部 Demo，统一展示在这里。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="mini-stat"><b>{{ demos.length }}</b> {{ t('home.demos', 'Demo') }}</span>
     </div>
-  </section>
+  </PageHero>
 
   <section class="section">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</div>

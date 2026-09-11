@@ -8,8 +8,18 @@
 //
 // 已修：四处都加了 loadError 标记 + `<EmptyBox kind="error" @retry>`（错误态用实线+错误色，
 // 并带 role=alert 与重试出口）。这个文件把"不许再退回混用"变成测试失败。
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+
+/** 递归列出 src 下的 .vue / .ts（护栏要扫全仓，不能只盯几个文件） */
+function* walk(dir: string): Generator<string> {
+  for (const e of readdirSync(dir)) {
+    const p = dir + '/' + e
+    if (statSync(p).isDirectory()) yield* walk(p)
+    else if (/\.(vue|ts)$/.test(e)) yield p
+  }
+}
+const files = (dir: string): string[] => [...walk(dir)]
 
 const ADMIN_LISTS = [
   'src/components/admin/AdminUsersSection.vue',
@@ -83,5 +93,52 @@ describe('P2 空态/错误态收敛', () => {
         /重试/.test(src) // 表格内联的重试按钮（<tr> 里不能塞 div，只能内联）
       expect(hasRetry, `${f} 的错误态没有重试入口`).toBe(true)
     }
+  })
+})
+
+describe('P2 页头收敛', () => {
+  /** 组件自己就是那个"手写 page-hero"的地方，豁免 */
+  const HERO_OWNER = 'src/components/PageHero.vue'
+  /** 首页 hero-v2 是品牌封面：D2 决定它保留巨字，不进组件 */
+  const BRAND_PAGE = 'src/views/HomeView.vue'
+
+  it('功能页页头一律走 <PageHero>（不许手写 page-hero 段）', () => {
+    const offenders: string[] = []
+    for (const f of files('src')) {
+      if (!f.endsWith('.vue') || f === HERO_OWNER || f === BRAND_PAGE) continue
+      readNoComments(f)
+        .split('\n')
+        .forEach((line, i) => {
+          if (/<section[^>]*class="page-hero/.test(line)) offenders.push(`${f}:${i + 1}`)
+        })
+    }
+    expect(offenders, '这些地方还在手写页头段，应改用 <PageHero>').toEqual([])
+    // 首页那条豁免必须真的是"品牌变体"，不能变成随便绕过护栏的后门
+    expect(read(BRAND_PAGE)).toMatch(/<section[^>]*class="page-hero hero-v2"/)
+  })
+
+  it('.huge 只属于首页品牌封面（功能页不许再用巨字档）', () => {
+    const offenders: string[] = []
+    for (const f of files('src')) {
+      if (!f.endsWith('.vue') || f === BRAND_PAGE || f === HERO_OWNER) continue
+      readNoComments(f)
+        .split('\n')
+        .forEach((line, i) => {
+          if (/class="huge"/.test(line)) offenders.push(`${f}:${i + 1}`)
+        })
+    }
+    expect(offenders, '功能页又用回 .huge 了（D2：巨字只留首页）').toEqual([])
+    // 首页必须**还在用**巨字 —— 否则等于悄悄把品牌封面也降档了
+    expect(read(BRAND_PAGE)).toContain('class="huge"')
+  })
+
+  it('页标题字号只有一个真源（--fs-title-compact）', () => {
+    const css = read('src/styles/components/page-head.css')
+    // P2-b 起 .page-title 独立成类，字号走令牌 —— 不许再写回字面 clamp
+    expect(css).toMatch(/\.page-title\s*\{[^}]*font-size:\s*var\(--fs-title-compact\)/s)
+    expect(css).not.toMatch(/\.page-title\s*\{[^}]*clamp\(/s)
+    // 页头变体只有"紧凑"与"详情收紧"两种，且都定义在本文件
+    expect(css).toContain('.page-hero--compact')
+    expect(css).toContain('.page-hero--tight')
   })
 })

@@ -20,6 +20,7 @@ import CompletenessDash from '../components/upload/CompletenessDash.vue'
 import StepReview from '../components/upload/StepReview.vue'
 import StepModelAssert from '../components/upload/StepModelAssert.vue'
 import StepDescribe from '../components/upload/StepDescribe.vue'
+import PageHero from '../components/PageHero.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -477,9 +478,9 @@ async function submit() {
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ editSlug ? t('upload.editEyebrow', '编辑 Demo') : t('app.nav.upload', '上传 Demo') }}</span>
-    <h1 class="huge">{{ editSlug ? demoTitle || t('upload.edit', '编辑') : t('upload.new', '上传') }}</h1>
+    <h1 class="page-title">{{ editSlug ? demoTitle || t('upload.edit', '编辑') : t('upload.new', '上传') }}</h1>
     <p class="sub">
       {{ editSlug
         ? t('upload.editSub', '改信息或重新上传文件；改动会写入时间线并生成更新公告。')
@@ -489,7 +490,7 @@ async function submit() {
       {{ t('upload.aiHint', '不会打包、不确定 HTML 能不能单独打开？把文件丢给 AI，让它按指南检查「自包含 / zip 能跑 / 封面可截图」再代传。') }}
       <a href="/api/v1/meta/agent-guide" target="_blank" rel="noopener">{{ t('upload.aiHintLink', 'AI 自动上传指南 →') }}</a>
     </p>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</div>

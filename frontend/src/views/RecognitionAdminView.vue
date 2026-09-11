@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useUiStore } from '../stores/ui'
 import type { RecognitionItem } from '../api/types'
+import PageHero from '../components/PageHero.vue'
 
 // embedded：作为管理后台的一个面板渲染时不再自带 page-hero（后台已有自己的标题区）
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
@@ -122,11 +123,11 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section v-if="!embedded" class="page-hero">
+  <div class="route-page">  <PageHero v-if="!embedded">
     <span class="eyebrow">管理后台</span>
-    <h1 class="huge">赞助 / 致谢榜</h1>
+    <h1 class="page-title">赞助 / 致谢榜</h1>
     <p class="sub">管理员添加赞助者与致谢名单，前台「关于本站」页展示。</p>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="error" class="notice notice-error">{{ error }}</div>

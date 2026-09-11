@@ -9,6 +9,7 @@ import EmptyBox from '../components/EmptyBox.vue'
 import PaginationBar from '../components/PaginationBar.vue'
 import { useLocalPagination } from '../composables/useLocalPagination'
 import { t } from '../i18n'
+import PageHero from '../components/PageHero.vue'
 
 // 粉丝/关注名单页（M0-2）：同一实现按 mode 复用，路由用 props 函数注入。
 // 名单接口后端不分页（返回全量 UserPublic），前端用 useLocalPagination 兜底切页。
@@ -77,15 +78,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('user.eyebrow', '用户主页') }}</span>
-    <h1 class="huge">{{ mode === 'followers' ? t('user.followers', '粉丝') : t('user.following', '关注') }}</h1>
+    <h1 class="page-title">{{ mode === 'followers' ? t('user.followers', '粉丝') : t('user.following', '关注') }}</h1>
     <p class="sub">
       {{ mode === 'followers' ? t('user.fl.subFollowers', '关注 {u} 的人', { u: username }) : t('user.fl.subFollowing', '{u} 正在关注的人', { u: username }) }}
       ·
       <RouterLink :to="`/user/${username}`" style="font-weight: 900">{{ username }}</RouterLink>
     </p>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div v-if="error" class="notice notice-error">{{ error }}</div>

@@ -13,6 +13,7 @@ import PaginationBar from '../components/PaginationBar.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { useListPage } from '../composables/useListPage'
+import PageHero from '../components/PageHero.vue'
 
 const q = ref('')
 const sort = ref<'demos' | 'score' | 'votes' | 'new' | 'name'>('demos')
@@ -56,14 +57,14 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="route-page">  <section class="page-hero page-hero--compact">
+  <div class="route-page">  <PageHero>
     <span class="eyebrow">{{ t('models.eyebrow', '模型图鉴') }}</span>
     <h1 class="page-title">{{ t('models.title', '模型') }}</h1>
     <p class="sub">{{ t('models.sub', '每个模型在这一年里真正做过什么 —— 从作品反推它的行为，不给综合分。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
       <span class="tag-stat"><b>{{ total }}</b> {{ t('models.count', '个模型') }}</span>
     </div>
-  </section>
+  </PageHero>
 
   <section class="section" style="padding-top: 8px">
     <div class="toolbar">

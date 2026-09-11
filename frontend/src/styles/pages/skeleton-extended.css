@@ -174,6 +174,22 @@
   font-size: 12px;
   color: var(--text-forum);
 }
+/* P3-b：小屏三列（类型/正文/时间）挤一行，正文被压到只剩几十像素。
+   改成两行：类型 + 正文占第一行，时间落到第二行右对齐。 */
+@media (max-width: 720px) {
+  .notif-item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .notif-text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .notif-time {
+    flex-basis: 100%;
+    text-align: right;
+  }
+}
 
 /* 论坛嵌套回复 */
 .forum-reply.nested {

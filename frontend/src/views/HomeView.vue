@@ -842,10 +842,11 @@ onBeforeUnmount(() => {
    P0-3：1024 → 1025，与上面的 max-1024 严丝合缝（消除 1024 两个规则同时命中的重叠） */
 @media (min-width: 1025px) {
   .hub-side {
+    /* P3-b：去掉 max-height + overflow-y —— 原先侧栏是个独立滚动区，
+       页面上出现第二个滚动条（占 322px 侧栏宽的 5%），滚轮落在侧栏时只滚侧栏。
+       sticky 不需要内滚：侧栏比视口高时随页面一起滚即可（一页一滚动区）。 */
     position: sticky;
     top: 86px; /* 顶栏高度 + 间距 */
-    max-height: calc(100vh - 100px);
-    overflow-y: auto;
   }
 }
 /* 换池口径说明行（策展透明，03 §3.2） */

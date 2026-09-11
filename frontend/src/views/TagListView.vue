@@ -56,14 +56,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="container">
-    <!-- v2 D3：本页是「探索」的下钻页（旧 /tags 浏览），补一条返回路径 -->
-    <nav class="breadcrumb" style="padding-top: 18px">
-      <RouterLink to="/tags">{{ t('tags.exploreCrumb', '探索') }}</RouterLink>
-      <span class="sep">/</span>
-      <span>{{ t('tags.title', '标签') }}</span>
-    </nav>
-  </div>
+  <!-- P3-b：原先这里再套一层 .container —— 页面外层 main 已是 .container，
+       嵌套后宽度被二次收敛成 min(1280, 100%-32) = 1248，比下方内容窄 16px、左缘对不齐。
+       面包屑直接放在页面容器里即可（对照 TagDetailView 的无嵌套写法）。 -->
+  <nav class="breadcrumb" style="padding-top: 18px">
+    <RouterLink to="/tags">{{ t('tags.exploreCrumb', '探索') }}</RouterLink>
+    <span class="sep">/</span>
+    <span>{{ t('tags.title', '标签') }}</span>
+  </nav>
   <PageHero>
     <span class="eyebrow">{{ t('tags.eyebrow', '标签系统') }}</span>
     <h1 class="page-title">{{ t('tags.title', '标签') }}</h1>

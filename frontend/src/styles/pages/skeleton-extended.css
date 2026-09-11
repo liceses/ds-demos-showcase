@@ -195,7 +195,8 @@
   min-width: 0;
 }
 .forum-side {
-  width: 260px;
+  /* RF-6a：宽度不在这里定（>1024 归 forum-lite 的 280px、≤1024 归下方断点），
+     原先的 260px 被 forum-lite 覆盖成死值，已删；其余布局属性保留。 */
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -327,13 +328,10 @@
   }
 }
 
-/* 论坛加宽 + 侧栏收起 */
-.forum-topbar-inner,
-.forum-hero-inner,
-.forum-section,
-.forum-container {
-  max-width: 1100px;
-}
+/* 论坛加宽 + 侧栏收起
+   RF-6a：原先这里有 `.forum-*{max-width:1100px}` 无条件声明，被 forum-lite 的 1280px
+   完全覆盖（同特异性 + 链尾导入）→ 纯死规则，已删；宽度基准归 forum-lite（限定 >1024），
+   本文件只负责断点回落。 */
 @media (max-width: 1024px) {
   .forum-topbar-inner,
   .forum-hero-inner,
@@ -346,7 +344,12 @@
   }
 }
 
-/* Demo 页轻量评论 */
+/* Demo 页轻量评论
+   RF-6a：与 pages/forum-lite.css（链尾导入）是**部分覆盖**关系，别再当成死规则整块删：
+     被 forum-lite 覆盖的：.quick-comment-input 的 border/box-shadow、
+                           .quick-comment 的 border/background、.quick-comment-list 的 gap
+     本文件仍是生效源的：.quick-comments 的 gap、.quick-comment-input 的 background/padding、
+                         .quick-comment 的 padding、.quick-comment-head/-author/-floor/-time */
 .quick-comments {
   display: flex;
   flex-direction: column;

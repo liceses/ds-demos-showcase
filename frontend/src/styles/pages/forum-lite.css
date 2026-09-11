@@ -1,20 +1,28 @@
 /* ---------- 论坛轻量版 ---------- */
 /* T16（M4-2b）：:root --paper-forum 覆盖已撤——令牌单一源归 forum.css（#f7f0e3），
    消除双 :root 定义靠导入序取胜的存量 quirk（t8 记账，t16 并一）；视觉零变化（生效值即此值）。 */
-.forum-topbar-inner,
-.forum-hero-inner,
-.forum-section,
-.forum-container {
-  max-width: 1280px;
+/* RF-6a：这两个是**桌面基准值**，必须限定在 >1024px ——
+   原先它们是无条件声明，又以链尾导入（index.css:52 晚于 skeleton-extended:51），
+   同特异性下压过了 skeleton-extended 的 @1024/@720 两个断点（媒体查询不提供特异性加成）：
+     · .forum-side 恒为 280px → 1024 档的 220px 与 720 档的 100%（移动端塌陷）从未生效
+     · .forum-* 容器恒为 1280px → 平板宽度下不回落 100%，横向溢出
+   限定 min-width 后级联恢复为：>1024 用这里的基准，≤1024 / ≤720 交给断点层。 */
+@media (min-width: 1025px) {
+  .forum-topbar-inner,
+  .forum-hero-inner,
+  .forum-section,
+  .forum-container {
+    max-width: 1280px;
+  }
+  .forum-side {
+    width: 280px;
+  }
 }
 .forum-topbar-inner,
 .forum-hero-inner,
 .forum-section {
   padding-left: 20px;
   padding-right: 20px;
-}
-.forum-side {
-  width: 280px;
 }
 /* 主题卡轻量化：细边、无常驻阴影、hover 才浮起 */
 .forum-topic-card {

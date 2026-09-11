@@ -119,9 +119,16 @@
   --fs-title-huge: clamp(44px, 8vw, 120px);   /* == utilities.css .huge（品牌页专用） */
 
   /* ---------- 页宽三档（P3 落地；容器各自取用，不再各写各的） ---------- */
-  --w-page: min(1280px, calc(100% - 32px)); /* == layouts/container.css 现值 */
-  --w-wide: min(1440px, calc(100% - 32px)); /* 大屏列表/表格/后台主区 */
+  --w-page: min(1280px, calc(100% - 32px)); /* 默认外壳宽度 */
+  --w-wide: min(1440px, calc(100% - 32px)); /* 大屏浏览面（作品库/探索/模型/题目/排行榜） */
   --w-read: min(760px, calc(100% - 32px));  /* 阅读与表单（关于正文/登录/上传列） */
+  /* 外壳宽度真源（P3-fix）：顶栏 / 主区 / 页脚**只能有一个宽度**。
+     原先只有 main 换成 --w-wide、顶栏与页脚仍是 --w-page —— 1440 屏内容比顶栏宽出
+     左右各 57px、1920 屏各 80px（实测），整站看着就是没对齐（用户报的就是这条）。
+     现在三处都取 --w-shell：默认 --w-page；浏览面由 .shell-wide 整体换绑
+     （见 layouts/container.css）。任何"更窄的列"必须是有意居中的内容决定
+     （--w-read / 内容层 max-width），不允许外壳自身不一致。 */
+  --w-shell: var(--w-page);
 
   /* ---------- 搜索框宽度三档（P2-c 收敛） ----------
      收敛前：.search-box 的 max-width 在 toolbar.css(420px) 与 pages/about.css(560px) 里

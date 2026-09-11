@@ -112,7 +112,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'forum-shell': route.meta.forum }">
+  <!-- P3-fix：宽档挂在外壳根上（自定义属性 --w-shell 由此继承给顶栏/主区/页脚三处）——
+       原先只把 main 换成 --w-wide，顶栏与页脚仍是 1280：1440 屏内容比顶栏宽 57px、
+       1920 屏宽 80px（用户实测报的就是这条）。外壳宽度只能有一个真源。 -->
+  <div class="app-shell" :class="{ 'forum-shell': route.meta.forum, 'shell-wide': route.meta.wide }">
     <template v-if="!route.meta.forum">
     <header class="topbar container">
       <RouterLink to="/" class="brand">
@@ -207,9 +210,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- P3 页宽三档：默认 --w-page(1280)；列表/网格页由路由 meta.wide 开 .container--wide
-         （≥1440 起生效 --w-wide）；阅读与表单页各自用 --w-read 收窄。 -->
-    <main class="container" :class="{ 'forum-container': route.meta.forum, 'container--wide': route.meta.wide }" style="flex: 1">
+    <!-- P3：宽度真源是 --w-shell（顶栏/主区/页脚同宽，由 .app-shell 上的 .shell-wide 决定）。
+         这里不再单独给 main 加宽档 —— 那正是上一版"内容比顶栏宽"的成因。 -->
+    <main class="container" :class="{ 'forum-container': route.meta.forum }" style="flex: 1">
       <RouterView v-slot="{ Component }">
         <!-- P2-1 页面转场（04 §2.3.1 可抄范式）：Transition 必须包在 KeepAlive 外层，
              mode="out-in" = 旧页 0ms 硬切消失（.page-leave-active transition:none）+ 新页 stamp-lite 250ms 登场；

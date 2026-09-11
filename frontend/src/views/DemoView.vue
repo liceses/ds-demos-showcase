@@ -384,7 +384,9 @@ onMounted(load)
            dv-stage 的 sticky 约束块从 dv-shell（跨 row1+row2）变为 row1 包装层，
            滚到 dv-story 时预览被自然推出视口（标准释放），几何上不再与 row2 重叠 -->
       <div class="dv-row-preview">
-        <div class="dv-stage" ref="stageEl">
+        <!-- dv-stage--immersive：全屏期间把 sticky 祖先自身提到最高层，避免后出现的兄弟卡片
+             画在覆盖层之上（sticky 会创建 stacking context，详见 preview-embed.css 注释） -->
+        <div class="dv-stage" ref="stageEl" :class="{ 'dv-stage--immersive': fsActive }">
         <!-- P1 补入口（用户报「移动端没有全屏按钮」顺带暴露的真实缺口）：
              全屏此前只有 ≤720 的动作条按钮 + iframe 拿到焦点后按 F —— 桌面端**没有任何可见入口**。
              现在这里是两个常驻控件（互斥显示：进入全屏后退出按钮在 IframePreview 内提供）：

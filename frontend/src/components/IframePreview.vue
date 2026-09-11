@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { usePreviewFullscreen } from '../composables/usePreviewFullscreen'
+import { useImmersiveChrome } from '../composables/useImmersiveChrome'
 
 // 注意 withDefaults 不是可有可无：Vue 对**布尔型 prop** 有"缺省即 false"的强制转换，
 // 写成裸的 `hotkeys?: boolean` 时"调用方没传"会变成 false —— 详情页的 G 热键就静默失效
@@ -34,6 +35,16 @@ const autoHeight = ref<number | null>(null)
 // 覆盖层内**必须有可见退出按钮**：没有 Esc 之后它是唯一可靠出口。
 const { isFullscreen, toggle: toggleFullscreen, exit: exitFullscreen } = usePreviewFullscreen()
 
+// 沉浸式 chrome：刚进入/刚被唤出时展开（带「退出全屏」文字），2.5s 后收起为半透明锚点。
+// 锚点**常驻**——上一轮把 Esc 让给了作品，它是唯一不依赖键盘的出口线索（护栏钉住它不可 display:none）。
+const { awake: chromeAwake, poke: pokeChrome } = useImmersiveChrome()
+
+// 进入全屏时**显式唤出** chrome：不能只靠 pointerdown 冒泡（程序化 click / 键盘触发都没有 pointerdown，
+// 而且 composable 的首次计时从组件挂载就开始，进全屏时它早已收起 —— 实测进全屏后 opacity 仍 0.4、无标签）。
+watch(isFullscreen, (on) => {
+  if (on) pokeChrome()
+})
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 键盘焦点（docs/预览架构与排坑记录.md 坑五）：demo 的 WASD/Esc 等操作依赖 iframe 内
 // window 的 keydown，而键盘事件只送到「持有焦点的文档」。跨源预览 iframe 默认没有焦点，
@@ -46,9 +57,38 @@ const { isFullscreen, toggle: toggleFullscreen, exit: exitFullscreen } = usePrev
 // 事件只作触发器（window focus/blur + document focusin/focusout + 指针按下后校准）。
 const kbFocused = ref(false)
 const frameLoaded = ref(false)
-/** 触屏无键盘：不显示按键说明（(hover:none) 与站点触屏判定同源） */
+/** 触屏无键盘：不显示键盘提示（(hover:none) 与站点触屏判定同源） */
 const hoverCapable = !matchMedia('(hover: none)').matches
-const showFocusHint = computed(() => hoverCapable && frameLoaded.value && !kbFocused.value)
+
+// 焦点提示（坑五）改为**一次性居中 toast**：
+//   · 原先它是左上角常驻黄条，被 z-index 更高的 chrome 压住（--z-overlay:2 < --z-local:10），
+//     用户实测"提示条被按钮遮住"；
+//   · 现在：load 后出现，4s 自动消失；用户点进画面（kbFocused 变真）立即消失；
+//     本会话提示过一次就不再打扰（sessionStorage）。
+const HINT_MS = 4000
+const KB_HINT_KEY = 'demo.kbHintShown'
+let hintTimer: ReturnType<typeof setTimeout> | null = null
+const hintDismissed = ref(false)
+try {
+  if (sessionStorage.getItem(KB_HINT_KEY) === '1') hintDismissed.value = true
+} catch {
+  /* 隐私模式：每次都提示也不算错 */
+}
+const showFocusHint = computed(
+  () => hoverCapable && frameLoaded.value && !kbFocused.value && !hintDismissed.value,
+)
+function dismissHint() {
+  if (hintTimer !== null) {
+    clearTimeout(hintTimer)
+    hintTimer = null
+  }
+  hintDismissed.value = true
+  try {
+    sessionStorage.setItem(KB_HINT_KEY, '1')
+  } catch {
+    /* 存不下就只是下次再提示一次 */
+  }
+}
 
 function syncFocus() {
   kbFocused.value = !!frame.value && document.activeElement === frame.value
@@ -57,11 +97,16 @@ function onShellPointerDown() {
   // 指针按下之后浏览器才执行「聚焦」默认动作：本帧末 + 稍后各校准一次（不引轮询）
   setTimeout(syncFocus, 0)
   setTimeout(syncFocus, 150)
+  // 点画面（含点在 iframe 上）也短暂唤出 chrome —— pointerdown 会冒泡到本元素，
+  // 且不 preventDefault，游戏照常收到这次点击。这是"移入唤出"不可行（见 useImmersiveChrome 注释）之后的替代路径。
+  pokeChrome()
 }
 function onFrameLoad() {
   frameLoaded.value = true
   syncFocus()
   emit('loaded')
+  // 首次加载后给 4s 的提示窗口，然后自动收起（不再常驻）
+  if (!hintDismissed.value && hintTimer === null) hintTimer = setTimeout(dismissHint, HINT_MS)
 }
 
 // sandbox：预览源与本站不同源（如 demo.deepdemos.top / OSS 直链）时，加 allow-same-origin，
@@ -157,7 +202,11 @@ function onKeydown(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return
   if (e.key.toLowerCase() === 'g') {
     e.preventDefault()
-    toggleFullscreen()
+    if (isFullscreen.value) toggleFullscreen()
+    else {
+      toggleFullscreen()
+      pokeChrome()
+    }
   }
 }
 
@@ -174,6 +223,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (hintTimer !== null) clearTimeout(hintTimer)
   window.removeEventListener('message', onMessage)
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('focus', syncFocus)
@@ -207,31 +257,33 @@ defineExpose({ toggleFullscreen, exitFullscreen, isFullscreen })
       @load="onFrameLoad"
     ></iframe>
 
-    <!-- 退出全屏：站点不绑 Esc 之后这是唯一可靠出口，因此**常驻可见**。
-         不做"悬停显形"——预览区被 iframe 完全覆盖，指针落在 iframe 上时父级 :hover 收不到事件，
-         悬停显形在这个位置等于永不显形（P1 补全屏入口时实测过）。 -->
+    <!-- 右上角唯一控件，两态：
+           展开（刚进入/刚唤出 2.5s）= 带「退出全屏」文字；收起 = 半透明小锚点（hover/聚焦时展开）。
+         锚点常驻 —— 站点不绑 Esc 之后它是唯一不依赖键盘的出口线索（护栏：不可 display:none）。
+         它也是**唯一**压在画面上的站点元素：原先同时存在的 .preview-fs-exit 与 .preview-hint
+         在右上角互相重叠（实测 rect 相交），.preview-hint 已删（按钮 title 已说明 G）。 -->
     <button
       v-if="isFullscreen"
-      class="preview-fs-exit"
+      class="preview-chrome"
+      :class="{ 'is-awake': chromeAwake }"
       type="button"
       :title="t('demo.fsExitTip', '退出全屏（或按 G）')"
+      :aria-label="t('demo.barExitFs', '退出全屏')"
       @click="exitFullscreen"
     >
-      {{ t('demo.barExitFs', '退出全屏') }}
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+        <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="2" />
+      </svg>
+      <!-- 标签常驻 DOM，显隐交给 CSS（.is-awake / :hover / :focus-visible）——
+           这样"悬停时保持展开"不需要 JS 维护任何状态，也就不会泄漏成"永远展开"。 -->
+      <span class="preview-chrome-label">{{ t('demo.barExitFs', '退出全屏') }}</span>
     </button>
 
-    <!-- 键盘焦点提示（坑五）：pointer-events:none，点击穿透到 iframe —— 真实点击才交得出焦点 -->
-    <div v-if="showFocusHint" class="preview-focus-hint mono" aria-hidden="true">
+    <!-- 键盘焦点提示（坑五）：一次性居中 toast。pointer-events:none，点击穿透到 iframe
+         —— 真实点击才交得出键盘焦点。4s 自动消失 / 点进画面立即消失 / 本会话只提示一次。
+         居中而非左上角：既不与右上角 chrome 抢位置，也不会被压住。 -->
+    <div v-if="showFocusHint" class="preview-kb-toast mono" aria-hidden="true">
       {{ t('demo.previewKbHint', '点击预览后，键盘操作才生效') }}
-    </div>
-    <!-- 按键说明只给指针设备（触屏没有这些键）；不再提 F/ESC：
-         F（原生全屏）已退役，ESC 归属作品本身（站点不绑）。 -->
-    <div v-if="hoverCapable" class="preview-hint mono">
-      {{
-        isFullscreen
-          ? t('demo.fsHintOn', '按 G 或点右上角退出全屏')
-          : t('demo.fsHintOff', '按 G 或点按钮进入全屏（Esc 留给作品本身）')
-      }}
     </div>
   </div>
 </template>

@@ -21,9 +21,14 @@ function read(rel: string): string {
   return readFileSync(path.join(SRC, rel), 'utf8')
 }
 
-/** 剥注释：本轮大量注释在解释"为什么不再有 requestFullscreen / escape"，不剥会全是假阳性 */
+/** 剥注释：本轮大量注释在解释"为什么不再有 requestFullscreen / escape / preview-hint"，不剥会全是假阳性 */
 function readNoComments(rel: string): string {
   return read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+}
+
+/** CSS：剥掉 /* *\/ 注释（GS 里解释历史类名的注释不该被当成"类还在"） */
+function readCssNoComments(rel: string): string {
+  return read(rel).replace(/\/\*[\s\S]*?\*\//g, '')
 }
 
 const PREVIEW = 'components/IframePreview.vue'
@@ -51,11 +56,11 @@ describe('预览全屏与键盘归属', () => {
     expect(readNoComments(PREVIEW)).not.toMatch(/@dblclick/)
   })
 
-  it('覆盖层内必须有可见退出按钮（站点不绑 Esc 后的唯一可靠出口）', () => {
+  it('覆盖层内必须有常驻的退出控件（站点不绑 Esc 后的唯一可靠出口）', () => {
     const src = read(PREVIEW)
-    expect(src).toContain('preview-fs-exit')
-    // 按钮必须真的绑了退出动作，而不是只挂了个类名
-    expect(src).toMatch(/class="preview-fs-exit"[\s\S]{0,200}@click="exitFullscreen"/)
+    expect(src).toContain('preview-chrome')
+    // 必须真的绑了退出动作，而不是只挂了个类名
+    expect(src).toMatch(/class="preview-chrome"[\s\S]{0,400}@click="exitFullscreen"/)
   })
 
   it('站点自己的浮层必须保留 Esc（只收敛全屏那条，别做过头）', () => {
@@ -69,6 +74,75 @@ describe('预览全屏与键盘归属', () => {
     for (const f of mustKeep) {
       expect(readNoComments(f), `${f} 丢了 Esc 关闭 —— 那是真·站点浮层`).toMatch(/escape/i)
     }
+  })
+
+  it('全屏必须解除内嵌上下文的高度上限（曾导致画面底部空 120px）', () => {
+    // styles/pages/demo-detail.css 有一条为"内嵌预览"写的 .dv-stage iframe { max-height: calc(100vh - 120px) }，
+    // 1440x900 下 = 780px —— 全屏时它让画面铺不满（实测 frame 780 而非 900）。
+    const css = readCssNoComments('styles/components/responsive-v1.css')
+    const start = css.indexOf('.preview-shell.web-fullscreen .preview-frame {')
+    const body = css.slice(start, css.indexOf('}', start))
+    expect(body, '全屏必须显式 max-height: none').toMatch(/max-height:\s*none/)
+    expect(body).toMatch(/min-height:\s*0/)
+  })
+
+  it('全屏层必须逃出 sticky 祖先的 stacking context', () => {
+    // position: sticky 会创建 stacking context —— 覆盖层即使 z-index:9999 也会被关在
+    // .dv-stage 里，与"后出现"的兄弟卡片（position:relative/z-index:auto）同级比较时
+    // DOM 顺序在后者赢，卡片画在"全屏层"之上（实测 elementsFromPoint 栈顶是 DIV.card）。
+    expect(readCssNoComments('styles/components/preview-embed.css')).toMatch(/\.dv-stage--immersive\s*\{[^}]*z-index:\s*var\(--z-fullscreen\)/)
+    expect(readNoComments(DETAIL), 'DemoView 必须把逃逸类绑到 stage 上').toMatch(/'dv-stage--immersive':\s*fsActive/)
+  })
+
+  it('chrome 不得依赖 JS 维护的悬停状态（会泄漏成"永远展开"）', () => {
+    const src = readNoComments(PREVIEW)
+    expect(src).not.toMatch(/holdChrome|releaseChrome/)
+    // 悬停保持展开交给 CSS
+    expect(readCssNoComments('styles/components/preview-embed.css')).toMatch(/\.preview-chrome:hover\s+\.preview-chrome-label/)
+  })
+
+  it('独立页顶条必须在文档流内（不得绝对/固定定位压在画面上）', () => {
+    const css = read(PLAY)
+    const bar = css.slice(css.indexOf('.play-bar {'))
+    const body = bar.slice(0, bar.indexOf('}'))
+    expect(body, '压回 fixed/absolute 就会重新遮挡画面').not.toMatch(/position:\s*(fixed|absolute)/)
+    expect(body).not.toMatch(/\binset\s*:/)
+  })
+
+  it('全屏必须真铺满：shell 无 padding、预览 iframe 无描边', () => {
+    const css = readCssNoComments('styles/components/responsive-v1.css')
+    const shellStart = css.indexOf('.preview-shell.web-fullscreen {')
+    const shellBody = css.slice(shellStart, css.indexOf('}', shellStart))
+    expect(shellBody).toMatch(/padding:\s*0/)
+    const frameStart = css.indexOf('.preview-shell.web-fullscreen .preview-frame {')
+    const frameBody = css.slice(frameStart, css.indexOf('}', frameStart))
+    expect(frameBody, '全屏时画面上不该留站点的描边').toMatch(/border:\s*none/)
+  })
+
+  it('chrome 锚点必须常驻（不可 display:none —— 否则退出不可达）', () => {
+    const css = readCssNoComments('styles/components/preview-embed.css')
+    const start = css.indexOf('.preview-chrome {')
+    const body = css.slice(start, css.indexOf('}', start))
+    expect(body).not.toMatch(/display:\s*none/)
+    // 收起态只是半透明，不是消失
+    expect(body).toMatch(/opacity:\s*0?\.?\d/)
+  })
+
+  it('焦点提示必须自动消失（不能只靠"用户点了画面"）+ z 不得低于 chrome', () => {
+    const src = read(PREVIEW)
+    expect(src, '缺少自动消失定时器').toMatch(/setTimeout\(dismissHint/)
+    const css = readCssNoComments('styles/components/preview-embed.css')
+    const start = css.indexOf('.preview-kb-toast {')
+    const body = css.slice(start, css.indexOf('}', start))
+    // 提示用 --z-overlay(2) 时低于 chrome 的 --z-local(10)，会被按钮压住（用户实测）
+    expect(body).toMatch(/z-index:\s*var\(--z-toast\)/)
+  })
+
+  it('重复且与退出按钮重叠的 .preview-hint 必须已删除', () => {
+    // 只看 class 绑定，不看注释（该元素已删，但注释里会提到它的历史）
+    expect(read(PREVIEW)).not.toMatch(/class="[^"]*preview-hint/)
+    expect(readCssNoComments('styles/components/responsive-v1.css')).not.toContain('.preview-hint')
+    expect(readCssNoComments('styles/components/preview-embed.css')).not.toContain('.preview-hint')
   })
 
   it('独立预览页必须把热键关掉（一个键都不绑）', () => {

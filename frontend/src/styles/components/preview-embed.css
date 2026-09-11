@@ -1,4 +1,15 @@
 /* ---------- iframe 预览 ---------- */
+
+/* 全屏时的**层叠逃逸**（实测坑，见 docs/预览架构与排坑记录.md 坑八）：
+   `position: sticky` 会创建 stacking context —— 覆盖层虽然 z-index:9999，却被关在
+   .dv-stage（sticky, z-index:auto）这个上下文里；于是与"后面出现"的兄弟（如 .dv-card
+   描述卡，position:relative / z-index:auto）在父上下文里同级比较时，**DOM 顺序在后者赢**，
+   卡片会画在"全屏层"之上（实测 elementsFromPoint 栈顶就是 DIV.card）。
+   解法：全屏期间把承载覆盖层的 .dv-stage 自身提到最高层（它是 sticky，可接受 z-index）。
+   不用 Teleport 到 body：把 iframe 移出再移回会**重新加载作品**。 */
+.dv-stage--immersive {
+  z-index: var(--z-fullscreen);
+}
 .preview-shell {
   position: relative;
   width: 100%;
@@ -16,39 +27,86 @@
 
 /* 键盘焦点提示（坑五）：跨源 iframe 未持焦点时 demo 收不到键盘（WASD 失效）。
    pointer-events:none —— 点击必须穿透到 iframe 本身，只有真实点击浏览器才交焦点。 */
-.preview-focus-hint {
+/* 键盘焦点提示（坑五）：一次性居中 toast。
+   原先它是左上角常驻黄条，且 z 用 --z-overlay(2) —— 比 chrome 的 --z-local(10) 还低，
+   于是被按钮压住（用户实测"提示条被遮住"）。现在：居中、z 提到 toast 级、4s 自动消失。 */
+.preview-kb-toast {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: var(--z-overlay);
-  padding: 4px 10px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-toast);
+  padding: 8px 14px;
+  font-size: 12px;
   background: var(--yellow);
   color: var(--on-accent, #000);
   border: 3px solid var(--ink);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  pointer-events: none;
+  box-shadow: 4px 4px 0 0 var(--ink);
+  pointer-events: none; /* 点击穿透到 iframe：真实点击才交得出键盘焦点 */
+  white-space: nowrap;
 }
 
-/* P1：全屏覆盖层里的**唯一可靠出口**（站点不再绑 Esc 之后）。
-   常驻可见、不做悬停显形 —— 预览区被 iframe 覆盖，父级 :hover 收不到事件。 */
-.preview-fs-exit {
+/* 全屏时的 chrome：**唯一**压在画面上的站点元素，两态。
+   展开（is-awake）= 带「退出全屏」文字；收起 = 半透明小锚点（hover/聚焦自动展开）。
+   它同时是"退出全屏"按钮本身 —— 站点不绑 Esc 之后这是唯一不依赖键盘的出口，
+   因此锚点常驻（护栏禁止对它 display:none）。 */
+.preview-chrome {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   z-index: var(--z-local);
-  min-height: 44px; /* 触达底线 */
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px;
   font: inherit;
   font-size: 12px;
   font-weight: 800;
   background: var(--paper, #fff);
   color: var(--ink, #000);
-  border: var(--border-w, 4px) solid var(--ink, #000);
-  box-shadow: 4px 4px 0 0 var(--ink, #000);
+  border: 3px solid var(--ink, #000);
+  box-shadow: 3px 3px 0 0 var(--ink, #000);
   cursor: pointer;
+  opacity: 0.4;
+  transition: opacity var(--b-dur) var(--b-ease);
 }
-.preview-fs-exit:active {
+/* 收起态：只留图标、半透明；展开 / hover / 聚焦：变实并显示文字。
+   三项条件并列，意味着"悬停时保持展开"由 CSS 负责 —— JS 不维护悬停状态（曾因状态泄漏
+   导致 chrome 永远展开，见 useImmersiveChrome 注释）。 */
+.preview-chrome .preview-chrome-label {
+  display: none;
+}
+.preview-chrome.is-awake,
+.preview-chrome:hover,
+.preview-chrome:focus-visible {
+  opacity: 1;
+}
+.preview-chrome.is-awake .preview-chrome-label,
+.preview-chrome:hover .preview-chrome-label,
+.preview-chrome:focus-visible .preview-chrome-label {
+  display: inline;
+}
+.preview-chrome:hover,
+.preview-chrome:focus-visible {
+  padding: 6px 10px;
+}
+.preview-chrome:active {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
+/* 触屏没有 hover：命中区放大到 ≥44px（视觉尺寸不变），并保持常态可见 */
+@media (hover: none) {
+  .preview-chrome {
+    opacity: 1;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-chrome {
+    transition: none;
+  }
+}
+

@@ -66,17 +66,6 @@ onBeforeUnmount(() => {
     <LoadingRow v-if="loading" :text="t('demo.loading', '加载 Demo…')" />
     <EmptyBox v-else-if="error" kind="error" :text="error" />
     <template v-else-if="demo">
-      <div class="play-shell">
-        <IframePreview
-          ref="previewRef"
-          :key="previewKey"
-          :srcdoc="demo.previewHtml"
-          :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
-          :title="demo.title"
-          :hotkeys="false"
-        />
-      </div>
-
       <!-- 浮条：**点击**操作，不占任何键位。这样 Esc/F/G 全部属于作品。 -->
       <div class="play-bar">
         <button class="play-btn" type="button" @click="back">
@@ -93,71 +82,102 @@ onBeforeUnmount(() => {
         >
           {{ t('demo.playRaw', '原始文件') }} <span aria-hidden="true">↗</span>
         </a>
+        <!-- 说明文字只在宽屏显示（≤720 由 CSS 隐藏）：手机上顶条必须保持单行 44px。
+             用 CSS 而不是 hover 媒体特性判定 —— 后者在模拟环境/外接键鼠的平板上并不可靠。 -->
         <span class="play-hint mono">{{ t('demo.playKeysHint', '键盘全部交给作品（含 Esc）') }}</span>
       </div>
+      <div class="play-shell">
+        <IframePreview
+          ref="previewRef"
+          :key="previewKey"
+          :srcdoc="demo.previewHtml"
+          :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
+          :title="demo.title"
+          :hotkeys="false"
+        />
+      </div>
+
     </template>
   </div>
 </template>
 
 <style scoped>
-/* 满视口：用 dvh 照顾移动端地址栏动态高度，vh 作回退 */
+/* 布局（P-chrome 重设计）：顶条占文档流、iframe 拿满剩余视口 —— **零遮挡**。
+   原先顶条是 position:fixed 压在画面上（实测 .play-bar 12,12→378,79 与 iframe 0,0→390,844 相交），
+   还把 .preview-focus-hint（同在 12,12）压在下面（z: --z-local(10) > --z-overlay(2)）——
+   用户报的"3 个按钮浮在 demo 画面上、还遮住提示条"就是这两条。 */
 .play-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 0;
+  height: 100vh;
+  height: 100dvh; /* 移动端地址栏动态高度 */
+  min-height: 0;
+}
+.play-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 5px 12px;
+  border-bottom: var(--border-w, 4px) solid var(--ink, #000);
+  background: var(--paper, #fff);
 }
 .play-shell {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
 }
 .play-shell :deep(.preview-shell) {
   flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 .play-shell :deep(.preview-frame) {
   height: 100%;
   min-height: 0;
-  border: none; /* 满视口时不描边，避免"页面里嵌了一块"的观感 */
-}
-/* 浮条：常驻可见（不悬停显形 —— 预览被 iframe 覆盖，父级 :hover 收不到事件） */
-.play-bar {
-  position: fixed;
-  left: 12px;
-  top: 12px;
-  z-index: var(--z-local);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  max-width: calc(100vw - 24px);
+  border: none; /* 满视口时不描边：画面上不留属于站点的颜色 */
 }
 .play-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 5px 10px;
+  min-height: 32px;
+  padding: 4px 10px;
   font: inherit;
   font-size: 12px;
   font-weight: 800;
   background: var(--paper, #fff);
   color: var(--ink, #000);
-  border: var(--border-w, 4px) solid var(--ink, #000);
-  box-shadow: 4px 4px 0 0 var(--ink, #000);
+  border: 3px solid var(--ink, #000);
+  box-shadow: 3px 3px 0 0 var(--ink, #000);
   cursor: pointer;
   text-decoration: none;
+  white-space: nowrap;
 }
 .play-btn:active {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
 .play-hint {
+  display: none; /* 窄屏默认不显示，见下方 min-width 断点 */
+  margin-left: auto;
   font-size: 11px;
-  color: var(--paper, #fff);
-  background: var(--ink, #000);
-  padding: 4px 8px;
+  color: var(--ink-faint, #767676);
+}
+@media (min-width: 721px) {
+  .play-hint {
+    display: inline;
+  }
+}
+/* 窄屏：顶条保持单行（3 个按钮 ≈ 300px），说明文字已由 v-if 收起 */
+@media (max-width: 480px) {
+  .play-bar {
+    gap: 6px;
+    padding: 5px 8px;
+  }
+  .play-btn {
+    padding: 4px 8px;
+  }
 }
 </style>

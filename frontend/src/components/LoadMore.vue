@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { t } from '../i18n'
 
 /**
@@ -12,8 +13,12 @@ import { t } from '../i18n'
  *  · 还有更多  → 按钮（显示"已显示 x / 共 y"），禁用态由 loading 控制
  *  · 已到底    → 给一行轻提示（否则用户不知道"没有更多"还是"按钮坏了"）
  *  · 首屏加载中 → 一行 loading（列表为空时才有意义，由调用方决定是否渲染）
+ *
+ * P4 补充：后端有的列表接口返回**裸数组、没有 total**（如 GET /notifications），
+ * 此时 shown<total 判不出"还有更多"，由调用方用 hasMore 显式传入自己的口径
+ * （满页 / 服务端计数）。
  */
-withDefaults(
+const props = withDefaults(
   defineProps<{
     shown: number
     total: number
@@ -22,17 +27,21 @@ withDefaults(
     step?: number
     /** 已到底时是否显示提示（默认显示） */
     showEnd?: boolean
+    /** 显式覆盖"还有更多"（接口无 total 时用） */
+    hasMore?: boolean
   }>(),
   { loading: false, showEnd: true },
 )
 
 const emit = defineEmits<{ more: [] }>()
+
+const more = computed(() => props.hasMore ?? props.shown < props.total)
 </script>
 
 <template>
   <div class="load-more">
     <button
-      v-if="shown < total"
+      v-if="more"
       class="btn btn-sm btn-outline"
       type="button"
       :disabled="loading"
@@ -47,9 +56,9 @@ const emit = defineEmits<{ more: [] }>()
       }}
       <span v-if="!loading" class="load-more-count mono">{{ shown }} / {{ total }}</span>
     </button>
-    <p v-else-if="showEnd && total > 0" class="load-more-end muted">
+    <p v-else-if="showEnd && shown > 0" class="load-more-end muted">
       <!-- 已到底的文案可覆盖：首页要的是「查看全部 →」链接、模型页要的是带提示的到底行 -->
-      <slot name="end">{{ t('common.allLoaded', '已全部加载（{n} 件）', { n: total }) }}</slot>
+      <slot name="end">{{ t('common.allLoaded', '已全部加载（{n} 件）', { n: shown }) }}</slot>
     </p>
   </div>
 </template>

@@ -50,7 +50,11 @@ class Settings(BaseSettings):
     # zip 解压后的累计体积 / 成员数 / 压缩比上限：zip 炸弹打满磁盘会连带拖死同盘 SQLite
     zip_max_uncompressed: int = 500 * 1024 * 1024  # 500MB
     zip_max_members: int = 2000
-    zip_max_ratio: int = 100  # 解压/压缩 比
+    zip_max_ratio: int = 100  # 累计解压/累计压缩 比（KB-28：口径修正 + 下方阈值下限）
+    # 压缩比只在解压量达到该下限后才判（KB-28）：
+    # 解压后总共才几百 KB 的包，压缩比再高也不构成磁盘威胁 ——
+    # 而小文件（几十字节的重复内容）压缩比天然可以极大，不设下限会把正常 demo 误判成炸弹。
+    zip_ratio_min_bytes: int = 4 * 1024 * 1024  # 4MB
     # 封面解码前允许的最大像素数（Pillow 默认阈值太宽松，1 亿像素足以顶爆内存）
     cover_max_pixels: int = 40_000_000
 

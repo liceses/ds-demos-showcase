@@ -189,6 +189,70 @@ def test_extract_zip_rejects_traversal_and_bomb(client, admin_headers, monkeypat
     assert e2.value.status_code == 413
 
 
+# ---------------- KB-28：压缩比口径（线上误杀正常 demo 的回归） ----------------
+
+
+def _zip_of(files: dict[str, bytes]) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        for name, data in files.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
+
+
+def test_normal_demo_zip_with_tiny_last_member_is_accepted(client, admin_headers):
+    """线上误杀形状的回归：多文件 demo + 最后一个成员是几百字节的小文件。
+
+    旧实现用「**累计解压量** / **当前这一个成员**的压缩量」算比值：
+    每多一个成员分子就在涨、分母只算最后一个文件 —— 最后那个文件越小比值越离谱，
+    正常包会被算成几千比一而误判成压缩炸弹。这条用例就是钉住「不许再这么算」。
+    """
+    from app.services import storage
+
+    slug = _upload(client, admin_headers, "KB28 正常多文件包").json()["slug"]
+    # 真代码风格的可压缩文本（重复度中等），末尾放一个极小的 index.html
+    js = ("function render(){ return 1; }\n" * 900).encode()
+    css = (".card{display:flex;gap:8px;padding:12px}\n" * 600).encode()
+    html = b"<!doctype html><html><body><div id=app></div></body></html>"
+    data = _zip_of({"index.html": html, "assets/app.js": js, "assets/style.css": css})
+
+    # 先确认这个包确实会踩中旧公式（否则用例就失去意义）
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        total_uncompressed = sum(m.file_size for m in zf.infolist())
+        last_compressed = max([m for m in zf.infolist() if m.filename == "index.html"][0].compress_size, 1)
+        assert total_uncompressed / last_compressed > 100, "用例本身没造出旧公式的误杀条件"
+
+    storage.extract_zip(data, slug, require_index=True)  # 不该抛
+
+
+def test_bomb_zip_still_rejected_by_cumulative_ratio(client, admin_headers):
+    """口径修正后，真炸弹（大体积 + 极高压缩比）仍然要拦。"""
+    from app.config import settings
+    from app.services import storage
+
+    slug = _upload(client, admin_headers, "KB28 炸弹").json()["slug"]
+    # 20MB 全零：压缩后约 20KB，累计比 ≈ 1000:1，且解压量远超 zip_ratio_min_bytes
+    assert 20 * 1024 * 1024 > settings.zip_ratio_min_bytes
+    data = _zip_of({"index.html": b"<!doctype html>ok", "payload.bin": b"\0" * (20 * 1024 * 1024)})
+    with pytest.raises(HTTPException) as e:
+        storage.extract_zip(data, slug, require_index=True)
+    assert e.value.status_code == 413
+    assert "压缩比" in str(e.value.detail)
+
+
+def test_small_high_ratio_zip_skips_ratio_check(client, admin_headers, monkeypatch):
+    """解压量低于下限时**不判**压缩比：小包再高也不构成磁盘威胁。"""
+    from app.config import settings
+    from app.services import storage
+
+    slug = _upload(client, admin_headers, "KB28 小包高比").json()["slug"]
+    monkeypatch.setattr(settings, "zip_ratio_min_bytes", 1024 * 1024, raising=False)
+    monkeypatch.setattr(settings, "zip_max_ratio", 2, raising=False)  # 阈值压到 2:1
+    # 100KB 可压缩文本 + 小 index.html：真实比远超 2:1，但解压量 < 1MB 下限
+    data = _zip_of({"index.html": b"<!doctype html>ok", "big.txt": b"abcdefgh" * 12800})
+    storage.extract_zip(data, slug, require_index=True)  # 下限生效 → 不该抛
+
+
 # ---------------- KB-13：路径归属判定 ----------------
 
 

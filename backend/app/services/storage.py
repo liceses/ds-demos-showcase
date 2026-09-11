@@ -39,9 +39,13 @@ def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
     - 成员名含 `..` 直接拒绝（旧实现只做字符串前缀比较，`../x` 会落到同前缀兄弟目录）；
     - 累计解压字节 / 成员数 / 压缩比超限即中断（zip 炸弹打满磁盘会连带拖死同盘 SQLite）；
     - 越界判定用 `Path.is_relative_to`，不再用 startswith（后者对同前缀路径失效）。
+
+    压缩比口径（KB-28 修正）：**累计解压量 / 累计压缩量**，且只在解压量超过
+    `zip_ratio_min_bytes` 时才判 —— 见下方注释里记录的旧实现错在哪。
     """
     root = target.resolve()
     total_bytes = 0
+    total_compressed = 0
     members = 0
     for member in zf.infolist():
         raw = member.filename.replace("\\", "/")
@@ -63,9 +67,26 @@ def _safe_extract(zf: zipfile.ZipFile, target: Path) -> None:
                 status_code=413,
                 detail=f"zip 解压后体积超过上限（{settings.zip_max_uncompressed // (1024 * 1024)}MB）",
             )
-        compressed = int(member.compress_size or 0)
-        if compressed and total_bytes / max(compressed, 1) > settings.zip_max_ratio:
-            raise HTTPException(status_code=413, detail="zip 压缩比异常（疑似压缩炸弹）")
+        total_compressed += int(member.compress_size or 0)
+        # KB-28 修正：旧实现写的是 `total_bytes / member.compress_size` ——
+        # 拿**累计解压量**除以**当前这一个成员**的压缩量：每多一个成员分子就涨，
+        # 而分母只算最后一个文件，于是最后那个文件越小比值越离谱（正常的多文件 demo
+        # 只要最后一个成员是几百字节的小文件就会爆表，被误判成压缩炸弹）。
+        # 正确口径是「累计解压 / 累计压缩」；并且只在解压量够大时才判 ——
+        # 解压后总共才几百 KB 的包，压缩比再高也不构成磁盘威胁，
+        # 而极小文件的压缩比天然可以极大（比如一份几十字节的重复内容）。
+        if (
+            total_bytes >= settings.zip_ratio_min_bytes
+            and total_compressed > 0
+            and total_bytes / total_compressed > settings.zip_max_ratio
+        ):
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"zip 压缩比异常（疑似压缩炸弹）：解压 {total_bytes // (1024 * 1024)}MB / "
+                    f"压缩 {max(total_compressed // 1024, 1)}KB，超过 {settings.zip_max_ratio}:1"
+                ),
+            )
         dest = target.joinpath(*parts)
         if not dest.resolve().is_relative_to(root):
             raise HTTPException(status_code=400, detail="zip 中存在非法路径")

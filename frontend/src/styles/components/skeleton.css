@@ -26,4 +26,22 @@
   text-align: center;
   font-size: 14px;
 }
+/* P2：三种语义分开 —— empty 保持虚线（"还没有"），error/notfound 改实线（"出事了/不存在"），
+   error 再用错误色，让"接口挂了"与"真没数据"一眼可辨（原先两者长得一模一样）。 */
+.empty-box-text {
+  margin: 0;
+}
+.empty-box-action {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.empty-box--error {
+  border-style: solid;
+  border-color: var(--err);
+}
+.empty-box--notfound {
+  border-style: solid;
+}
 

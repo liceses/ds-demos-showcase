@@ -8,6 +8,7 @@ import MarkdownEditor from '../MarkdownEditor.vue'
 import EntityPicker from '../picker/EntityPicker.vue'
 import type { EntityPick } from '../picker/pickerSources'
 import { parseDate } from '../../utils/time'
+import EmptyBox from '../EmptyBox.vue'
 import { t } from '../../i18n'
 
 function toLocalInput(iso: string): string {
@@ -60,6 +61,8 @@ const filteredAnnouncements = computed(() =>
 )
 
 const annStatusFilter = ref<'all' | 'draft' | 'published' | 'offline'>('all')
+/** P2：加载失败标记（与"筛选后为空"分开） */
+const loadError = ref(false)
 const annCategoryFilter = ref('')
 const annPinnedFilter = ref<'all' | 'pinned' | 'unpinned'>('all')
 async function loadAnnouncements() {
@@ -69,8 +72,11 @@ async function loadAnnouncements() {
       category: annCategoryFilter.value.trim() || undefined,
       pinned: annPinnedFilter.value === 'all' ? undefined : annPinnedFilter.value === 'pinned',
     })
+    loadError.value = false
   } catch {
+    // P2：失败 ≠ 没有公告（原来都渲染成「暂无公告」，等于把故障报成空库）
     announcements.value = []
+    loadError.value = true
   }
 }
 
@@ -295,7 +301,13 @@ onMounted(loadAnnouncements)
       </select>
     </div>
 
-    <div class="table-wrap">
+    <EmptyBox
+      v-if="loadError"
+      kind="error"
+      :text="t('admin.ann.loadFailed', '公告列表加载失败（不是「没有公告」）')"
+      @retry="loadAnnouncements"
+    />
+    <div v-else class="table-wrap">
       <table class="data">
         <thead>
           <tr><th>类型</th><th>置顶</th><th>状态</th><th>分类</th><th>标题</th><th>内容</th><th>时间</th><th>操作</th></tr>

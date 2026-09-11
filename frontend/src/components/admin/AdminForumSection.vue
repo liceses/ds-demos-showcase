@@ -24,6 +24,9 @@ const topicStatusFilter = ref('')
 const topicPage = ref(1)
 const topicTotal = ref(0)
 const TOPIC_PAGE_SIZE = 20
+/** P2：主题/举报两份列表各自的加载失败标记（与"真的没有"分开） */
+const topicLoadError = ref(false)
+const reportLoadError = ref(false)
 
 async function loadForum() {
   try {
@@ -35,9 +38,12 @@ async function loadForum() {
     })
     forumTopics.value = r.items
     topicTotal.value = r.total
+    topicLoadError.value = false
   } catch {
+    // P2：失败 ≠ 没有主题（原来都渲染成"没有匹配的主题"，管理员会去翻页找帖）
     forumTopics.value = []
     topicTotal.value = 0
+    topicLoadError.value = true
   }
 }
 function topicSearch() {
@@ -51,8 +57,10 @@ function topicPageGo(p: number) {
 async function loadForumReports() {
   try {
     forumReports.value = await api.listForumReports()
+    reportLoadError.value = false
   } catch {
     forumReports.value = []
+    reportLoadError.value = true
   }
 }
 // 状态与关键词走服务端（跨全库）；分类与置顶只有本库字段，留在客户端 ——
@@ -103,6 +111,8 @@ const forumReplyStatus = ref('')
 const forumReplyQuery = ref('')
 const forumRepliesShown = ref<ForumReply[]>([])
 const forumRepliesLoading = ref(false)
+/** P2：回复列表的加载失败标记（护栏测试抓出的第 5 处同型缺陷，审计未列到） */
+const replyLoadError = ref(false)
 async function forumSelectReplies() {
   forumRepliesLoading.value = true
   try {
@@ -112,8 +122,10 @@ async function forumSelectReplies() {
       q: forumReplyQuery.value.trim() || undefined,
       limit: 80,
     })
+    replyLoadError.value = false
   } catch {
     forumRepliesShown.value = []
+    replyLoadError.value = true
   } finally {
     forumRepliesLoading.value = false
   }
@@ -197,7 +209,14 @@ onMounted(() => {
             </tr>
             <tr v-if="!filteredForumTopics.length">
               <td colspan="9" style="text-align:center">
-                {{ topicTotal ? '本页被"分类/置顶"筛空了 —— 这两个只作用于当前页，试试翻页或清掉它们' : '没有匹配的主题（换个关键词或放宽状态）' }}
+                <!-- P2：加载失败与"筛空了"分开 —— 原来接口挂了也走这条文案，管理员会去翻页找帖 -->
+                <template v-if="topicLoadError">
+                  主题列表加载失败（不是「没有主题」）
+                  <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="loadForum">重试</button>
+                </template>
+                <template v-else>
+                  {{ topicTotal ? '本页被"分类/置顶"筛空了 —— 这两个只作用于当前页，试试翻页或清掉它们' : '没有匹配的主题（换个关键词或放宽状态）' }}
+                </template>
               </td>
             </tr>
           </tbody>
@@ -241,6 +260,12 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="forumRepliesLoading && !forumRepliesShown.length"><td colspan="6" style="text-align:center">加载中…</td></tr>
+            <tr v-else-if="replyLoadError">
+              <td colspan="6" style="text-align:center">
+                回复列表加载失败（不是「没有回复」）
+                <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="forumSelectReplies">重试</button>
+              </td>
+            </tr>
             <tr v-else-if="!forumRepliesShown.length"><td colspan="6" style="text-align:center">没有匹配的回复（换个关键词或放宽状态）</td></tr>
           </tbody>
         </table>
@@ -263,7 +288,16 @@ onMounted(() => {
                 <span v-else class="muted">已处理</span>
               </td>
             </tr>
-            <tr v-if="!forumReports.length"><td colspan="5" style="text-align:center">暂无举报</td></tr>
+            <tr v-if="!forumReports.length">
+              <td colspan="5" style="text-align:center">
+                <!-- P2：同上，举报列表的失败态 -->
+                <template v-if="reportLoadError">
+                  举报列表加载失败（不是「没有举报」）
+                  <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="loadForumReports">重试</button>
+                </template>
+                <template v-else>暂无举报</template>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

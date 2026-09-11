@@ -5,11 +5,15 @@ import { api } from '../../api'
 import { useUiStore } from '../../stores/ui'
 import type { AdminUser } from '../../api/types'
 import PaginationBar from '../PaginationBar.vue'
+import EmptyBox from '../EmptyBox.vue'
 import { useLocalPagination } from '../../composables/useLocalPagination'
+import { t } from '../../i18n'
 
 const ui = useUiStore()
 const users = ref<AdminUser[]>([])
 const query = ref('')
+/** P2：加载失败标记（与"筛选后为空"分开 —— 前者要报错+重试，后者只是没匹配） */
+const loadError = ref(false)
 const roleFilter = ref<'all' | 'admin' | 'user'>('all')
 const statusFilter = ref<'all' | 'active' | 'suspended'>('all')
 
@@ -28,8 +32,12 @@ const { page, total, pages, paged, setPage, pageSize } = useLocalPagination<Admi
 async function loadUsers() {
   try {
     users.value = await api.adminUsers()
+    loadError.value = false
   } catch {
+    // P2：接口失败必须与"真的没有用户"分开 —— 原来两者都渲染成空表，
+    // 运维看到「0 个用户」会以为库空了，而不是先去查服务
     users.value = []
+    loadError.value = true
   }
 }
 
@@ -119,7 +127,13 @@ onMounted(loadUsers)
       </div>
     </div>
 
-    <div class="table-wrap">
+    <EmptyBox
+      v-if="loadError"
+      kind="error"
+      :text="t('admin.users.loadFailed', '用户列表加载失败（不是「没有用户」）')"
+      @retry="loadUsers"
+    />
+    <div v-else class="table-wrap">
       <table class="data">
         <thead>
           <tr><th>用户名</th><th>角色</th><th>状态</th><th>Demo 数</th><th>操作</th></tr>

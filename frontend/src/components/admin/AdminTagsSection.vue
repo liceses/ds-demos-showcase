@@ -12,6 +12,7 @@ import { parseDate } from '../../utils/time'
 import { tagSuggestionEntityQuery } from '../../utils/entityDeepLink'
 import type { AdminDemo, TagKeyInfo, TagSuggestion } from '../../api/types'
 import { t } from '../../i18n'
+import EmptyBox from '../EmptyBox.vue'
 
 const ui = useUiStore()
 const router = useRouter()
@@ -75,9 +76,11 @@ async function loadTags() {
     const d = await api.adminDemos()
     await tagsStore.load()
     demos.value = d
+    tagsLoadError.value = false
     if (!adminActiveKey.value && tagKeys.value.length) adminActiveKey.value = tagKeys.value[0].key
   } catch {
     demos.value = []
+    tagsLoadError.value = true
   }
 }
 
@@ -163,6 +166,10 @@ async function saveEditKey() {
 }
 
 const suggestions = ref<TagSuggestion[]>([])
+/** P2：待审建议的加载失败标记（与"真的没有建议"分开） */
+const suggLoadError = ref(false)
+/** P2：标签键/值数据本身的加载失败标记（同上） */
+const tagsLoadError = ref(false)
 const aiDemoSlug = ref('')
 const aiText = ref('')
 const aiResult = ref<{ key: string; value: string; reason: string }[]>([])
@@ -199,8 +206,11 @@ async function syncModelsFromDev() {
 async function loadSuggestions() {
   try {
     suggestions.value = await api.listTagSuggestions('pending')
+    suggLoadError.value = false
   } catch {
+    // P2：失败 ≠ 没有待审建议（原来都渲染成"暂无待审建议"）
     suggestions.value = []
+    suggLoadError.value = true
   }
 }
 
@@ -345,12 +355,21 @@ onMounted(() => {
 
       <div class="tag-pane tag-pane-tall">
         <div class="tag-pane-keys">
-          <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">
-            <div v-if="tagKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel[m] }}</div>
-            <button v-for="k in tagKeys.filter((k) => k.mode === m)" :key="k.key" class="tag-pane-key" :class="{ active: adminActiveKey === k.key }" type="button" @click="selectAdminKey(k)">
-              <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
-              <span class="tag-pane-key-count">{{ k.demo_count }}</span>
-            </button>
+          <!-- P2：标签数据加载失败 → 别渲染成"没有标签"（护栏测试抓出的同型缺陷） -->
+          <template v-if="tagsLoadError">
+            <p class="notice notice-error" style="margin: 8px">
+              标签数据加载失败（不是「没有标签」）
+              <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="loadTags">重试</button>
+            </p>
+          </template>
+          <template v-else>
+            <template v-for="m in (['fixed', 'open', 'int'] as const)" :key="m">
+              <div v-if="tagKeys.some((k) => k.mode === m)" class="tag-pane-group-label">{{ modeLabel[m] }}</div>
+              <button v-for="k in tagKeys.filter((k) => k.mode === m)" :key="k.key" class="tag-pane-key" :class="{ active: adminActiveKey === k.key }" type="button" @click="selectAdminKey(k)">
+                <span class="tag-pane-key-label">{{ k.label || k.key }} <code>{{ k.key }}</code></span>
+                <span class="tag-pane-key-count">{{ k.demo_count }}</span>
+              </button>
+            </template>
           </template>
         </div>
         <div class="tag-pane-values">
@@ -475,7 +494,13 @@ onMounted(() => {
         <h2 class="section-title">待审固定值建议</h2>
         <span class="hint">{{ t('admin.inbox.digestThenEntity', '队列只消化待办；批准后深链回实体页改字段。') }}</span>
       </div>
-      <div v-if="!suggestions.length" class="empty-box">暂无待审建议</div>
+      <EmptyBox
+        v-if="suggLoadError"
+        kind="error"
+        :text="t('admin.tags.suggLoadFailed', '待审建议加载失败（不是「没有建议」）')"
+        @retry="loadSuggestions"
+      />
+      <EmptyBox v-else-if="!suggestions.length" :text="t('admin.tags.noSugg', '暂无待审建议')" />
       <div v-else class="table-wrap">
         <table class="data">
           <thead><tr><th>键</th><th>值</th><th>说明</th><th>分组</th><th>时间</th><th>操作</th></tr></thead>

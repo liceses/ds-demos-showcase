@@ -612,6 +612,9 @@ export const en = {
     cancel: 'Cancel',
     close: 'Close',
     ok: 'OK',
+    loadFailed: 'Failed to load',
+    retry: 'Retry',
+    notFound: 'Not found',
   },
 
   forum: {
@@ -1152,6 +1155,11 @@ export const en = {
       remove: 'Remove',
       change: 'Change',
       searchTopic: 'Search topic title…',
+      loadFailed: 'Announcement list failed to load (this is NOT "no announcements")',
+    },
+    // P2：后台列表的失败态文案（与"真的没有"分开）
+    users: {
+      loadFailed: 'User list failed to load (this is NOT "no users")',
     },
     // T5·M5-F1 精选管理（07 §2.2 首页策展池面板）
     featured: {
@@ -1176,6 +1184,8 @@ export const en = {
     },
     tags: {
       searchValue: 'Search value or description…',
+      suggLoadFailed: 'Pending suggestions failed to load (this is NOT "no suggestions")',
+      noSugg: 'No pending suggestions',
       capped: 'Showing the top {n} by usage — type a keyword to see all',
       noMatch: 'No matching value, try another keyword',
       noneYet: 'No values yet',

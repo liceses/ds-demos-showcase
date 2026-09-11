@@ -238,6 +238,10 @@ def serialize_demo(
                 "is_author": bool(current_user_id is not None and demo.author_id == current_user_id),
                 "prompt": demo.prompt,
                 "model_hint": demo.model_hint or "",
+                # KB-29：单个文件作品（html/svg）此前**没有**序列化出来 ——
+                # 前端据此决定下载按钮写「下载文件」还是「下载 ZIP」，
+                # 缺字段导致单文件作品永远显示成 ZIP（详情页文案与实际下载内容不符）。
+                "single_file": demo.single_file,
                 "video_url": demo.video_url,
                 "file_size": files_dir.stat().st_size if files_dir.exists() else None,
                 "storage_size": demo_storage_size(demo.slug),

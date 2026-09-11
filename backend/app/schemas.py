@@ -274,6 +274,9 @@ class DemoDetailOut(DemoSummaryOut):
     prompt: str = ""
     # Q2：选了兜底型号时的依据留痕（没记录/灰测不便说/别人传的/多模型混合 + 自由描述）
     model_hint: str = ""
+    # KB-29：单个文件作品（'html' | 'svg' | None）。详情页据此决定下载按钮文案；
+    # 此前该字段只存在于模型与下载路由、从不进响应，前端只能一直显示「下载 ZIP」。
+    single_file: str | None = None
     video_url: str | None = None
     file_size: int | None = None
     storage_size: int | None = None

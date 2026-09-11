@@ -19,8 +19,11 @@ def _db():
     return SessionLocal()
 
 
-def _upload(client, headers, title, tags=("model:dsv4-flash", "type:game")):
-    files = {"file": ("index.html", f"<!doctype html><body>{title}</body>".encode(), "text/html")}
+def _upload(client, headers, title, tags=("model:dsv4-flash", "type:game"), filename="index.html", content=None):
+    """上传一件作品。filename/content 可选（KB-29：用来区分单文件与 zip 作品）。"""
+    if content is None:
+        content = f"<!doctype html><body>{title}</body>".encode()
+    files = {"file": (filename, content, "text/html")}
     return client.post(
         "/api/v1/demos",
         headers=headers,
@@ -451,3 +454,28 @@ def test_health_reports_default_secret_warnings(client):
     """默认密钥/口令告警随 /health 返回（KB-23）。"""
     body = client.get("/api/v1/health").json()
     assert "warnings" in body and isinstance(body["warnings"], list)
+
+
+# ---------------- KB-29：单文件作品要在详情里暴露 single_file ----------------
+
+
+def test_demo_detail_exposes_single_file(client, admin_headers):
+    """详情响应必须带 single_file —— 前端据此决定下载按钮写「下载文件」还是「下载 ZIP」。
+
+    修前该字段只存在于模型与下载路由、从不进响应，于是单文件作品一律显示成「下载 ZIP」。
+    """
+    slug = _upload(client, admin_headers, "KB29 单文件作品", filename="index.html").json()["slug"]
+    detail = client.get(f"/api/v1/demos/{slug}").json()
+    assert detail.get("single_file") == "html"
+
+    # 多文件（zip）作品则是 None，前端按 falsy 走「下载 ZIP」分支
+    import io as _io
+    import zipfile as _zipfile
+
+    buf = _io.BytesIO()
+    with _zipfile.ZipFile(buf, "w", compression=_zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("index.html", "<!doctype html>ok")
+        zf.writestr("app.js", "console.log(1)")
+    slug2 = _upload(client, admin_headers, "KB29 多文件作品", filename="bundle.zip", content=buf.getvalue()).json()["slug"]
+    detail2 = client.get(f"/api/v1/demos/{slug2}").json()
+    assert detail2.get("single_file") is None

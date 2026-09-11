@@ -594,8 +594,12 @@ export interface DemoDetail extends DemoSummary {
   video_url?: string | null
   file_size?: number
   storage_size?: number
-  /** 单文件项目（下载按钮显示「下载文件」而非「下载 ZIP」） */
-  single_file?: boolean
+  /** 单文件项目：'html' | 'svg'（下载按钮显示「下载文件」而非「下载 ZIP」）。
+   *  KB-29：此前类型写成 boolean 且后端从不返回该字段 —— 类型错、值也没有。
+   *  现在后端 DemoDetailOut 会输出真实取值（'html'/'svg'/null）。 */
+  single_file?: 'html' | 'svg' | null
+  /** Q2：兜底型号的依据留痕（后端一直在返回，类型此前漏了） */
+  model_hint?: string
   inconsistency?: boolean
   timeline?: DemoTimelineEntry[]
   /** Mock 模式专用：iframe srcdoc */

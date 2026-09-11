@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   一键启动 DS 展示站开发环境（后端 + 前端）。
 .DESCRIPTION

@@ -1,7 +1,9 @@
 /* ---------- JS Masonry 瀑布流（替代 CSS 多列，避免 rebalance 跳位） ---------- */
+/* 防滚动锚点跳动（原在 .waterfall 上，P2-e 随瀑布流统一搬来） */
 .masonry {
   display: flex;
   align-items: flex-start;
+  overflow-anchor: none;
 }
 .masonry-col {
   flex: 1;

@@ -6,6 +6,7 @@ import { useLoadGeneration } from '../composables/useLoadGeneration'
 import { useAuthStore } from '../stores/auth'
 import { useUiStore } from '../stores/ui'
 import type { DemoDetail, DemoSummary, SamePromptResult, SessionLog, TaskDetail } from '../api/types'
+import MasonryGrid from '../components/MasonryGrid.vue'
 import IframePreview from '../components/IframePreview.vue'
 import PeekDrawer from '../components/PeekDrawer.vue'
 import CopyButton from '../components/CopyButton.vue'
@@ -692,11 +693,12 @@ onMounted(load)
         <CopyButton :text="samePrompt.prompt" style="position: absolute; top: 10px; right: 10px" />
         <p class="same-prompt-text">{{ samePrompt.prompt }}</p>
       </div>
-      <div class="waterfall" style="margin-top: 14px">
-        <div v-for="d in samePrompt.items" :key="d.slug" class="waterfall-item">
-          <DemoCard :demo="d" />
-        </div>
-      </div>
+      <!-- P2-e：CSS 多列瀑布流（.waterfall）统一到 <MasonryGrid> —— 见下方相关推荐同款 -->
+      <MasonryGrid :items="samePrompt.items" :item-key="(d: unknown) => (d as DemoSummary).slug" style="margin-top: 14px">
+        <template #default="{ item }">
+          <DemoCard :demo="item as DemoSummary" />
+        </template>
+      </MasonryGrid>
     </section>
 
     <!-- 相关推荐 -->
@@ -736,11 +738,11 @@ onMounted(load)
       </div>
       <div v-if="relatedLoading && !relatedShown.length" class="loading-row"><span class="spinner"></span> {{ t('demo.loadingRelated', '加载推荐…') }}</div>
       <div v-else-if="!relatedShown.length" class="empty-box">{{ t('demo.noRelated', '暂无相关推荐') }}</div>
-      <div v-else class="waterfall">
-        <div v-for="d in relatedShown" :key="d.slug" class="waterfall-item">
-          <DemoCard :demo="d" />
-        </div>
-      </div>
+      <MasonryGrid v-else :items="relatedShown" :item-key="(d: unknown) => (d as DemoSummary).slug">
+        <template #default="{ item }">
+          <DemoCard :demo="item as DemoSummary" />
+        </template>
+      </MasonryGrid>
     </section>
 
     <!-- ④ 继续逛：目标梯度需要明确的"下一步"，不能只把相关区块被动陈列在这里 -->

@@ -11,7 +11,7 @@ const pages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)
 <template>
   <div class="filter-row" style="justify-content: center; margin-top: 16px">
     <button class="btn btn-sm btn-outline" type="button" :disabled="page <= 1" @click="emit('change', page - 1)">{{ t('common.prev', '上一页') }}</button>
-    <span class="tag-stat"><b>{{ page }}</b> / {{ pages }}</span>
+    <span class="mini-stat"><b>{{ page }}</b> / {{ pages }}</span>
     <button class="btn btn-sm btn-outline" type="button" :disabled="page >= pages" @click="emit('change', page + 1)">{{ t('common.next', '下一页') }}</button>
   </div>
 </template>

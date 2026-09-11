@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { api } from '../api'
 import DemoCard from '../components/DemoCard.vue'
+import MasonryGrid from '../components/MasonryGrid.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import LoadMore from '../components/LoadMore.vue'
@@ -37,11 +38,11 @@ onMounted(() => {
     <EmptyBox v-else-if="error" kind="error" :text="error" @retry="loadFirst" />
     <EmptyBox v-else-if="!demos.length" :text="t('public.empty', '还没有公开用户上传的 Demo')" />
     <template v-else>
-      <div class="waterfall">
-        <div v-for="d in demos" :key="d.slug" class="waterfall-item">
-          <DemoCard :demo="d" />
-        </div>
-      </div>
+      <MasonryGrid :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
+        <template #default="{ item }">
+          <DemoCard :demo="item as DemoSummary" />
+        </template>
+      </MasonryGrid>
       <LoadMore :shown="demos.length" :total="total" :loading="loading" @more="loadMore" />
     </template>
   </section>

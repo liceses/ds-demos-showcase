@@ -1,12 +1,8 @@
 /* ---------- 瀑布流 ---------- */
-.waterfall {
-  columns: 3 280px;
-  column-gap: 24px;
-}
-.waterfall-item {
-  break-inside: avoid;
-  margin-bottom: 24px;
-}
+/* P2-e：CSS 多列版（.waterfall / .waterfall-item）已删 —— 全站统一走
+   components/MasonryGrid.vue 的 JS 版（布局样式见 pages/demos.css 的 .masonry）。
+   理由：CSS 多列在追加时会把已有卡片重新分栏（rebalance 跳位），JS 版只把新卡
+   放进最短列，已有卡片永不移动。 */
 .demo-card {
   display: block;
   text-decoration: none;

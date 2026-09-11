@@ -8,6 +8,7 @@ import { useNotificationsStore } from '../stores/notifications'
 import { useQueues } from '../composables/adminQueues'
 import { openSearch } from '../composables/useSearch'
 import DemoCard from '../components/DemoCard.vue'
+import MasonryGrid from '../components/MasonryGrid.vue'
 import LoadMore from '../components/LoadMore.vue'
 import { useLoadMore } from '../composables/useLoadMore'
 import { t } from '../i18n'
@@ -115,11 +116,11 @@ onMounted(async () => {
       </div>
       <div v-if="!demos.length" class="empty-box">{{ t('user.noDemos', '还没有发布 Demo') }}</div>
       <template v-else>
-        <div class="waterfall">
-          <div v-for="d in demos" :key="d.slug" class="waterfall-item">
-            <DemoCard :demo="d" />
-          </div>
-        </div>
+        <MasonryGrid :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
+          <template #default="{ item }">
+            <DemoCard :demo="item as DemoSummary" />
+          </template>
+        </MasonryGrid>
         <LoadMore :shown="demos.length" :total="demoTotal" :loading="demoLoading" @more="loadMoreDemos" />
       </template>
     </section>

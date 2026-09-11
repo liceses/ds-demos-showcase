@@ -69,8 +69,8 @@ onMounted(async () => {
     <h1 class="page-title">{{ t('tags.title', '标签') }}</h1>
     <p class="sub">{{ t('tags.sub', '每个标签键定义一类属性：固定值是客观事实，开放值由用户创造，数字值是量化参数。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
-      <span class="tag-stat"><b>{{ keys.length }}</b> {{ t('tags.keys', '标签键') }}</span>
-      <span class="tag-stat"><b>{{ keys.reduce((n, k) => n + k.values.length, 0) }}</b> {{ t('tags.values', '标签值') }}</span>
+      <span class="mini-stat"><b>{{ keys.length }}</b> {{ t('tags.keys', '标签键') }}</span>
+      <span class="mini-stat"><b>{{ keys.reduce((n, k) => n + k.values.length, 0) }}</b> {{ t('tags.values', '标签值') }}</span>
     </div>
   </PageHero>
 

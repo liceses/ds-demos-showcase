@@ -183,10 +183,10 @@ async function executeMerge() {
       </div>
       <div v-if="mergeError" class="notice notice-error" style="margin-top: 8px">{{ mergeError }}</div>
       <div v-if="mergeResult" class="tag-merge-result" style="margin-top: 8px">
-        <span class="tag-stat"><b>{{ mergeResult.merged }}</b> 迁移</span>
-        <span class="tag-stat"><b>{{ mergeResult.removed_dups }}</b> 重复</span>
-        <span class="tag-stat"><b>{{ mergeResult.affected_demos }}</b> Demo</span>
-        <span class="tag-stat"><b>{{ mergeResult.deleted_source ? '是' : '否' }}</b> 删源</span>
+        <span class="mini-stat"><b>{{ mergeResult.merged }}</b> 迁移</span>
+        <span class="mini-stat"><b>{{ mergeResult.removed_dups }}</b> 重复</span>
+        <span class="mini-stat"><b>{{ mergeResult.affected_demos }}</b> Demo</span>
+        <span class="mini-stat"><b>{{ mergeResult.deleted_source ? '是' : '否' }}</b> 删源</span>
       </div>
     </div>
 

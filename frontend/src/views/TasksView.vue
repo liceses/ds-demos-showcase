@@ -40,7 +40,7 @@ onMounted(load)
     <h1 class="page-title">{{ t('tasks.title', '题目') }}</h1>
     <p class="sub">{{ t('tasks.sub', '同一道题，不同模型各交了什么 —— 题目是本站的比较单位。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
-      <span class="tag-stat"><b>{{ total }}</b> {{ t('tasks.count', '道题目') }}</span>
+      <span class="mini-stat"><b>{{ total }}</b> {{ t('tasks.count', '道题目') }}</span>
     </div>
   </PageHero>
 

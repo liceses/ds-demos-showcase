@@ -42,11 +42,6 @@
   color: var(--paper);
 }
 
-/* 防止列表替换时浏览器滚动锚点导致页面跳动 */
-.waterfall {
-  overflow-anchor: none;
-}
-
 /* Tab 切换动效 */
 .tab-pane-enter-active {
   transition: opacity var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease);

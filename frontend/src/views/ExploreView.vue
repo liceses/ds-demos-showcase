@@ -62,9 +62,9 @@ onMounted(load)
     <h1 class="page-title">{{ t('explore.title', '探索') }}</h1>
     <p class="sub">{{ t('explore.sub', '按模型看它做过什么，按题目看同一句话不同模型的回答，按标签看题材分布。') }}</p>
     <div class="filter-row" style="margin-top: 16px">
-      <span class="tag-stat"><b>{{ data?.models.total ?? 0 }}</b> {{ t('explore.modelsN', '个模型') }}</span>
-      <span class="tag-stat"><b>{{ data?.tasks_total ?? 0 }}</b> {{ t('explore.tasksN', '道题目') }}</span>
-      <span class="tag-stat"><b>{{ totalWorks }}</b> {{ t('explore.worksN', '个作品') }}</span>
+      <span class="mini-stat"><b>{{ data?.models.total ?? 0 }}</b> {{ t('explore.modelsN', '个模型') }}</span>
+      <span class="mini-stat"><b>{{ data?.tasks_total ?? 0 }}</b> {{ t('explore.tasksN', '道题目') }}</span>
+      <span class="mini-stat"><b>{{ totalWorks }}</b> {{ t('explore.worksN', '个作品') }}</span>
     </div>
   </PageHero>
 

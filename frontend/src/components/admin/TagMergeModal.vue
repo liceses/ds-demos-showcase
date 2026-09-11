@@ -105,10 +105,10 @@ async function execute() {
 
           <div v-if="result" class="tag-merge-result">
             <div class="filter-row" style="margin: 0">
-              <span class="tag-stat"><b>{{ result.merged }}</b> 引用迁移</span>
-              <span class="tag-stat"><b>{{ result.removed_dups }}</b> 重复移除</span>
-              <span class="tag-stat"><b>{{ result.affected_demos }}</b> 受影响 Demo</span>
-              <span class="tag-stat"><b>{{ result.deleted_source ? '是' : '否' }}</b> 源值删除</span>
+              <span class="mini-stat"><b>{{ result.merged }}</b> 引用迁移</span>
+              <span class="mini-stat"><b>{{ result.removed_dups }}</b> 重复移除</span>
+              <span class="mini-stat"><b>{{ result.affected_demos }}</b> 受影响 Demo</span>
+              <span class="mini-stat"><b>{{ result.deleted_source ? '是' : '否' }}</b> 源值删除</span>
             </div>
             <p v-if="result.dry_run" class="hint" style="margin: 8px 0 0">以上为预览，确认后才会执行。</p>
           </div>

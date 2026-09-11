@@ -62,18 +62,8 @@
 .tag-key-card.mode-fixed { border-top-color: var(--ink); }
 .tag-key-card.mode-open { border-top-color: var(--yellow); }
 .tag-key-card.mode-int { border-top-color: var(--mint); }
-.tag-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-}
-.tag-stat b {
-  background: var(--yellow);
-  border: 2px solid var(--ink);
-  color: var(--on-accent, #000); /* 计数小方块：荧光底黑字（全站复用） */
-  padding: 1px 7px;
-}
+/* P2-e 清副本：.tag-stat / .tag-stat b 与 components/toolbar-chips.css 的 .mini-stat
+   逐字节相同（原注释自己也写着"全站复用"），已删 —— .vue 里 16 处用法改用 .mini-stat。 */
 
 /* ---------- 标签选择面板（方案 A：黄色工具箱） ---------- */
 .tag-panel {

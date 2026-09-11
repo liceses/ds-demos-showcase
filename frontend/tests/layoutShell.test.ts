@@ -57,8 +57,9 @@ describe('外壳宽度（顶栏 / 主区 / 页脚必须同宽）', () => {
     const app = read('App.vue')
     // 外壳根带 shell-wide
     expect(app).toMatch(/class="app-shell"[^>]*'shell-wide':\s*route\.meta\.wide/)
-    // main 只挂 container（+ 论坛壳），不再单独带宽档
-    expect(app).toMatch(/<main class="container"/)
+    // main 的宽度类：默认 .container；P2 的 meta.bare（独立预览页）走 .bare-main 满视口。
+    // 两种情况都**不再**单独带宽档 —— 那是"内容比顶栏宽"的成因。
+    expect(app).toMatch(/route\.meta\.bare \? 'bare-main' : 'container'/)
     expect(app).not.toContain('container--wide')
   })
 })

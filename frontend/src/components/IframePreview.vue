@@ -1,26 +1,41 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useUiStore } from '../stores/ui'
 import { t } from '../i18n'
-import { lockBodyScroll, unlockBodyScroll } from '../composables/useBodyScrollLock'
+import { usePreviewFullscreen } from '../composables/usePreviewFullscreen'
 
-const props = defineProps<{
-  src?: string
-  srcdoc?: string
-  title?: string
-}>()
+// 注意 withDefaults 不是可有可无：Vue 对**布尔型 prop** 有"缺省即 false"的强制转换，
+// 写成裸的 `hotkeys?: boolean` 时"调用方没传"会变成 false —— 详情页的 G 热键就静默失效
+// （本轮实测踩到：window 收到了 'g'，但处理器从未挂上，defaultPrevented 一直是 false）。
+const props = withDefaults(
+  defineProps<{
+    src?: string
+    srcdoc?: string
+    title?: string
+    /**
+     * 是否绑定站点热键（默认 true = 只在详情页这类"浏览中的预览"里绑 G）。
+     * 独立预览页传 :hotkeys="false"：那里的目标是"我在玩"，站点一个键都不该碰。
+     */
+    hotkeys?: boolean
+  }>(),
+  { hotkeys: true },
+)
 
 // M0-B：向宿主透传 iframe @load（DemoView 预览三态的 ready 信号；跨源加载失败浏览器不触发 error，超时兜底在宿主侧）
 const emit = defineEmits<{ loaded: [] }>()
 
-const ui = useUiStore()
-
 const frame = ref<HTMLIFrameElement | null>(null)
 const autoHeight = ref<number | null>(null)
-const webFullscreen = ref(false)
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 键盘焦点（docs/预览架构与排坑记录.md 坑五）：demo 的 WASD 等操作依赖 iframe 内
+// 全屏：站内覆盖层，**唯一实现**（composables/usePreviewFullscreen）。
+// 这里不再有 requestFullscreen / fullscreenchange / webkitRequestFullscreen ——
+// Fullscreen API 保障"全屏态按 Esc 退出全屏"，与"Esc 归 demo 去关自己的菜单"互斥（规范约束），
+// 所以全屏只走覆盖层，站点不绑 Esc。
+// 覆盖层内**必须有可见退出按钮**：没有 Esc 之后它是唯一可靠出口。
+const { isFullscreen, toggle: toggleFullscreen, exit: exitFullscreen } = usePreviewFullscreen()
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 键盘焦点（docs/预览架构与排坑记录.md 坑五）：demo 的 WASD/Esc 等操作依赖 iframe 内
 // window 的 keydown，而键盘事件只送到「持有焦点的文档」。跨源预览 iframe 默认没有焦点，
 // 于是 WASD 静默失效（点一下预览才恢复）。实测结论（CDP 探针，Edge 152）：
 //   · 父页面持焦点 → iframe 内的 keydown 监听收不到（input.keys 无变化）
@@ -31,7 +46,7 @@ const webFullscreen = ref(false)
 // 事件只作触发器（window focus/blur + document focusin/focusout + 指针按下后校准）。
 const kbFocused = ref(false)
 const frameLoaded = ref(false)
-/** 触屏无键盘：不显示该提示（(hover:none) 与站点触屏判定同源） */
+/** 触屏无键盘：不显示按键说明（(hover:none) 与站点触屏判定同源） */
 const hoverCapable = !matchMedia('(hover: none)').matches
 const showFocusHint = computed(() => hoverCapable && frameLoaded.value && !kbFocused.value)
 
@@ -54,7 +69,7 @@ function onFrameLoad() {
 // 同源或 srcdoc（Mock）保持不透明 origin 不放行，防止上传的 demo 读本站 Cookie/存储。
 // allow-pointer-lock：3D 游戏（如我的世界）用 Pointer Lock 控制视角/移动，缺它 requestPointerLock 会被拒。
 const sandboxAttr = computed(() => {
-  // 注意：不带 allow-fullscreen（浏览器提示其为非法 sandbox flag；全屏由 allowfullscreen + allow="fullscreen" 提供）
+  // 注意：不带 allow-fullscreen（浏览器提示其为非法 sandbox flag）
   const base = 'allow-scripts allow-modals allow-forms allow-popups allow-pointer-lock'
   if (props.src) {
     try {
@@ -68,7 +83,7 @@ const sandboxAttr = computed(() => {
 })
 
 const frameStyle = computed(() => {
-  if (webFullscreen.value) return { height: '100%' }
+  if (isFullscreen.value) return { height: '100%' }
   if (autoHeight.value) return { height: autoHeight.value + 'px' }
   return undefined
 })
@@ -126,76 +141,30 @@ function onMessage(e: MessageEvent) {
   }
 }
 
-async function toggleIframeFullscreen() {
-  const el = frame.value
-  if (!el) return
-
-  // 已在全屏 → 退出
-  if (document.fullscreenElement) {
-    try {
-      await document.exitFullscreen()
-    } catch {
-      /* 忽略退出失败 */
-    }
-    return
-  }
-
-  try {
-    await el.requestFullscreen()
-    return
-  } catch (e) {
-    const reason = e instanceof Error ? e.message : String(e)
-    // 兼容旧版 WebKit（Safari 前缀方法）
-    const legacy = el as HTMLIFrameElement & { webkitRequestFullscreen?: () => Promise<void> }
-    if (legacy.webkitRequestFullscreen) {
-      try {
-        await legacy.webkitRequestFullscreen()
-        return
-      } catch {
-        /* 旧前缀也被拒，继续降级 */
-      }
-    }
-    // 环境（如外层预览面板沙箱未放行 allow="fullscreen"）拒绝 iframe 全屏：
-    // 不再静默，降级为网页全屏覆盖层并明确告知原因
-    webFullscreen.value = true
-    lockBodyScroll()
-    ui.toast(`iframe 全屏被浏览器拒绝（${reason}），已切换为网页全屏`, 'info')
-  }
-}
-
-async function toggleWebFullscreen() {
-  webFullscreen.value = !webFullscreen.value
-  // RF-2：走引用计数锁，避免卸载时把别人的锁（如搜索覆盖层）一起清掉
-  if (webFullscreen.value) lockBodyScroll()
-  else unlockBodyScroll()
-}
-
-function exitWebFullscreen() {
-  if (webFullscreen.value) {
-    webFullscreen.value = false
-    unlockBodyScroll()
-  }
-}
-
+/**
+ * 站点热键：**只保留 G**（切换覆盖层）。
+ *
+ * 刻意**不绑 Escape**：很多 demo 用 Esc 关自己的菜单，站点一旦绑了它，用户按 Esc
+ * 想关游戏菜单却变成"站点退全屏"（用户实测报的就是这条）。退出全屏改由
+ * 覆盖层内的可见按钮 + G 承担。
+ *
+ * 焦点事实（坑五）：iframe 持焦点时父文档收不到 keydown，所以这里的 G 只在
+ * "用户没在操作 demo"时生效 —— 天然不会跟 demo 抢键。
+ */
 function onKeydown(e: KeyboardEvent) {
   const target = e.target as HTMLElement | null
   if (target && target.closest('input, textarea, select, [contenteditable]')) return
   if (e.metaKey || e.ctrlKey || e.altKey) return
-  const key = e.key.toLowerCase()
-  if (key === 'f') {
+  if (e.key.toLowerCase() === 'g') {
     e.preventDefault()
-    void toggleIframeFullscreen()
-  } else if (key === 'g') {
-    e.preventDefault()
-    toggleWebFullscreen()
-  } else if (key === 'escape' && webFullscreen.value) {
-    exitWebFullscreen()
+    toggleFullscreen()
   }
 }
 
 onMounted(() => {
   window.addEventListener('message', onMessage)
-  window.addEventListener('keydown', onKeydown)
+  // 独立预览页传 :hotkeys="false" —— 那里一个键都不绑
+  if (props.hotkeys !== false) window.addEventListener('keydown', onKeydown)
   // 焦点进出预览（含焦点移到 iframe / 回到父页面 / 切走窗口）都要重算提示
   window.addEventListener('focus', syncFocus)
   window.addEventListener('blur', syncFocus)
@@ -211,13 +180,19 @@ onBeforeUnmount(() => {
   window.removeEventListener('blur', syncFocus)
   document.removeEventListener('focusin', syncFocus)
   document.removeEventListener('focusout', syncFocus)
-  // RF-2：只释放自己持有的那一次锁（旧写法无条件清空，会解掉搜索覆盖层等别人的锁）
-  if (webFullscreen.value) unlockBodyScroll()
 })
+
+// 供宿主（DemoView 的动作条 / 预览角按钮、独立预览页）调用。
+// 全屏状态共用一个来源，宿主不再自己维护 nativeFs/fakeFs 两套状态。
+defineExpose({ toggleFullscreen, exitFullscreen, isFullscreen })
 </script>
 
 <template>
-  <div class="preview-shell" :class="{ 'web-fullscreen': webFullscreen }" @pointerdown="onShellPointerDown">
+  <div
+    class="preview-shell"
+    :class="{ 'web-fullscreen': isFullscreen }"
+    @pointerdown="onShellPointerDown"
+  >
     <iframe
       ref="frame"
       class="preview-frame"
@@ -229,15 +204,34 @@ onBeforeUnmount(() => {
       allowfullscreen
       allow="fullscreen"
       loading="eager"
-      @dblclick="toggleIframeFullscreen"
       @load="onFrameLoad"
     ></iframe>
+
+    <!-- 退出全屏：站点不绑 Esc 之后这是唯一可靠出口，因此**常驻可见**。
+         不做"悬停显形"——预览区被 iframe 完全覆盖，指针落在 iframe 上时父级 :hover 收不到事件，
+         悬停显形在这个位置等于永不显形（P1 补全屏入口时实测过）。 -->
+    <button
+      v-if="isFullscreen"
+      class="preview-fs-exit"
+      type="button"
+      :title="t('demo.fsExitTip', '退出全屏（或按 G）')"
+      @click="exitFullscreen"
+    >
+      {{ t('demo.barExitFs', '退出全屏') }}
+    </button>
+
     <!-- 键盘焦点提示（坑五）：pointer-events:none，点击穿透到 iframe —— 真实点击才交得出焦点 -->
     <div v-if="showFocusHint" class="preview-focus-hint mono" aria-hidden="true">
       {{ t('demo.previewKbHint', '点击预览后，键盘操作才生效') }}
     </div>
-    <div class="preview-hint mono">
-      {{ webFullscreen ? '按 G / ESC 退出网页全屏' : '按 F 全屏 · 按 G 网页全屏 · ESC 退出' }}
+    <!-- 按键说明只给指针设备（触屏没有这些键）；不再提 F/ESC：
+         F（原生全屏）已退役，ESC 归属作品本身（站点不绑）。 -->
+    <div v-if="hoverCapable" class="preview-hint mono">
+      {{
+        isFullscreen
+          ? t('demo.fsHintOn', '按 G 或点右上角退出全屏')
+          : t('demo.fsHintOff', '按 G 或点按钮进入全屏（Esc 留给作品本身）')
+      }}
     </div>
   </div>
 </template>

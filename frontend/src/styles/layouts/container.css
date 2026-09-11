@@ -22,3 +22,12 @@
 .shell-wide {
   --w-shell: var(--w-wide);
 }
+
+/* P2：独立预览页（meta.bare）的满视口主区 —— 不套 .container 的宽度上限 */
+.bare-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+}

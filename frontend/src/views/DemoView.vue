@@ -100,27 +100,17 @@ watch([mountPreview, previewArmed], ([m, armed]) => {
 })
 
 // ---------- M1-B 移动动作条（03 §6.1 移动线框）：≤720 底部固定 5 键 ----------
-// 全屏=Fullscreen API；iOS（元素级 requestFullscreen 缺席/被拒）降级为固定定位层
-// （z 在 topbar 之上、toast 之下）；重开=重建 iframe（key 变更）+ 回加载态；
-// ★评分=滚到信息卡评分组并闪一次；讨论=展开 #dv-comments 并滚过去。
-const nativeFs = ref(false)
-const fakeFs = ref(false)
-const fsActive = computed(() => nativeFs.value || fakeFs.value)
-function onFsChange() {
-  nativeFs.value = !!document.fullscreenElement
+// 重开=重建 iframe（key 变更）+ 回加载态；★评分=滚到信息卡评分组并闪一次；讨论=展开 #dv-comments 并滚过去。
+//
+// 全屏（P1 重设计）：站点侧**只有一套**实现，在 IframePreview 里（composables/usePreviewFullscreen），
+// 这里只转发按钮点击与读状态。原先本组件自持 nativeFs/fakeFs 两套状态 + 自己 requestFullscreen，
+// 与 IframePreview 的 webFullscreen 并存 —— 两套退出方式还不同（这套有按钮、那套只有 G/Esc）。
+// 现在原生全屏整体退役（Fullscreen API 保障"全屏态按 Esc 退出全屏"，与"Esc 归 demo"互斥）。
+const previewRef = ref<InstanceType<typeof IframePreview> | null>(null)
+const fsActive = computed(() => !!previewRef.value?.isFullscreen)
+function toggleFullscreen() {
+  previewRef.value?.toggleFullscreen()
 }
-function onFsKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && fakeFs.value) fakeFs.value = false
-}
-onMounted(() => {
-  document.addEventListener('fullscreenchange', onFsChange)
-  document.addEventListener('keydown', onFsKey)
-})
-onBeforeUnmount(() => {
-  document.removeEventListener('fullscreenchange', onFsChange)
-  document.removeEventListener('keydown', onFsKey)
-  if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
-})
 // 动作条是 fixed，只遮「main 里的内容」垫不住 App 级 footer（footer 在 route-page 之外，
 // App.vue 红线不可动）→ 页脚抬升用 body padding 精确挂载/卸载（组件卸载即还原，无样式泄漏）
 // P1 底栏契约：垫底 = 底栏真实高 + 动作条高，两者都走 token，不再各写各的字面量
@@ -140,23 +130,6 @@ onBeforeUnmount(() => {
   mqlBar.removeEventListener('change', syncBodyPad)
   document.body.style.paddingBottom = ''
 })
-async function toggleFullscreen() {
-  if (fsActive.value) {
-    fakeFs.value = false
-    if (document.fullscreenElement) await document.exitFullscreen().catch(() => undefined)
-    return
-  }
-  const el = stageEl.value
-  if (el && el.requestFullscreen) {
-    try {
-      await el.requestFullscreen()
-      return
-    } catch {
-      /* 元素级全屏被拒（iOS Safari 等）→ 走固定定位层 */
-    }
-  }
-  fakeFs.value = true
-}
 // 重开：与 M0-B 三态衔接——重建 iframe 强制走一遍 loading（march 边框）→ready/error
 function restartPreview() {
   previewKey.value += 1
@@ -411,29 +384,36 @@ onMounted(load)
            dv-stage 的 sticky 约束块从 dv-shell（跨 row1+row2）变为 row1 包装层，
            滚到 dv-story 时预览被自然推出视口（标准释放），几何上不再与 row2 重叠 -->
       <div class="dv-row-preview">
-        <div class="dv-stage" ref="stageEl" :class="{ 'dv-stage--fs': fakeFs }">
-        <!-- 全屏退出把手：Fullscreen API 与固定定位层两条路共用（fixed 层里它是唯一回得来的门） -->
-        <button v-if="fsActive" class="dv-fs-exit" type="button" @click="toggleFullscreen">
-          {{ t('demo.barExitFs', '退出全屏') }}
-        </button>
+        <div class="dv-stage" ref="stageEl">
         <!-- P1 补入口（用户报「移动端没有全屏按钮」顺带暴露的真实缺口）：
-             全屏此前只有 ≤720 的动作条按钮 + iframe 拿到焦点后按 F —— 桌面端**没有任何可见入口**
-             （旧样式 .preview-fullscreen-btn 还留在 responsive-v1.css 里，但模板零引用，是死 CSS）。
-             这里在预览右上角补一个常驻控件：指针设备悬停/聚焦时浮现（预览保持干净），
-             触屏设备常驻可见；≤720 由动作条提供（那条更常驻），本控件让位不重复。 -->
-        <button
-          v-if="demo.demo_type === 'web' && previewArmed && !fsActive"
-          class="dv-fs-enter"
-          type="button"
-          :title="t('demo.fsTip', '全屏预览（快捷键 F）')"
-          :aria-label="t('demo.barFullscreen', '全屏')"
-          @click="toggleFullscreen"
-        >
-          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-            <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="2" />
-          </svg>
-          <span>{{ t('demo.barFullscreen', '全屏') }}</span>
-        </button>
+             全屏此前只有 ≤720 的动作条按钮 + iframe 拿到焦点后按 F —— 桌面端**没有任何可见入口**。
+             现在这里是两个常驻控件（互斥显示：进入全屏后退出按钮在 IframePreview 内提供）：
+             「全屏」= 覆盖层（Esc 留给作品本身）；「独立预览」= 跳到 /demo/:slug/play。 -->
+        <div v-if="demo.demo_type === 'web' && previewArmed && !fsActive" class="dv-fs-actions">
+          <button
+            class="dv-fs-enter"
+            type="button"
+            :title="t('demo.fsTip', '进入全屏（或按 G；Esc 留给作品本身）')"
+            :aria-label="t('demo.barFullscreen', '全屏')"
+            @click="toggleFullscreen"
+          >
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+              <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span>{{ t('demo.barFullscreen', '全屏') }}</span>
+          </button>
+          <RouterLink
+            class="dv-fs-enter dv-fs-play"
+            :to="`/demo/${demo.slug}/play`"
+            :title="t('demo.playPageTip', '在独立预览页打开（无站点外壳，Esc 归作品）')"
+          >
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+              <path d="M11 3h6v6M17 3l-8 8" fill="none" stroke="currentColor" stroke-width="2" />
+              <path d="M9 5H5v10h10v-4" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+            <span>{{ t('demo.playPage', '独立预览') }}</span>
+          </RouterLink>
+        </div>
         <!-- iframe 懒挂载：预览进视口才加载，移动端/长页面不必为一块看不见的区域付渲染与流量 -->
         <!-- M0-B 预览三态：触屏默认海报点击播放；桌面进视口自动挂载（既有懒挂载逻辑不变） -->
         <template v-if="demo.demo_type === 'web'">
@@ -456,6 +436,7 @@ onMounted(load)
           </div>
           <template v-else-if="mountPreview">
             <IframePreview
+              ref="previewRef"
               :key="previewKey"
               :srcdoc="demo.previewHtml"
               :src="demo.previewHtml ? undefined : (demo.preview_url ?? `/preview/${demo.slug}/index.html`)"
@@ -1000,49 +981,24 @@ onMounted(load)
 
 /* iOS 降级全屏层：固定定位盖住顶栏（z 1050：topbar 1000 之上、toast 1100 之下）；
    Fullscreen API 路径由浏览器接管，无需此类 */
-.dv-stage--fs {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-search);
-  max-height: none;
-  overflow: auto;
-  background: var(--paper, #fff);
-  padding: 8px;
-}
-.dv-stage--fs iframe {
-  max-height: calc(100vh - 16px);
-}
-.dv-fs-exit {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: var(--z-local);
-  min-height: 44px; /* 触达底线 */
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  background: var(--paper, #fff);
-  color: var(--ink, #000);
-  border: var(--border-w, 4px) solid var(--ink, #000);
-  box-shadow: 4px 4px 0 0 var(--ink, #000);
-  cursor: pointer;
-}
-.dv-fs-exit:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
-  transition-duration: 0ms;
-}
-/* P1 全屏入口（与 .dv-fs-exit 同角同位、互斥显示：进入前见它、进入后见退出把手）
+/* P1：旧的两套全屏样式（.dv-stage--fs 固定层 + .dv-fs-exit 把手）已删 ——
+   全屏唯一实现移到 components/IframePreview.vue（覆盖层 .preview-shell.web-fullscreen，
+   退出按钮 .preview-fs-exit）。原生全屏退役后这些类无引用。 */
+
+/* P1/P1b 预览右上角动作组（全屏 + 独立预览）
    **常驻可见，不做悬停浮现** —— 实测：预览区被 iframe 完全覆盖，指针落在 iframe 上时
    父级 hover 链为空（.dv-stage:hover === false，而悬停右侧事实卡时链正常），
-   靠 :hover 显形的控件在这个位置**永远不会出现**（等于没补）。
+   靠 :hover 显形的控件在这个位置**永远不会出现**。
    ≤720 让位给动作条的常驻「全屏」，避免同一动作两个入口。 */
-.dv-fs-enter {
+.dv-fs-actions {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: var(--z-local);
+  display: inline-flex;
+  gap: 8px;
+}
+.dv-fs-enter {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1056,14 +1012,15 @@ onMounted(load)
   border: var(--border-w, 4px) solid var(--ink, #000);
   box-shadow: 4px 4px 0 0 var(--ink, #000);
   cursor: pointer;
+  text-decoration: none;
 }
 .dv-fs-enter:active {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
-/* ≤720：动作条 5 键里有常驻「全屏」，这里让位（同一个动作用两个入口=噪音） */
+/* ≤720：动作条 5 键里有常驻「全屏」，这里整体让位（同一个动作用两个入口=噪音） */
 @media (max-width: 720px) {
-  .dv-fs-enter {
+  .dv-fs-actions {
     display: none;
   }
 }

@@ -24,7 +24,6 @@
 @import './components/preview-embed.css';
 @import './components/markdown.css';
 @import './components/version-timeline.css';
-@import './components/comments.css';
 @import './components/table.css';
 @import './components/status-pill.css';
 @import './components/notice.css';
@@ -33,7 +32,6 @@
 @import './components/form-page.css';
 @import './components/breadcrumb.css';
 @import './components/toolbar-chips.css';
-@import './components/announcement.css';
 @import './components/timeline-light.css';
 @import './components/responsive-v1.css';
 @import './components/modal.css';
@@ -41,7 +39,6 @@
 @import './pages/home.css';
 @import './pages/tag-system.css';
 @import './components/scrollbar.css';
-@import './pages/home-lobby.css';
 @import './pages/demos.css';
 @import './pages/admin.css';
 @import './pages/demos-ledger.css';

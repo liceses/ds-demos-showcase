@@ -56,28 +56,12 @@
 
 /* 手机竖屏 */
 @media (max-width: 480px) {
-  .entry-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-  .entry-card {
-    min-height: 120px;
-    padding: 16px 12px 12px;
-  }
-  .entry-card h2 {
-    font-size: 18px;
-  }
   .dash-stats {
     gap: 10px;
   }
   .stat-card {
     flex: 1 1 45%;
     min-width: 0;
-  }
-  .tag-strip-chips {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
   }
   .page-hero .huge {
     font-size: 40px;

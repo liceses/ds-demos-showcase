@@ -123,11 +123,6 @@
   color: var(--on-accent, #000); /* 评分迷你徽标：薄荷底黑字（t17 全站扫描） */
 }
 
-/* 首页入口：排行榜 */
-.entry-card.entry-rank {
-  border-top: 8px solid var(--ink);
-}
-
 /* 评分分布条 */
 .rating-dist {
   display: inline-flex;

@@ -15,10 +15,6 @@
     height: 50vh;
     min-height: 300px;
   }
-  .comment-children {
-    margin-left: 8px;
-    padding-left: 8px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

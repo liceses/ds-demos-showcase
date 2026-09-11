@@ -18,9 +18,11 @@ const TOKEN_FILES = ['src/styles/tokens/primitives.css', 'src/styles/tokens/sema
 /** 布局令牌命名空间（色彩/阴影/边框令牌不在此测试范围） */
 const NAMESPACES = ['--z-', '--sp-', '--fs-', '--w-', '--tabbar-']
 
-/** 允许保留字面量的局部层叠：抽屉内部相对序（遮罩 44 < 浮层 45 < 底部 sheet 46）
- *  + 两处纯局部抬升（DemoView 预览内 5/3）。它们不参与全局层表，改动前需读上下文。 */
-const ALLOWED_LOCAL_Z = new Set(['44', '45', '46', '5', '3'])
+/** 允许保留字面量的局部层叠：作品详情预览内部的纯局部抬升（5 / 3）。
+ *  它们不参与全局层表（父级已建立层叠上下文），改动前需读上下文。
+ *  筛选抽屉的 44/45/46 已在 P1 收进 `calc(var(--z-sheet) - N)` —— 因为它们在移动端
+ *  必须压过底栏（900），不再是"局部"问题。 */
+const ALLOWED_LOCAL_Z = new Set(['5', '3'])
 
 function* files(dir: string): Generator<string> {
   for (const e of readdirSync(dir)) {
@@ -32,6 +34,12 @@ function* files(dir: string): Generator<string> {
 
 function read(p: string): string {
   return readFileSync(p, 'utf8')
+}
+
+/** 读源码并剥掉注释：注释里出现的 "bottom: 0"、"--z-xxx" 之类字样是文档，
+ *  不该被"禁止字面量"类断言当成违规（踩过：自己的说明注释把测试判红）。 */
+function readNoComments(p: string): string {
+  return read(p).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
 }
 
 function allSources(): string[] {
@@ -87,5 +95,15 @@ describe('布局令牌', () => {
     const app = read('src/components/AppTabBar.vue')
     expect(app).toContain('var(--tabbar-h)')
     expect(read('src/styles/tokens/primitives.css')).toContain('--tabbar-h-safe')
+  })
+
+  it('页内贴底浮层不许再抢底栏的位置（P1 底栏契约）', () => {
+    // 常驻贴底条：bottom 必须走 --tabbar-h-safe（就位于底栏之上）
+    const demo = readNoComments('src/views/DemoView.vue')
+    expect(demo).toMatch(/\.dv-mbar\s*\{[^}]*bottom:[^;]*var\(--tabbar-h-safe\)/s)
+    expect(demo).not.toMatch(/\.dv-mbar\s*\{[^}]*bottom:\s*0/s)
+    // 模态浮层：z-index 必须高于底栏（压过它），而不是被它盖住
+    const demos = readNoComments('src/views/DemosView.vue')
+    expect(demos).toMatch(/\.facet-panel--sheet\s*\{[^}]*z-index:\s*var\(--z-sheet\)/s)
   })
 })

@@ -122,10 +122,14 @@ onBeforeUnmount(() => {
 })
 // 动作条是 fixed，只遮「main 里的内容」垫不住 App 级 footer（footer 在 route-page 之外，
 // App.vue 红线不可动）→ 页脚抬升用 body padding 精确挂载/卸载（组件卸载即还原，无样式泄漏）
+// P1 底栏契约：垫底 = 底栏真实高 + 动作条高，两者都走 token，不再各写各的字面量
+// （原来 60px + App.vue 的 56px，且各带一份 safe-area → 重复垫了安全区）
 const MQL_BAR = '(max-width: 720px)'
 const mqlBar = window.matchMedia(MQL_BAR)
 function syncBodyPad() {
-  document.body.style.paddingBottom = mqlBar.matches ? 'calc(60px + env(safe-area-inset-bottom, 0px))' : ''
+  document.body.style.paddingBottom = mqlBar.matches
+    ? 'calc(var(--tabbar-h-safe) + var(--mbar-h) + var(--tabbar-fab-overhang))'
+    : ''
 }
 onMounted(() => {
   mqlBar.addEventListener('change', syncBodyPad)
@@ -919,11 +923,14 @@ onMounted(load)
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    z-index: var(--z-dropdown); /* 与 dv-rail 同段位：peek(z80)/toast(z1100) 仍在之上 */
+    /* P1 底栏契约：动作条**就位于底栏之上**（再让开中央 FAB 的上探量），
+       不再与底栏抢 bottom:0。原来两者 top/bottom 完全重合（实测 786/844），
+       底栏 z900 压住动作条 z60 → 5 个主操作全不可见。 */
+    bottom: calc(var(--tabbar-h-safe) + var(--tabbar-fab-overhang));
+    z-index: var(--z-dropdown);
     border-top: var(--border-w, 4px) solid var(--ink, #000);
     background: var(--paper, #fff);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* 已不在屏幕最底缘 → 不再吃安全区（安全区由底栏承担，重复垫会让动作条虚高） */
   }
   /* 页脚不被遮的垫底走 body padding（脚本挂载/卸载，见 syncBodyPad——footer 在 App.vue，红线不可动） */
 }

@@ -60,7 +60,9 @@
   border: 2px solid var(--ink);
 }
 .ad-nav-item.active .ad-nav-badge { background: var(--ink); color: var(--paper); }
-.ad-main { min-width: 0; max-width: 1180px; }
+/* P1：原 `max-width: 1180px` 是死值 —— 侧栏 210px + 间距后可用宽仅 1050px（实测 .ad-main 实宽
+   1050），1180 永不生效。真源交给页宽令牌（P3 统一到 --w-wide）。 */
+.ad-main { min-width: 0; }
 
 .ac-hero {
   display: flex;

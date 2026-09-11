@@ -14,16 +14,16 @@
 .forum-shell .muted {
   color: var(--text-forum);
 }
-.forum-container {
-  max-width: 860px;
-}
+/* P1：本文件原有四处 `max-width: 860px`（.forum-container/.forum-topbar-inner/
+   .forum-hero-inner/.forum-section）是**全区间死值** —— >1025 被 forum-lite.css 的 1280、
+   ≤1024 被 skeleton-extended.css 的 100% 覆盖（同一批选择器两处都定义），860 从未生效
+   （实测 .forum-container computed max-width = 1280px）。已删。 */
 .forum-topbar {
   background: var(--ink);
   color: var(--yellow);
   border-bottom: 4px solid var(--ink);
 }
 .forum-topbar-inner {
-  max-width: 860px;
   margin: 0 auto;
   padding: 10px 16px;
   display: flex;
@@ -65,7 +65,6 @@
   padding: 32px 0 8px;
 }
 .forum-hero-inner {
-  max-width: 860px;
   margin: 0 auto;
   padding: 0 16px;
   display: flex;
@@ -82,7 +81,6 @@
   color: var(--text-forum);
 }
 .forum-section {
-  max-width: 860px;
   margin: 0 auto;
   padding: 20px 16px 40px;
 }

@@ -753,9 +753,9 @@ onBeforeUnmount(() => observer?.disconnect())
 .facet-backdrop {
   position: fixed;
   inset: 0;
-  /* P0-2：44/45/46 是抽屉内部相对序（遮罩<浮层<底部 sheet），刻意保留字面量——
-     局部层叠不进全局层表（token 见 tokens/primitives.css 的 --z-*）。 */
-  z-index: 44;
+  /* P1 底栏契约：遮罩必须压过底栏（900），否则底栏在遮罩"之上"仍亮着，且 sheet 底部被切 58px。
+     三者保持相对序：遮罩 < 浮层 < 底部 sheet，统一挂在 --z-sheet 段位上。 */
+  z-index: calc(var(--z-sheet) - 2);
   background: rgba(0, 0, 0, 0.32);
 }
 
@@ -769,25 +769,26 @@ onBeforeUnmount(() => observer?.disconnect())
   flex-direction: column;
   min-height: 0;
 }
-/* 浮层：顶栏之下、TagTip(z60) 之上的 drawer 段位；入场=b-stamp-drop 350ms 落下回弹一次（关闭 0ms 对称） */
+/* 浮层：顶栏之下、TagTip(--z-dropdown) 之上的 drawer 段位；入场=b-stamp-drop 350ms 落下回弹一次（关闭 0ms 对称） */
 .facet-panel--overlay {
   position: fixed;
   top: 78px;
   right: 16px;
   bottom: 16px;
   width: min(360px, calc(100vw - 32px));
-  z-index: 45;
+  z-index: calc(var(--z-sheet) - 1); /* P1：与 sheet 同段位保持相对序（遮罩 < 浮层 < sheet） */
   overflow-y: auto;
   overscroll-behavior: contain;
   animation: b-stamp-drop var(--b-dur-stage, 350ms) var(--b-ease-stamp, cubic-bezier(0.16, 1, 0.3, 1)) both;
 }
-/* 移动 bottom-sheet：贴底上收，安全区垫底；入场=贴边方向镜像落下（从下方 24px 升起同帧谱） */
+/* 移动 bottom-sheet：**压过底栏**（P1 底栏契约），安全区仍由自己垫（它盖住了底栏，成为屏幕最底件）；
+   入场=贴边方向镜像落下（从下方 24px 升起同帧谱） */
 .facet-panel--sheet {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 46;
+  z-index: var(--z-sheet); /* P1：原 46 低于底栏 900 → 最后 58px 被整条盖住，末项点不到 */
   max-height: 76vh;
   overflow-y: auto;
   overscroll-behavior: contain;

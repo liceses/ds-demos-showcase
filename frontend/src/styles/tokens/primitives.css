@@ -128,20 +128,24 @@
      作品详情动作条与筛选 sheet 被底栏压住（实测：两者 top/bottom 完全重合）。
      P1 起，页内贴底条一律 bottom: var(--tabbar-h-safe)。 */
   --tabbar-h: 56px;
-  --tabbar-h-safe: calc(56px + env(safe-area-inset-bottom, 0px));
+  --tabbar-h-safe: calc(56px + var(--border-w) + env(safe-area-inset-bottom, 0px));
+  --mbar-h: 58px; /* 作品详情移动动作条：按钮 56 + 上边框 2（已在底栏之上，不再吃安全区） */
+  /* 底栏中央 FAB 上探量：.fab 56×56 + margin-top:-16px → 实测越过底栏上缘 14px。
+     页内贴底条还要再抬这么多，否则中央那颗按钮被 FAB 圆钮咬掉 14px（实测命中 SPAN.fab-glyph）。 */
+  --tabbar-fab-overhang: 14px;
 
   /* ---------- z-index 层级（**当前值**，非目标值） ----------
      P0 只做「把 20 个离散值收敛成一张表」，取值与原字面量逐一相同 → 层叠结果零变化。
-     已知倒挂（P1 修，不在本阶段改）：toast(1100) 与 modal(1100) 同级；论坛接管(2000)
-     与全屏预览(9999) 都压在 toast 上；底栏(900) 反而高于页内贴底条 → 移动端动作条不可见。 */
+    已知倒挂（P1 已修三处）：底栏(900) 高于页内贴底条 → 移动端动作条不可见（改为止于底栏之上）；
+    筛选 sheet(46) 与 peek 抽屉(80) 都低于底栏 → 被切 56px（改为压过底栏）。 */
   --z-raised: 1;
   --z-overlay: 2;
   --z-local: 10;
   --z-dropdown: 60;
-  --z-drawer: 80;
+  --z-drawer: 950; /* P1：抽屉（.peek-root）必须压过底栏 900 —— 原 80 使遮罩盖不住底栏、面板被切 56px */
   --z-tabbar: 900;
   --z-float: 900; /* 常驻浮动入口（.forum-peek 斜角 Tab）——与底栏同为 900，但两者互不相干 */
-  --z-sheet: 1000;
+  --z-sheet: 1000; /* P1：底部筛选 sheet 改为压过底栏（原 46，被底栏整条盖住最后 58px） */
   --z-search: 1050;
   --z-modal: 1100;
   --z-toast: 1100; /* P1 提到 --z-modal 之上（1200） */

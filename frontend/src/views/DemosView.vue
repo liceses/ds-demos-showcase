@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineOptions({ name: 'DemosView' })
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { useLoadGeneration } from '../composables/useLoadGeneration'
 import type { DemoSummary, TagKeyInfo } from '../api/types'
@@ -8,6 +8,7 @@ import { tagLabel } from '../utils/funMode'
 import { guessVendor } from '../utils/tagGroups'
 import { chipLabel, intBounds, intBoundsOf, quickPresets, vendorDot } from '../utils/demoFacets'
 import { useDemoFilters } from '../composables/useDemoFilters'
+import { useFacetDrawer } from '../composables/useFacetDrawer'
 import type { QuickPreset } from '../utils/demoFacets'
 import { t, keyLabel, vendorLabel } from '../i18n'
 import DemoCard from '../components/DemoCard.vue'
@@ -127,73 +128,20 @@ function toggleVendor(group: string) {
 // 形态：桌面 overlay（可钉住转常驻侧栏，localStorage 记忆）/ 移动（≤720）bottom-sheet
 // （单组展开、应用即收、抽屉头「已选 N」）。钉住布局切换 0ms 硬切（t22/t23 口径：列宽
 // 变化不做补间）；浮层/抽屉出场 stamp-in 微档、关闭 0ms 对称（03 §12.5 弹层语汇）。
-const MQL_MOBILE = '(max-width: 720px)'
-const mqlMobile = window.matchMedia(MQL_MOBILE)
-const isMobile = ref(mqlMobile.matches)
-function onMqlChange(e: MediaQueryListEvent) {
-  isMobile.value = e.matches
-}
-onMounted(() => mqlMobile.addEventListener('change', onMqlChange))
-onBeforeUnmount(() => mqlMobile.removeEventListener('change', onMqlChange))
-
-const PIN_LS_KEY = 'dsh_demos_facet_pin'
-function lsGet(k: string): string | null {
-  try {
-    return localStorage.getItem(k)
-  } catch {
-    return null
-  }
-}
-function lsSet(k: string, v: string) {
-  try {
-    localStorage.setItem(k, v)
-  } catch {
-    /* 隐私模式：钉住是增值能力，收得起就行 */
-  }
-}
-const facetPinned = ref(lsGet(PIN_LS_KEY) === '1')
-const facetOpen = ref(false) // overlay / bottom-sheet 的开合（钉住态常开，不占用此态）
-const panelMode = computed<'pinned' | 'overlay' | 'sheet'>(() =>
-  isMobile.value ? 'sheet' : facetPinned.value ? 'pinned' : 'overlay',
-)
-const showPanel = computed(() => (panelMode.value === 'pinned' ? true : facetOpen.value))
-const backdropActive = computed(() => showPanel.value && panelMode.value !== 'pinned')
+// RF-4i：形态层（模式判定/开合/钉住持久化/Esc）抽到 useFacetDrawer；分组内容留在本视图。
 const panelEl = ref<HTMLElement | null>(null)
-
-function openFacet() {
-  facetOpen.value = true
-  // 移动端单组展开：进入 sheet 时收敛到恰好一组（无开着的组则落回模型组；米勒：一屏一事）。
-  // 必须显式写 false——缺席键会回落「默认开」，光写一个 true 压不住其他组
-  if (isMobile.value) {
+const { isMobile, panelMode, showPanel, backdropActive, closeFacet, toggleFacet, pinFacet, unpinFacet } = useFacetDrawer({
+  panelEl,
+  onOpen: () => {
+    // 移动端单组展开：进入 sheet 时收敛到恰好一组（无开着的组则落回模型组；米勒：一屏一事）。
+    // 必须显式写 false——缺席键会回落「默认开」，光写一个 true 压不住其他组
+    if (!isMobile.value) return
     const firstOpen = panelGroups.value.find((g) => isPanelOpen(g))?.group.key ?? 'model'
     const next: Record<string, boolean> = {}
     for (const g of panelGroups.value) next[g.group.key] = g.group.key === firstOpen
     panelOpen.value = next
-  }
-  void nextTick(() => panelEl.value?.focus()) // 轻量可达性：开抽屉即把焦点交给面板（完整焦点环 P2）
-}
-function closeFacet() {
-  facetOpen.value = false
-}
-function toggleFacet() {
-  facetOpen.value ? closeFacet() : openFacet()
-}
-function pinFacet() {
-  facetPinned.value = true
-  facetOpen.value = false
-  lsSet(PIN_LS_KEY, '1')
-}
-function unpinFacet() {
-  facetPinned.value = false
-  facetOpen.value = false
-  lsSet(PIN_LS_KEY, '0')
-}
-// Esc 关浮层/抽屉（钉住态是常驻侧栏，不响应 Esc）
-function onDocKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && facetOpen.value) closeFacet()
-}
-onMounted(() => document.addEventListener('keydown', onDocKey))
-onBeforeUnmount(() => document.removeEventListener('keydown', onDocKey))
+  },
+})
 
 // 抽屉分面组序（03 §4.2）：模型置顶（厂商折叠）→ type/category/game → 技术键（可搜索）→ 数值键
 type PanelEntry = { kind: 'model' | 'label' | 'tech' | 'int'; group: FilterGroup }
@@ -522,7 +470,7 @@ onBeforeUnmount(() => observer?.disconnect())
         v-if="panelMode !== 'pinned'"
         class="btn btn-secondary facet-btn"
         type="button"
-        :aria-expanded="facetOpen"
+        :aria-expanded="showPanel"
         aria-controls="facet-panel"
         @click="toggleFacet"
       >

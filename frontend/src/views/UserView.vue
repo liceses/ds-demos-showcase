@@ -8,6 +8,8 @@ import { useNotificationsStore } from '../stores/notifications'
 import { useQueues } from '../composables/adminQueues'
 import { openSearch } from '../composables/useSearch'
 import DemoCard from '../components/DemoCard.vue'
+import LoadMore from '../components/LoadMore.vue'
+import { useLoadMore } from '../composables/useLoadMore'
 import { t } from '../i18n'
 import PageHero from '../components/PageHero.vue'
 
@@ -20,7 +22,17 @@ const { totalMust: adminQueueTotal } = useQueues()
 
 const user = ref<(User & { demo_count: number }) | null>(null)
 const profile = ref<UserProfile | null>(null)
-const demos = ref<DemoSummary[]>([])
+// P2-d：原实现只发一次 page_size=50 —— 第 51 件起静默消失。改走统一累积加载。
+const {
+  items: demos,
+  total: demoTotal,
+  loading: demoLoading,
+  loadFirst: loadDemos,
+  loadMore: loadMoreDemos,
+} = useLoadMore<DemoSummary>(
+  (params) => api.listDemos({ status: 'approved', tags: [`author:${props.username}`], ...params }),
+  24,
+)
 const loading = ref(true)
 const error = ref('')
 
@@ -46,8 +58,7 @@ onMounted(async () => {
     ])
     user.value = u
     profile.value = p
-    const res = await api.listDemos({ status: 'approved', tags: [`author:${props.username}`], page_size: 50 })
-    demos.value = res.items
+    await loadDemos()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -103,11 +114,14 @@ onMounted(async () => {
         <h2 class="section-title">{{ t('user.theirDemos', 'TA 的 Demo') }}</h2>
       </div>
       <div v-if="!demos.length" class="empty-box">{{ t('user.noDemos', '还没有发布 Demo') }}</div>
-      <div v-else class="waterfall">
-        <div v-for="d in demos" :key="d.slug" class="waterfall-item">
-          <DemoCard :demo="d" />
+      <template v-else>
+        <div class="waterfall">
+          <div v-for="d in demos" :key="d.slug" class="waterfall-item">
+            <DemoCard :demo="d" />
+          </div>
         </div>
-      </div>
+        <LoadMore :shown="demos.length" :total="demoTotal" :loading="demoLoading" @more="loadMoreDemos" />
+      </template>
     </section>
   </template>
   </div>

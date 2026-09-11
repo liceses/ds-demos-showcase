@@ -216,18 +216,18 @@ watch(() => route.params.slug, load, { immediate: true })
         <DemoCard :demo="item as (typeof demoItems)[number]" />
       </template>
     </MasonryGrid>
-    <div class="filter-row" style="justify-content: center; margin-top: 14px">
-      <button
-        v-if="demoItems.length < demoTotal"
-        class="btn btn-secondary"
-        type="button"
-        :disabled="demoLoading"
-        @click="loadDemos(false)"
-      >
-        {{ demoLoading ? '…' : t('models.loadMore', '再显示 {n} 件', { n: STEP }) }}
-      </button>
-      <span v-else-if="demoTotal > FIRST" class="muted mono">{{ t('models.bottom', '到底了 · 共 {n} 件，试试按社区分排', { n: demoTotal }) }}</span>
-    </div>
+    <!-- P2-d：按钮/到底文案走统一件 <LoadMore>（原先自己拼「再显示 N 件」+ 到底行） -->
+    <LoadMore
+      :shown="demoItems.length"
+      :total="demoTotal"
+      :loading="demoLoading"
+      :step="STEP"
+      @more="loadDemos(false)"
+    >
+      <template #end>
+        <span v-if="demoTotal > FIRST" class="muted mono">{{ t('models.bottom', '到底了 · 共 {n} 件，试试按社区分排', { n: demoTotal }) }}</span>
+      </template>
+    </LoadMore>
 
     <p class="muted mono" style="text-align: center; margin-top: 24px">
       {{ t('models.since', '收录') }} {{ parseDate(model.created_at).toLocaleDateString(currentLocale()) }}

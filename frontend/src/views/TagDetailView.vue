@@ -10,12 +10,25 @@ import TagGroupBox from '../components/TagGroupBox.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import PageHero from '../components/PageHero.vue'
+import LoadMore from '../components/LoadMore.vue'
+import { useLoadMore } from '../composables/useLoadMore'
 
 const props = defineProps<{ k: string; v: string }>()
 
 const tag = ref<Tag | null>(null)
 const keyDef = ref<TagKeyInfo | null>(null)
-const demos = ref<DemoSummary[]>([])
+// P2-d：原实现只发一次 page_size=50 —— 第 51 件起静默消失（页面既不提示"还有更多"也不提示"已到底"）。
+// 改走统一的累积加载 + <LoadMore>。
+const {
+  items: demos,
+  total: demoTotal,
+  loading: demoLoading,
+  loadFirst: loadDemos,
+  loadMore: loadMoreDemos,
+} = useLoadMore<DemoSummary>(
+  (params) => api.listDemos({ status: 'approved', tags: [`${props.k}:${props.v}`], ...params }),
+  24,
+)
 const forumCount = ref(0)
 const loading = ref(true)
 const error = ref('')
@@ -25,15 +38,14 @@ const sameKeyValues = computed(() => keyDef.value?.values || [])
 
 onMounted(async () => {
   try {
-    const [t, keys, res, fr] = await Promise.all([
+    const [t, keys, fr] = await Promise.all([
       api.getTag(props.k, props.v),
       api.listTagKeys().catch(() => [] as TagKeyInfo[]),
-      api.listDemos({ status: 'approved', tags: [`${props.k}:${props.v}`], page_size: 50 }),
       api.listForumTopics({ tag: `${props.k}:${props.v}`, page_size: 1 }).catch(() => ({ total: 0 } as never)),
     ])
     tag.value = t
     keyDef.value = keys.find((x) => x.key === props.k) || null
-    demos.value = res.items
+    await loadDemos()
     forumCount.value = (fr as { total?: number }).total || 0
   } catch (e) {
     error.value = (e as Error).message
@@ -114,14 +126,17 @@ onMounted(async () => {
     <section class="section">
       <div class="section-head">
         <h2 class="section-title">关联 Demo</h2>
-        <span class="mini-stat"><b>{{ demos.length }}</b> 个</span>
+        <span class="mini-stat"><b>{{ demoTotal }}</b> 个</span>
       </div>
       <EmptyBox v-if="!demos.length" text="这个标签还很年轻，还没有 Demo" />
-      <MasonryGrid v-else :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
-        <template #default="{ item }">
-          <DemoCard :demo="item as DemoSummary" />
-        </template>
-      </MasonryGrid>
+      <template v-else>
+        <MasonryGrid :items="demos" :item-key="(d: unknown) => (d as DemoSummary).slug">
+          <template #default="{ item }">
+            <DemoCard :demo="item as DemoSummary" />
+          </template>
+        </MasonryGrid>
+        <LoadMore :shown="demos.length" :total="demoTotal" :loading="demoLoading" @more="loadMoreDemos" />
+      </template>
     </section>
   </template>
   </div>

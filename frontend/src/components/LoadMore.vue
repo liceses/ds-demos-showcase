@@ -1,0 +1,72 @@
+<script setup lang="ts">
+import { t } from '../i18n'
+
+/**
+ * 「加载更多」统一控件（P2-d）。
+ *
+ * 收敛前这一支有 5 处各写各的：HomeView 拼「加载更多（x/y）」、ModelDetailView 拼
+ * 「再显示 N 件」、TagDetailView/UserView/PublicView **根本没有**（只发一次 page_size=50
+ * 就结束，第 51 件起静默消失）。
+ *
+ * 三态：
+ *  · 还有更多  → 按钮（显示"已显示 x / 共 y"），禁用态由 loading 控制
+ *  · 已到底    → 给一行轻提示（否则用户不知道"没有更多"还是"按钮坏了"）
+ *  · 首屏加载中 → 一行 loading（列表为空时才有意义，由调用方决定是否渲染）
+ */
+withDefaults(
+  defineProps<{
+    shown: number
+    total: number
+    loading?: boolean
+    /** 单页步进（用于"再显示 N 件"这类文案） */
+    step?: number
+    /** 已到底时是否显示提示（默认显示） */
+    showEnd?: boolean
+  }>(),
+  { loading: false, showEnd: true },
+)
+
+const emit = defineEmits<{ more: [] }>()
+</script>
+
+<template>
+  <div class="load-more">
+    <button
+      v-if="shown < total"
+      class="btn btn-sm btn-outline"
+      type="button"
+      :disabled="loading"
+      @click="emit('more')"
+    >
+      {{
+        loading
+          ? t('common.loading', '加载中…')
+          : step
+            ? t('common.loadMoreStep', '再显示 {n} 件', { n: step })
+            : t('common.loadMore', '加载更多')
+      }}
+      <span v-if="!loading" class="load-more-count mono">{{ shown }} / {{ total }}</span>
+    </button>
+    <p v-else-if="showEnd && total > 0" class="load-more-end muted">
+      <!-- 已到底的文案可覆盖：首页要的是「查看全部 →」链接、模型页要的是带提示的到底行 -->
+      <slot name="end">{{ t('common.allLoaded', '已全部加载（{n} 件）', { n: total }) }}</slot>
+    </p>
+  </div>
+</template>
+
+<style scoped>
+.load-more {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 4px;
+}
+.load-more-count {
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.load-more-end {
+  margin: 0;
+  font-size: 12px;
+}
+</style>

@@ -14,6 +14,7 @@ import { timeAgo } from '../utils/time'
 import DemoCard from '../components/DemoCard.vue'
 import AnnouncementModal from '../components/AnnouncementModal.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
+import LoadMore from '../components/LoadMore.vue'
 
 // 整活模式：大标题/灰测区文案随全站开关切换
 const funOn = funEffective
@@ -446,10 +447,12 @@ onBeforeUnmount(() => {
           </RouterLink>
         </div>
         <div class="latest-more" v-if="latest.length">
-          <button v-if="latest.length < latestTotal" class="btn btn-sm btn-outline" type="button" :disabled="latestBusy" @click="loadMoreLatest">
-            {{ latestBusy ? t('home.latest.loading', '加载中…') : t('home.latest.more', `加载更多（${latest.length}/${latestTotal}）`, { n: latest.length, total: latestTotal }) }}
-          </button>
-          <RouterLink v-else class="btn btn-sm btn-outline" to="/demos">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
+          <!-- P2-d：按钮/到底文案走统一件 <LoadMore>（原先这里自己拼「加载更多（x/y）」） -->
+          <LoadMore :shown="latest.length" :total="latestTotal" :loading="latestBusy" @more="loadMoreLatest">
+            <template #end>
+              <RouterLink class="btn btn-sm btn-outline" to="/demos">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
+            </template>
+          </LoadMore>
         </div>
       </section>
     </div>

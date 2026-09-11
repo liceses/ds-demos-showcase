@@ -592,8 +592,7 @@ export const en = {
   },
 
   common: {
-    loading: 'Loading…',
-    search: 'Search',
+    loading: 'Loading…',    search: 'Search',
     rescanning: 'Scanning…',
     refresh: 'Refresh',
     reset: 'Reset',
@@ -615,6 +614,9 @@ export const en = {
     loadFailed: 'Failed to load',
     retry: 'Retry',
     notFound: 'Not found',
+    loadMore: 'Load more',
+    loadMoreStep: 'Show {n} more',
+    allLoaded: 'All loaded ({n})',
   },
 
   forum: {

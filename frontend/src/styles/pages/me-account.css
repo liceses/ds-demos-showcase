@@ -1,0 +1,176 @@
+/* ---------- 收藏夹 · 浏览历史 · 账号资料（本轮新增；只复用令牌与既有语汇） ---------- */
+
+/* 工具行（新建收藏夹等） */
+.me-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.me-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.me-create .input {
+  width: min(260px, 60vw);
+}
+
+/* 行式列表（管理场景要密度；卡片墙留给"浏览"场景） */
+.me-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--border-w) solid var(--ink);
+}
+.me-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px;
+  border-bottom: 2px solid var(--ink);
+}
+.me-covers {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.me-cover {
+  width: 48px;
+  height: 36px;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  background: var(--paper-deep);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+.me-cover--empty {
+  color: var(--ink-faint, #767676);
+}
+.me-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.me-row-title {
+  font-weight: 900;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 15px;
+}
+.me-row-title:hover {
+  text-decoration: underline;
+}
+.me-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft, #555);
+}
+.me-dot {
+  color: var(--ink-faint, #767676);
+}
+.me-vis {
+  padding: 1px 6px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+}
+.me-vis--public {
+  background: var(--mint, #b8e6d0);
+}
+.me-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* 条目行（夹详情 / 历史）：缩略图可点 */
+.me-row--item .me-thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 48px;
+  border: 2px solid var(--ink);
+  background: var(--paper-deep);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--ink);
+  text-decoration: none;
+  overflow: hidden;
+}
+.me-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 历史页：隐私说明条 + 按天分组 */
+.hist-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin: 0;
+}
+.hist-notice-text {
+  margin: 0;
+  font-size: 13px;
+  max-width: 62ch;
+}
+.hist-group + .hist-group {
+  margin-top: 20px;
+}
+.hist-day {
+  display: block;
+  margin: 18px 0 6px;
+  color: var(--ink-soft, #555);
+}
+
+/* ≤720：操作折到第二行，缩略图缩小；按钮保持 ≥44px 触达（min-height） */
+@media (max-width: 720px) {
+  .me-row {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .me-row-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .me-row-actions .btn {
+    min-height: 44px;
+  }
+  .me-covers {
+    order: 1;
+  }
+  .me-row--item .me-thumb {
+    width: 56px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .hist-notice {
+    align-items: flex-start;
+  }
+}
+
+/* ≤480：封面缩略只留两张（省横向空间），行距收紧 */
+@media (max-width: 480px) {
+  .me-covers .me-cover:nth-child(n + 3) {
+    display: none;
+  }
+  .me-row {
+    padding: 12px 2px;
+  }
+}

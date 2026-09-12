@@ -75,6 +75,12 @@ import type {
   DeriveResult,
   SuggestionItem,
   SuggestionList,
+  CollectionItemOut,
+  CollectionOut,
+  CollectionVisibility,
+  FavoriteStatus,
+  HistoryItemOut,
+  MePatch,
 } from './types'
 
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
@@ -786,6 +792,83 @@ const realApi = {
   },
   async deleteAnnouncement(id: number): Promise<void> {
     await http.delete(`/admin/announcements/${id}`)
+  },
+
+  // ── 收藏夹 ───────────────────────────────────────────────
+  async listMyCollections(): Promise<CollectionOut[]> {
+    const { data } = await http.get('/me/collections')
+    return data.items
+  },
+  async createCollection(payload: { title: string; description?: string; visibility?: CollectionVisibility }): Promise<CollectionOut> {
+    const { data } = await http.post('/me/collections', payload)
+    return data
+  },
+  async updateCollection(id: number, patch: { title?: string; description?: string; visibility?: CollectionVisibility }): Promise<CollectionOut> {
+    const { data } = await http.patch(`/me/collections/${id}`, patch)
+    return data
+  },
+  async deleteCollection(id: number): Promise<void> {
+    await http.delete(`/me/collections/${id}`)
+  },
+  async listCollectionItems(id: number, params: { page?: number; pageSize?: number } = {}): Promise<Paginated<CollectionItemOut>> {
+    const { data } = await http.get(`/me/collections/${id}/items`, { params: { page: params.page, page_size: params.pageSize } })
+    return data
+  },
+  async addToCollection(id: number, slug: string): Promise<void> {
+    await http.post(`/me/collections/${id}/items`, { slug })
+  },
+  async removeFromCollection(id: number, slug: string): Promise<void> {
+    await http.delete(`/me/collections/${id}/items/${encodeURIComponent(slug)}`)
+  },
+  async getFavoriteStatus(slug: string): Promise<FavoriteStatus> {
+    const { data } = await http.get('/me/favorites/status', { params: { slug } })
+    return data
+  },
+  async toggleFavorite(slug: string, collectionId?: number): Promise<FavoriteStatus> {
+    const { data } = await http.post('/me/favorites/toggle', { slug, collection_id: collectionId })
+    return data
+  },
+  async listPublicCollections(username: string): Promise<CollectionOut[]> {
+    const { data } = await http.get(`/users/${encodeURIComponent(username)}/collections`)
+    return data.items
+  },
+  async getPublicCollection(id: number): Promise<CollectionOut> {
+    const { data } = await http.get(`/collections/${id}`)
+    return data
+  },
+  async listPublicCollectionItems(id: number, params: { page?: number; pageSize?: number } = {}): Promise<Paginated<CollectionItemOut>> {
+    const { data } = await http.get(`/collections/${id}/items`, { params: { page: params.page, page_size: params.pageSize } })
+    return data
+  },
+
+  // ── 浏览历史 ─────────────────────────────────────────────
+  async recordView(slug: string): Promise<void> {
+    await http.post(`/me/history/${encodeURIComponent(slug)}`)
+  },
+  async listHistory(params: { page?: number; pageSize?: number } = {}): Promise<Paginated<HistoryItemOut>> {
+    const { data } = await http.get('/me/history', { params: { page: params.page, page_size: params.pageSize } })
+    return data
+  },
+  async clearHistory(): Promise<void> {
+    await http.delete('/me/history')
+  },
+  async deleteHistoryItem(slug: string): Promise<void> {
+    await http.delete(`/me/history/${encodeURIComponent(slug)}`)
+  },
+
+  // ── 资料与隐私 ───────────────────────────────────────────
+  async updateMe(patch: MePatch): Promise<User> {
+    const { data } = await http.patch('/auth/me', patch)
+    return data
+  },
+  async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
+    const fd = new FormData()
+    fd.append('file', file)
+    const { data } = await http.post('/auth/me/avatar', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return data
+  },
+  async removeAvatar(): Promise<void> {
+    await http.delete('/auth/me/avatar')
   },
 }
 

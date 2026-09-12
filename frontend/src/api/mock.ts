@@ -28,6 +28,11 @@ import type {
   FollowOut,
   DemoSummary,
   Paginated,
+  CollectionOut,
+  CollectionItemOut,
+  FavoriteStatus,
+  HistoryItemOut,
+  MePatch,
   PeekResult,
   SessionLog,
   Settings,
@@ -134,10 +139,63 @@ function svgCover(bg: string, text: string, sub: string): string {
 }
 
 const users: User[] = [
-  { id: 1, username: 'admin', role: 'admin', status: 'active', bio: '站点管理员', created_at: '2025-01-01T00:00:00Z' },
-  { id: 2, username: 'tester', role: 'user', status: 'active', bio: 'AI Demo 爱好者', created_at: '2025-02-11T08:00:00Z' },
-  { id: 3, username: 'alice', role: 'user', status: 'active', bio: '收集各种网页小玩具', created_at: '2025-03-02T10:30:00Z' },
+  { id: 1, username: 'admin', role: 'admin', status: 'active', bio: '站点管理员', display_name: '', avatar_url: '', history_enabled: true, created_at: '2025-01-01T00:00:00Z' },
+  { id: 2, username: 'tester', role: 'user', status: 'active', bio: 'AI Demo 爱好者', display_name: '', avatar_url: '', history_enabled: true, created_at: '2025-02-11T08:00:00Z' },
+  { id: 3, username: 'alice', role: 'user', status: 'active', bio: '收集各种网页小玩具', display_name: '', avatar_url: '', history_enabled: true, created_at: '2025-03-02T10:30:00Z' },
 ]
+
+// ── 收藏夹 / 浏览历史（mock 侧内存状态；真实后端见 routers/collections.py） ──
+type MockCollection = { id: number; owner: string; title: string; description: string; visibility: 'private' | 'public'; is_default: boolean; updated_at: string }
+type MockCollectionItem = { collection_id: number; slug: string; added_at: string }
+type MockHistory = { user: string; slug: string; viewed_at: string }
+
+const collections: MockCollection[] = []
+const collectionItems: MockCollectionItem[] = []
+const viewHistory: MockHistory[] = []
+let collectionSeq = 1
+
+/** 默认夹「我的收藏」：第一次用到时自动创建（与后端语义一致：不可删、不可转公开） */
+function defaultCollectionOf(username: string): MockCollection {
+  let c = collections.find((x) => x.owner === username && x.is_default)
+  if (!c) {
+    c = {
+      id: collectionSeq++,
+      owner: username,
+      title: '我的收藏',
+      description: '',
+      visibility: 'private',
+      is_default: true,
+      updated_at: new Date().toISOString(),
+    }
+    collections.push(c)
+  }
+  return c
+}
+
+function requireUser(): User {
+  if (!currentUser) throw new Error('未登录')
+  return currentUser
+}
+
+function toCollectionOut(c: MockCollection): CollectionOut {
+  const items = collectionItems.filter((i) => i.collection_id === c.id).sort((a, b) => b.added_at.localeCompare(a.added_at))
+  const covers: string[] = []
+  for (const it of items) {
+    const d = demos.find((x) => x.slug === it.slug)
+    if (d && !covers.includes(d.cover_url) && covers.length < 3) covers.push(d.cover_url)
+  }
+  return {
+    id: c.id,
+    owner_username: c.owner,
+    title: c.title,
+    description: c.description,
+    visibility: c.visibility,
+    is_default: c.is_default,
+    item_count: items.length,
+    cover_urls: covers,
+    updated_at: c.updated_at,
+  }
+}
 
 const passwordOf: Record<string, string> = {
   admin: 'admin123',
@@ -153,6 +211,8 @@ function toUserPublic(u: User): UserPublic {
     role: u.role,
     status: u.status,
     bio: u.bio || '',
+    display_name: u.display_name || '',
+    avatar_url: u.avatar_url || '',
     created_at: u.created_at,
     demo_count: demos.filter((d) => d.author === u.username).length,
   }
@@ -729,7 +789,7 @@ export const mockApi = {
     if (users.some((u) => u.username === username)) {
       throw new Error('用户名已存在')
     }
-    const user: User = { id: users.length + 1, username, role: 'user', status: 'active', bio: '', created_at: new Date().toISOString() }
+    const user: User = { id: users.length + 1, username, role: 'user', status: 'active', bio: '', display_name: '', avatar_url: '', history_enabled: true, created_at: new Date().toISOString() }
     users.push(user)
     passwordOf[username] = password
     currentUser = clone(user)
@@ -2204,7 +2264,7 @@ export const mockApi = {
     await delay()
     const u = users.find((x) => x.username === username)
     if (!u) throw new Error('用户不存在')
-    return { id: u.id, username: u.username, role: u.role, status: u.status, bio: u.bio || '', created_at: u.created_at, reputation: 42, demo_count: u.demo_count ?? 0, topic_count: 2, reply_count: 5, follower_count: 3, following_count: 1, is_following: false, is_self: username === currentUser?.username }
+    return { id: u.id, username: u.username, role: u.role, status: u.status, bio: u.bio || '', display_name: u.display_name || '', avatar_url: u.avatar_url || '', created_at: u.created_at, reputation: 42, demo_count: u.demo_count ?? 0, topic_count: 2, reply_count: 5, follower_count: 3, following_count: 1, is_following: false, is_self: username === currentUser?.username }
   },
   async toggleFollow(_userId: number): Promise<FollowOut> {
     await delay()
@@ -2547,6 +2607,212 @@ export const mockApi = {
     await delay(200)
     const idx = announcements.findIndex((a) => a.id === id)
     if (idx >= 0) announcements.splice(idx, 1)
+  },
+  // ── 收藏夹 ───────────────────────────────────────────────
+  async listMyCollections(): Promise<CollectionOut[]> {
+    await delay()
+    const me = requireUser()
+    defaultCollectionOf(me.username) // 保证默认夹存在（UI 一进来就能看到它）
+    return collections.filter((c) => c.owner === me.username).map(toCollectionOut).sort((a, b) => Number(b.is_default) - Number(a.is_default) || b.updated_at.localeCompare(a.updated_at))
+  },
+  async createCollection(payload: { title: string; description?: string; visibility?: 'private' | 'public' }): Promise<CollectionOut> {
+    await delay()
+    const me = requireUser()
+    const title = payload.title.trim()
+    if (!title) throw new Error('名称不能为空')
+    if (collections.filter((c) => c.owner === me.username).length >= 20) throw new Error('最多 20 个收藏夹')
+    if (collections.some((c) => c.owner === me.username && c.title === title)) throw new Error('已有同名收藏夹')
+    const c: MockCollection = {
+      id: collectionSeq++,
+      owner: me.username,
+      title,
+      description: payload.description?.trim() || '',
+      visibility: payload.visibility || 'private',
+      is_default: false,
+      updated_at: new Date().toISOString(),
+    }
+    collections.push(c)
+    return toCollectionOut(c)
+  },
+  async updateCollection(id: number, patch: { title?: string; description?: string; visibility?: 'private' | 'public' }): Promise<CollectionOut> {
+    await delay()
+    const me = requireUser()
+    const c = collections.find((x) => x.id === id)
+    if (!c || c.owner !== me.username) throw new Error('收藏夹不存在')
+    if (patch.title !== undefined) {
+      if (c.is_default) throw new Error('默认收藏夹不可改名')
+      const t = patch.title.trim()
+      if (!t) throw new Error('名称不能为空')
+      c.title = t
+    }
+    if (patch.description !== undefined) c.description = patch.description.trim()
+    if (patch.visibility !== undefined) {
+      if (c.is_default) throw new Error('默认收藏夹不可转公开')
+      c.visibility = patch.visibility
+    }
+    c.updated_at = new Date().toISOString()
+    return toCollectionOut(c)
+  },
+  async deleteCollection(id: number): Promise<void> {
+    await delay()
+    const me = requireUser()
+    const c = collections.find((x) => x.id === id)
+    if (!c || c.owner !== me.username) throw new Error('收藏夹不存在')
+    if (c.is_default) throw new Error('默认收藏夹不可删除')
+    collections.splice(collections.indexOf(c), 1)
+    for (let i = collectionItems.length - 1; i >= 0; i--) if (collectionItems[i].collection_id === id) collectionItems.splice(i, 1)
+  },
+  async listCollectionItems(id: number, params: { page?: number; pageSize?: number } = {}): Promise<Paginated<CollectionItemOut>> {
+    await delay()
+    const me = requireUser()
+    const c = collections.find((x) => x.id === id)
+    if (!c || c.owner !== me.username) throw new Error('收藏夹不存在')
+    const page = params.page || 1
+    const pageSize = params.pageSize || 20
+    const rows = collectionItems.filter((i) => i.collection_id === id).sort((a, b) => b.added_at.localeCompare(a.added_at))
+    const slice = rows.slice((page - 1) * pageSize, page * pageSize)
+    return {
+      items: slice.map((it) => ({ demo: clone(demos.find((d) => d.slug === it.slug)!), added_at: it.added_at })).filter((x) => x.demo),
+      total: rows.length,
+      page,
+      page_size: pageSize,
+    }
+  },
+  async addToCollection(id: number, slug: string): Promise<void> {
+    await delay(120)
+    const me = requireUser()
+    const c = collections.find((x) => x.id === id)
+    if (!c || c.owner !== me.username) throw new Error('收藏夹不存在')
+    if (!demos.some((d) => d.slug === slug)) throw new Error('作品不存在')
+    if (collectionItems.some((i) => i.collection_id === id && i.slug === slug)) return // 幂等
+    const inThis = collectionItems.filter((i) => i.collection_id === id).length
+    if (inThis >= 500) throw new Error('收藏夹已满（最多 500 件）')
+    collectionItems.push({ collection_id: id, slug, added_at: new Date().toISOString() })
+    c.updated_at = new Date().toISOString()
+  },
+  async removeFromCollection(id: number, slug: string): Promise<void> {
+    await delay(120)
+    const me = requireUser()
+    const c = collections.find((x) => x.id === id)
+    if (!c || c.owner !== me.username) throw new Error('收藏夹不存在')
+    const i = collectionItems.findIndex((x) => x.collection_id === id && x.slug === slug)
+    if (i >= 0) collectionItems.splice(i, 1)
+    c.updated_at = new Date().toISOString()
+  },
+  async getFavoriteStatus(slug: string): Promise<FavoriteStatus> {
+    await delay(80)
+    if (!currentUser) return { favorited: false, collection_ids: [] }
+    const ids = collections
+      .filter((c) => c.owner === currentUser!.username && collectionItems.some((i) => i.collection_id === c.id && i.slug === slug))
+      .map((c) => c.id)
+    return { favorited: ids.length > 0, collection_ids: ids }
+  },
+  async toggleFavorite(slug: string, collectionId?: number): Promise<FavoriteStatus> {
+    await delay(150)
+    const me = requireUser()
+    const target = collectionId ? collections.find((c) => c.id === collectionId && c.owner === me.username) : defaultCollectionOf(me.username)
+    if (!target) throw new Error('收藏夹不存在')
+    const has = collectionItems.some((i) => i.collection_id === target.id && i.slug === slug)
+    if (has) await (this as unknown as { removeFromCollection: (a: number, b: string) => Promise<void> }).removeFromCollection(target.id, slug)
+    else await (this as unknown as { addToCollection: (a: number, b: string) => Promise<void> }).addToCollection(target.id, slug)
+    return (this as unknown as { getFavoriteStatus: (s: string) => Promise<FavoriteStatus> }).getFavoriteStatus(slug)
+  },
+  async listPublicCollections(username: string): Promise<CollectionOut[]> {
+    await delay()
+    return collections.filter((c) => c.owner === username && c.visibility === 'public').map(toCollectionOut)
+  },
+  async getPublicCollection(id: number): Promise<CollectionOut> {
+    await delay()
+    const c = collections.find((x) => x.id === id)
+    // 私密夹对他人/匿名一律 404（不泄露"存在但无权"）
+    if (!c) throw new Error('收藏夹不存在')
+    const mine = currentUser && c.owner === currentUser.username
+    if (c.visibility !== 'public' && !mine) throw new Error('收藏夹不存在')
+    return toCollectionOut(c)
+  },
+  async listPublicCollectionItems(id: number, params: { page?: number; pageSize?: number } = {}): Promise<Paginated<CollectionItemOut>> {
+    await delay()
+    const c = collections.find((x) => x.id === id)
+    const mine = currentUser && c && c.owner === currentUser.username
+    if (!c || (c.visibility !== 'public' && !mine)) throw new Error('收藏夹不存在')
+    const page = params.page || 1
+    const pageSize = params.pageSize || 24
+    const rows = collectionItems.filter((i) => i.collection_id === id).sort((a, b) => b.added_at.localeCompare(a.added_at))
+    return {
+      items: rows.slice((page - 1) * pageSize, page * pageSize).map((it) => ({ demo: clone(demos.find((d) => d.slug === it.slug)!), added_at: it.added_at })),
+      total: rows.length,
+      page,
+      page_size: pageSize,
+    }
+  },
+
+  // ── 浏览历史（服务端侧；匿名只写本机 localStorage，见 useLocalHistory） ──
+  async recordView(slug: string): Promise<void> {
+    await delay(60)
+    if (!currentUser) return // 匿名：服务端一无所知
+    if (!currentUser.history_enabled) return // 开关关闭：不新增（已有记录保留，清空需显式操作）
+    const me = currentUser.username
+    const i = viewHistory.findIndex((h) => h.user === me && h.slug === slug)
+    const now = new Date().toISOString()
+    if (i >= 0) viewHistory[i].viewed_at = now
+    else viewHistory.push({ user: me, slug, viewed_at: now })
+    const mine = viewHistory.filter((h) => h.user === me).sort((a, b) => b.viewed_at.localeCompare(a.viewed_at))
+    for (const old of mine.slice(200)) viewHistory.splice(viewHistory.indexOf(old), 1) // 上限 200
+  },
+  async listHistory(params: { page?: number; pageSize?: number } = {}): Promise<Paginated<HistoryItemOut>> {
+    await delay()
+    const me = requireUser()
+    const page = params.page || 1
+    const pageSize = params.pageSize || 20
+    const rows = viewHistory.filter((h) => h.user === me.username).sort((a, b) => b.viewed_at.localeCompare(a.viewed_at))
+    return {
+      items: rows.slice((page - 1) * pageSize, page * pageSize).map((h) => ({ demo: clone(demos.find((d) => d.slug === h.slug)!), viewed_at: h.viewed_at })).filter((x) => x.demo),
+      total: rows.length,
+      page,
+      page_size: pageSize,
+    }
+  },
+  async clearHistory(): Promise<void> {
+    await delay(150)
+    const me = requireUser()
+    for (let i = viewHistory.length - 1; i >= 0; i--) if (viewHistory[i].user === me.username) viewHistory.splice(i, 1)
+  },
+  async deleteHistoryItem(slug: string): Promise<void> {
+    await delay(100)
+    const me = requireUser()
+    const i = viewHistory.findIndex((h) => h.user === me.username && h.slug === slug)
+    if (i >= 0) viewHistory.splice(i, 1)
+  },
+
+  // ── 资料与隐私 ───────────────────────────────────────────
+  async updateMe(patch: MePatch): Promise<User> {
+    await delay(150)
+    const me = requireUser()
+    if (patch.display_name !== undefined) me.display_name = patch.display_name.trim().slice(0, 64)
+    if (patch.bio !== undefined) me.bio = patch.bio.trim().slice(0, 500)
+    if (patch.history_enabled !== undefined) me.history_enabled = patch.history_enabled
+    const live = users.find((u) => u.id === me.id)
+    if (live) Object.assign(live, { display_name: me.display_name, bio: me.bio, history_enabled: me.history_enabled })
+    return clone(me)
+  },
+  async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
+    await delay(400)
+    const me = requireUser()
+    if (file.size > 1024 * 1024) throw new Error('头像不能超过 1MB')
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error('只支持 png/jpg/webp')
+    // mock：直接用对象 URL（真实后端会裁成 256×256 落 /media/avatars/…）
+    const url = URL.createObjectURL(file)
+    me.avatar_url = url
+    const live = users.find((u) => u.id === me.id)
+    if (live) live.avatar_url = url
+    return { avatar_url: url }
+  },
+  async removeAvatar(): Promise<void> {
+    await delay(150)
+    const me = requireUser()
+    me.avatar_url = ''
+    const live = users.find((u) => u.id === me.id)
+    if (live) live.avatar_url = ''
   },
 }
 

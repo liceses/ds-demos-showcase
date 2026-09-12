@@ -9,6 +9,10 @@ export interface User {
   bio: string
   created_at: string
   demo_count?: number
+  display_name: string
+  avatar_url: string
+  /** 浏览历史开关（仅 /auth/me 返回） */
+  history_enabled: boolean
 }
 
 export interface TagRef {
@@ -841,6 +845,8 @@ export interface UserProfile {
   role: string
   status: string
   bio: string
+  display_name: string
+  avatar_url: string
   created_at: string
   reputation: number
   demo_count: number
@@ -879,6 +885,10 @@ export interface UserPublic {
   role: string
   status: string
   bio: string
+  /** 展示名（可空；空则显示 username）。username 与 URL 不变 */
+  display_name: string
+  /** 头像 URL（可空；空则前端用首字母方块兜底） */
+  avatar_url: string
   created_at: string
   demo_count: number
 }
@@ -1009,4 +1019,67 @@ export interface SiteInfo {
     features: Record<string, unknown>
   }
   generated_at: string
+}
+
+// ─────────────────────────────────────────────────────────────
+// 收藏夹（Collection）：作品收藏 + 可命名可分享的公开收藏夹
+// ─────────────────────────────────────────────────────────────
+
+/** 可见性：私密（只有自己）/ 公开（他人与匿名都能看、可分享链接） */
+export type CollectionVisibility = 'private' | 'public'
+
+export interface CollectionOut {
+  id: number
+  /** 归属者用户名（公开夹页面要显示"谁的收藏夹"；自己的列表里等于自己） */
+  owner_username: string
+  title: string
+  description: string
+  visibility: CollectionVisibility
+  /** 默认收藏夹「我的收藏」：自动创建、不可删除、不可转公开 */
+  is_default: boolean
+  item_count: number
+  /** 夹内前 3 件作品封面（按加入时间倒序），用于列表缩略 */
+  cover_urls: string[]
+  updated_at: string
+}
+
+export interface CollectionItemOut {
+  /** 复用作品列表项，前端直接用 DemoCard 渲染 */
+  demo: DemoSummary
+  added_at: string
+}
+
+/** 详情页收藏按钮的状态（一次请求拿到"是否已收藏"与"在哪些夹里"） */
+export interface FavoriteStatus {
+  favorited: boolean
+  collection_ids: number[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// 浏览历史（混合：匿名本地 + 登录服务端）
+// ─────────────────────────────────────────────────────────────
+
+export interface HistoryItemOut {
+  demo: DemoSummary
+  viewed_at: string
+}
+
+/** 本机历史条目（localStorage，字段刻意精简；与 useLocalHistory 一一对应） */
+export interface LocalHistoryItem {
+  slug: string
+  title: string
+  cover_url: string
+  model_labels: string[]
+  ts: number
+}
+
+// ─────────────────────────────────────────────────────────────
+// 账号资料与隐私
+// ─────────────────────────────────────────────────────────────
+
+export interface MePatch {
+  display_name?: string
+  bio?: string
+  /** 关闭后服务端不再记录新历史（已有记录需显式清空） */
+  history_enabled?: boolean
 }

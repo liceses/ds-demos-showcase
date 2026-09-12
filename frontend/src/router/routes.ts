@@ -28,6 +28,13 @@ export const routes: RouteRecordRaw[] = [
   { path: '/user/:username/followers', name: 'user-followers', component: () => import('../views/FollowListView.vue'), props: (route) => ({ username: String(route.params.username), mode: 'followers' as const }), meta: { title: '粉丝' } },
   { path: '/user/:username/following', name: 'user-following', component: () => import('../views/FollowListView.vue'), props: (route) => ({ username: String(route.params.username), mode: 'following' as const }), meta: { title: '关注' } },
   { path: '/author/public', name: 'public-author', component: () => import('../views/PublicView.vue'), meta: { title: '公开用户' } },
+  // 收藏夹（需登录）—— /me/history 不在此列：匿名也要能看"本机记录"（混合存储的匿名半边）
+  { path: '/me/collections', name: 'me-collections', component: () => import('../views/MeCollectionsView.vue'), meta: { title: '收藏夹', requiresAuth: true } },
+  { path: '/me/collections/:id', name: 'me-collection-detail', component: () => import('../views/MeCollectionDetailView.vue'), props: true, meta: { title: '收藏夹', requiresAuth: true } },
+  { path: '/me/history', name: 'me-history', component: () => import('../views/MeHistoryView.vue'), meta: { title: '浏览历史' } },
+  // 公开侧：某人的公开收藏夹 + 分享落地页（都是可匿名的）
+  { path: '/user/:username/collections', name: 'user-collections', component: () => import('../views/PublicCollectionsView.vue'), props: true, meta: { title: '公开收藏夹' } },
+  { path: '/collections/:id', name: 'collection', component: () => import('../views/PublicCollectionView.vue'), props: true, meta: { title: '收藏夹' } },
   { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '账户设置', requiresAuth: true } },
   { path: '/notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知', requiresAuth: true } },
   { path: '/upload', name: 'upload', component: () => import('../views/UploadView.vue'), meta: { title: '上传 Demo', remountOnQuery: true } },

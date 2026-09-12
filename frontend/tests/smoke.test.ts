@@ -92,9 +92,10 @@ describe('三主题对比度表（04 §3.7 硬门）', () => {
 })
 // ---------- ③ 路由表快照（静态可解析 + 动态段/重定向/404，M4-E2 抽出 routes） ----------
 // P2：新增 /demo/:slug/play（独立预览页，meta.bare）→ 27 → 28
+// 本轮：新增 /me/collections、/me/collections/:id、/me/history、/user/:username/collections、/collections/:id → 33
 describe('路由表快照', () => {
   it('路由数量与形态稳定（快照防误删/误改）', () => {
-    expect(routes.length).toBe(28)
+    expect(routes.length).toBe(33)
     // P2：独立预览页必须带 meta.bare（App.vue 据此隐藏顶栏/页脚/底栏）
     const play = routes.find((r) => r.name === 'demo-play')
     expect(play?.path).toBe('/demo/:slug/play')

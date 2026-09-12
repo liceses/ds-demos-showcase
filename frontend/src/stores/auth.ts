@@ -41,6 +41,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * 直接用接口返回值更新本地 user（不必再 fetchMe 一趟）。
+   * 为什么必须有：PATCH /auth/me、上传/移除头像、切换隐私开关都返回新的 user，
+   * 而 store 原先只有 fetchMe/login/register/logout —— 改完 UI 不会变，用户会以为没生效。
+   */
+  function setUser(u: User | null) {
+    user.value = u
+  }
+
   async function logout() {
     try {
       await api.logout()
@@ -49,5 +58,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, loading, isLoggedIn, isAdmin, fetchMe, login, register, logout }
+  return { user, loading, isLoggedIn, isAdmin, fetchMe, login, register, logout, setUser }
 })

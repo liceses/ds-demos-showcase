@@ -10,6 +10,7 @@ import type { DemoDetail, TaskDetail } from '../api/types'
 import TagPicker from '../components/TagPicker.vue'
 import type { TagPick } from '../components/TagPicker.vue'
 import { t } from '../i18n'
+import { compressImage } from '../utils/imageCompress'
 import { tagLabel } from '../utils/funMode'
 import { useUploadDraft } from '../composables/useUploadDraft'
 import { useTaskMount } from '../composables/useTaskMount'
@@ -318,16 +319,35 @@ onMounted(async () => {
   }
 })
 
-function onCoverChange(e: Event) {
+/**
+ * 封面选图：**端侧先压**再上传。
+ *
+ * 原先这里零校验零压缩 —— 一张 12MB 的手机照原样上传（慢、费流量），而带宽是本站的明确约束
+ * （docs/预览架构与排坑记录.md「带宽与成本意识」）。现在统一走 utils/imageCompress：
+ * 最长边 1600 / webp q0.82（服务端 compress_cover 再归一到 1280，两级参数刻意错开避免叠加失真）。
+ *
+ * 三条不变量：① 任何压缩失败都回退原文件继续上传，绝不阻断；② 小图原样直通（幂等）；
+ * ③ 预览用压缩后的 blob（更快、内存更小）。不给用户看体积数字（"无感"）。
+ */
+const coverOptimizing = ref(false)
+async function onCoverChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0] || null
-  coverFile.value = file
   coverPreview.value = ''
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      coverPreview.value = String(reader.result || '')
-    }
-    reader.readAsDataURL(file)
+  if (!file) {
+    coverFile.value = null
+    return
+  }
+  coverFile.value = file // 先占位：压缩失败也不至于丢文件
+  coverOptimizing.value = true
+  try {
+    const res = await compressImage(file, { maxEdge: 1600 })
+    coverFile.value = res.file
+    coverPreview.value = URL.createObjectURL(res.file)
+  } catch {
+    // 理论上 compressImage 内部已兜底，这里只是最后一道保险
+    coverPreview.value = URL.createObjectURL(file)
+  } finally {
+    coverOptimizing.value = false
   }
 }
 

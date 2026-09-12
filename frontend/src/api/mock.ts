@@ -2798,7 +2798,8 @@ export const mockApi = {
   async uploadAvatar(file: File): Promise<{ avatar_url: string }> {
     await delay(400)
     const me = requireUser()
-    if (file.size > 1024 * 1024) throw new Error('头像不能超过 1MB')
+    // 口径与封面一致（后端 max_file_size=200MB）：端侧已先压成 512×512，这里只拦异常文件
+    if (file.size > 200 * 1024 * 1024) throw new Error('图片过大（上限 200MB）')
     if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) throw new Error('只支持 png/jpg/webp')
     // mock：直接用对象 URL（真实后端会裁成 256×256 落 /media/avatars/…）
     const url = URL.createObjectURL(file)

@@ -1,10 +1,109 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { api } from '../api'
 import { t } from '../i18n'
 import { getChosenTheme, getEffectiveTheme, setTheme } from '../utils/theme'
 import type { EffectiveTheme, ThemeChoice } from '../utils/theme'
 import PageHero from '../components/PageHero.vue'
+import { useAuthStore } from '../stores/auth'
+import { useUiStore } from '../stores/ui'
+import { compressImage } from '../utils/imageCompress'
+
+// ── 个人资料（含头像）与隐私（本批新增；收藏夹/历史那套的账号侧） ──
+const auth = useAuthStore()
+const ui = useUiStore()
+const displayName = ref('')
+const bio = ref('')
+const savingProfile = ref(false)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarUploading = ref(false)
+
+function syncFromUser() {
+  displayName.value = auth.user?.display_name || ''
+  bio.value = auth.user?.bio || ''
+}
+onMounted(syncFromUser)
+
+async function saveProfile() {
+  savingProfile.value = true
+  try {
+    const u = await api.updateMe({ display_name: displayName.value.trim(), bio: bio.value.trim() })
+    auth.setUser(u) // 不刷新页面就生效（此前 store 没有更新入口，改完要手动刷新才变）
+    ui.toast(t('acc.saved', '资料已保存'), 'success')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+function pickAvatar() {
+  avatarInput.value?.click()
+}
+
+/**
+ * 头像上传：**端侧先压成 512×512**（与封面同一套管线）。
+ * 不再有 1MB 硬限 —— 与后端 200MB 口径一致，用户不该因为"照片太大"被拦。
+ */
+async function onAvatarChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0] || null
+  input.value = '' // 允许重复选同一个文件
+  if (!file) return
+  avatarUploading.value = true
+  try {
+    const res = await compressImage(file, { square: 512 })
+    const { avatar_url } = await api.uploadAvatar(res.file)
+    if (auth.user) auth.setUser({ ...auth.user, avatar_url })
+    ui.toast(t('acc.avatarUpdated', '头像已更新'), 'success')
+  } catch (err) {
+    ui.toast((err as Error).message, 'error')
+  } finally {
+    avatarUploading.value = false
+  }
+}
+
+async function removeAvatar() {
+  avatarUploading.value = true
+  try {
+    await api.removeAvatar()
+    if (auth.user) auth.setUser({ ...auth.user, avatar_url: '' })
+    ui.toast(t('acc.avatarRemoved', '头像已移除'), 'success')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  } finally {
+    avatarUploading.value = false
+  }
+}
+
+const historyOn = computed(() => auth.user?.history_enabled !== false)
+async function setHistory(on: boolean) {
+  try {
+    const u = await api.updateMe({ history_enabled: on })
+    auth.setUser(u)
+    if (on) ui.toast(t('acc.historyOn', '已开启历史记录'), 'success')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
+/** 关闭并清空：**两个接口一起调**（只关开关不清数据 = 用户以为删了其实还在） */
+async function turnOffAndClear() {
+  const ok = await ui.confirm({
+    title: t('acc.historyOffClear', '关闭并清空历史'),
+    message: t('acc.historyOffClearMsg', '账号侧已记录的浏览历史会被删除，且不可恢复。'),
+    confirmText: t('acc.historyOffClear', '关闭并清空历史'),
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    const u = await api.updateMe({ history_enabled: false })
+    auth.setUser(u)
+    await api.clearHistory()
+    ui.toast(t('hist.cleared', '浏览历史已清空'), 'success')
+  } catch (e) {
+    ui.toast((e as Error).message, 'error')
+  }
+}
 
 // 修改密码表单
 const oldPassword = ref('')
@@ -128,7 +227,76 @@ onBeforeUnmount(() => {
     </div>
   </section>
 
-  <section class="section" style="padding-top: 0">
+  <!-- 个人资料（含头像）：收藏/历史的账号侧入口 -->
+    <section class="section" style="padding-top: 0">
+      <div class="card card-default read-col" style="padding: 24px">
+        <h2 style="margin-bottom: 6px">{{ t('acc.profile', '个人资料') }}</h2>
+        <p class="hint" style="margin-bottom: 16px">{{ t('acc.profileHint', '展示名与头像会出现在你的作品与评论旁；用户名不变（用于链接与提及）。') }}</p>
+        <div class="avatar-row">
+          <span class="avatar-preview" aria-hidden="true">
+            <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" alt="" />
+            <template v-else>{{ (auth.user?.username || '?')[0].toUpperCase() }}</template>
+          </span>
+          <div class="avatar-actions">
+            <input ref="avatarInput" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" @change="onAvatarChange" />
+            <button class="btn btn-sm btn-outline" type="button" :disabled="avatarUploading" @click="pickAvatar">
+              {{ avatarUploading ? t('acc.uploading', '上传中…') : t('acc.avatar', '上传头像') }}
+            </button>
+            <button v-if="auth.user?.avatar_url" class="btn btn-sm btn-outline" type="button" :disabled="avatarUploading" @click="removeAvatar">
+              {{ t('acc.removeAvatar', '移除') }}
+            </button>
+            <p class="hint" style="margin: 6px 0 0">{{ t('acc.avatarHint', '支持 png/jpg/webp，会自动压缩成方形，无需自己处理大小') }}</p>
+          </div>
+        </div>
+        <form class="form-stack" style="margin-top: 18px" @submit.prevent="saveProfile">
+          <label class="field">
+            <span>{{ t('acc.displayName', '展示名') }}</span>
+            <input v-model="displayName" class="input" maxlength="64" :placeholder="auth.user?.username || ''" />
+          </label>
+          <label class="field">
+            <span>{{ t('acc.bio', '简介') }}</span>
+            <textarea v-model="bio" class="input" rows="3" maxlength="500" />
+          </label>
+          <button class="btn btn-primary btn-block" type="submit" :disabled="savingProfile">
+            {{ savingProfile ? t('common.loading', '加载中…') : t('common.save', '保存') }}
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 隐私：浏览历史开关 + 收藏夹可见性说明 -->
+    <section class="section" style="padding-top: 0">
+      <div class="card card-coral read-col" style="padding: 24px">
+        <h2 style="margin-bottom: 6px">{{ t('acc.privacy', '隐私') }}</h2>
+        <div class="privacy-row">
+          <div>
+            <p style="margin: 0; font-weight: 800">{{ t('acc.historyToggle', '浏览历史') }}</p>
+            <p class="hint" style="margin: 4px 0 0">{{ t('acc.historyHint', '登录后记录你打开过的作品，跨设备可见；只记作品与时间，不记 IP、不记来源。') }}</p>
+          </div>
+          <div class="tab-group" role="radiogroup" :aria-label="t('acc.historyToggle', '浏览历史')">
+            <button class="tab" :class="{ active: historyOn }" type="button" role="radio" :aria-checked="historyOn" @click="setHistory(true)">
+              {{ t('acc.record', '记录') }}
+            </button>
+            <button class="tab" :class="{ active: !historyOn }" type="button" role="radio" :aria-checked="!historyOn" @click="setHistory(false)">
+              {{ t('acc.notRecord', '不记录') }}
+            </button>
+          </div>
+        </div>
+        <div v-if="!historyOn" class="privacy-off">
+          <button class="btn btn-sm btn-danger" type="button" @click="turnOffAndClear">{{ t('acc.historyOffClear', '关闭并清空历史') }}</button>
+          <span class="hint">{{ t('acc.historyOffHint', '已停止记录；上面的按钮会把账号侧已有记录一并删除') }}</span>
+        </div>
+        <div class="privacy-row" style="margin-top: 18px">
+          <div>
+            <p style="margin: 0; font-weight: 800">{{ t('acc.collections', '收藏夹可见性') }}</p>
+            <p class="hint" style="margin: 4px 0 0">{{ t('acc.collectionsHint', '收藏夹默认私密；设为公开的可以被查看与分享。') }}</p>
+          </div>
+          <RouterLink class="btn btn-sm btn-outline" to="/me/collections">{{ t('acc.manageCollections', '去管理收藏夹 →') }}</RouterLink>
+        </div>
+      </div>
+    </section>
+
+<section class="section" style="padding-top: 0">
     <div class="appearance-card card card-default read-col">
       <h2 style="margin-bottom: 6px">{{ t('settings.appearanceTitle', '外观与主题') }}</h2>
       <p class="appearance-desc">

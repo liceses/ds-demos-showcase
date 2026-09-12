@@ -174,3 +174,71 @@
     padding: 12px 2px;
   }
 }
+
+/* 设置页：头像行（无图用首字母方块，与站点"没图就用字"的既有做法一致） */
+.avatar-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.avatar-preview {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  background: var(--paper-deep);
+  border: var(--border-w) solid var(--ink);
+  box-shadow: 4px 4px 0 0 var(--ink);
+  font-weight: 900;
+  font-size: 40px;
+  text-transform: uppercase;
+  overflow: hidden;
+}
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.avatar-actions .hint {
+  flex-basis: 100%;
+}
+
+/* 设置页：隐私行（说明在左、开关在右） */
+.privacy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.tab-group {
+  display: inline-flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.privacy-off {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+@media (max-width: 480px) {
+  .avatar-preview {
+    width: 72px;
+    height: 72px;
+    font-size: 30px;
+  }
+  .privacy-row {
+    align-items: flex-start;
+  }
+}

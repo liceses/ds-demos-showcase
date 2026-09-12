@@ -37,6 +37,12 @@ class User(Base):
     trust_level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     need_review: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     github_bound: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # 展示名（可空；空则显示 username —— username 与 URL 不变）
+    display_name: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    # 头像 URL（空 = 前端用首字母方块兜底）
+    avatar_url: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    # 浏览历史开关：关闭后服务端不再记录新历史（已有记录需显式清空）
+    history_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     # 社区声望：收到赞 +1、感谢 +2；取消后扣回
     reputation: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     # 收到的赞/感谢原始计数（排行榜用，随互动事务维护）
@@ -618,3 +624,50 @@ class EntitySuggestion(Base):
     reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Collection(Base):
+    """收藏夹（可命名、可公开分享）。每个用户有一个 is_default 的「我的收藏」。"""
+
+    __tablename__ = "collections"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(60), nullable=False)
+    description: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    # private | public（公开的任何人可看，可分享链接；私密的对他人一律 404）
+    visibility: Mapped[str] = mapped_column(String(8), default="private", nullable=False, index=True)
+    # 默认夹：自动创建、不可删除、不可转公开、不可改名
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    owner: Mapped["User"] = relationship()
+
+
+class CollectionItem(Base):
+    """收藏夹条目。同一夹内同一作品只允许一行（重复加入 = 幂等）。"""
+
+    __tablename__ = "collection_items"
+    __table_args__ = (UniqueConstraint("collection_id", "demo_id", name="uq_collection_item"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    collection_id: Mapped[int] = mapped_column(ForeignKey("collections.id"), index=True, nullable=False)
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id"), index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class DemoView(Base):
+    """浏览历史（服务端侧）。
+
+    隐私口径与 services/visits.py 的「不收集访客 IP」一致：**只存 user_id / demo_id / 时间**，
+    不存 IP、不存 UA、不存来源页。同一作品只保留最近一次（unique + upsert 刷新 viewed_at）。
+    """
+
+    __tablename__ = "demo_views"
+    __table_args__ = (UniqueConstraint("user_id", "demo_id", name="uq_demo_view"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    demo_id: Mapped[int] = mapped_column(ForeignKey("demos.id"), index=True, nullable=False)
+    viewed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False, index=True)

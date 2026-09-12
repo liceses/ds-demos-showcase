@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+import asyncio
+
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from ..client_ip import get_client_ip
 from ..database import get_db
 from ..deps import current_user
 from ..models import User
-from ..schemas import AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest, UserOut
+from ..config import settings
+from ..schemas import AuthResponse, ChangePasswordRequest, LoginRequest, MeOut, MePatch, RegisterRequest, UserOut
 from ..security import (
     clear_auth_cookie,
     create_access_token,
@@ -13,7 +16,7 @@ from ..security import (
     set_auth_cookie,
     verify_password,
 )
-from ..services import ratelimit
+from ..services import ratelimit, storage, storage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -59,9 +62,68 @@ def logout(response: Response, user: User = Depends(current_user)):
     return response
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me", response_model=MeOut)
 def me(user: User = Depends(current_user)):
     return user
+
+
+@router.patch("/me", response_model=MeOut)
+def update_me(body: MePatch, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """改展示名 / 简介 / 历史开关。
+
+    history_enabled 只**停止后续记录**，不动已有数据 —— "关闭"与"删除"是两件事，
+    界面上分开呈现（前端切到"不记录"后才提供"关闭并清空"）。
+    """
+    if body.display_name is not None:
+        user.display_name = body.display_name.strip()[:64]
+    if body.bio is not None:
+        user.bio = body.bio.strip()[:500]
+    if body.history_enabled is not None:
+        user.history_enabled = bool(body.history_enabled)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """头像上传：端侧已先压成 512×512，这里**再归一化一次**（双保险，也兜住端侧解不了的格式）。
+
+    接收上限与封面一致（settings.max_file_size），不做"图片太大"式的严苛限制。
+    """
+    from .demos import _read_limited
+
+    data = await _read_limited(file, settings.max_file_size, "图片过大（上限 200MB）")
+    old = user.avatar_url
+    url = await asyncio.to_thread(storage.save_avatar, user.id, data)
+    user.avatar_url = url
+    db.commit()
+    db.refresh(user)
+    # 注意 old != url：文件名带内容哈希，同一张图重复上传会得到**同一个 URL**，
+    # 此时删除等于把自己刚写好的文件删掉（实测踩到）。只在真的换了一张图时才清理旧文件。
+    if old and old != url and old.startswith("/media/avatars/"):
+        try:
+            await asyncio.to_thread(storage.delete_media_file, old)
+        except Exception:  # noqa: BLE001 —— 删旧文件失败不该让"换头像"失败
+            pass
+    return {"avatar_url": url}
+
+
+@router.delete("/me/avatar", status_code=204)
+def remove_avatar(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    old = user.avatar_url
+    user.avatar_url = ""
+    db.commit()
+    if old and old.startswith("/media/avatars/"):
+        try:
+            storage.delete_media_file(old)
+        except Exception:  # noqa: BLE001
+            pass
+    return None
 
 
 @router.post("/change-password", status_code=204)

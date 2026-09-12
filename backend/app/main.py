@@ -19,7 +19,7 @@ from .config import settings
 from .database import Base, SessionLocal, engine, get_db
 from .errors import AppError
 from .models import ForumTopic, Setting, Tag, TagKey, User
-from .routers import admin, admin_entities, announcements, auth, comments, demos, explore, forum, meta, models, notifications, peek, ratings, sessions, stats, tags, tasks, users
+from .routers import admin, admin_entities, announcements, auth, collections, comments, demos, explore, forum, history, meta, models, notifications, peek, ratings, sessions, stats, tags, tasks, users
 from .security import hash_password
 from .services import oss
 from .services import scope as scope_service
@@ -118,6 +118,8 @@ async def site_scope(request: Request, call_next):
 
 API_PREFIX = "/api/v1"
 app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(collections.router, prefix=API_PREFIX)
+app.include_router(history.router, prefix=API_PREFIX)
 app.include_router(users.router, prefix=API_PREFIX)
 app.include_router(tags.router, prefix=API_PREFIX)
 app.include_router(demos.router, prefix=API_PREFIX)
@@ -462,6 +464,25 @@ def _ensure_announcement_columns() -> None:
                 conn.exec_driver_sql(f"ALTER TABLE announcements ADD COLUMN {name} {ddl}")
 
 
+def _add_column_if_missing(conn, table: str, name: str, ddl: str) -> None:  # type: ignore[no-untyped-def]
+    """幂等加列：先读 PRAGMA 再决定是否 ALTER（重复启动不会因"列已存在"炸库）。"""
+    cols = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+    if name not in cols:
+        conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+
+
+def _ensure_account_columns() -> None:
+    """本轮（账号/收藏/历史）给 users 补三列：展示名、头像、历史开关。
+
+    用 _add_column_if_missing 而不是照抄既有函数的写法 —— 既有几个函数各自手写存在性判断，
+    新代码没必要再复制一份易错的样板。
+    """
+    with engine.begin() as conn:  # engine 由 .database 提供，main.py 顶部已导入
+        _add_column_if_missing(conn, "users", "display_name", "VARCHAR(64) NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "users", "avatar_url", "VARCHAR(300) NOT NULL DEFAULT ''")
+        _add_column_if_missing(conn, "users", "history_enabled", "BOOLEAN NOT NULL DEFAULT 1")
+
+
 def _ensure_user_columns() -> None:
     """SQLite 增量迁移：给已存在的 users 表补充论坛信任字段。"""
     from sqlalchemy import inspect as sa_inspect
@@ -590,6 +611,7 @@ def init_db() -> None:
     _ensure_tag_key_columns()
     _ensure_announcement_columns()
     _ensure_user_columns()
+    _ensure_account_columns()
     _ensure_forum_columns()
     _ensure_forum_reply_columns()
     _ensure_model_columns()

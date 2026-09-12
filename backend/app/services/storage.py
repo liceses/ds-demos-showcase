@@ -1,3 +1,4 @@
+import hashlib
 import io
 import mimetypes
 import re
@@ -392,3 +393,54 @@ def make_slug(title: str) -> str:
         base = "demo"
     base = base[:60]
     return f"{base}-{uuid.uuid4().hex[:8]}"
+
+
+def save_avatar(user_id: int, data: bytes) -> str:
+    """头像：居中裁方 → 512×512 → WebP q82 → /media/avatars/{uid}-{sha8}.webp。
+
+    端侧已压过一次，这里再归一化一次是**双保险**（也能兜住端侧解不了的格式）。
+    文件名带内容哈希：换头像即换 URL，CDN/浏览器缓存不会顽固地给旧图。
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        raise HTTPException(status_code=500, detail="服务端缺少 Pillow，无法处理头像")
+    limit = settings.cover_max_pixels
+    try:
+        img = Image.open(io.BytesIO(data))
+        w, h = img.size
+        if w * h > limit:
+            raise HTTPException(status_code=413, detail=f"图片像素过大（{w}x{h}）")
+        img.load()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="不是有效图片")
+
+    size = min(img.size)
+    left = (img.width - size) // 2
+    top = (img.height - size) // 2
+    img = img.crop((left, top, left + size, top + size)).resize((512, 512), Image.LANCZOS)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+
+    buf = io.BytesIO()
+    img.save(buf, format="WEBP", quality=82, method=4)
+    payload = buf.getvalue()
+    digest = hashlib.sha256(payload).hexdigest()[:8]
+
+    target_dir = settings.media_path / "avatars"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    name = f"{user_id}-{digest}.webp"
+    (target_dir / name).write_bytes(payload)
+    return f"/media/avatars/{name}"
+
+
+def delete_media_file(url: str) -> None:
+    """删除 /media 下的文件（只允许 avatars/covers 目录，拒绝越权路径）。"""
+    rel = url.removeprefix("/media/").lstrip("/")
+    if rel.startswith("avatars/") or rel.startswith("covers/"):
+        p = (settings.media_path / rel).resolve()
+        root = settings.media_path.resolve()
+        if str(p).startswith(str(root)) and p.is_file():
+            p.unlink()

@@ -28,6 +28,9 @@ def _user_public(db: Session, user: User) -> UserPublic:
         role=user.role,
         status=user.status,
         bio=user.bio,
+        # 展示名与头像：空则前端回落 username / 首字母方块
+        display_name=user.display_name or "",
+        avatar_url=user.avatar_url or "",
         created_at=user.created_at,
         demo_count=demo_count,
     )

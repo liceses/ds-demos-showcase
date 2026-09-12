@@ -27,11 +27,20 @@ class UserOut(ORMModel):
     role: str
     status: str
     bio: str
+    # 展示名与头像：空则前端回落 username / 首字母方块
+    display_name: str = ""
+    avatar_url: str = ""
     created_at: datetime
 
 
 class UserPublic(UserOut):
     demo_count: int = 0
+
+
+class MeOut(UserOut):
+    """/auth/me 专用：history_enabled 只对自己可见（别人不需要知道我关没关历史）。"""
+
+    history_enabled: bool = True
 
 
 class AuthResponse(BaseModel):
@@ -913,3 +922,74 @@ class BatchReviewIn(BaseModel):
 
     action: str = Field(pattern="^(approve|reject)$")
     ids: list[int] = Field(min_length=1, max_length=500)
+
+
+# ---------- 收藏夹 / 浏览历史 / 账号资料（本轮） ----------
+class CollectionOut(BaseModel):
+    id: int
+    owner_username: str
+    title: str
+    description: str = ""
+    visibility: str = "private"
+    is_default: bool = False
+    item_count: int = 0
+    # 夹内前 3 件作品封面（列表缩略用），避免前端为每个夹各发一次请求
+    cover_urls: list[str] = []
+    updated_at: datetime
+
+
+class CollectionCreateIn(BaseModel):
+    title: str = Field(min_length=1, max_length=60)
+    description: str = Field(default="", max_length=200)
+    visibility: str = "private"
+
+
+class CollectionUpdateIn(BaseModel):
+    title: str | None = Field(default=None, max_length=60)
+    description: str | None = Field(default=None, max_length=200)
+    visibility: str | None = None
+
+
+class CollectionItemIn(BaseModel):
+    slug: str
+
+
+class CollectionItemOut(BaseModel):
+    demo: DemoSummaryOut
+    added_at: datetime
+
+
+class CollectionItemPage(BaseModel):
+    items: list[CollectionItemOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class FavoriteStatus(BaseModel):
+    favorited: bool
+    collection_ids: list[int] = []
+
+
+class FavoriteToggleIn(BaseModel):
+    slug: str
+    # 不传 = 走默认夹（"收藏"永远只点一下）
+    collection_id: int | None = None
+
+
+class HistoryItemOut(BaseModel):
+    demo: DemoSummaryOut
+    viewed_at: datetime
+
+
+class HistoryPage(BaseModel):
+    items: list[HistoryItemOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class MePatch(BaseModel):
+    display_name: str | None = Field(default=None, max_length=64)
+    bio: str | None = Field(default=None, max_length=500)
+    history_enabled: bool | None = None

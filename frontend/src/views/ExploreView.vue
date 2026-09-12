@@ -5,11 +5,13 @@
 defineOptions({ name: 'ExploreView' })
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../api'
-import type { ExploreResult, TagKeyValue } from '../api/types'
+import type { ExploreResult } from '../api/types'
 import { modelDisplay } from '../utils/modelDisplay'
+import { tagLabel } from '../utils/funMode'
+import { iconInkFor, vendorIcon } from '../utils/vendorIcon'
 import { t } from '../i18n'
 import EntityStamp from '../components/EntityStamp.vue'
-import TagGroupBox from '../components/TagGroupBox.vue'
+import TagTip from '../components/TagTip.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import PageHero from '../components/PageHero.vue'
@@ -26,15 +28,16 @@ const labelTitles: Record<string, () => string> = {
   game: () => t('explore.gameTitle', '玩法'),
 }
 
-/** D5 组盒统一：把 explore 的 {value, demos} 映射成 TagKeyValue，group 用键标签当盒头 */
-function boxedValues(key: string): TagKeyValue[] {
-  const label = labelTitles[key]?.() || key
-  return (data.value?.tags[key] || []).map((v) => ({
-    value: v.value,
-    description: '',
-    demo_count: v.demos,
-    group: label,
-  }))
+/**
+ * 某一键下"有作品"的值（facet 列表用）。
+ *
+ * 与改前 boxedValues 的区别：不再把值包成 TagGroupBox 需要的 {group} 形状 ——
+ * 组框那层正是"一筐套一筐"的第二层，扁平列表不需要它。
+ */
+function valuesOf(key: string): { value: string; description: string; demo_count: number }[] {
+  return (data.value?.tags[key] || [])
+    .filter((v) => v.demos > 0)
+    .map((v) => ({ value: v.value, description: '', demo_count: v.demos }))
 }
 
 const totalWorks = computed(() => data.value?.models.total ?? 0)
@@ -95,12 +98,36 @@ onMounted(load)
       </div>
       <div v-if="!data.models.items.length" class="empty-box">{{ t('explore.emptyModels', '还没有模型条目') }}</div>
       <div v-else class="explore-grid">
-        <RouterLink v-for="m in modelsPart.withContent" :key="m.slug" class="explore-cell card card-entity" :to="`/models/${m.slug}`">
-          <EntityStamp :name="m.name" :vendor="m.vendor" size="md" />
+        <RouterLink
+          v-for="m in modelsPart.withContent"
+          :key="m.slug"
+          class="explore-cell card card-entity"
+          :class="{ 'is-embedded': !!vendorIcon(m.vendor) }"
+          :style="vendorIcon(m.vendor) ? { '--vendor': vendorIcon(m.vendor)!.hex } : undefined"
+          :to="`/models/${m.slug}`"
+        >
+          <!-- D 变体：半嵌入图标块（上凸 10px）+ 底色=厂商色 + 左缘 3px 细带；无图标则回退字母章且无色 -->
+          <template v-if="vendorIcon(m.vendor)">
+            <!-- D 变体：顶带 + 左带（对齐设计稿；带子用负偏移压住卡片边框，使边框本身被染成厂商色） -->
+            <span class="explore-band explore-band--top" aria-hidden="true"></span>
+            <span class="explore-band explore-band--left" aria-hidden="true"></span>
+            <span
+              class="explore-tile"
+              aria-hidden="true"
+              :style="{ background: vendorIcon(m.vendor)!.hex, color: iconInkFor(vendorIcon(m.vendor)!.hex) }"
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path v-for="(d, i) in vendorIcon(m.vendor)!.paths" :key="i" :d="d" />
+              </svg>
+            </span>
+          </template>
+          <span v-else class="explore-tile explore-tile--letter" aria-hidden="true">{{ (m.vendor || m.name || '?').slice(0, 1).toUpperCase() }}</span>
           <div class="explore-cell-main">
             <div class="explore-cell-name">{{ modelDisplay(m) }}</div>
             <div class="explore-cell-meta">
-              <span class="muted">{{ t('explore.worksCount', '{n} 个作品', { n: m.demo_count }) }}</span>
+              <span class="explore-vendor mono">{{ m.vendor || t('explore.noVendor', '未标厂商') }} · {{ t('explore.worksShort', '{n} 件', { n: m.demo_count }) }}</span>
+            </div>
+            <div class="explore-cell-meta">
               <!-- 排序口径是收缩社区分，这里就必须显示同一个数：
                    显示原始 RATE 5.0 却排在 4.8 后面，等于页面自己和自己矛盾 -->
               <span
@@ -201,11 +228,28 @@ onMounted(load)
           <RouterLink class="btn btn-sm btn-outline" to="/tags/keys">{{ t('explore.allKeys', '全部标签键 →') }}</RouterLink>
         </template>
       </EmptyBox>
-      <div v-else class="explore-labels">
-        <div v-for="k in labelKeysWithContent" :key="k" class="explore-label-block">
-          <TagGroupBox :values="boxedValues(k).filter((v) => v.demo_count > 0)" mode="display" :route-key="k" />
+      <!-- 扁平 facet 列表：一行一键（dl/dt/dd）。
+           改前是"每键一个外框 + TagGroupBox 自带组框 + chip 自身边框" = **三层黑框**装一个 chip，
+           而外层块宽 672px —— 空与重同时发生。现在整段一层框，chip 是唯一有边框的元素。 -->
+      <dl v-else class="explore-facets">
+        <div v-for="k in LABEL_KEYS" :key="k" class="explore-facet-row">
+          <dt class="explore-facet-key mono">{{ labelTitles[k]() }}</dt>
+          <dd class="explore-facet-values">
+            <template v-if="valuesOf(k).length">
+              <RouterLink
+                v-for="v in valuesOf(k)"
+                :key="v.value"
+                class="tag-chip mode-fixed"
+                :to="`/tag/${k}/${v.value}`"
+              >
+                {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>
+                <TagTip :tag-key="k" :value="v.value" :description="v.description" />
+              </RouterLink>
+            </template>
+            <span v-else class="muted">{{ t('explore.noValue', '暂无') }}</span>
+          </dd>
         </div>
-      </div>
+      </dl>
       <EmptyBox v-if="!data.models.items.length && !data.tasks.length" :text="t('explore.emptyAll', '还没有可探索的内容')" />
     </template>
 

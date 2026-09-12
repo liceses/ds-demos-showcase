@@ -41,16 +41,6 @@
   color: var(--ink);
 }
 .explore-fold:hover { background: var(--yellow); }
-.explore-labels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
-}
-.explore-label-block {
-  border: 3px solid var(--ink);
-  background: var(--paper);
-  padding: 12px 14px;
-}
 
 /* 折叠控件（空实体）：视觉沿用 .explore-fold 的 mint 底 + 2px 黑边。
    与 .explore-fold 分开命名是因为后者是"未定型号"的**链接**，语义不同（这里是个 disclosure 按钮）。 */
@@ -115,4 +105,120 @@
 .explore-grid[hidden],
 .task-lines[hidden] {
   display: none;
+}
+
+/* 扁平 facet 列表（一行一键）：整段一层框，chip 是唯一有边框的元素。
+   改前是"每键一个 3px 外框 + TagGroupBox 组框 + chip 边框"三层叠着，而内容只有一个 chip。 */
+.explore-facets {
+  border: var(--border-w) solid var(--ink);
+  background: var(--paper);
+  padding: 4px 14px;
+}
+.explore-facet-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+}
+.explore-facet-row + .explore-facet-row {
+  border-top: 2px dashed var(--ink-faint, #9a9a9a);
+}
+.explore-facet-key {
+  flex: 0 0 72px;
+  padding-top: 6px; /* 与 chip 内文字基线对齐 */
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-soft, #555);
+}
+.explore-facet-values {
+  margin: 0; /* dd 默认 margin-inline-start: 40px —— 不对齐的经典坑 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .explore-facet-key {
+    flex-basis: 64px;
+  }
+  .explore-facet-values .tag-chip {
+    min-height: 44px;
+  }
+}
+
+/* ── 模型格 D 变体：半嵌入图标块 + 厂商底色 + 左缘细带 ──
+   选择器用 .explore-grid .explore-cell（0,2,0）压过 .card-entity（0,1,0），避免依赖 CSS 导入顺序。 */
+.explore-grid {
+  row-gap: 20px; /* 12 → 20：图标上凸 10px 会贴到上一行，必须让出行距 */
+  /* 注意：这里**不能**加 overflow:hidden —— 会裁掉凸出卡片上沿的徽章 */
+}
+.explore-grid .explore-cell {
+  position: relative;
+  display: block;
+  padding: 26px 14px 12px;
+}
+.explore-tile {
+  position: absolute;
+  left: 14px;
+  top: -10px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 4px solid var(--ink);
+  overflow: hidden;
+}
+.explore-tile svg {
+  display: block;
+}
+.explore-tile--letter {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 900;
+  font-size: 18px;
+}
+/* 厂商色带（D 变体）：顶带 + 左带。
+   偏移用 calc(var(--border-w) * -1) **而不是硬编码 -4px** —— 设计稿里的 -4px 是为了快出效果，
+   落地必须跟着边框令牌走，否则以后改 --border-w 带子就会错位（这是"稿子能看、落地要改"的正当差异）。 */
+.explore-band {
+  position: absolute;
+  background: var(--vendor, var(--ink));
+}
+.explore-band--top {
+  left: calc(var(--border-w) * -1);
+  right: calc(var(--border-w) * -1);
+  top: calc(var(--border-w) * -1);
+  height: 3px;
+}
+.explore-band--left {
+  left: calc(var(--border-w) * -1);
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+.explore-grid .explore-cell-main {
+  margin-left: 52px;
+}
+.explore-vendor {
+  font-size: 12px;
+  color: var(--ink-soft, #555);
+}
+@media (max-width: 720px) {
+  .explore-tile {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+    top: -8px;
+  }
+  .explore-tile svg {
+    width: 18px;
+    height: 18px;
+  }
+  .explore-grid .explore-cell {
+    padding-top: 22px;
+  }
+  .explore-grid .explore-cell-main {
+    margin-left: 42px;
+  }
 }

@@ -80,6 +80,52 @@ describe('探索页护栏', () => {
     expect(scoped).toMatch(/:deep\(\.mini-stat\) b/)
   })
 
+  it('标签段不得再"一筐套一筐"（每键外框 + 组框已删）', () => {
+    // 用户实测反馈：三层黑框装一个 chip，且外层块 672px 宽 —— 空与重同时发生
+    // 只看**真实用法**，不看注释（注释里会解释"改前是 TagGroupBox" —— 整串匹配会误报）
+    expect(view).not.toMatch(/<TagGroupBox/)
+    expect(view).not.toContain("import TagGroupBox")
+    expect(view).not.toMatch(/class="explore-label-block"/)
+    expect(view).not.toMatch(/class="explore-labels"/)
+    expect(css).not.toContain('.explore-label-block')
+    // 扁平结构：dl/dt/dd
+    expect(view).toMatch(/<dl v-else class="explore-facets"/)
+    expect(view).toMatch(/<dt class="explore-facet-key/)
+    expect(view).toMatch(/<dd class="explore-facet-values">/)
+  })
+
+  it('dd 必须显式清零左边距（dl 默认 margin-inline-start 会顶开键值对齐）', () => {
+    const i = css.indexOf('.explore-facet-values')
+    const body = css.slice(css.indexOf('{', i), css.indexOf('}', i))
+    expect(body).toMatch(/margin:\s*0/)
+  })
+
+  it('值的交互能力不回退：仍是链接 + 保留介绍气泡', () => {
+    // 用纯字符串包含断言：正则里的 \` / \$ 转义都是多余的（lint no-useless-escape 会报）
+    expect(view).toContain('/tag/${k}/${v.value}')
+    expect(view).toContain('<TagTip')
+    expect(view).toMatch(/class="tag-chip mode-fixed"/)
+  })
+
+  it('空键走 muted 文本，不再占独立盒子', () => {
+    expect(view).toMatch(/explore\.noValue/)
+    expect(view).not.toMatch(/boxCount\(/)
+  })
+
+  it('D 变体必须同时有顶带与左带（设计稿有两条，实现不许只留一条）', () => {
+    // 这条护栏来自一次真实偏差：设计稿 D = 顶带 + 左带，而实施计划漏写了顶带、实现照计划走 → 稿子与落地不一致
+    expect(view).toContain('explore-band--top')
+    expect(view).toContain('explore-band--left')
+    expect(view).not.toMatch(/class="explore-band"\s/) // 不许再出现"光秃秃一条"的写法
+  })
+
+  it('色带偏移必须走 --border-w 令牌（不许硬编码 -4px）', () => {
+    const i = css.indexOf('.explore-band--top')
+    const body = css.slice(i, css.indexOf('}', css.indexOf('.explore-band--left')))
+    expect(body).toMatch(/calc\(var\(--border-w\) \* -1\)/)
+    expect(body).not.toMatch(/left:\s*-4px/)
+  })
+
   it('eyebrow 不得等于标题（首屏最贵位置不复述同层信息）', () => {
     const en = read('i18n/en.ts')
     // 注意：en.ts 里第一个 `explore: {` 是 app.nav 的**导航标签对象**（紧凑单行），

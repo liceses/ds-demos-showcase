@@ -52,3 +52,67 @@
   padding: 12px 14px;
 }
 
+/* 折叠控件（空实体）：视觉沿用 .explore-fold 的 mint 底 + 2px 黑边。
+   与 .explore-fold 分开命名是因为后者是"未定型号"的**链接**，语义不同（这里是个 disclosure 按钮）。 */
+.explore-fold-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--mint);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  cursor: pointer;
+}
+.explore-fold-btn:hover {
+  background: var(--yellow);
+}
+/* 空实体格子：展开后也不该与"有作品"的格子同权（去掉实体色左条 + 降透明度） */
+.explore-cell.is-empty {
+  opacity: 0.72;
+  border-left-color: var(--ink-faint, #9a9a9a);
+}
+/* 题目段：条数少时不再"1393px 一行只有一条"（auto-fill 让空位留给后续条目） */
+@media (min-width: 721px) {
+  .task-lines {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 12px;
+  }
+}
+/* ≤720：折叠按钮与题目行的触达底线上到 44px */
+@media (max-width: 720px) {
+  .explore-fold-btn,
+  .explore-fold {
+    min-height: 44px;
+  }
+  /* 模型格子改两列：5 个格子从 350px 降到 ~140px，把"题目"段推进首屏 */
+  .explore-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .explore-cell {
+    padding: 10px;
+    gap: 8px;
+  }
+  .explore-cell-name {
+    font-size: 13px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
+/* 折叠必须真的藏住：`hidden` 属性靠的是 UA 的 `[hidden] { display: none }`，
+   而作者样式里的 `.explore-grid { display: grid }` 会**覆盖 UA 样式**（作者样式优先，与特异性无关）
+   —— 实测：折叠区仍然显示，"展开态"与默认态高度完全相同（1142 = 1142）才暴露出来。
+   这里显式复位，别依赖 UA 规则。 */
+.explore-grid[hidden],
+.task-lines[hidden] {
+  display: none;
+}

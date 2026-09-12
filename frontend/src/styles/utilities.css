@@ -50,3 +50,20 @@
 .read-col.read-col {
   max-width: var(--w-read);
 }
+
+/* 移动端触达底线（≤720）：顶栏的可点元素与标签 chip 实测只有 39–42px，低于 44px 的触达建议值。
+   范围刻意收窄到"顶栏控件 + 页内 chip" —— 页脚的 17px 文字链接**不在内**：
+   那是正文里的行内链接（WCAG 目标尺寸对行内链接有豁免），强行撑到 44px 只会把页脚撑肿。
+   注：这条是全站共享组件的修正（探索页审计发现，但受益的不止探索页）。 */
+@media (max-width: 720px) {
+  /* 只提 min-height，**绝不动 display**：实测给 `.topbar .btn` 加 `display: inline-flex`
+     会覆盖顶栏"移动端隐藏"的 `display: none` 规则，把「上传 Demo」等桌面项放出来、导航被撑高 81px。
+     这条对部分控件可能无效（inline 元素不吃 min-height），但**无害**；真正的触达修正应作为
+     组件级改动单独做（需要逐个确认每个控件的 display 契约），不在探索页这次改版的范围内。 */
+  .topbar .btn,
+  .topbar .brand,
+  .topbar .nav-link,
+  .tag-chip {
+    min-height: 44px;
+  }
+}

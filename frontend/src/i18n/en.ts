@@ -497,6 +497,11 @@ export const en = {
   },
 
   demo: {
+    favNeedLogin: 'Sign in to save works',
+    favSaved: 'Saved',
+    favOn: '★ Saved',
+    favOff: '☆ Save',
+    favAddTo: 'Add to collection ▾',
     loading: 'Loading demo…',
     author: 'Author',
     created: 'Created',
@@ -625,6 +630,7 @@ export const en = {
     manageCollections: 'Manage collections →',
   },
   fav: {
+    viewAll: 'View all →',
     title: 'Collections',
     mine: 'My collections',
     pageHint: 'Public collections can be seen by anyone with the link; private ones are yours alone.',
@@ -666,6 +672,8 @@ export const en = {
     notFound: 'This collection does not exist or is not public',
   },
   hist: {
+    recent: 'Recently viewed',
+    localOnly: 'This device only',
     title: 'History',
     note: 'Stored on this device when signed out; synced to your account when signed in (can be turned off in settings).',
     privacy: 'Records only what you opened and when — never IP or referrer.',

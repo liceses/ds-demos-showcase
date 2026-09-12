@@ -242,3 +242,96 @@
     align-items: flex-start;
   }
 }
+
+/* 详情页：加入收藏夹下拉面板（轻量，不用 Modal） */
+.fav-menu {
+  position: relative;
+  margin-top: 8px;
+  max-width: 320px;
+  background: var(--paper, #fff);
+  border: var(--border-w, 4px) solid var(--ink, #000);
+  box-shadow: 6px 6px 0 0 var(--ink, #000);
+  padding: 6px;
+}
+.fav-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.fav-menu-row:hover {
+  background: var(--paper-deep, #f2eee6);
+}
+.fav-menu-check {
+  width: 18px;
+  flex: 0 0 auto;
+  font-weight: 900;
+}
+.fav-menu-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fav-menu-new {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 2px solid var(--ink, #000);
+}
+.fav-menu-new .input {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* 「我的」页 / 用户页：收藏夹卡片（3 列；窄屏横向滚动单行，不换行堆叠） */
+.me-cards {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 6px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.me-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  height: 100%;
+}
+.me-card-title {
+  font-weight: 900;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .me-cards {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(200px, 68vw);
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 10px;
+  }
+  .me-cards > li {
+    scroll-snap-align: start;
+  }
+  .me-card {
+    min-height: 44px;
+  }
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { api } from '../api'
 import { parseDate, currentLocale } from '../utils/time'
 import type { DemoSummary, User, UserProfile } from '../api/types'
@@ -15,6 +15,11 @@ import LoadMore from '../components/LoadMore.vue'
 import { useLoadMore } from '../composables/useLoadMore'
 import { t } from '../i18n'
 import PageHero from '../components/PageHero.vue'
+import LoadingRow from '../components/LoadingRow.vue'
+import EmptyBox from '../components/EmptyBox.vue'
+import { useLocalHistory } from '../composables/useLocalHistory'
+import { relativeTime } from '../utils/relTime'
+import type { CollectionOut } from '../api/types'
 
 const props = defineProps<{ username: string }>()
 const auth = useAuthStore()
@@ -41,6 +46,31 @@ const loading = ref(true)
 const error = ref('')
 
 const isSelf = computed(() => !!auth.user && auth.user.username === props.username)
+
+// ── 收藏夹 / 最近浏览（本轮） ──
+// 两条刻意的规则：
+//   ①「最近浏览」**只在本人页**显示 —— 否则等于把访客自己的本机记录摆在别人主页上；
+//   ② 他人页没有公开收藏夹时**整块不渲染** —— 不在每个访客面前摆一个空盒子。
+const myCollections = ref<CollectionOut[]>([])
+const collectionsLoading = ref(false)
+const local = useLocalHistory()
+const recentRows = computed(() => local.items.value.slice(0, 6))
+const showCollections = computed(() => collectionsLoading.value || myCollections.value.length > 0)
+
+async function loadCollections() {
+  collectionsLoading.value = true
+  try {
+    myCollections.value = isSelf.value
+      ? ((await api.listMyCollections()) ?? []).slice(0, 3)
+      : ((await api.listPublicCollections(props.username)) ?? []).slice(0, 3)
+  } catch {
+    myCollections.value = []
+  } finally {
+    collectionsLoading.value = false
+  }
+}
+onMounted(loadCollections)
+watch(isSelf, loadCollections)
 
 async function toggleFollow() {
   if (!profile.value) return
@@ -114,6 +144,60 @@ onMounted(async () => {
         >{{ profile.is_following ? t('user.followingBtn', '已关注') : t('user.followBtn', '关注') }}</button>
       </div>
     </PageHero>
+
+    <!-- 收藏夹（本人 = 我的夹 / 他人 = TA 的公开夹；空则整块不渲染） -->
+    <section v-if="showCollections" class="section">
+      <div class="section-head">
+        <h2 class="section-title">{{ isSelf ? t('fav.title', '收藏夹') : t('fav.publicOf', '公开收藏夹') }}</h2>
+        <RouterLink class="btn btn-sm btn-outline" :to="isSelf ? '/me/collections' : `/user/${username}/collections`">
+          {{ t('fav.viewAll', '查看全部 →') }}
+        </RouterLink>
+      </div>
+      <LoadingRow v-if="collectionsLoading" :text="t('fav.loading', '加载收藏夹…')" />
+      <ul v-else class="me-cards">
+        <li v-for="c in myCollections" :key="c.id">
+          <RouterLink class="card card-default me-card" :to="c.visibility === 'public' ? `/collections/${c.id}` : `/me/collections/${c.id}`">
+            <span class="me-covers" aria-hidden="true">
+              <img v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" alt="" loading="lazy" decoding="async" />
+              <span v-if="!c.cover_urls.length" class="me-cover me-cover--empty">—</span>
+            </span>
+            <span class="me-card-title">{{ c.title }}</span>
+            <span class="me-row-meta">
+              <span class="mono">{{ c.item_count }} {{ t('fav.items', '件') }}</span>
+              <span class="me-dot" aria-hidden="true">·</span>
+              <span class="mono me-vis" :class="c.visibility === 'public' ? 'me-vis--public' : ''">
+                {{ c.visibility === 'public' ? t('fav.public', '公开') : t('fav.private', '私密') }}
+              </span>
+            </span>
+          </RouterLink>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 最近浏览：**仅本人**（读本机 localStorage，不发请求） -->
+    <section v-if="isSelf" class="section">
+      <div class="section-head">
+        <h2 class="section-title">{{ t('hist.recent', '最近浏览') }}</h2>
+        <span class="mono muted">{{ t('hist.localOnly', '仅本机可见') }}</span>
+        <RouterLink class="btn btn-sm btn-outline" to="/me/history">{{ t('fav.viewAll', '查看全部 →') }}</RouterLink>
+      </div>
+      <EmptyBox v-if="!recentRows.length" :text="t('hist.empty', '还没有浏览记录')" />
+      <ul v-else class="me-list">
+        <li v-for="r in recentRows" :key="r.slug" class="me-row me-row--item">
+          <RouterLink class="me-thumb" :to="`/demo/${r.slug}`">
+            <img v-if="r.cover_url" :src="r.cover_url" alt="" loading="lazy" decoding="async" />
+            <span v-else aria-hidden="true">{{ r.title[0] }}</span>
+          </RouterLink>
+          <div class="me-row-main">
+            <RouterLink class="me-row-title" :to="`/demo/${r.slug}`">{{ r.title }}</RouterLink>
+            <p class="me-row-meta">
+              <span v-for="m in r.model_labels.slice(0, 2)" :key="m" class="tag-chip">{{ m }}</span>
+              <span class="muted mono">{{ relativeTime(new Date(r.ts).toISOString()) }}</span>
+            </p>
+          </div>
+        </li>
+      </ul>
+    </section>
 
     <section class="section">
       <div class="section-head">

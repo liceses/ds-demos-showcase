@@ -18,12 +18,17 @@ import RatingWidget from '../components/RatingWidget.vue'
 import QuickComments from '../components/QuickComments.vue'
 import { parseDate, currentLocale } from '../utils/time'
 import { tagLabel } from '../utils/funMode'
+import { errorMessage } from '../utils/error'
+import { useLocalHistory } from '../composables/useLocalHistory'
+import { useDismissOnEsc } from '../composables/useDismissOnEsc'
+import type { CollectionOut, FavoriteStatus } from '../api/types'
 import { t } from '../i18n'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const ui = useUiStore()
 const slug = String(route.params.slug)
+const local = useLocalHistory()
 
 const demo = ref<DemoDetail | null>(null)
 const loading = ref(true)
@@ -107,6 +112,91 @@ watch([mountPreview, previewArmed], ([m, armed]) => {
 // 与 IframePreview 的 webFullscreen 并存 —— 两套退出方式还不同（这套有按钮、那套只有 G/Esc）。
 // 现在原生全屏整体退役（Fullscreen API 保障"全屏态按 Esc 退出全屏"，与"Esc 归 demo"互斥）。
 const previewRef = ref<InstanceType<typeof IframePreview> | null>(null)
+
+// ── 收藏与浏览记录（后端 routers/collections.py、routers/history.py） ──
+// 按钮语义：未收藏 = 白底黑边「☆ 收藏」，已收藏 = 黑底白字「★ 已收藏」—— 状态靠样式，不靠读文案。
+// 状态读取失败（离线/接口异常）按"未收藏"呈现：页面照常可用，点的时候才报错，不在加载期打断浏览。
+const favStatus = ref<FavoriteStatus>({ favorited: false, collection_ids: [] })
+const myCollections = ref<CollectionOut[]>([])
+const favMenuOpen = ref(false)
+const favBusy = ref(false)
+const newFavTitle = ref('')
+
+const favorited = computed(() => favStatus.value.favorited)
+
+async function loadFavorite() {
+  if (!auth.isLoggedIn()) return
+  try {
+    favStatus.value = await api.getFavoriteStatus(slug)
+  } catch {
+    /* 读不到就当未收藏 */
+  }
+}
+
+async function loadMyCollections() {
+  if (!auth.isLoggedIn()) return
+  try {
+    myCollections.value = (await api.listMyCollections()) ?? []
+  } catch {
+    myCollections.value = []
+  }
+}
+
+function requireLogin(): boolean {
+  if (auth.isLoggedIn()) return true
+  // 不静默失败：明确告知"要登录"并带上回跳（护栏钉这条）
+  ui.toast(t('demo.favNeedLogin', '登录后即可收藏'), 'error')
+  void router.push('/login?next=' + encodeURIComponent(route.fullPath))
+  return false
+}
+
+async function toggleFavorite() {
+  if (!requireLogin()) return
+  const before = favStatus.value
+  // 乐观更新 + 失败回滚：收藏这种高频轻动作等转圈手感很差
+  favStatus.value = { favorited: !before.favorited, collection_ids: before.collection_ids }
+  favBusy.value = true
+  try {
+    favStatus.value = await api.toggleFavorite(slug)
+    if (favStatus.value.favorited) ui.toast(t('demo.favSaved', '已收藏'), 'success')
+  } catch (e) {
+    favStatus.value = before
+    ui.toast(errorMessage(e), 'error')
+  } finally {
+    favBusy.value = false
+  }
+}
+
+async function openFavMenu() {
+  if (!requireLogin()) return
+  favMenuOpen.value = !favMenuOpen.value
+  if (favMenuOpen.value) await loadMyCollections()
+}
+
+async function toggleInCollection(id: number) {
+  try {
+    favStatus.value = await api.toggleFavorite(slug, id)
+  } catch (e) {
+    ui.toast(errorMessage(e), 'error')
+  }
+}
+
+async function createFavFromPanel() {
+  const title = newFavTitle.value.trim()
+  if (!title) return
+  try {
+    const c = await api.createCollection({ title })
+    myCollections.value = [...myCollections.value, c]
+    newFavTitle.value = ''
+    favStatus.value = await api.toggleFavorite(slug, c.id) // 新建即加入，少一步
+  } catch (e) {
+    ui.toast(errorMessage(e), 'error')
+  }
+}
+
+// 面板是站点浮层：Esc 关闭（走 useDismissOnEsc —— 这样本文件里不出现 Esc 分支，
+// 预览全屏那条护栏（禁止这两个文件用 Esc 退全屏）就能继续按文件粒度生效）
+useDismissOnEsc(favMenuOpen, () => (favMenuOpen.value = false))
 const fsActive = computed(() => !!previewRef.value?.isFullscreen)
 function toggleFullscreen() {
   previewRef.value?.toggleFullscreen()
@@ -312,6 +402,15 @@ async function load() {
     // 先把日志请求发出去，详情一到就赋值渲染，再 await 日志。
     const logsPromise = api.listSessionLogs(slug).catch(() => [] as SessionLog[])
     demo.value = await api.getDemo(slug)
+    // 浏览记录（混合存储）：本机始终记；登录时服务端也记一份（失败静默，绝不影响浏览）
+    local.record({
+      slug: demo.value.slug,
+      title: demo.value.title,
+      cover_url: demo.value.cover_url || '',
+      model_labels: (demo.value.models ?? []).map((m) => m.name || m.slug),
+    })
+    void api.recordView(demo.value.slug).catch(() => undefined)
+    void loadFavorite()
     sessionLogs.value = await logsPromise
     void loadSamePrompt()
     void loadSameTask()
@@ -535,7 +634,48 @@ onMounted(load)
           <div class="dv-group dv-actions">
             <button v-if="demo.demo_type !== 'link'" class="btn btn-secondary dv-action-main" type="button" @click="onDownload">{{ demo.single_file ? t('demo.downloadFile', '下载文件') : t('demo.downloadZip', '下载 ZIP') }}</button>
             <div class="dv-action-row">
-              <RouterLink class="btn btn-sm btn-outline" :to="`/forum?demo=${demo.slug}`">{{ t('demo.discuss', '讨论 →') }}</RouterLink>
+              <!-- 收藏：未收藏 = 白底黑边，已收藏 = 黑底白字 -->
+            <button
+              class="btn btn-sm"
+              :class="favorited ? 'btn-dark' : 'btn-outline'"
+              type="button"
+              :disabled="favBusy"
+              :aria-pressed="favorited"
+              @click="toggleFavorite"
+            >
+              {{ favorited ? t('demo.favOn', '★ 已收藏') : t('demo.favOff', '☆ 收藏') }}
+            </button>
+            <button class="btn btn-sm btn-outline" type="button" :aria-expanded="favMenuOpen" @click="openFavMenu">
+              {{ t('demo.favAddTo', '加入收藏夹 ▾') }}
+            </button>
+            <RouterLink class="btn btn-sm btn-outline" :to="`/forum?demo=${demo.slug}`">{{ t('demo.discuss', '讨论 →') }}</RouterLink>
+
+            <!-- 加入收藏夹面板：轻量下拉（不用 Modal，避免打断浏览）；勾选即时生效 -->
+            <div v-if="favMenuOpen" class="fav-menu" role="menu" :aria-label="t('demo.favAddTo', '加入收藏夹 ▾')">
+              <button
+                v-for="c in myCollections"
+                :key="c.id"
+                class="fav-menu-row"
+                type="button"
+                role="menuitemcheckbox"
+                :aria-checked="favStatus.collection_ids.includes(c.id)"
+                @click="toggleInCollection(c.id)"
+              >
+                <span class="fav-menu-check" aria-hidden="true">{{ favStatus.collection_ids.includes(c.id) ? '✓' : '' }}</span>
+                <span class="fav-menu-title">{{ c.title }}</span>
+                <span class="mono muted">{{ c.item_count }}</span>
+              </button>
+              <div class="fav-menu-new">
+                <input
+                  v-model="newFavTitle"
+                  class="input"
+                  maxlength="60"
+                  :placeholder="t('fav.new', '新建收藏夹')"
+                  @keydown.enter.prevent="createFavFromPanel"
+                />
+                <button class="btn btn-sm btn-primary" type="button" @click="createFavFromPanel">{{ t('common.create', '创建') }}</button>
+              </div>
+            </div>
               <template v-if="canEdit">
                 <RouterLink class="btn btn-sm btn-outline" :to="`/upload?slug=${demo.slug}`">{{ t('demo.edit', '编辑') }}</RouterLink>
                 <button class="btn btn-sm btn-danger" type="button" @click="onDelete">{{ t('demo.del', '删除') }}</button>

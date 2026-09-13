@@ -28,7 +28,7 @@ from ..client_ip import get_client_ip
 from ..config import settings
 from ..database import get_db
 from ..deps import current_user, optional_user
-from ..models import Announcement, Demo, DemoModel, DemoTask, DemoTimeline, DemoTag, Model, SessionLog, Tag, TagKey, Task, User
+from ..models import CollectionItem, DemoView, Announcement, Demo, DemoModel, DemoTask, DemoTimeline, DemoTag, Model, SessionLog, Tag, TagKey, Task, User
 from ..schemas import DemoCreateResult, DemoDetailOut, DemoFromUrlIn, DemoMetaOut, DemoSummaryOut, Paginated, SamePromptOut
 from ..serializers import preload_demo_relations, serialize_demo
 from ..services import counters, model_service, oss, storage
@@ -881,6 +881,8 @@ async def _create_demo_record(
         try:
             await asyncio.to_thread(storage.extract_zip, zip_bytes, slug, require_index=(demo_type == "web"))
         except HTTPException:
+            _purge_demo_references(db, demo.id)  # 外键清理：收藏/浏览记录没有 ondelete 级联
+
             db.delete(demo)
             db.commit()
             shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)
@@ -1415,11 +1417,29 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
     return snapshot
 
 
+def _purge_demo_references(db: Session, demo_id: int) -> None:
+    """删除 Demo 前清掉**没有 ondelete 级联**的引用行。
+
+    为什么必须显式清：`CollectionItem.demo_id` / `DemoView.demo_id` 两个外键建表时没写 ondelete
+    （见 models.py），而 SQLite 开着 `PRAGMA foreign_keys=ON` ⇒ 作品只要被收藏过或被浏览过，
+    删除就会 `sqlite3.IntegrityError: FOREIGN KEY constraint failed`（生产 500，2026-09 事故）。
+    其余引用表（tags/models/tasks/timeline/session_logs）都是 CASCADE，`TagValueSuggestion` /
+    `EntitySuggestion` 是 SET NULL —— **不在这里手动删**（手删会绕过 SET NULL 语义）。
+
+    不改表结构：SQLite 给已有表加外键要重建表，而 `_ensure_*` 那套只会加列；
+    显式清理对存量生产库立刻生效。
+    """
+    db.query(CollectionItem).filter(CollectionItem.demo_id == demo_id).delete(synchronize_session=False)
+    db.query(DemoView).filter(DemoView.demo_id == demo_id).delete(synchronize_session=False)
+
+
 @router.delete("/{slug}", status_code=204)
 def delete_demo(slug: str, db: Session = Depends(get_db), user: User = Depends(current_user)):
     demo = _find_demo(db, slug)
     if demo.author_id != user.id and user.role != "admin":
         raise HTTPException(status_code=403, detail="无权删除该 Demo", )
+    _purge_demo_references(db, demo.id)  # 外键清理：收藏/浏览记录没有 ondelete 级联
+
     db.delete(demo)
     db.commit()
     shutil.rmtree(storage.demo_dir(slug), ignore_errors=True)

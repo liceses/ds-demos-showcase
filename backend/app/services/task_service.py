@@ -344,6 +344,46 @@ def prompt_excerpts(db: Session, task_ids: list[int], limit_chars: int = 160) ->
     return out
 
 
+def representative_covers(db: Session, task_ids: list[int]) -> dict[int, str]:
+    """批量取题目行的「代表封面缩略图」：该题下**排序第一且有缩略图**的已上架作品。
+
+    排序口径与 `task_chain()` **完全一致**（rating_avg desc → rating_count desc → id desc）——
+    题目页链条第一行是哪件作品，列表页封面就得是哪件；两处口径一旦分叉，读者看到的
+    「代表作品」和点进去看到的第一行不是同一个，比没有封面更糟。
+
+    没有缩略图的作品（上传时没给封面 → default.svg / SVG 封面 / 尚未回填）直接跳过：
+    宁可不放图，也不拿站内占位图冒充作品封面。
+
+    取数方式与 `prompt_excerpts()` 同款：**一页一次查询**（不按题目循环 → 无 N+1），
+    ORDER BY 交给 SQLite，Python 侧按 task_id 取首条（不引窗口函数 —— 全仓无先例，
+    而本页最多 20 题、最多百来行）。返回 {task_id: thumb_url}，无封面者不在字典里。
+    """
+    out: dict[int, str] = {}
+    ids = [i for i in task_ids if i]
+    if not ids:
+        return out
+    rows = (
+        db.query(DemoTask.task_id, Demo.cover_thumb_url)
+        .join(Demo, Demo.id == DemoTask.demo_id)
+        .filter(
+            DemoTask.task_id.in_(ids),
+            Demo.status == "approved",
+            Demo.cover_thumb_url != "",
+        )
+        .order_by(
+            DemoTask.task_id.asc(),
+            Demo.rating_avg.desc(),
+            Demo.rating_count.desc(),
+            Demo.id.desc(),
+        )
+        .all()
+    )
+    for tid, url in rows:
+        if tid not in out and url:
+            out[tid] = url
+    return out
+
+
 def list_tasks(
     db: Session,
     status: str | None = None,
@@ -382,6 +422,8 @@ def list_tasks(
 
     # 题面摘录：规则与取数都在 prompt_excerpts() 一处（本页一次查询，不按任务循环）
     excerpts = prompt_excerpts(db, [t.id for t, _ in rows])
+    # 代表封面：同上，一页一次查询（口径与 task_chain 同源，见 representative_covers）
+    covers = representative_covers(db, [t.id for t, _ in rows])
 
     items = [
         {
@@ -390,6 +432,7 @@ def list_tasks(
             "title": t.title,
             "description": t.description,
             "prompt_excerpt": excerpts.get(t.id, ""),
+            "cover_thumb_url": covers.get(t.id, ""),
             "category": t.category,
             "status": t.status,
             "demo_count": c,

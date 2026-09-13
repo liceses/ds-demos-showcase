@@ -354,10 +354,16 @@ def _ensure_demo_columns() -> None:
         # 首页策展（07 §2.2）：featured=1 进首页精选/hero 策展池；featured_order=排序位（1 起连续）
         ("featured", "BOOLEAN NOT NULL DEFAULT 0"),
         ("featured_order", "INTEGER"),
+        # 列表缩略图（探索页题目行封面）：空 = 无缩略图，前端不渲染图片。
+        # 存量回填走 scripts/backfill_cover_thumbs.py（先上线后端→再跑脚本，此前列表照旧无图）
+        ("cover_thumb_url", "VARCHAR(500) NOT NULL DEFAULT ''"),
     ]
     if "featured" not in cols:
         # 迁移前置备份（07 §2.2 红线；仅首次加列时做一次）
         _sqlite_db_backup("featured")
+    if "cover_thumb_url" not in cols:
+        # 同上：新列首次添加也先备份（回滚 = 恢复该备份）
+        _sqlite_db_backup("cover_thumb_url")
     with engine.begin() as conn:
         for name, ddl in additions:
             if name not in cols:

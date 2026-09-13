@@ -847,9 +847,11 @@ async def _create_demo_record(
     demo.status = status
 
     if cover_bytes:
-        demo.cover_url = await asyncio.to_thread(storage.save_cover, cover_bytes, cover_ext)
+        # save_cover 返回 (封面, 200px 缩略图)：两个 URL 一起落库（缩略图是列表页唯一的图片来源）
+        demo.cover_url, demo.cover_thumb_url = await asyncio.to_thread(storage.save_cover, cover_bytes, cover_ext)
     else:
         demo.cover_url = "/media/covers/default.svg"
+        demo.cover_thumb_url = ""  # SVG 无法栅格化 → 列表页不渲染图片（不留空洞）
 
     db.add(demo)
     db.flush()
@@ -1275,7 +1277,7 @@ async def update_demo(
     if cover is not None and cover.filename:
         ext = Path(cover.filename).suffix.lstrip(".") or "png"
         cover_bytes = await _read_limited(cover, settings.max_file_size, "封面文件过大")
-        demo.cover_url = await asyncio.to_thread(storage.save_cover, cover_bytes, ext)
+        demo.cover_url, demo.cover_thumb_url = await asyncio.to_thread(storage.save_cover, cover_bytes, ext)
         changed = True
     if file is not None and file.filename:
         if demo.demo_type == "link":
@@ -1365,6 +1367,8 @@ def _snapshot_demo(db: Session, demo: Demo, user: User) -> Demo:
         title=demo.title,
         description=demo.description,
         cover_url=demo.cover_url,
+        # 版本快照复用同一张封面文件 → 缩略图也必须一起复制，否则快照版在列表页永远没图
+        cover_thumb_url=demo.cover_thumb_url,
         demo_type=demo.demo_type,
         external_url=demo.external_url,
         prompt=demo.prompt,

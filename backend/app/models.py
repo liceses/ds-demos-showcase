@@ -121,6 +121,9 @@ class Demo(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     cover_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    # 列表缩略图（最长边 200 的 WebP，命名 <封面名>-thumb.webp）；空 = 无缩略图
+    # （default.svg / SVG 封面 / 尚未回填）—— 前端据此不渲染 <img>，不给假封面也不留空洞
+    cover_thumb_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     # web=网页应用 zip=文件包 link=外部链接
     demo_type: Mapped[str] = mapped_column(String(16), default="web", nullable=False, index=True)
     external_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)

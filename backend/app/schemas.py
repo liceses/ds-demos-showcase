@@ -730,6 +730,9 @@ class TaskSummaryOut(BaseModel):
     description: str = ""
     # 题面摘录：无描述时取该题下第一件作品的提示词（列表页要能看懂题目是什么）
     prompt_excerpt: str = ""
+    # 题目行的代表封面（200px 缩略图）：该题下排序第一且有缩略图的已上架作品；
+    # 空 = 该题没有任何带缩略图的作品（如全是 default.svg）→ 前端不渲染图片
+    cover_thumb_url: str = ""
     category: str | None = None
     status: str = "active"
     demo_count: int = 0

@@ -97,7 +97,9 @@ fs.writeFileSync(OUT_MD, md)
 // hash 只覆盖"源"（令牌文件内容），不受本脚本排版变化影响
 const crypto = await import('node:crypto')
 const h = crypto.createHash('sha256')
-for (const f of files) h.update(f + '\n' + fs.readFileSync(path.join(TOKENS_DIR, f), 'utf8'))
+// **必须归一 EOL**：hash 覆盖的是文件内容，而工作区行尾随平台/autocrlf 变（Windows CRLF vs CI 检出 LF）——
+// 不归一会算两个 hash，CI 的「⑤ 令牌表 hash 对账」必红（2026-09-13 a295a68 真实事故）。
+for (const f of files) h.update(f + '\n' + fs.readFileSync(path.join(TOKENS_DIR, f), 'utf8').replace(/\r\n/g, '\n'))
 const hash = h.digest('hex')
 fs.writeFileSync(OUT_HASH, hash + '\n')
 

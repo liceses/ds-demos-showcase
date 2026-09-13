@@ -210,7 +210,8 @@ describe('⑤ 令牌表与 tokens/*.css 同步（规范里的表是生成物，�
 
   it('hash 对账：改了 tokens/*.css 必须重跑 tooling/uiux-tokens.mjs', () => {
     const h = createHash('sha256')
-    for (const { f, text } of sources()) h.update(f + '\n' + text)
+    // 归一 EOL：工作区 CRLF（Windows）与 CI 检出 LF 必须算出同一个 hash（真实事故：a295a68 CI 红）
+    for (const { f, text } of sources()) h.update(f + '\n' + text.replace(/\r\n/g, '\n'))
     expect(readFileSync(HASH_FILE, 'utf8').trim(), '令牌文件已改但令牌表没重跑：node tooling/uiux-tokens.mjs').toBe(h.digest('hex'))
   })
 

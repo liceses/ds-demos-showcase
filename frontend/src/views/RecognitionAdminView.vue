@@ -129,11 +129,11 @@ onMounted(load)
     <p class="sub">管理员添加赞助者与致谢名单，前台「关于本站」页展示。</p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div v-if="error" class="notice notice-error">{{ error }}</div>
 
-    <div class="card card-default" style="max-width: 520px; padding: 20px; margin-bottom: 20px">
-      <h2 style="margin-bottom: 12px">{{ editing ? '编辑' : '添加' }}（{{ form.kind === 'sponsor' ? '赞助' : '致谢' }}）</h2>
+    <div class="card card-default" style="max-width: 520px; padding: var(--sp-20); margin-bottom: var(--sp-20)">
+      <h2 style="margin-bottom: var(--sp-12)">{{ editing ? '编辑' : '添加' }}（{{ form.kind === 'sponsor' ? '赞助' : '致谢' }}）</h2>
       <div class="form-stack">
         <div class="filter-row" style="margin-bottom: 0">
           <select v-model="form.kind" class="input" style="max-width: 120px" @change="kind = form.kind; resetForm()">
@@ -145,7 +145,7 @@ onMounted(load)
         <template v-if="form.kind === 'sponsor'">
           <div class="filter-row" style="margin-bottom: 0">
             <input v-model.number="form.amount" class="input" type="number" min="0" placeholder="金额（元，可空）" style="max-width: 160px" />
-            <label style="display: flex; align-items: center; gap: 6px">
+            <label style="display: flex; align-items: center; gap: var(--sp-6)">
               <input v-model="form.show_amount" type="checkbox" style="width: 18px; height: 18px" /> 公开金额
             </label>
           </div>
@@ -159,7 +159,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="filter-row" style="gap: 8px; margin-bottom: 8px">
+    <div class="filter-row" style="gap: var(--sp-8); margin-bottom: var(--sp-8)">
       <button class="tab" :class="{ active: kind === 'sponsor' }" type="button" @click="kind = 'sponsor'; form.kind = 'sponsor'">赞助榜</button>
       <button class="tab" :class="{ active: kind === 'thanks' }" type="button" @click="kind = 'thanks'; form.kind = 'thanks'">致谢榜</button>
     </div>

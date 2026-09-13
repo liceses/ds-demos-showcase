@@ -4,7 +4,7 @@
  *
  * 收敛前：16 个页面手写 `<section class="page-hero"><span class="eyebrow"><h1 class="huge">`，
  * 5 个列表页手写 `page-hero--compact` + `h1.page-title`；4 个详情页还各自内联
- * `style="padding-bottom: 20px"` 与 `h1 style="margin-top: 0"`。
+ * `style="padding-bottom: var(--sp-20)"` 与 `h1 style="margin-top: 0"`。
  * 结果：同一件事 3 种写法，且"巨字档"（`.huge` = clamp(44px,8vw,120px)，1440 屏实测
  * 115.2px）与紧凑档（42px）混用 —— 登录页顶着 115px 巨标题配 440px 表单卡。
  *

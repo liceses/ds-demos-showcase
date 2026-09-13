@@ -34,7 +34,7 @@ function label(tag: { key: string; value: string }) {
 </script>
 
 <template>
-  <RouterLink :to="`/demo/${demo.slug}`" class="card card-hover demo-card animate-in">
+  <RouterLink :to="`/demo/${demo.slug}`" class="card card-hover demo-card animate-in b-lift">
     <div class="demo-cover">
       <img v-if="cover && !coverBroken" :src="cover" :alt="demo.title" loading="lazy" decoding="async" @error="onCoverError" />
       <div v-else class="cover-fallback" style="background: var(--wash-mint, #4ecdc4)">{{ demo.title[0] }}</div>
@@ -46,7 +46,7 @@ function label(tag: { key: string; value: string }) {
       <div v-if="showModelChips" class="demo-byline">
         <ModelChips :models="demo.models ?? []" :max="2" size="sm" plain prefix />
       </div>
-      <div class="filter-row" style="margin-bottom: 10px">
+      <div class="filter-row" style="margin-bottom: var(--sp-10)">
         <span
           v-for="t in demo.tags.filter((x) => x.key !== 'author' && (x.key !== 'model' || !showModelChips)).slice(0, 3)"
           :key="t.key + ':' + t.value"
@@ -79,7 +79,7 @@ function label(tag: { key: string; value: string }) {
 .rate-pair {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-4);
   white-space: nowrap;
 }
 .rate-star {

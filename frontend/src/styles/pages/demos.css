@@ -18,25 +18,25 @@
 .filter-label {
   align-self: center;
   min-width: 0;
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
   border: 2px solid var(--ink);
   background: var(--paper);
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .tag-selected-row {
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .tag-groups {
-  margin-top: 16px;
+  margin-top: var(--sp-16);
 }
 .tag-group {
   border: 3px solid var(--ink);
   background: var(--paper);
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-12);
 }
 .tag-group.mode-fixed { border-left: 8px solid var(--ink); }
 .tag-group.mode-open { border-left: 8px solid var(--yellow); }
@@ -44,8 +44,8 @@
 .tag-group-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: var(--sp-10);
+  padding: var(--sp-8) var(--sp-12);
   cursor: pointer;
   flex-wrap: wrap;
   user-select: none;
@@ -59,25 +59,25 @@
 .tag-group-title code {
   background: var(--yellow);
   border: 2px solid var(--ink);
-  padding: 0 4px;
-  font-size: 11px;
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-11);
 }
 .tag-group-toggle {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   border-bottom: 3px solid var(--ink);
   flex-shrink: 0;
 }
 .tag-group-chips {
-  padding: 0 12px 12px;
+  padding: 0 var(--sp-12) var(--sp-12);
   margin: 0;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .tag-group-collapsed {
-  padding: 0 12px 12px;
+  padding: 0 var(--sp-12) var(--sp-12);
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--ink-faint, #767676);
 }
 
@@ -140,7 +140,7 @@
   display: flex;
   justify-content: space-between;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft);
 }
 
@@ -148,13 +148,13 @@
 .vendor-strip {
   border: 2px solid var(--ink);
   background: var(--paper);
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 .vendor-strip-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
+  gap: var(--sp-8);
+  padding: 5px var(--sp-10);
   cursor: pointer;
   background: var(--mint);
   border-bottom: 2px solid var(--ink);
@@ -170,14 +170,14 @@
 }
 .vendor-strip-name {
   font-weight: 800;
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 .vendor-strip-toggle {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   border-bottom: 2px solid var(--ink);
 }
 .vendor-strip .filter-row {
-  padding: 8px;
+  padding: var(--sp-8);
 }

@@ -26,7 +26,7 @@ watch(
 
 <template>
   <div class="md-editor">
-    <div class="filter-row" style="margin-bottom: 8px">
+    <div class="filter-row" style="margin-bottom: var(--sp-8)">
       <button class="btn btn-sm btn-outline" type="button" @click="preview = !preview">{{ preview ? '编辑' : '预览' }}</button>
     </div>
     <textarea

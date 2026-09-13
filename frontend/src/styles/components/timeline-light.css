@@ -2,16 +2,16 @@
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .timeline-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--sp-10);
   background: var(--paper);
   border: 2px solid var(--ink);
   box-shadow: var(--sh-off-md) 0 var(--ink); /* R2 单源（原 4px 4px 0） */
-  padding: 12px 14px;
+  padding: var(--sp-12) var(--sp-14);
 }
 .timeline-body {
   flex: 1;

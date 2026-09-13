@@ -2,10 +2,10 @@
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
-  font-size: 13px;
-  margin-bottom: 20px;
+  font-size: var(--fs-13);
+  margin-bottom: var(--sp-20);
 }
 .breadcrumb a {
   text-decoration: none;

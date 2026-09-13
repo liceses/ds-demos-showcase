@@ -4,14 +4,14 @@
 .me-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-14);
 }
 .me-create {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
 }
 .me-create .input {
@@ -28,13 +28,13 @@
 .me-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 4px;
+  gap: var(--sp-14);
+  padding: var(--sp-14) var(--sp-4);
   border-bottom: 2px solid var(--ink);
 }
 .me-covers {
   display: flex;
-  gap: 4px;
+  gap: var(--sp-4);
   flex: 0 0 auto;
 }
 .me-cover {
@@ -45,7 +45,7 @@
   background: var(--paper-deep);
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 .me-cover--empty {
   color: var(--ink-faint, #767676);
@@ -58,7 +58,7 @@
   font-weight: 900;
   color: var(--ink);
   text-decoration: none;
-  font-size: 15px;
+  font-size: var(--fs-15);
 }
 .me-row-title:hover {
   text-decoration: underline;
@@ -66,20 +66,20 @@
 .me-row-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
-  margin: 4px 0 0;
-  font-size: 12px;
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-12);
   color: var(--ink-soft, #555);
 }
 .me-dot {
   color: var(--ink-faint, #767676);
 }
 .me-vis {
-  padding: 1px 6px;
+  padding: 1px var(--sp-6);
   border: 2px solid var(--ink);
   background: var(--paper);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
 }
 .me-vis--public {
@@ -88,7 +88,7 @@
 .me-row-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -104,7 +104,7 @@
   display: grid;
   place-items: center;
   font-weight: 900;
-  font-size: 20px;
+  font-size: var(--fs-20);
   color: var(--ink);
   text-decoration: none;
   overflow: hidden;
@@ -120,22 +120,22 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: var(--sp-14);
   flex-wrap: wrap;
-  padding: 14px 16px;
+  padding: var(--sp-14) var(--sp-16);
   margin: 0;
 }
 .hist-notice-text {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-13);
   max-width: 62ch;
 }
 .hist-group + .hist-group {
-  margin-top: 20px;
+  margin-top: var(--sp-20);
 }
 .hist-day {
   display: block;
-  margin: 18px 0 6px;
+  margin: 18px 0 var(--sp-6);
   color: var(--ink-soft, #555);
 }
 
@@ -143,7 +143,7 @@
 @media (max-width: 720px) {
   .me-row {
     flex-wrap: wrap;
-    row-gap: 10px;
+    row-gap: var(--sp-10);
   }
   .me-row-actions {
     width: 100%;
@@ -158,7 +158,7 @@
   .me-row--item .me-thumb {
     width: 56px;
     height: 40px;
-    font-size: 16px;
+    font-size: var(--fs-16);
   }
   .hist-notice {
     align-items: flex-start;
@@ -171,7 +171,7 @@
     display: none;
   }
   .me-row {
-    padding: 12px 2px;
+    padding: var(--sp-12) var(--sp-2);
   }
 }
 
@@ -179,7 +179,7 @@
 .avatar-row {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: var(--sp-16);
   flex-wrap: wrap;
 }
 .avatar-preview {
@@ -204,7 +204,7 @@
 .avatar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -217,20 +217,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--sp-16);
   flex-wrap: wrap;
 }
 .tab-group {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--sp-6);
   flex: 0 0 auto;
 }
 .privacy-off {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: var(--sp-12);
 }
 @media (max-width: 480px) {
   .avatar-preview {
@@ -246,24 +246,24 @@
 /* 详情页：加入收藏夹下拉面板（轻量，不用 Modal） */
 .fav-menu {
   position: relative;
-  margin-top: 8px;
+  margin-top: var(--sp-8);
   max-width: 320px;
   background: var(--paper, #fff);
   border: var(--border-w, 4px) solid var(--ink, #000);
   box-shadow: 6px 6px 0 0 var(--ink, #000);
-  padding: 6px;
+  padding: var(--sp-6);
 }
 .fav-menu-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   width: 100%;
   min-height: 36px;
-  padding: 6px 8px;
+  padding: var(--sp-6) var(--sp-8);
   background: none;
   border: none;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-13);
   text-align: left;
   cursor: pointer;
 }
@@ -285,8 +285,8 @@
 }
 .fav-menu-new {
   display: flex;
-  gap: 6px;
-  padding: 8px;
+  gap: var(--sp-6);
+  padding: var(--sp-8);
   border-top: 2px solid var(--ink, #000);
 }
 .fav-menu-new .input {
@@ -298,22 +298,22 @@
 .me-cards {
   list-style: none;
   margin: 0;
-  padding: 2px 0 6px;
+  padding: var(--sp-2) 0 var(--sp-6);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .me-card {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: var(--sp-8);
+  padding: var(--sp-12);
   text-decoration: none;
   color: var(--ink);
   height: 100%;
 }
 .me-card-title {
   font-weight: 900;
-  font-size: 14px;
+  font-size: var(--fs-14);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -326,7 +326,7 @@
     overflow-x: auto;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 10px;
+    padding-bottom: var(--sp-10);
   }
   .me-cards > li {
     scroll-snap-align: start;

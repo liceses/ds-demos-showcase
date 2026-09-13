@@ -49,13 +49,13 @@ async function queue() {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.refine.hint', '规则只出建议，改标签仍要人在收件箱批准。') }}</span>
-      <label class="filter-row" style="margin: 0; gap: 6px">
+      <label class="filter-row" style="margin: 0; gap: var(--sp-6)">
         <span class="muted">{{ t('admin.refine.minConf', '置信度 ≥') }}</span>
         <input v-model.number="minConfidence" class="input" type="number" step="0.05" min="0" max="1" style="max-width: 92px" />
       </label>
-      <label class="filter-row" style="margin: 0; gap: 6px">
+      <label class="filter-row" style="margin: 0; gap: var(--sp-6)">
         <span class="muted">{{ t('admin.refine.scanN', '扫描最近') }}</span>
         <input v-model.number="limit" class="input" type="number" step="100" min="1" max="2000" style="max-width: 100px" />
       </label>
@@ -63,7 +63,7 @@ async function queue() {
       <button class="btn btn-sm btn-primary" type="button" :disabled="loading || queueing || !data?.proposed" @click="queue">
         {{ queueing ? t('admin.refine.queueing', '生成候选中…') : t('admin.refine.queueBtn', '生成候选') }}
       </button>
-      <p class="hint" style="margin: 0 0 12px">
+      <p class="hint" style="margin: 0 0 var(--sp-12)">
         {{ t('admin.refine.confTier', '置信度分档（真实语料校准）：≥85% 基本可信 · 72%~84% 偶有误判（多为单词命中）· 建议先用默认 80% 批量确认，低段逐条看。') }}
       </p>
     </div>
@@ -90,10 +90,10 @@ async function queue() {
         </div>
       </div>
 
-      <div class="section-head" style="margin-top: 20px">
+      <div class="section-head" style="margin-top: var(--sp-20)">
         <h2 class="section-title">{{ t('admin.refine.distTitle', '当前 type 分布') }}</h2>
       </div>
-      <div class="filter-row" style="margin: 0 0 6px">
+      <div class="filter-row" style="margin: 0 0 var(--sp-6)">
         <RouterLink
           v-for="x in data.stats.type_dist"
           :key="x.value"
@@ -102,7 +102,7 @@ async function queue() {
         >{{ x.value }}<span class="count">{{ x.demos }}</span></RouterLink>
       </div>
 
-      <div class="section-head" style="margin-top: 20px">
+      <div class="section-head" style="margin-top: var(--sp-20)">
         <h2 class="section-title">{{ t('admin.refine.targetTitle', '建议去向') }}</h2>
         <span class="mini-stat"><b>{{ Object.keys(data.by_target).length }}</b> {{ t('admin.refine.targetN', '个新细分值') }}</span>
       </div>
@@ -111,7 +111,7 @@ async function queue() {
         <span v-for="(n, k) in data.by_target" :key="k" class="tag-chip mode-open">{{ k }}<span class="count">{{ n }}</span></span>
       </div>
 
-      <div class="section-head" style="margin-top: 20px">
+      <div class="section-head" style="margin-top: var(--sp-20)">
         <h2 class="section-title">{{ t('admin.refine.samplesTitle', '建议样例（前 40 条）') }}</h2>
       </div>
       <EmptyBox v-if="!data.samples.length" :text="t('admin.refine.empty', '规则在这些作品上没抓到可信信号')" />
@@ -137,7 +137,7 @@ async function queue() {
           </tr>
         </tbody>
       </table>
-      <p class="hint" style="margin-top: 10px">
+      <p class="hint" style="margin-top: var(--sp-10)">
         {{ t('admin.refine.footHint', '入队后到「收件箱」逐条或批量批准；批准时若目标固定值不存在会自动补进词表（type 是 fixed 键）。') }}
         <span v-if="total" class="muted">· {{ t('admin.refine.footTotal', '当前已上架 {n} 件', { n: total }) }}</span>
       </p>

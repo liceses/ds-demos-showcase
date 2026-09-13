@@ -42,8 +42,9 @@ html.theme-switching *::after {
   --card-coral-bg: var(--wash-red);
   --card-coral-shadow: var(--sh-off-xl) 0px 0px var(--k-warm-white);
 
-  /* t6 M5-U2（C2 重裁，08 §3）：实体强调卡影墨黑降饱和——电光青 #00d9ff 硬影 → --k-cyan-dim #2f95a3（≈5:1 可辨不刺眼） */
-  --shadow-entity: var(--sh-off-xl) 0px 0px var(--k-cyan-dim);
+  /* t6 M5-U2（C2 重裁，08 §3）：实体强调卡影墨黑降饱和 —— **2026-09 已废**：
+     实体卡影改为默认墨影（--shadow-entity = … var(--ink)），墨黑主题下 --ink 自动翻暖白，
+     不需要再为墨黑写一条覆盖（原先那条 --k-cyan-dim 覆盖与 --k-cyan-dim 令牌一并删除）。 */
 
   color-scheme: dark;
 }

@@ -68,18 +68,18 @@ onMounted(async () => {
     <span class="eyebrow">{{ t('tags.eyebrow', '标签系统') }}</span>
     <h1 class="page-title">{{ t('tags.title', '标签') }}</h1>
     <p class="sub">{{ t('tags.sub', '每个标签键定义一类属性：固定值是客观事实，开放值由用户创造，数字值是量化参数。') }}</p>
-    <div class="filter-row" style="margin-top: 16px">
+    <div class="filter-row" style="margin-top: var(--sp-16)">
       <span class="mini-stat"><b>{{ keys.length }}</b> {{ t('tags.keys', '标签键') }}</span>
       <span class="mini-stat"><b>{{ keys.reduce((n, k) => n + k.values.length, 0) }}</b> {{ t('tags.values', '标签值') }}</span>
     </div>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('tags.loading', '加载标签…') }}</div>
     <div v-else-if="error" class="notice notice-error">{{ error }}</div>
 
     <template v-else>
-      <div class="filter-row" style="margin-bottom: 14px">
+      <div class="filter-row" style="margin-bottom: var(--sp-14)">
         <button
           v-for="f in ['all', 'fixed', 'open', 'int']"
           :key="f"
@@ -112,7 +112,7 @@ onMounted(async () => {
               <span class="tag-pane-key-count">{{ k.demo_count }}</span>
             </button>
           </template>
-          <div v-if="!filteredKeys.length" class="muted" style="padding: 8px">{{ t('tags.noMatch', '无匹配标签') }}</div>
+          <div v-if="!filteredKeys.length" class="muted" style="padding: var(--sp-8)">{{ t('tags.noMatch', '无匹配标签') }}</div>
         </div>
 
         <!-- 右：值面板 -->
@@ -122,12 +122,12 @@ onMounted(async () => {
               <b>{{ keyLabel(activeTagKey.key, activeTagKey.label) }} <code>{{ activeTagKey.key }}</code></b>
               <span class="mode-badge" :class="'mode-badge-' + activeTagKey.mode">{{ modeLabel(activeTagKey.mode) }}</span>
             </div>
-            <p class="muted" style="margin: 0 0 10px">{{ activeTagKey.description || t('tags.noDesc', '暂无介绍') }}</p>
-            <div v-if="activeTagKey.mode === 'int' && activeTagKey.min != null && activeTagKey.max != null" class="muted" style="font-size: 12px; margin-bottom: 8px">
+            <p class="muted" style="margin: 0 0 var(--sp-10)">{{ activeTagKey.description || t('tags.noDesc', '暂无介绍') }}</p>
+            <div v-if="activeTagKey.mode === 'int' && activeTagKey.min != null && activeTagKey.max != null" class="muted" style="font-size: var(--fs-12); margin-bottom: var(--sp-8)">
               {{ t('tags.range', '值域') }}：{{ activeTagKey.min }} ~ {{ activeTagKey.max }}
             </div>
 
-            <div v-if="activeTagKey.values.length" class="tag-dist-bars" style="margin-bottom: 12px">
+            <div v-if="activeTagKey.values.length" class="tag-dist-bars" style="margin-bottom: var(--sp-12)">
               <div v-for="v in activeTagKey.values" :key="v.value" class="tag-dist-bar-col" :title="`${v.value}: ${v.demo_count}`">
                 <div class="tag-dist-bar-fill" :class="'mode-' + activeTagKey.mode" :style="{ height: Math.max(4, Math.round((v.demo_count / maxCount(activeTagKey)) * 36)) + 'px' }"></div>
                 <span class="tag-dist-bar-label">{{ tagLabel(v.value) }}</span>

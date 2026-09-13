@@ -78,10 +78,10 @@ function fallbackCopy(value: string): boolean {
 .copy-btn {
   display: inline-block;
   font-family: var(--font-body, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   letter-spacing: 0.04em;
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
   background: var(--paper, #fff);
   border: 2px solid var(--ink, #000);
   color: var(--ink, #000);

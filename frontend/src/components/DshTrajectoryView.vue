@@ -81,8 +81,8 @@ const blocks = computed(() => parse())
 </script>
 
 <template>
-  <div v-if="model || preset" class="card card-mint" style="padding: 12px 16px; margin-bottom: 14px; font-size: 13px">
-    <span v-if="model" class="mini-stat" style="margin-right: 16px"><b>模型</b> {{ model }}</span>
+  <div v-if="model || preset" class="card card-mint" style="padding: var(--sp-12) var(--sp-16); margin-bottom: var(--sp-14); font-size: var(--fs-13)">
+    <span v-if="model" class="mini-stat" style="margin-right: var(--sp-16)"><b>模型</b> {{ model }}</span>
     <span v-if="preset" class="mini-stat"><b>预设</b> {{ preset }}</span>
   </div>
 
@@ -90,7 +90,7 @@ const blocks = computed(() => parse())
     <div v-for="(b, i) in blocks" :key="i" class="dsh-block" :class="'dsh-' + b.kind">
       <div class="dsh-title">{{ b.title }}</div>
       <pre v-if="b.kind === 'tool'" class="dsh-code">{{ b.args }}</pre>
-      <pre v-else-if="b.kind === 'reason'" class="muted" style="margin: 0; font-size: 12px">{{ b.text }}</pre>
+      <pre v-else-if="b.kind === 'reason'" class="muted" style="margin: 0; font-size: var(--fs-12)">{{ b.text }}</pre>
       <p v-else class="dsh-text">{{ b.text }}</p>
     </div>
     <div v-if="!blocks.length" class="empty-box">未能解析会话轨迹</div>

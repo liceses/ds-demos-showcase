@@ -36,7 +36,7 @@ function onEntityModelPick(p: EntityPick) {
     <legend>{{ t('upload.s2Legend', '它是哪个模型做出来的？') }}</legend>
     <p class="uw-why">{{ t('upload.s2Why', '模型是本站的地基：只有声明了，作品才会进模型页与同题对比。') }}</p>
 
-    <div class="filter-row" style="margin: 0 0 8px">
+    <div class="filter-row" style="margin: 0 0 var(--sp-8)">
       <input v-model="modelQuery" class="input" type="search" :placeholder="t('upload.s2Search', '搜型号名…')" data-step-focus="2" style="max-width: 240px" />
       <span class="muted mono">{{ filteredExact.length }}</span>
     </div>
@@ -58,7 +58,7 @@ function onEntityModelPick(p: EntityPick) {
 
     <!-- T5·M5-F2 别名缺口根治：词表无命中且已输入、尚未声明时，展开模型库搜索（后端 model 搜索含别名） -->
     <div v-if="(modelQuery ?? '').trim() && !filteredExact.length && !chosenModelNames.length" class="uw-entity-fallback">
-      <p class="hint" style="margin: 4px 0 6px">
+      <p class="hint" style="margin: var(--sp-4) 0 var(--sp-6)">
         {{ t('upload.s2EntityNote', '按名称/别名在模型库里找（如输入了旧写法会命中真名）…') }}
       </p>
       <EntityPicker
@@ -74,33 +74,33 @@ function onEntityModelPick(p: EntityPick) {
     <div class="uw-fallbacks">
       <div class="uw-fb">
         <b>{{ t('upload.s2FbVendor', '知道厂商，不确定具体型号') }}</b>
-        <div v-if="fbVendorOpen" class="filter-row" style="margin-top: 6px; flex-wrap: wrap">
+        <div v-if="fbVendorOpen" class="filter-row" style="margin-top: var(--sp-6); flex-wrap: wrap">
           <button v-for="f in vendorFamilies" :key="f.value" type="button" class="tag-chip mode-open" :class="{ active: chosenModelNames.includes(f.value) }" @click="emit('pick', f.value)">
             {{ f.vendor }}
           </button>
           <p v-if="!vendorFamilies.length" class="muted">{{ t('upload.s2NoVendor', '厂商族节点还没建立，请选下一条。') }}</p>
           <button class="btn btn-sm btn-outline" type="button" @click="fbVendorOpen = false">▴ {{ t('upload.collapse', '收起') }}</button>
         </div>
-        <button v-else class="btn btn-sm btn-outline" type="button" style="margin-top: 6px" @click="fbVendorOpen = true">{{ t('upload.s2PickVendor', '选厂商 →') }}</button>
+        <button v-else class="btn btn-sm btn-outline" type="button" style="margin-top: var(--sp-6)" @click="fbVendorOpen = true">{{ t('upload.s2PickVendor', '选厂商 →') }}</button>
       </div>
       <div class="uw-fb">
         <b>{{ t('upload.s2FbUnknown', '完全不知道是什么模型') }}</b>
-        <button class="btn btn-sm btn-outline" type="button" style="margin-top: 6px" :class="{ active: chosenModelNames.includes(unknownValue) }" @click="emit('pick', unknownValue)">
+        <button class="btn btn-sm btn-outline" type="button" style="margin-top: var(--sp-6)" :class="{ active: chosenModelNames.includes(unknownValue) }" @click="emit('pick', unknownValue)">
           {{ t('upload.s2FbUnknownBtn', '标为「未标注」') }}
         </button>
       </div>
       <div class="uw-fb">
         <b>{{ t('upload.s2FbGuess', '网传灰测 / 内部版本，未经证实') }}</b>
-        <button class="btn btn-sm btn-outline" type="button" style="margin-top: 6px" :class="{ active: chosenModelNames.includes(guessValue) }" @click="emit('pick', guessValue)">
+        <button class="btn btn-sm btn-outline" type="button" style="margin-top: var(--sp-6)" :class="{ active: chosenModelNames.includes(guessValue) }" @click="emit('pick', guessValue)">
           {{ t('upload.s2FbGuessBtn', '标为「灰测未证实」') }}
         </button>
       </div>
     </div>
 
-    <p v-if="modelUncertain" class="hint" style="margin: 10px 0 0">
+    <p v-if="modelUncertain" class="hint" style="margin: var(--sp-10) 0 0">
       {{ t('upload.s2UncertainNote', '不确定也是有效信息：写下依据，站方日后确认了可以批量帮你归位。') }}
     </p>
-    <label v-if="modelUncertain" class="field" style="margin-top: 6px">
+    <label v-if="modelUncertain" class="field" style="margin-top: var(--sp-6)">
       {{ t('upload.modelHintLabel', '为什么不确定型号？（可选，但会帮助日后归类）') }}
       <input v-model="modelHint" class="input" maxlength="500" :placeholder="t('upload.modelHintPh', '如：网传灰测版 / 别人传的没写 / 只知道是 DeepSeek')" />
     </label>

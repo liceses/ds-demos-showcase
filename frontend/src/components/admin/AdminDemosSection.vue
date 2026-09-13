@@ -125,7 +125,7 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 14px">
+    <div class="filter-row" style="margin-bottom: var(--sp-14)">
       <div class="search-box search-box--grow">
         <input v-model="demoQuery" class="input" type="search" placeholder="搜索标题 / 作者 / slug / 标签…" @input="demoPage = 1" />
         <span class="search-icon">Q</span>
@@ -184,19 +184,22 @@ onMounted(load)
 .curate-cell {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 .chip-toggle {
   border: 2px solid #000;
   background: #fff;
   color: #000;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   line-height: 1;
-  padding: 4px 7px;
+  padding: var(--sp-4) 7px;
   cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
+  /* R7：色切 0ms 硬切 —— 原先写的是 `background 120ms ease, color 120ms ease`，
+     等于给颜色做了淡入淡出（违反 R7 与参考站 Rule 02"Brutal Snap"）。这里显式 0ms，
+     既保持"切换是离散事件"的语义，也让守护规则能识别（颜色属性只许 0ms）。 */
+  transition: background 0ms, color 0ms;
 }
 .chip-toggle.on {
   background: #000;
@@ -211,8 +214,8 @@ onMounted(load)
   border: 2px solid #000;
   background: #fff;
   font: inherit;
-  font-size: 12px;
-  padding: 3px 2px;
+  font-size: var(--fs-12);
+  padding: 3px var(--sp-2);
   cursor: pointer;
 }
 </style>

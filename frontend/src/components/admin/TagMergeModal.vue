@@ -110,7 +110,7 @@ async function execute() {
               <span class="mini-stat"><b>{{ result.affected_demos }}</b> 受影响 Demo</span>
               <span class="mini-stat"><b>{{ result.deleted_source ? '是' : '否' }}</b> 源值删除</span>
             </div>
-            <p v-if="result.dry_run" class="hint" style="margin: 8px 0 0">以上为预览，确认后才会执行。</p>
+            <p v-if="result.dry_run" class="hint" style="margin: var(--sp-8) 0 0">以上为预览，确认后才会执行。</p>
           </div>
 
           <div class="filter-row" style="margin: 0">

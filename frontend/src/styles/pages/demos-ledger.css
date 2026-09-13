@@ -13,7 +13,7 @@
 .tag-strip-toggle {
   background: var(--ink);
   color: var(--paper);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
 }
 .tag-strip-toggle:hover {
@@ -23,8 +23,8 @@
 
 /* 上传页 open/int 已有值建议行 */
 .tag-suggest-row {
-  margin: 6px 0 0;
-  gap: 6px;
+  margin: var(--sp-6) 0 0;
+  gap: var(--sp-6);
   flex-wrap: wrap;
 }
 .tag-suggest-label {

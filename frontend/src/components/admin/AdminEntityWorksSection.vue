@@ -158,21 +158,21 @@ async function detachDemo(slug: string) {
   margin-bottom: 22px;
 }
 .kc-zone-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   border-bottom: var(--border-w, 4px) solid var(--ink, #000);
-  padding-bottom: 6px;
-  margin-bottom: 12px;
+  padding-bottom: var(--sp-6);
+  margin-bottom: var(--sp-12);
   flex: 1 1 auto;
 }
 .kc-rel-row {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: center;
   flex-wrap: wrap;
-  padding: 6px 0;
+  padding: var(--sp-6) 0;
 }
 .kc-works {
   list-style: none;
@@ -181,9 +181,9 @@ async function detachDemo(slug: string) {
 }
 .kc-works li {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: baseline;
-  padding: 6px 0;
+  padding: var(--sp-6) 0;
   border-bottom: 2px solid var(--ink, #000);
 }
 .kc-work-link {

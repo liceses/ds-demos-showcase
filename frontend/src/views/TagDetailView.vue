@@ -73,7 +73,7 @@ onMounted(async () => {
     </div>
 
     <PageHero tight>
-      <div class="filter-row" style="margin: 0 0 12px">
+      <div class="filter-row" style="margin: 0 0 var(--sp-12)">
         <span v-if="keyDef" class="mode-badge" :class="'mode-badge-' + keyDef.mode">
           {{ keyLabel(keyDef.key, keyDef.label) }} · {{ modeLabel(keyDef.mode) }}
         </span>
@@ -87,14 +87,14 @@ onMounted(async () => {
         <template v-if="valueInfo?.description"><br />{{ valueInfo.description }}</template>
         <template v-if="!keyDef && !valueInfo?.description">{{ t('tagDetail.noDesc', '暂无介绍') }}</template>
       </p>
-      <div class="filter-row" style="margin-top: 16px">
+      <div class="filter-row" style="margin-top: var(--sp-16)">
         <span class="mini-stat"><b>{{ tag.demo_count }}</b> {{ t('tagDetail.demos', 'Demo') }}</span>
         <span class="mini-stat"><b>{{ sameKeyValues.length }}</b> {{ t('tagDetail.sameKey', '同键值') }}</span>
         <RouterLink v-if="forumCount > 0" class="mini-stat" :to="`/forum?tag=${tag.key}:${tag.value}`">{{ t('tagDetail.related', '相关讨论 {n} →', { n: forumCount }) }}</RouterLink>
       </div>
     </PageHero>
 
-    <section v-if="sameKeyValues.length > 1" class="section" style="padding-top: 8px">
+    <section v-if="sameKeyValues.length > 1" class="section" style="padding-top: var(--sp-8)">
       <div class="section-head">
         <h2 class="section-title">{{ t('tagDetail.switchKey', '同键切换') }}</h2>
       </div>
@@ -106,7 +106,7 @@ onMounted(async () => {
       />
     </section>
 
-    <section v-if="tag.children?.length" class="section" style="padding-top: 8px">
+    <section v-if="tag.children?.length" class="section" style="padding-top: var(--sp-8)">
       <div class="section-head">
         <h2 class="section-title">{{ t('tagDetail.children', '子标签') }}</h2>
       </div>

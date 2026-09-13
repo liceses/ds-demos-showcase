@@ -172,7 +172,7 @@ async function executeMerge() {
   <div class="tag-group-box">
     <!-- 合成台（admin） -->
     <div v-if="mode === 'admin'" class="tag-merge-craft">
-      <h3 style="margin: 0 0 10px">合并标签（合成台）</h3>
+      <h3 style="margin: 0 0 var(--sp-10)">合并标签（合成台）</h3>
       <div class="filter-row" style="margin: 0; flex-wrap: wrap">
         <input v-model="mergeFrom" class="input" style="max-width: 140px" placeholder="源值" />
         <span class="tag-merge-plus">+</span>
@@ -181,8 +181,8 @@ async function executeMerge() {
         <button class="btn btn-sm btn-secondary" type="button" :disabled="merging" @click="previewMerge">预览</button>
         <button v-if="mergeResult" class="btn btn-sm btn-danger" type="button" :disabled="merging" @click="executeMerge">执行</button>
       </div>
-      <div v-if="mergeError" class="notice notice-error" style="margin-top: 8px">{{ mergeError }}</div>
-      <div v-if="mergeResult" class="tag-merge-result" style="margin-top: 8px">
+      <div v-if="mergeError" class="notice notice-error" style="margin-top: var(--sp-8)">{{ mergeError }}</div>
+      <div v-if="mergeResult" class="tag-merge-result" style="margin-top: var(--sp-8)">
         <span class="mini-stat"><b>{{ mergeResult.merged }}</b> 迁移</span>
         <span class="mini-stat"><b>{{ mergeResult.removed_dups }}</b> 重复</span>
         <span class="mini-stat"><b>{{ mergeResult.affected_demos }}</b> Demo</span>
@@ -201,7 +201,7 @@ async function executeMerge() {
         <div class="group-card-head">
           <b>{{ g.group }}</b><span class="count">{{ g.values.length }}</span>
           <div v-if="mode === 'admin' && g.group !== '未分组'" class="filter-row" style="margin: 0; margin-left: auto">
-            <input v-model="renameDraft[g.group]" class="input" style="max-width: 90px; padding: 2px 6px" placeholder="新名" @keyup.enter="renameGroup(g.group)" />
+            <input v-model="renameDraft[g.group]" class="input" style="max-width: 90px; padding: var(--sp-2) var(--sp-6)" placeholder="新名" @keyup.enter="renameGroup(g.group)" />
             <button class="btn btn-sm btn-outline" type="button" @click="renameGroup(g.group)">重命名</button>
             <button class="btn btn-sm btn-dark" type="button" @click="clearGroup(g.group)">清除</button>
           </div>
@@ -228,14 +228,14 @@ async function executeMerge() {
           <input
             v-model="addDraft[g.group]"
             class="input"
-            style="max-width: 180px; padding: 2px 6px"
+            style="max-width: 180px; padding: var(--sp-2) var(--sp-6)"
             placeholder="输入值回车归组"
             @keyup.enter="addToGroup(g.group)"
           />
           <button class="btn btn-sm btn-outline" type="button" @click="addToGroup(g.group)">添加</button>
         </div>
 
-        <div v-if="mode === 'admin' && g.group === '未分组'" class="group-card-values" style="margin-top: 6px">
+        <div v-if="mode === 'admin' && g.group === '未分组'" class="group-card-values" style="margin-top: var(--sp-6)">
           <template v-for="v in visibleValues(g.values)" :key="v.value">
             <span class="tag-chip mode-fixed" :class="{ 'search-hit': hit(v.value) }">
               {{ tagLabel(v.value) }}<span class="count">{{ v.demo_count }}</span>

@@ -205,7 +205,7 @@ onMounted(() => {
     <ForumHeader v-if="route.meta.forum" />
 
     <div v-if="isMock" class="container">
-      <div class="notice notice-warn" style="margin-top: 14px">
+      <div class="notice notice-warn" style="margin-top: var(--sp-14)">
         <span v-if="lang === 'en'">{{ t('app.mockNotice', '') }}</span>
         <span v-else><strong>Mock 模式</strong>：当前使用内置占位数据，未连接后端。设置 <code>VITE_USE_MOCK=false</code> 后切换到真实 API。</span>
       </div>
@@ -326,11 +326,11 @@ onMounted(() => {
 .user-menu-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   cursor: pointer;
 }
 .user-menu-caret {
-  font-size: 10px;
+  font-size: var(--fs-10);
 }
 /* 管理员有待办时的红点提示（点击展开看合计） */
 .user-menu-dot {
@@ -355,12 +355,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: var(--sp-10);
+  padding: var(--sp-10) var(--sp-14);
   color: var(--ink, #000);
   text-decoration: none;
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-14);
   background: none;
   border: none;
   cursor: pointer;
@@ -375,25 +375,25 @@ onMounted(() => {
 }
 .user-menu-badge {
   min-width: 22px;
-  padding: 1px 6px;
+  padding: 1px var(--sp-6);
   text-align: center;
   background: var(--red, #ff6b6b);
   color: var(--on-accent, #000);
   border: 2px solid var(--ink, #000);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 900;
 }
 .topnav-cta {
-  margin-left: 14px; /* t36 实测：CTA 与认证簇仅隔 2px——转化主件脱离按钮堆，独立成组 */
+  margin-left: var(--sp-14); /* t36 实测：CTA 与认证簇仅隔 2px——转化主件脱离按钮堆，独立成组 */
 }
 /* ---- M1-fix-10 topnav 间距重排（t36 CDP 实测驱动）----
    实况：容器 1280 有 356px 余量但簇内全挤——nav 簇 gap 8px（文字间距 32px）、
    右簇 gap 8px、CTA 距注册 2px。修法=簇内呼吸，不动 space-between 的簇间分配。 */
 .topbar nav.topnav {
-  gap: 14px; /* 导航簇 8→14：文字间距 32→38px，静默文字链需要呼吸感 */
+  gap: var(--sp-14); /* 导航簇 8→14：文字间距 32→38px，静默文字链需要呼吸感 */
 }
 .topbar .topnav.topnav-tools {
-  gap: 10px; /* 右簇（功能钮）8→10：边框件之间留一线（原 topnav-desktop 选择器随 M2-1 右簇改名而更新） */
+  gap: var(--sp-10); /* 右簇（功能钮）8→10：边框件之间留一线（原 topnav-desktop 选择器随 M2-1 右簇改名而更新） */
 }
 
 /* 弹层登场（编排类豁免口径，R7 白名单内） */
@@ -464,14 +464,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-8);
 }
 .footer-link {
   color: var(--ink-soft, #555);
   text-decoration: none;
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 .footer-link:hover {
   color: var(--ink, #000);
@@ -484,5 +484,5 @@ onMounted(() => {
   background: var(--ink, #000);
 }
 .footer-ext {
-  font-size: 11px;
+  font-size: var(--fs-11);
 }</style>

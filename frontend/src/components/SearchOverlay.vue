@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
           <!-- 错误（三域全挂）：诚实报错 + 重试 -->
           <template v-else-if="allFailed">
             <div class="notice notice-error">{{ t('search.allFailed', '搜索请求失败——网络或服务暂时不可用') }}</div>
-            <button class="btn btn-sm btn-outline" style="margin-top: 10px" type="button" @click="run">{{ t('search.retry', '重试') }}</button>
+            <button class="btn btn-sm btn-outline" style="margin-top: var(--sp-10)" type="button" @click="run">{{ t('search.retry', '重试') }}</button>
           </template>
 
           <!-- 结果：三域分组（组间 2px 实线分割，节奏靠线不靠盒） -->
@@ -373,15 +373,15 @@ onBeforeUnmount(() => {
 @media (max-width: 720px) {
   .so-panel {
     width: calc(100% - 24px);
-    margin-top: 24px;
-    margin-bottom: 24px;
+    margin-top: var(--sp-24);
+    margin-bottom: var(--sp-24);
   }
 }
 .so-input-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 2px 12px;
+  gap: var(--sp-12);
+  padding: var(--sp-4) var(--sp-2) var(--sp-12);
   border-bottom: 2px solid var(--ink, #000);
 }
 .so-input-row:focus-within {
@@ -397,10 +397,10 @@ onBeforeUnmount(() => {
   border: none;
   background: none;
   font-family: var(--font-heading, sans-serif);
-  font-size: 20px;
+  font-size: var(--fs-20);
   font-weight: 800;
   color: var(--ink, #000);
-  padding: 8px 0;
+  padding: var(--sp-8) 0;
 }
 .so-input:focus {
   outline: none; /* 指示器交给行底线（focus-within 换色）——盒子轮廓在搜索条内是噪音 */
@@ -417,7 +417,7 @@ onBeforeUnmount(() => {
   background: var(--red, #ff6b6b);
   color: var(--on-accent, #000);
   font-weight: 900;
-  font-size: 14px;
+  font-size: var(--fs-14);
   cursor: pointer;
 }
 .so-close:hover {
@@ -426,12 +426,12 @@ onBeforeUnmount(() => {
 }
 
 .so-body {
-  padding: 16px 2px 4px;
+  padding: var(--sp-16) var(--sp-2) var(--sp-4);
   min-height: 120px;
 }
 /* ---- 组间 2px 实线分割（三律第 2 律）：分组节奏靠线不靠盒 ---- */
 .so-group {
-  padding: 12px 0 6px;
+  padding: var(--sp-12) 0 var(--sp-6);
 }
 .so-group + .so-group {
   border-top: 2px solid var(--ink, #000);
@@ -439,17 +439,17 @@ onBeforeUnmount(() => {
 .so-kicker {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin: 0 0 4px;
+  gap: var(--sp-8);
+  margin: 0 0 var(--sp-4);
   font-family: var(--font-heading, sans-serif);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink, #000);
 }
 .so-count {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   color: var(--ink-soft, #555);
   font-variant-numeric: tabular-nums;
@@ -458,23 +458,23 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-12);
   min-height: 44px; /* 触达底线 */
-  padding: 6px 10px;
+  padding: var(--sp-6) var(--sp-10);
   margin: 0 -10px;
   text-decoration: none;
   color: var(--ink, #000);
 }
 .so-item-title {
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-14);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .so-item-meta {
   flex: none;
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft, #555);
   font-variant-numeric: tabular-nums;
 }
@@ -491,31 +491,31 @@ onBeforeUnmount(() => {
 }
 /* ---- 空态（诚实 + 出口） ---- */
 .so-empty {
-  padding: 20px 2px 8px;
+  padding: var(--sp-20) var(--sp-2) var(--sp-8);
 }
 .so-empty-title {
-  margin: 0 0 4px;
-  font-size: 16px;
+  margin: 0 0 var(--sp-4);
+  font-size: var(--fs-16);
   font-weight: 900;
   color: var(--ink, #000);
 }
 .so-empty-hint {
-  margin: 0 0 14px;
-  font-size: 13px;
+  margin: 0 0 var(--sp-14);
+  font-size: var(--fs-13);
   color: var(--ink-soft, #555);
 }
 .so-empty-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 /* ---- 空闲：域直达 ---- */
 .so-idle {
-  padding: 4px 0 8px;
+  padding: var(--sp-4) 0 var(--sp-8);
 }
 .so-idle-hint {
-  margin: 0 0 8px;
-  font-size: 13px;
+  margin: 0 0 var(--sp-8);
+  font-size: var(--fs-13);
   color: var(--ink-soft, #555);
 }
 /* ---- 页脚：兜底链 + 键位提示（触屏隐藏键位） ---- */
@@ -523,15 +523,15 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-12);
   flex-wrap: wrap;
-  margin-top: 10px;
-  padding: 12px 2px 0;
+  margin-top: var(--sp-10);
+  padding: var(--sp-12) var(--sp-2) 0;
   border-top: 2px solid var(--ink, #000);
 }
 .so-all {
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--ink, #000);
   text-decoration: none;
 }
@@ -545,7 +545,7 @@ onBeforeUnmount(() => {
 }
 .so-hints {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft, #555);
 }
 @media (hover: none) {

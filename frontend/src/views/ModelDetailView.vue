@@ -101,8 +101,8 @@ watch(() => route.params.slug, load, { immediate: true })
 
   <!-- 错误态必须给出口：只有一行红字等于把用户困在死路上（截图里就出现过裸 "Not Found"） -->
   <section v-else-if="error" class="empty-box">
-    <p style="margin-bottom: 6px">{{ t('models.loadFailed', '这个模型页没能加载出来') }}</p>
-    <p class="muted mono" style="font-size: 12px; margin: 0 0 14px">{{ error }}</p>
+    <p style="margin-bottom: var(--sp-6)">{{ t('models.loadFailed', '这个模型页没能加载出来') }}</p>
+    <p class="muted mono" style="font-size: var(--fs-12); margin: 0 0 var(--sp-14)">{{ error }}</p>
     <div class="filter-row" style="justify-content: center">
       <button class="btn btn-sm btn-primary" type="button" @click="load">↻ {{ t('models.retry', '重试') }}</button>
       <RouterLink class="btn btn-sm btn-outline" to="/models">{{ t('models.backList', '返回模型列表') }}</RouterLink>
@@ -116,7 +116,7 @@ watch(() => route.params.slug, load, { immediate: true })
         <EntityStamp :name="model.name" :vendor="model.vendor" size="lg" />
         <div>
           <h1 class="page-title">{{ tagLabel(model.name) }}</h1>
-          <div class="filter-row" style="margin-top: 6px; gap: 8px">
+          <div class="filter-row" style="margin-top: var(--sp-6); gap: var(--sp-8)">
             <span v-if="model.vendor" class="mini-stat"><b>{{ model.vendor }}</b> {{ t('models.vendor', '厂商') }}</span>
             <span v-if="model.status !== 'active'" class="mode-badge" :class="entityStatusClass(model.status)">
               {{ t('models.status_' + (statusText[model.status] || model.status), model.status) }}
@@ -125,7 +125,7 @@ watch(() => route.params.slug, load, { immediate: true })
           </div>
         </div>
       </div>
-      <p v-if="model.description" class="sub" style="margin-top: 10px">{{ model.description }}</p>
+      <p v-if="model.description" class="sub" style="margin-top: var(--sp-10)">{{ model.description }}</p>
     </PageHero>
 
     <!-- 档案统计：分数是"事实的摘要"（收缩社区分），必须与票数、样本档同屏 -->
@@ -155,7 +155,7 @@ watch(() => route.params.slug, load, { immediate: true })
             <span class="dist-count">{{ d.demos }}</span>
           </div>
         </div>
-        <p v-else class="muted" style="font-size: 13px; margin: 0">{{ t('models.emptyTypes', '暂无类型标签') }}</p>
+        <p v-else class="muted" style="font-size: var(--fs-13); margin: 0">{{ t('models.emptyTypes', '暂无类型标签') }}</p>
       </div>
       <div class="card card-default archive-card">
         <h3 class="archive-title">{{ t('models.gamesTitle', '常见玩法') }}</h3>
@@ -165,18 +165,18 @@ watch(() => route.params.slug, load, { immediate: true })
             <span class="dist-count">{{ d.demos }}</span>
           </div>
         </div>
-        <p v-else class="muted" style="font-size: 13px; margin: 0">{{ t('models.emptyGames', '暂无玩法标签') }}</p>
+        <p v-else class="muted" style="font-size: var(--fs-13); margin: 0">{{ t('models.emptyGames', '暂无玩法标签') }}</p>
       </div>
     </div>
 
     <!-- 热门任务（同题对比入口）：每行 = 任务 + 该模型作品数 + 对比视图 -->
     <div class="section-head" style="margin-top: 28px">
       <h2 class="section-title">{{ t('models.hotTasks', '热门任务') }}</h2>
-      <span class="muted" style="font-size: 13px">{{ t('models.compareSub', '进入任务即可与其他模型同题对比') }}</span>
+      <span class="muted" style="font-size: var(--fs-13)">{{ t('models.compareSub', '进入任务即可与其他模型同题对比') }}</span>
     </div>
     <div v-if="!model.tasks.length" class="empty-box">{{ t('models.emptyTasks', '还没有参与任务') }}</div>
     <div v-else class="task-lines">
-      <RouterLink v-for="tk in model.tasks" :key="tk.slug" class="task-line" :to="`/tasks/${tk.slug}`">
+      <RouterLink v-for="tk in model.tasks" :key="tk.slug" class="task-line b-lift" :to="`/tasks/${tk.slug}`">
         <span class="task-line-title">{{ tk.title }}</span>
         <span class="task-line-count">{{ t('models.taskWorks', '{n} 个作品', { n: tk.demo_count }) }}</span>
         <span class="task-line-cta">{{ t('models.compareCta', '同题对比 →') }}</span>
@@ -195,11 +195,11 @@ watch(() => route.params.slug, load, { immediate: true })
           :class="{ active: demoSort === o[0] }"
           @click="setSort(o[0])"
         >{{ o[1] }}</button>
-        <span class="muted mono" style="font-size: 12px">{{ demoItems.length }} / {{ demoTotal }}</span>
+        <span class="muted mono" style="font-size: var(--fs-12)">{{ demoItems.length }} / {{ demoTotal }}</span>
       </div>
     </div>
     <!-- facet：用本页已有的类型分布做筛选，答的是"它擅长做什么" -->
-    <div v-if="model.type_dist.length" class="filter-row" style="margin: 0 0 12px">
+    <div v-if="model.type_dist.length" class="filter-row" style="margin: 0 0 var(--sp-12)">
       <span class="filter-label">{{ t('models.facetLabel', '按类型筛') }}</span>
       <button
         v-for="d in model.type_dist.slice(0, 6)"
@@ -229,7 +229,7 @@ watch(() => route.params.slug, load, { immediate: true })
       </template>
     </LoadMore>
 
-    <p class="muted mono" style="text-align: center; margin-top: 24px">
+    <p class="muted mono" style="text-align: center; margin-top: var(--sp-24)">
       {{ t('models.since', '收录') }} {{ parseDate(model.created_at).toLocaleDateString(currentLocale()) }}
     </p>
   </template>

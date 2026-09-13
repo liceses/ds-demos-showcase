@@ -1,9 +1,9 @@
 /* ---------- v2 卡片署名（轻 chip）：让位给标题，不做卡内最高对比元素 ---------- */
-.demo-byline { margin: 2px 0 8px; }
+.demo-byline { margin: var(--sp-2) 0 var(--sp-8); }
 .model-by {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft);
-  margin-right: 4px;
+  margin-right: var(--sp-4);
   letter-spacing: 0.04em;
 }
 .model-chip.model-chip-plain {
@@ -11,7 +11,7 @@
   border-style: solid;
   background: var(--paper-deep);
   padding: 1px 7px;
-  font-size: 11px;
+  font-size: var(--fs-11);
   text-decoration: none;
 }
 .model-chip.model-chip-plain:hover { background: var(--yellow); }
@@ -22,12 +22,12 @@
   border-style: dashed;
   cursor: default;
 }
-.chips-plain .model-chip-more { font-size: 11px; color: var(--ink-soft); }
+.chips-plain .model-chip-more { font-size: var(--fs-11); color: var(--ink-soft); }
 .stat-card .stat-sub {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   letter-spacing: 0.02em;
-  margin-top: 2px;
+  margin-top: var(--sp-2);
 }
 

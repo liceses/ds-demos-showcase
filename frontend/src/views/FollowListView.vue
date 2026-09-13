@@ -88,7 +88,7 @@ onMounted(async () => {
     </p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <LoadingRow v-if="loading" :text="t('user.fl.loading', '加载名单…')" />
     <EmptyBox

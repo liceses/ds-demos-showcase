@@ -82,23 +82,23 @@ const updatedLabel = computed(() =>
       <PageHero tight>
         <span class="eyebrow">{{ t('fav.title', '收藏夹') }}</span>
         <h1 class="page-title">{{ collection.title }}</h1>
-        <p class="me-row-meta" style="margin-top: 10px">
+        <p class="me-row-meta" style="margin-top: var(--sp-10)">
           <RouterLink :to="`/user/${collection.owner_username}`" style="font-weight: 900">@{{ collection.owner_username }}</RouterLink>
           <span class="me-dot" aria-hidden="true">·</span>
           <span class="mono">{{ collection.item_count }} {{ t('fav.items', '件') }}</span>
           <span class="me-dot" aria-hidden="true">·</span>
           <span class="muted mono">{{ t('fav.updatedOn', '更新于 {d}', { d: updatedLabel }) }}</span>
         </p>
-        <div class="filter-row" style="margin-top: 12px">
+        <div class="filter-row" style="margin-top: var(--sp-12)">
           <CopyButton :text="shareLink" :label="t('fav.copyLink', '复制链接')" />
           <RouterLink class="btn btn-sm btn-outline" :to="`/user/${collection.owner_username}/collections`">
             {{ t('fav.moreOf', 'TA 的其他收藏夹 →') }}
           </RouterLink>
         </div>
-        <p v-if="collection.description" class="hint" style="margin-top: 10px">{{ collection.description }}</p>
+        <p v-if="collection.description" class="hint" style="margin-top: var(--sp-10)">{{ collection.description }}</p>
       </PageHero>
 
-      <section class="section" style="padding-top: 8px">
+      <section class="section" style="padding-top: var(--sp-8)">
         <p class="card card-mint hist-notice">
           <span>{{ t('fav.publicNotice', '这是一份公开收藏夹，任何拿到链接的人都能查看。') }}</span>
         </p>

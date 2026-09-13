@@ -738,7 +738,7 @@ onMounted(load)
           <span class="dv-disclose-hint">{{ t('demo.sessionHint', '点开可读原始对话轨迹') }}</span>
         </summary>
         <div class="dv-disclose-body">
-          <div class="filter-row" style="margin-bottom: 10px">
+          <div class="filter-row" style="margin-bottom: var(--sp-10)">
             <button
               v-for="log in sessionLogs"
               :key="log.id"
@@ -751,7 +751,7 @@ onMounted(load)
             </button>
           </div>
           <div v-if="!selectedLog" class="muted">{{ t('demo.pickSession', '选一个文件查看内容') }}</div>
-          <div v-else class="card card-mint" style="padding: 20px">
+          <div v-else class="card card-mint" style="padding: var(--sp-20)">
             <div v-if="loadingLog" class="loading-row"><span class="spinner"></span> {{ t('demo.loadingSession', '加载会话…') }}</div>
             <DshTrajectoryView v-else-if="selectedLog.endsWith('.jsonl')" :raw="logContent" />
             <MarkdownRenderer v-else :content="logContent" />
@@ -771,7 +771,7 @@ onMounted(load)
               <span class="tag-chip active">{{ t2.version_label }}</span>
               <div class="timeline-body">
                 <p style="margin: 0">{{ t2.message }}</p>
-                <RouterLink v-if="t2.old_slug" class="btn btn-sm btn-outline" :to="`/demo/${t2.old_slug}`" style="margin-top: 6px">
+                <RouterLink v-if="t2.old_slug" class="btn btn-sm btn-outline" :to="`/demo/${t2.old_slug}`" style="margin-top: var(--sp-6)">
                   {{ t('demo.viewOld', '查看旧版 →') }}
                 </RouterLink>
               </div>
@@ -804,7 +804,7 @@ onMounted(load)
     </section>
 
     <!-- v2：同提示词的其他作品（同一句话交给不同模型 → 严格复现对比，零 Task 依赖） -->
-    <section v-if="samePrompt" class="section dv-cmp dv-cmp-repro" style="padding-top: 8px">
+    <section v-if="samePrompt" class="section dv-cmp dv-cmp-repro" style="padding-top: var(--sp-8)">
       <div class="section-head">
         <h2 class="section-title">{{ t('demo.samePromptTitle', '严格复现：同一句提示词，别的模型交出什么') }}</h2>
         <span class="dv-cmp-tag mono">PROMPT =</span>
@@ -817,7 +817,7 @@ onMounted(load)
         <p class="same-prompt-text">{{ samePrompt.prompt }}</p>
       </div>
       <!-- P2-e：CSS 多列瀑布流（.waterfall）统一到 <MasonryGrid> —— 见下方相关推荐同款 -->
-      <MasonryGrid :items="samePrompt.items" :item-key="(d: unknown) => (d as DemoSummary).slug" style="margin-top: 14px">
+      <MasonryGrid :items="samePrompt.items" :item-key="(d: unknown) => (d as DemoSummary).slug" style="margin-top: var(--sp-14)">
         <template #default="{ item }">
           <DemoCard :demo="item as DemoSummary" />
         </template>
@@ -826,7 +826,7 @@ onMounted(load)
 
     <!-- 相关推荐 -->
     <!-- v2 §7.3：同题作品（这道题别的模型交了什么）—— 与同提示词互补：一个严格复现，一个同命题发挥 -->
-    <section v-if="sameTask" class="section dv-cmp dv-cmp-task" style="padding-top: 8px">
+    <section v-if="sameTask" class="section dv-cmp dv-cmp-task" style="padding-top: var(--sp-8)">
       <div class="section-head">
         <h2 class="section-title">{{ t('demo.sameTaskTitle', '同命题发挥：这道题其他模型交了什么') }}</h2>
         <span class="dv-cmp-tag mono">TASK =</span>
@@ -834,7 +834,7 @@ onMounted(load)
           {{ t('demo.sameTaskCta', '看同题对比 →') }}
         </RouterLink>
       </div>
-      <p class="muted" style="margin: 0 0 10px">
+      <p class="muted" style="margin: 0 0 var(--sp-10)">
         <b>{{ sameTask.title }}</b>
         <span v-if="sameTask.description"> · {{ sameTask.description }}</span>
       </p>
@@ -842,7 +842,7 @@ onMounted(load)
         <RouterLink
           v-for="d in sameTaskOthers"
           :key="d.slug"
-          class="task-line"
+          class="task-line b-lift"
           :to="`/demo/${d.slug}`"
         >
           <span class="task-line-title">{{ d.title }}</span>
@@ -853,7 +853,7 @@ onMounted(load)
       </div>
     </section>
 
-    <section class="section dv-cmp dv-cmp-random" style="padding-top: 8px">
+    <section class="section dv-cmp dv-cmp-random" style="padding-top: var(--sp-8)">
       <div class="section-head">
         <h2 class="section-title">{{ t('demo.related', '随便逛逛（与本页无因果关系）') }}</h2>
         <span class="dv-cmp-tag mono">RANDOM</span>
@@ -875,7 +875,7 @@ onMounted(load)
           :is="n.peek ? 'button' : 'RouterLink'"
           v-for="n in browseNext"
           :key="n.to"
-          class="dv-next-card"
+          class="dv-next-card b-lift"
           :type="n.peek ? 'button' : undefined"
           :to="n.peek ? undefined : n.to"
           @click="n.peek ? (peekTarget = n.peek) : undefined"
@@ -982,11 +982,11 @@ onMounted(load)
   left: 8px;
   bottom: 8px;
   font-family: var(--font-body, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   background: var(--paper, #fff);
   border: 2px solid var(--ink, #000);
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
 }
 /* 覆盖层骨架：stamp-in 微档出场（复用全局 b-stamp-in 关键帧与令牌） */
 .pv-overlay {
@@ -1000,13 +1000,13 @@ onMounted(load)
 }
 .pv-loading-inner {
   display: grid;
-  gap: 10px;
+  gap: var(--sp-10);
   justify-items: center;
-  padding: 16px 20px;
+  padding: var(--sp-16) var(--sp-20);
   border: 4px solid var(--ink, #000);
   background: var(--paper, #fff);
   font-family: var(--font-body, monospace);
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 /* 蚂蚁线（b-march 语汇，照 preview 样板；关键帧本地定义） */
 .pv-march {
@@ -1038,9 +1038,9 @@ onMounted(load)
   letter-spacing: -0.02em;
 }
 .pv-fail-hint {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--ink-soft, #555);
-  margin: 4px 0 10px;
+  margin: var(--sp-4) 0 var(--sp-10);
   max-width: 40ch;
   text-align: center;
 }
@@ -1083,13 +1083,13 @@ onMounted(load)
   place-items: center;
   align-content: center;
   gap: 3px;
-  padding: 6px 2px;
+  padding: var(--sp-6) var(--sp-2);
   background: none;
   border: none;
   border-right: 2px solid var(--ink, #000);
   color: var(--ink, #000);
   font-family: var(--font-body, monospace);
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 800;
   letter-spacing: 0.05em;
   cursor: pointer;
@@ -1138,16 +1138,16 @@ onMounted(load)
   right: 8px;
   z-index: var(--z-local);
   display: inline-flex;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .dv-fs-enter {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   min-height: 36px;
-  padding: 5px 10px;
+  padding: 5px var(--sp-10);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   background: var(--paper, #fff);
   color: var(--ink, #000);

@@ -47,9 +47,14 @@
   --shadow-red: var(--sh-off-xl) 0px 0px var(--red);
   --shadow-yellow: var(--sh-off-xl) 0px 0px var(--yellow);
   --shadow-black-sm: var(--sh-off-sm) 0 0 var(--ink); /* P0-1 断 token 修复：小号硬影（此前未定义，L4908 一处引用带临时 fallback） */
-  /* t6 M5-U2（C2，08 §3）：实体强调卡单一语义影（models/explore/tasks 列表卡 + task 对比行）——
-     纸白=--shadow-teal 保值零漂移；墨黑由 themes.css 换绑 --k-cyan-dim（电光青降饱和档） */
-  --shadow-entity: var(--shadow-teal);
+  /* t6 M5-U2（C2，08 §3）：实体强调卡单一语义影（models/explore/tasks 列表卡 + task 对比行）
+     —— 2026-09 用户拍板改口径：**颜色 = 墨**（不再是青色），**档位 = 与探索页题目行同一套**
+     （3px 静止 / hover 5px）。两处共用同一对令牌 → 物理上不可能再分叉。
+     hover 档见 --shadow-entity-hover；墨黑主题不再单独覆盖（颜色跟着 --ink 自动翻暖白）。 */
+  --shadow-entity: var(--sh-off-uw) 0px 0px var(--ink);
+  --shadow-entity-hover: var(--sh-off-hov-uw) 0px 0px var(--ink);
+  /* 卡片 hover 换彩色的顶格档（参考站 Rule 04：卡片 hover 影 8→12 + 换成强调色） */
+  --shadow-hover-red: var(--sh-off-2xl) 0px 0px var(--red);
 
   color-scheme: light;
   font-family: var(--font-body);

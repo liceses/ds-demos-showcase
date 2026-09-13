@@ -97,7 +97,7 @@ function closeAndBlur(e: KeyboardEvent) {
     place-items: center;
     width: 14px;
     height: 14px;
-    margin-left: 2px;
+    margin-left: var(--sp-2);
     border: 1.5px solid currentColor;
     border-radius: 50%; /* 装饰圆豁免 */
     font: 700 9px/1 var(--font-body, ui-monospace, monospace);
@@ -118,13 +118,13 @@ function closeAndBlur(e: KeyboardEvent) {
   top: calc(100% + 6px);
   z-index: var(--z-dropdown); /* token 化前的临时层级（对齐 --z-modal 段位） */
   max-width: 260px;
-  padding: 8px 10px;
+  padding: var(--sp-8) var(--sp-10);
   border: 2px solid var(--ink, #000);
   background: var(--paper, #fff);
   color: var(--ink, #000);
   box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 1);
   font-family: var(--font-body, ui-monospace, monospace);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 400;
   line-height: 1.55;
   letter-spacing: 0;

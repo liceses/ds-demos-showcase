@@ -193,7 +193,7 @@ onMounted(() => {
     <h1 class="page-title">管理</h1>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <!-- 第 1 期壳层：左侧两级导航（带队列徽章 + 可搜索 + ↑↓ 键切换），窄屏退化为下拉 -->
     <div class="admin-shell">
       <aside class="ad-nav" @keydown="onNavKeydown">

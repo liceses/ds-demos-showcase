@@ -2,38 +2,36 @@
 .explore-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .explore-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: var(--sp-12);
+  padding: var(--sp-12) var(--sp-14);
   text-decoration: none;
   color: var(--ink);
-  transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
-}
-.explore-cell:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--shadow-black);
+  /* hover/active 物理已收进微交互库 .b-lift（模板加类）。
+     原先这里写的是 hover → var(--shadow-black) 6px：静止 8px → hover 6px = **影缩**，
+     违反 R6 与参考站 Rule 04 —— 收库后按 --shadow-entity-hover 走"3px → 5px 增大"。 */
 }
 .explore-cell-main { min-width: 0; }
 .explore-cell-name {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 15px;
+  font-size: var(--fs-15);
   text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.explore-cell-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.explore-cell-meta { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-4); flex-wrap: wrap; }
 .explore-fold {
   display: inline-block;
-  margin-top: 10px;
-  font-size: 12px;
+  margin-top: var(--sp-10);
+  font-size: var(--fs-12);
   font-weight: 700;
-  padding: 4px 10px;
+  padding: var(--sp-4) var(--sp-10);
   background: var(--mint);
   color: var(--on-accent, #000);
   border: 2px solid var(--ink);
@@ -47,11 +45,11 @@
 .explore-fold-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 6px 12px;
+  gap: var(--sp-6);
+  margin-top: var(--sp-10);
+  padding: var(--sp-6) var(--sp-12);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
   background: var(--mint);
   color: var(--ink);
@@ -71,7 +69,7 @@
   .task-lines {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-    gap: 12px;
+    gap: var(--sp-12);
   }
 }
 /* ≤720：折叠按钮与题目行的触达底线上到 44px */
@@ -83,14 +81,14 @@
   /* 模型格子改两列：5 个格子从 350px 降到 ~140px，把"题目"段推进首屏 */
   .explore-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: var(--sp-10);
   }
   .explore-cell {
-    padding: 10px;
-    gap: 8px;
+    padding: var(--sp-10);
+    gap: var(--sp-8);
   }
   .explore-cell-name {
-    font-size: 13px;
+    font-size: var(--fs-13);
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -112,21 +110,21 @@
 .explore-facets {
   border: var(--border-w) solid var(--ink);
   background: var(--paper);
-  padding: 4px 14px;
+  padding: var(--sp-4) var(--sp-14);
 }
 .explore-facet-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 10px 0;
+  gap: var(--sp-12);
+  padding: var(--sp-10) 0;
 }
 .explore-facet-row + .explore-facet-row {
   border-top: 2px dashed var(--ink-faint, #9a9a9a);
 }
 .explore-facet-key {
   flex: 0 0 72px;
-  padding-top: 6px; /* 与 chip 内文字基线对齐 */
-  font-size: 12px;
+  padding-top: var(--sp-6); /* 与 chip 内文字基线对齐 */
+  font-size: var(--fs-12);
   font-weight: 800;
   color: var(--ink-soft, #555);
 }
@@ -134,7 +132,7 @@
   margin: 0; /* dd 默认 margin-inline-start: 40px —— 不对齐的经典坑 */
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -150,13 +148,13 @@
 /* ── 模型格 D 变体：半嵌入图标块 + 厂商底色 + 左缘细带 ──
    选择器用 .explore-grid .explore-cell（0,2,0）压过 .card-entity（0,1,0），避免依赖 CSS 导入顺序。 */
 .explore-grid {
-  row-gap: 20px; /* 12 → 20：图标上凸 10px 会贴到上一行，必须让出行距 */
+  row-gap: var(--sp-20); /* 12 → 20：图标上凸 10px 会贴到上一行，必须让出行距 */
   /* 注意：这里**不能**加 overflow:hidden —— 会裁掉凸出卡片上沿的徽章 */
 }
 .explore-grid .explore-cell {
   position: relative;
   display: block;
-  padding: 26px 14px 12px;
+  padding: 26px var(--sp-14) var(--sp-12);
 }
 .explore-tile {
   position: absolute;
@@ -176,7 +174,7 @@
   background: var(--paper);
   color: var(--ink);
   font-weight: 900;
-  font-size: 18px;
+  font-size: var(--fs-18);
 }
 /* 厂商色带（D 变体）：顶带 + 左带。
    偏移用 calc(var(--border-w) * -1) **而不是硬编码 -4px** —— 设计稿里的 -4px 是为了快出效果，
@@ -201,7 +199,7 @@
   margin-left: 52px;
 }
 .explore-vendor {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--ink-soft, #555);
 }
 @media (max-width: 720px) {

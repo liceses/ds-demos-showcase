@@ -91,15 +91,15 @@ async function remove(item: AdminFeaturedItem) {
 
 <template>
   <div>
-    <p class="filter-label" style="margin-bottom: 10px">
+    <p class="filter-label" style="margin-bottom: var(--sp-10)">
       {{ t('admin.featured.hint', '首页「精选作品」与 hero 大卡 = 本池按序展示（池空时自动回落全量随机，本面板是唯一的策展入口）。只收已上架（approved）作品。') }}
     </p>
 
     <!-- RF-3：手写 loading-row/spinner 改用现成的 LoadingRow（全仓已有 40 处在用它） -->
     <LoadingRow v-if="loading && !rows.length" :text="t('admin.featured.loading', '加载精选池…')" />
 
-    <div v-else-if="!rows.length" class="card card-default" style="padding: 14px">
-      <p class="muted" style="margin: 0 0 10px">
+    <div v-else-if="!rows.length" class="card card-default" style="padding: var(--sp-14)">
+      <p class="muted" style="margin: 0 0 var(--sp-10)">
         {{ t('admin.featured.poolEmpty', '策展池为空——首页当前回落「已上架全量随机」（60s 同批 + 换一批）。加入第一件后即切换为策展态。') }}
       </p>
       <EntityPicker
@@ -109,7 +109,7 @@ async function remove(item: AdminFeaturedItem) {
         :placeholder="t('admin.featured.addPh', '搜作品名 / 作者 / slug，选中即加入…')"
         @pick="pickToAdd"
       />
-      <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNote', '新件排在池尾；加入后可在下方上移/置顶。重复加入会被后端拒绝。') }}</p>
+      <p class="hint" style="margin: var(--sp-8) 0 0">{{ t('admin.featured.addNote', '新件排在池尾；加入后可在下方上移/置顶。重复加入会被后端拒绝。') }}</p>
     </div>
 
     <template v-else>
@@ -118,7 +118,7 @@ async function remove(item: AdminFeaturedItem) {
         <span class="hint">{{ t('admin.featured.count', '池内 {n} 件', { n: rows.length }) }}</span>
       </div>
 
-      <div class="feat-add card card-default" style="padding: 12px; margin-bottom: 12px">
+      <div class="feat-add card card-default" style="padding: var(--sp-12); margin-bottom: var(--sp-12)">
         <EntityPicker
           kind="demo"
           mode="dropdown"
@@ -126,7 +126,7 @@ async function remove(item: AdminFeaturedItem) {
           :placeholder="t('admin.featured.addPh', '搜作品名 / 作者 / slug，选中即加入…')"
           @pick="pickToAdd"
         />
-        <p class="hint" style="margin: 8px 0 0">{{ t('admin.featured.addNoteInline', '新件排在池尾；可在行内上移/置顶调整。重复加入会被后端拒绝。') }}</p>
+        <p class="hint" style="margin: var(--sp-8) 0 0">{{ t('admin.featured.addNoteInline', '新件排在池尾；可在行内上移/置顶调整。重复加入会被后端拒绝。') }}</p>
       </div>
 
       <div class="feat-list">
@@ -145,7 +145,7 @@ async function remove(item: AdminFeaturedItem) {
           </div>
         </div>
       </div>
-      <p class="hint" style="margin-top: 8px">{{ t('admin.featured.heroNote', 'hero 大卡 = 池内第 1 件；首页展示顺序即本列表顺序。移除或排序均落审计。') }}</p>
+      <p class="hint" style="margin-top: var(--sp-8)">{{ t('admin.featured.heroNote', 'hero 大卡 = 池内第 1 件；首页展示顺序即本列表顺序。移除或排序均落审计。') }}</p>
     </template>
   </div>
 </template>
@@ -155,8 +155,8 @@ async function remove(item: AdminFeaturedItem) {
 .feat-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-10);
   flex-wrap: wrap;
 }
 .feat-list {
@@ -165,8 +165,8 @@ async function remove(item: AdminFeaturedItem) {
 .feat-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
+  gap: var(--sp-10);
+  padding: var(--sp-8) var(--sp-4);
   border-bottom: 2px solid var(--ink, #000);
 }
 .feat-row.hero {
@@ -186,11 +186,11 @@ async function remove(item: AdminFeaturedItem) {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-2);
 }
 .feat-title {
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--ink, #000);
   text-decoration: none;
   overflow: hidden;
@@ -201,12 +201,12 @@ async function remove(item: AdminFeaturedItem) {
   text-decoration: underline;
 }
 .feat-meta {
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 .feat-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   flex: none;
 }
 </style>

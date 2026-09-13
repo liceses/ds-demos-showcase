@@ -432,7 +432,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <span class="mini-stat"><b>{{ total }}</b> {{ t('demos.works', '件作品') }}</span>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <!-- 视图栏：模式轨道 + 排序，独立一行，不与搜索/标签混排 -->
     <div class="view-bar">
       <div class="mode-tool">
@@ -740,7 +740,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .facet-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--sp-24);
   align-items: start;
   transition: none;
 }
@@ -824,8 +824,8 @@ onBeforeUnmount(() => observer?.disconnect())
 .fp-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--sp-12);
   background: var(--ink, #000);
   color: var(--paper, #fff);
   position: sticky;
@@ -836,12 +836,12 @@ onBeforeUnmount(() => observer?.disconnect())
   font-family: var(--font-heading, sans-serif);
   font-weight: 900;
   text-transform: uppercase;
-  font-size: 13px;
+  font-size: var(--fs-13);
   letter-spacing: 0.04em;
 }
 .fp-count {
   font-family: var(--font-body, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   background: var(--paper, #fff);
   color: var(--ink, #000);
@@ -852,13 +852,13 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .fp-pin {
   font: inherit;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   letter-spacing: 0.04em;
   background: transparent;
   color: var(--paper, #fff);
   border: 2px solid var(--paper, #fff);
-  padding: 3px 8px;
+  padding: 3px var(--sp-8);
   cursor: pointer;
 }
 @media (hover: hover) {
@@ -879,7 +879,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .fp-close {
   font: inherit;
   font-weight: 900;
-  font-size: 14px;
+  font-size: var(--fs-14);
   background: transparent;
   border: none;
   color: var(--paper, #fff);
@@ -889,23 +889,23 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .fp-grammar {
   margin: 0;
-  padding: 8px 12px 0;
-  font-size: 10px;
+  padding: var(--sp-8) var(--sp-12) 0;
+  font-size: var(--fs-10);
   letter-spacing: 0.05em;
   color: var(--ink-soft, #555);
 }
 .fp-empty {
-  padding: 18px 12px;
-  font-size: 13px;
+  padding: 18px var(--sp-12);
+  font-size: var(--fs-13);
 }
 .fp-search {
   width: 100%;
 }
 .fp-search--tech {
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 .fp-nomatch {
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 
 /* 组（手风琴）：三律 2 实线分割（05 §5.2）——组间 2px 实线 divider，节奏靠线不靠盒；
@@ -919,10 +919,10 @@ onBeforeUnmount(() => observer?.disconnect())
 .fp-group-head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   width: 100%;
   min-height: 44px;
-  padding: 8px 12px;
+  padding: var(--sp-8) var(--sp-12);
   background: none;
   border: none;
   cursor: pointer;
@@ -941,7 +941,7 @@ span.fp-group-head {
 .fp-caret {
   display: inline-block;
   font-weight: 900;
-  font-size: 11px;
+  font-size: var(--fs-11);
   transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));
 }
 .fp-caret.open {
@@ -949,17 +949,17 @@ span.fp-group-head {
 }
 .fp-group-name {
   font-weight: 900;
-  font-size: 11px; /* 三律 2：组头=11px 大写字距小标题（05 §5.2） */
+  font-size: var(--fs-11); /* 三律 2：组头=11px 大写字距小标题（05 §5.2） */
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .fp-group-code {
-  font-size: 10px;
+  font-size: var(--fs-10);
   color: var(--ink-soft, #555);
 }
 .fp-grammar-or {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--fs-10);
   color: var(--ink-soft, #555);
   white-space: nowrap;
 }
@@ -979,24 +979,24 @@ span.fp-group-head {
   }
 }
 .fp-group-body {
-  padding: 2px 12px 12px;
+  padding: var(--sp-2) var(--sp-12) var(--sp-12);
   display: grid;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 
 /* 空态三出口（03 §4.5） */
 .dv-empty {
-  padding: 28px 16px;
+  padding: 28px var(--sp-16);
 }
 .dv-empty-what {
   font-family: var(--font-heading, sans-serif);
   font-weight: 900;
   font-size: 17px;
-  margin: 0 0 6px;
+  margin: 0 0 var(--sp-6);
 }
 .dv-empty-why {
-  font-size: 12px;
-  margin: 0 0 14px;
+  font-size: var(--fs-12);
+  margin: 0 0 var(--sp-14);
   max-width: 52ch;
   margin-left: auto;
   margin-right: auto;

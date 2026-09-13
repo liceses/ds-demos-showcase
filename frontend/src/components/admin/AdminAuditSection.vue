@@ -67,7 +67,7 @@ function fmt(v: unknown): string {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <select v-model="filters.action" class="input" style="max-width: 150px" @change="search">
         <option value="">{{ t('admin.audit.allActions', '全部动作') }}</option>
         <option v-for="a in data?.actions || []" :key="a" :value="a">{{ a }}</option>
@@ -131,7 +131,7 @@ function fmt(v: unknown): string {
         </tbody>
       </table>
 
-      <div class="filter-row" style="margin-top: 12px">
+      <div class="filter-row" style="margin-top: var(--sp-12)">
         <button class="btn btn-sm btn-dark" type="button" :disabled="page <= 1" @click="go(page - 1)">←</button>
         <span class="muted mono">{{ page }} / {{ pages }}</span>
         <button class="btn btn-sm btn-dark" type="button" :disabled="page >= pages" @click="go(page + 1)">→</button>

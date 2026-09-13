@@ -2,23 +2,23 @@
 .dash-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-20);
 }
 .stat-card {
-  padding: 12px 16px;
+  padding: var(--sp-12) var(--sp-16);
   border: 3px solid var(--ink);
   background: var(--paper);
   box-shadow: 4px 4px 0 0 var(--ink);
   min-width: 120px;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
 }
 .stat-card b {
   display: block;
   font-size: 28px;
   line-height: 1.1;
-  margin-bottom: 2px;
+  margin-bottom: var(--sp-2);
 }
 .stat-card.stat-ok { border-top: 8px solid var(--mint); }
 .stat-card.stat-warn { border-top: 8px solid var(--yellow); }
@@ -29,20 +29,20 @@
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 6px;
-  margin-left: 6px;
+  padding: 0 var(--sp-6);
+  margin-left: var(--sp-6);
   border: 2px solid var(--ink);
   background: var(--red);
   color: var(--on-accent, #000);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   vertical-align: middle;
 }
 .pager {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 14px;
+  gap: var(--sp-12);
+  margin-top: var(--sp-14);
 }
 .pager .btn:disabled {
   opacity: 0.4;
@@ -52,7 +52,7 @@
 /* P0-4 归位：@480 统计卡（原链尾文件） */
 @media (max-width: 480px) {
   .dash-stats {
-    gap: 10px;
+    gap: var(--sp-10);
   }
   .stat-card {
     flex: 1 1 45%;

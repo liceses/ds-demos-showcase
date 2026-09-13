@@ -158,14 +158,14 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 14px">
+    <div class="filter-row" style="margin-bottom: var(--sp-14)">
       <button class="tab" :class="{ active: forumSub === 'topics' }" type="button" @click="forumSub = 'topics'">主题</button>
       <button class="tab" :class="{ active: forumSub === 'replies' }" type="button" @click="forumSub = 'replies'">回复</button>
       <button class="tab" :class="{ active: forumSub === 'reports' }" type="button" @click="forumSub = 'reports'; loadForumReports()">举报</button>
     </div>
 
     <template v-if="forumSub === 'topics'">
-      <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+      <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
         <input v-model="topicQuery" class="input" type="search" placeholder="搜标题或正文…" style="max-width: 220px" @keyup.enter="topicSearch" />
         <select v-model="topicStatusFilter" class="input" style="max-width: 120px" @change="topicSearch">
           <option value="">全部状态</option>
@@ -212,7 +212,7 @@ onMounted(() => {
                 <!-- P2：加载失败与"筛空了"分开 —— 原来接口挂了也走这条文案，管理员会去翻页找帖 -->
                 <template v-if="topicLoadError">
                   主题列表加载失败（不是「没有主题」）
-                  <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="loadForum">重试</button>
+                  <button class="btn btn-sm btn-outline" type="button" style="margin-left: var(--sp-8)" @click="loadForum">重试</button>
                 </template>
                 <template v-else>
                   {{ topicTotal ? '本页被"分类/置顶"筛空了 —— 这两个只作用于当前页，试试翻页或清掉它们' : '没有匹配的主题（换个关键词或放宽状态）' }}
@@ -226,7 +226,7 @@ onMounted(() => {
     </template>
 
     <template v-else-if="forumSub === 'replies'">
-      <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+      <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
         <input v-model="forumReplyQuery" class="input" type="search" placeholder="搜回复内容或主题标题…" style="max-width: 260px" @keyup.enter="forumSelectReplies" />
         <select v-model="forumReplyStatus" class="input" style="max-width: 140px" @change="forumSelectReplies">
           <option value="">全部状态</option>
@@ -263,7 +263,7 @@ onMounted(() => {
             <tr v-else-if="replyLoadError">
               <td colspan="6" style="text-align:center">
                 回复列表加载失败（不是「没有回复」）
-                <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="forumSelectReplies">重试</button>
+                <button class="btn btn-sm btn-outline" type="button" style="margin-left: var(--sp-8)" @click="forumSelectReplies">重试</button>
               </td>
             </tr>
             <tr v-else-if="!forumRepliesShown.length"><td colspan="6" style="text-align:center">没有匹配的回复（换个关键词或放宽状态）</td></tr>
@@ -293,7 +293,7 @@ onMounted(() => {
                 <!-- P2：同上，举报列表的失败态 -->
                 <template v-if="reportLoadError">
                   举报列表加载失败（不是「没有举报」）
-                  <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="loadForumReports">重试</button>
+                  <button class="btn btn-sm btn-outline" type="button" style="margin-left: var(--sp-8)" @click="loadForumReports">重试</button>
                 </template>
                 <template v-else>暂无举报</template>
               </td>

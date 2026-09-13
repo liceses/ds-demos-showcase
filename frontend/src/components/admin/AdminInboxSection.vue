@@ -239,7 +239,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.inbox.hint', '低置信度建议默认不进此视图（阈值以下只记录不骚扰）') }}</span>
       <select v-model="status" class="input" style="max-width: 130px" @change="load">
         <option value="pending">{{ t('admin.inbox.pending', '待处理') }}</option>
@@ -311,7 +311,7 @@ onMounted(() => {
             <span class="muted mono inbox-time">{{ parseDate(s.created_at).toLocaleString('zh-CN') }}</span>
           </div>
           <div class="inbox-brief">{{ brief(s) }}</div>
-          <div class="filter-row" style="margin: 8px 0 0">
+          <div class="filter-row" style="margin: var(--sp-8) 0 0">
             <span class="hint">{{ effectOf(s) }}</span>
             <template v-if="s.status === 'pending'">
               <button class="btn btn-sm btn-primary" type="button" :disabled="busy[s.id]" @click="review(s, 'approve')">
@@ -338,7 +338,7 @@ onMounted(() => {
           <span class="muted mono inbox-time">{{ parseDate(s.created_at).toLocaleString('zh-CN') }}</span>
         </div>
         <div class="inbox-brief">{{ brief(s) }}</div>
-        <div class="filter-row" style="margin: 8px 0 0">
+        <div class="filter-row" style="margin: var(--sp-8) 0 0">
           <span class="hint">{{ effectOf(s) }}</span>
           <template v-if="s.status === 'pending'">
             <button class="btn btn-sm btn-primary" type="button" :disabled="busy[s.id]" @click="review(s, 'approve')">
@@ -367,16 +367,16 @@ onMounted(() => {
 .inbox-kind-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: var(--sp-12);
+  padding: var(--sp-8) 0;
   border-bottom: var(--border-w, 4px) solid var(--ink, #000);
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-12);
 }
 /* 勾选框：行首 18px 可点目标包 44px 热区（触达线） */
 .inbox-check {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   cursor: pointer;
   min-height: 44px;
 }
@@ -391,16 +391,16 @@ onMounted(() => {
 }
 /* 批量工具条：选中即现；失败列表逐条可重试 */
 .inbox-batch {
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-16);
 }
 .inbox-failed {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: var(--sp-10);
+  padding-top: var(--sp-10);
   border-top: 2px solid var(--ink, #000);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: var(--sp-10);
+  font-size: var(--fs-12);
 }
 </style>

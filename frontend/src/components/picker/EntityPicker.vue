@@ -302,7 +302,7 @@ onBeforeUnmount(() => {
       <template v-if="!loading">
         <div v-if="error" class="notice notice-error picker-error">
           {{ error }}
-          <button type="button" class="btn btn-sm btn-outline" style="margin-left: 8px" @click="run">{{ t('entityPicker.retry', '重试') }}</button>
+          <button type="button" class="btn btn-sm btn-outline" style="margin-left: var(--sp-8)" @click="run">{{ t('entityPicker.retry', '重试') }}</button>
         </div>
         <ul v-if="visible.length" :id="listId" ref="listEl" class="picker-list" role="listbox" :aria-label="t('entityPicker.results', '搜索结果')">
           <li v-for="(x, i) in visible" :key="pickedKey(x)" :data-pk="i" role="option" :aria-selected="isSelectedRow(x)">
@@ -352,8 +352,8 @@ onBeforeUnmount(() => {
 .picker-box {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-6);
 }
 .picker-input {
   flex: 1;
@@ -362,26 +362,26 @@ onBeforeUnmount(() => {
 }
 .picker-total {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 .picker-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: var(--sp-6);
+  margin-bottom: var(--sp-8);
 }
 .picker-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 .picker-x {
   border: none;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
+  font-size: var(--fs-12);
+  padding: var(--sp-2) var(--sp-4);
   min-width: 26px;
   min-height: 26px;
 }
@@ -403,7 +403,7 @@ onBeforeUnmount(() => {
 .picker-inline {
   max-height: 320px;
   overflow: auto;
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-6);
 }
 .picker-list {
   list-style: none;
@@ -413,10 +413,10 @@ onBeforeUnmount(() => {
 .picker-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--sp-10);
   width: 100%;
   min-height: 44px;
-  padding: 8px 10px;
+  padding: var(--sp-8) var(--sp-10);
   text-align: left;
   border: none;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
@@ -443,20 +443,20 @@ onBeforeUnmount(() => {
 }
 .picker-meta {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-variant-numeric: tabular-nums;
   opacity: 0.85;
 }
 .picker-empty,
 .picker-loading {
   margin: 0;
-  padding: 10px;
-  font-size: 12px;
+  padding: var(--sp-10);
+  font-size: var(--fs-12);
 }
 .picker-manual-hint {
   color: var(--ink-soft, #666);
 }
 .picker-error {
-  margin: 8px;
+  margin: var(--sp-8);
 }
 </style>

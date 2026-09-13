@@ -150,13 +150,13 @@ watch(
       </div>
     </div>
 
-    <div class="filter-row" style="margin-bottom: 12px">
+    <div class="filter-row" style="margin-bottom: var(--sp-12)">
       <button class="tag-chip" :class="{ active: stickyFilter }" type="button" @click="stickyFilter = !stickyFilter; apply()">{{ t('forum.onlySticky', '只看精华') }}</button>
       <button class="tag-chip" :class="{ active: participatedFilter }" type="button" @click="participatedFilter = !participatedFilter; apply()">{{ t('forum.mine', '我参与的') }}</button>
       <button class="tag-chip" :class="{ active: followedFilter }" type="button" @click="followedFilter = !followedFilter; apply()">{{ t('forum.followed', '我关注的') }}</button>
     </div>
 
-    <div v-if="demoFilter || tagFilter" class="filter-row" style="margin-bottom: 8px">
+    <div v-if="demoFilter || tagFilter" class="filter-row" style="margin-bottom: var(--sp-8)">
       <span class="filter-label">{{ t('forum.filter', '筛选') }}</span>
       <span class="tag-chip active">{{ demoFilter ? t('forum.demoFilter', '作品：{v}', { v: demoFilter }) : t('forum.tagFilter', '标签：{v}', { v: tagFilter }) }}</span>
       <button class="btn btn-sm btn-dark" type="button" @click="demoFilter = ''; tagFilter = ''; apply()">{{ t('demos.clearRange', '清除') }}</button>
@@ -169,7 +169,7 @@ watch(
         <EmptyBox v-else-if="!topics.length" :text="t('forum.empty', '暂无主题，来发第一帖吧')" />
 
         <div v-else class="forum-list">
-          <RouterLink v-for="t2 in topics" :key="t2.id" :to="`/forum/topic/${t2.id}`" class="forum-topic-card">
+          <RouterLink v-for="t2 in topics" :key="t2.id" :to="`/forum/topic/${t2.id}`" class="forum-topic-card b-lift">
             <span class="forum-avatar" :class="avatarClass(t2.author || t('forum.anon', '匿名'))">{{ (t2.author || t('forum.anon', '匿名'))[0] }}</span>
             <div class="forum-topic-body">
               <div class="forum-topic-title">

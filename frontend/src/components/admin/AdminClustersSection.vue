@@ -96,16 +96,16 @@ onMounted(() => load())
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.clusters.hint', '同一句提示词 / 相似提示词聚成的题目候选，命名后即可成题') }}</span>
-      <label class="mini-stat" style="display: flex; align-items: center; gap: 6px">
+      <label class="mini-stat" style="display: flex; align-items: center; gap: var(--sp-6)">
         {{ t('admin.clusters.threshold', '相似阈值') }}
         <input v-model.number="minScore" class="input" type="number" min="0.1" max="1" step="0.05" style="max-width: 90px" />
       </label>
       <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load(true)">
         {{ loading ? t('common.rescanning', '扫描中…') : t('admin.clusters.rescan', '重新扫描') }}
       </button>
-      <span v-if="data" class="muted mono" style="font-size: 12px">
+      <span v-if="data" class="muted mono" style="font-size: var(--fs-12)">
         {{ t('admin.clusters.stats', `语料 ${corpusN} 条 / 去重 ${uniqueN} 句 / exact ${exactN} · similar ${similarN}`, {
           a: corpusN, b: uniqueN, c: exactN, d: similarN,
         }) }}
@@ -118,10 +118,10 @@ onMounted(() => load())
     <template v-else-if="data">
       <template v-for="kind in (['exact', 'similar'] as const)" :key="kind">
         <div class="section-head" style="margin-top: 18px">
-          <h3 class="section-title" style="font-size: 20px">
+          <h3 class="section-title" style="font-size: var(--fs-20)">
             {{ kind === 'exact' ? t('admin.clusters.exact', '同句提示词（最高质量）') : t('admin.clusters.similar', '相似提示词（需人工判题）') }}
           </h3>
-          <span class="muted" style="font-size: 12px">
+          <span class="muted" style="font-size: var(--fs-12)">
             {{ kind === 'exact'
               ? t('admin.clusters.exactHint', '同一句话交给不同模型，直接就是 Benchmark')
               : t('admin.clusters.similarHint', '阈值 0.35 起（线上语料标定），再低会混入不同题') }}
@@ -138,7 +138,7 @@ onMounted(() => load())
               <span v-if="c.covered" class="cluster-covered-tag">{{ t('admin.clusters.covered', '已入题') }}</span>
             </header>
 
-            <label class="field" style="margin: 10px 0 6px">
+            <label class="field" style="margin: var(--sp-10) 0 var(--sp-6)">
               {{ t('admin.clusters.nameLabel', '题面名称') }}
               <input v-model="names[kind + '-' + i]" class="input" :placeholder="t('admin.clusters.namePh', '给这道题起个短名')" />
             </label>
@@ -159,7 +159,7 @@ onMounted(() => load())
               </li>
             </ul>
 
-            <div class="filter-row" style="margin-top: 10px">
+            <div class="filter-row" style="margin-top: var(--sp-10)">
               <button
                 class="btn btn-sm btn-primary"
                 type="button"

@@ -1,23 +1,29 @@
 /* ---------- ④ 继续逛：图谱三条边的明确出口（动效遵守四法则） ---------- */
-.dv-next { padding-top: 8px; }
-.dv-next-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.dv-next { padding-top: var(--sp-8); }
+.dv-next-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-12); }
 .dv-next-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 2px 10px;
-  padding: 14px 16px;
+  gap: var(--sp-2) var(--sp-10);
+  padding: var(--sp-14) var(--sp-16);
   text-decoration: none;
   color: var(--ink);
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
   box-shadow: var(--b-shadow);
 }
-.dv-next-label { font-family: var(--font-heading); font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; }
-.dv-next-why { grid-column: 1; font-size: 11px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dv-next-arrow { grid-column: 2; grid-row: 1 / span 2; font-size: 22px; font-weight: 900; }
-.dv-next-card:hover { transform: translate(-2px, -2px); box-shadow: var(--b-shadow-hot); background: var(--yellow); }
-.dv-next-card:active { transform: translate(4px, 4px); box-shadow: none; }
+.dv-next-label { font-family: var(--font-heading); font-size: var(--fs-14); font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; }
+.dv-next-why { grid-column: 1; font-size: var(--fs-11); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-next-arrow { grid-column: 2; grid-row: 1 / span 2; font-size: var(--fs-22); font-weight: 900; }
+/* 收进微交互库：卡片 → hover 12px 红（Rule 04 顶格档，与 .card-hover 同值）+ 背景硬切换黄
+   （Rule 02 Brutal Snap 正例：色切 0ms） */
+.dv-next-card {
+  --lift-sh: none;
+  --lift-sh-hover: var(--shadow-hover-red);
+  --lift-flat: var(--sh-off-2xl);
+}
+.dv-next-card:hover { background: var(--yellow); }
 @media (prefers-reduced-motion: reduce) {
   .dv-next-card { transition: none; }
   .dv-next-card:hover, .dv-next-card:active { transform: none; box-shadow: var(--b-shadow); }

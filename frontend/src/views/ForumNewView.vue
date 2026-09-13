@@ -93,7 +93,7 @@ async function submit() {
         </label>
         <div v-if="error" class="notice notice-error">{{ error }}</div>
         <div v-if="submitted" class="notice notice-success">
-          <p style="margin: 0 0 10px">{{ t('forum.reviewing', '已提交，等待审核。') }}</p>
+          <p style="margin: 0 0 var(--sp-10)">{{ t('forum.reviewing', '已提交，等待审核。') }}</p>
           <RouterLink class="btn btn-sm btn-outline" to="/forum">{{ t('forumNew.backToForum', '返回讨论区') }}</RouterLink>
         </div>
         <button v-if="!submitted" class="btn btn-primary btn-lg" type="button" :disabled="submitting" @click="submit">{{ submitting ? t('forumNew.publishing', '发布中…') : t('forumNew.publish', '发布') }}</button>

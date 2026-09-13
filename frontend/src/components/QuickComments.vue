@@ -113,11 +113,11 @@ onMounted(load)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-10);
   flex-wrap: wrap;
-  padding: 10px 2px;
+  padding: var(--sp-10) var(--sp-2);
   border-top: 2px dashed rgba(0, 0, 0, 0.18);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 </style>
 
@@ -128,8 +128,8 @@ onMounted(load)
     <div v-else class="quick-comments">
       <div class="quick-comment-input">
         <template v-if="auth.isLoggedIn()">
-          <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: 8px">{{ t('forum.reviewingVisible', '已提交，等待审核，通过后可见。') }}</div>
-          <p v-if="!topic" class="muted" style="margin: 0 0 6px">{{ t('quick.firstComment', '第一条评论将创建该作品的讨论。') }}</p>
+          <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: var(--sp-8)">{{ t('forum.reviewingVisible', '已提交，等待审核，通过后可见。') }}</div>
+          <p v-if="!topic" class="muted" style="margin: 0 0 var(--sp-6)">{{ t('quick.firstComment', '第一条评论将创建该作品的讨论。') }}</p>
           <div class="filter-row" style="margin: 0">
             <input
               v-model="replyText"
@@ -142,7 +142,7 @@ onMounted(load)
           </div>
         </template>
         <template v-else>
-          <p class="muted" style="margin: 0 0 8px">{{ t('forum.loginToComment', '登录后才能评论') }}</p>
+          <p class="muted" style="margin: 0 0 var(--sp-8)">{{ t('forum.loginToComment', '登录后才能评论') }}</p>
           <RouterLink class="btn btn-outline" :to="`/login?redirect=${route.fullPath}`">{{ t('auth.toLogin', '去登录') }}</RouterLink>
         </template>
       </div>

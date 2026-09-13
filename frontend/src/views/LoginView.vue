@@ -37,8 +37,8 @@ async function submit() {
     <h1 class="page-title">{{ t('auth.login', '登录') }}</h1>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
-    <div class="auth-card card card-coral" style="padding: 24px">
+  <section class="section" style="padding-top: var(--sp-8)">
+    <div class="auth-card card card-coral" style="padding: var(--sp-24)">
       <form class="form-stack" @submit.prevent="submit">
         <label class="field">
           {{ t('auth.username', '用户名') }}

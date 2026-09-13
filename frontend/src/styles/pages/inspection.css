@@ -2,25 +2,25 @@
 .inspect-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
 }
-.inspect-row { padding: 14px 18px; }
-.inspect-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.inspect-row { padding: var(--sp-14) 18px; }
+.inspect-head { display: flex; align-items: center; gap: var(--sp-10); flex-wrap: wrap; }
 .inspect-count {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 22px;
+  font-size: var(--fs-22);
   line-height: 1;
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
   background: var(--ink);
   color: var(--paper);
 }
 .inspect-samples {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  margin-top: 8px;
-  font-size: 12px;
+  gap: var(--sp-6) var(--sp-14);
+  margin-top: var(--sp-8);
+  font-size: var(--fs-12);
   color: var(--ink-soft);
 }
 

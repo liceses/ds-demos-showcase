@@ -421,7 +421,7 @@ onBeforeUnmount(() => {
           <span class="gray-fold-caret" :class="{ open: grayOpen }" aria-hidden="true">▾</span>
         </button>
         <template v-if="grayOpen">
-          <p class="muted" style="margin: 10px 0 16px">
+          <p class="muted" style="margin: var(--sp-10) 0 var(--sp-16)">
             {{ t('home.gray.desc', '以下 Demo 由网传灰测版模型生成。') }}
           </p>
           <MasonryGrid :cols="3" :items="grayTest" :item-key="(d: unknown) => (d as DemoSummary).slug">
@@ -429,7 +429,7 @@ onBeforeUnmount(() => {
               <DemoCard :demo="item as DemoSummary" />
             </template>
           </MasonryGrid>
-          <RouterLink class="btn btn-sm btn-outline" style="margin-top: 12px" :to="grayTagUrl">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
+          <RouterLink class="btn btn-sm btn-outline" style="margin-top: var(--sp-12)" :to="grayTagUrl">{{ t('home.viewAll', '查看全部 →') }}</RouterLink>
         </template>
       </section>
 
@@ -537,11 +537,11 @@ onBeforeUnmount(() => {
 .ann-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   width: 100%;
   min-height: 44px;
-  margin: 0 0 12px;
-  padding: 8px 14px;
+  margin: 0 0 var(--sp-12);
+  padding: var(--sp-8) var(--sp-14);
   border: none;
   background: var(--paper-deep, #f2eee6);
   box-shadow: var(--shadow-black, 6px 6px 0 0 var(--ink, #000));
@@ -552,9 +552,9 @@ onBeforeUnmount(() => {
 }
 .ann-banner-stamp {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
-  padding: 3px 8px;
+  padding: 3px var(--sp-8);
   background: var(--yellow, #ffe66d);
   color: var(--on-accent, #000);
   border: 2px solid var(--ink, #000);
@@ -568,13 +568,13 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .ann-banner-unread {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
   background: var(--yellow, #ffe66d);
   color: var(--on-accent, #000);
   border: 2px solid var(--ink, #000);
@@ -582,7 +582,7 @@ onBeforeUnmount(() => {
 }
 .ann-banner-all {
   flex: none;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 900;
   white-space: nowrap;
 }
@@ -601,7 +601,7 @@ onBeforeUnmount(() => {
 .hub-hero {
   display: grid;
   grid-template-columns: 0.88fr 1.12fr; /* 05 §5.1 不对称双列：右列=视觉主件占气场 */
-  gap: 32px;
+  gap: var(--sp-32);
   align-items: end;
 }
 .hub-hero-left,
@@ -612,7 +612,7 @@ onBeforeUnmount(() => {
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .hero-eyebrow-line {
   display: inline-block;
@@ -627,18 +627,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 10px 0;
+  gap: var(--sp-12);
+  margin-top: var(--sp-14);
+  padding: var(--sp-10) 0;
   font-variant-numeric: tabular-nums;
 }
 .hero-numstrip .hn {
-  font-size: 15px;
+  font-size: var(--fs-15);
 }
 .hero-numstrip .hn b {
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 400;
-  margin-right: 4px;
+  margin-right: var(--sp-4);
 }
 .hn-div {
   width: 2px;
@@ -650,15 +650,15 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-top: 14px;
+  gap: var(--sp-12);
+  margin-top: var(--sp-14);
 }
 .hero-cta-main {
-  font-size: 15px;
-  padding: 12px 22px;
+  font-size: var(--fs-15);
+  padding: var(--sp-12) 22px;
 }
 .hero-guide {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--ink-soft, #555);
   text-decoration: none;
   font-weight: 700;
@@ -691,18 +691,18 @@ onBeforeUnmount(() => {
   aspect-ratio: 16 / 10;
   background: var(--paper-deep, #f2eee6);
   font-weight: 900;
-  padding: 16px;
+  padding: var(--sp-16);
   text-align: center;
 }
 .hero-feature-meta {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: var(--sp-10);
+  padding: var(--sp-12) var(--sp-14);
 }
 .hero-feature-title {
   font-weight: 900;
-  font-size: 16px;
+  font-size: var(--fs-16);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -710,12 +710,12 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 .hero-feature-author {
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 .hero-feature-score {
   flex: none;
   font-weight: 900;
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
   border: 2px solid var(--ink, #000);
   background: var(--mint, #95e1d3);
   color: var(--on-accent, #000);
@@ -741,26 +741,26 @@ onBeforeUnmount(() => {
 .strip-item {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 12px 18px;
+  gap: var(--sp-8);
+  padding: var(--sp-12) 18px;
   text-decoration: none;
   color: var(--ink, #000);
   border-right: 2px solid var(--ink, #000);
   font-family: var(--font-heading, sans-serif);
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-14);
   white-space: nowrap;
 }
 .strip-item:first-child {
   padding-left: 0;
 }
 .strip-no {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   color: var(--ink-soft, #555);
 }
 .strip-count {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
 }
 @media (hover: hover) {
@@ -781,7 +781,7 @@ onBeforeUnmount(() => {
 @media (max-width: 720px) {
   .hub-hero {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: var(--sp-20);
   }
   .hub-hero-right {
     order: 3; /* 线框顺序：章→标题→tagline→数字条→CTA→轮播主件 */
@@ -804,7 +804,7 @@ onBeforeUnmount(() => {
     flex-wrap: nowrap;
   }
   .page-hero .huge {
-    margin-top: 8px; /* t20 375 目验：eyebrow 章阴影压标题首行，分离一档 */
+    margin-top: var(--sp-8); /* t20 375 目验：eyebrow 章阴影压标题首行，分离一档 */
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -821,9 +821,9 @@ onBeforeUnmount(() => {
 .hub-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--sp-24);
   align-items: start;
-  padding: 0 0 8px;
+  padding: 0 0 var(--sp-8);
 }
 .hub-main {
   min-width: 0;
@@ -834,7 +834,7 @@ onBeforeUnmount(() => {
 .hub-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-16);
   min-width: 0;
   align-self: stretch;
 }
@@ -851,16 +851,16 @@ onBeforeUnmount(() => {
 }
 /* 换池口径说明行（策展透明，03 §3.2） */
 .caliber-line {
-  font-size: 12px;
-  margin: -10px 0 14px;
+  font-size: var(--fs-12);
+  margin: -10px 0 var(--sp-14);
 }
 /* 灰测折叠条 */
 .gray-fold {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   width: 100%;
-  padding: 12px 14px;
+  padding: var(--sp-12) var(--sp-14);
   background: var(--paper, #fff);
   border: var(--border-w, 4px) solid var(--ink, #000);
   box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
@@ -870,7 +870,7 @@ onBeforeUnmount(() => {
 }
 .gray-fold-title {
   font-weight: 900;
-  font-size: 15px;
+  font-size: var(--fs-15);
 }
 .gray-fold-caret {
   margin-left: auto;
@@ -894,8 +894,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 9px 12px;
+  gap: var(--sp-10);
+  padding: 9px var(--sp-12);
   color: var(--ink, #000);
   text-decoration: none;
   border-bottom: 2px solid var(--ink, #000);
@@ -908,37 +908,37 @@ onBeforeUnmount(() => {
 }
 .latest-title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-14);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .latest-meta {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 .latest-more {
   text-align: center;
-  margin-top: 12px;
+  margin-top: var(--sp-12);
 }
 /* ---- 侧栏卡 ---- */
 .side-card {
   background: var(--paper, #fff);
   border: var(--border-w, 4px) solid var(--ink, #000);
   box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
-  padding: 14px;
+  padding: var(--sp-14);
 }
 /* M1-H3 侧栏解体（05 §2.1/§5）：热帖/榜单去盒化——无边框无影，组间 2px 实线分割，
    11px 大写字距小标题（编辑式条目语汇）；管理员过渡卡保留盒形态 */
 .side-block {
-  padding: 4px 0;
+  padding: var(--sp-4) 0;
 }
 .side-block + .side-block {
   border-top: 2px solid var(--ink, #000);
-  padding-top: 12px;
+  padding-top: var(--sp-12);
 }
 .side-kicker {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -947,17 +947,17 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-10);
 }
 .side-title {
   font-family: var(--font-heading, sans-serif);
   font-weight: 900;
-  font-size: 15px;
+  font-size: var(--fs-15);
 }
 
 .side-more {
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--ink, #000);
   text-decoration: none;
   font-weight: 700;
@@ -966,11 +966,11 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 .side-sub {
-  margin: 8px 0 4px;
+  margin: var(--sp-8) 0 var(--sp-4);
 }
 .side-sub-link {
   font-weight: 900;
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--ink, #000);
   text-decoration: none;
   text-transform: uppercase;
@@ -983,8 +983,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
+  gap: var(--sp-8);
+  padding: var(--sp-6) 0;
   color: var(--ink, #000);
   text-decoration: none;
   border-bottom: 1px solid rgba(0, 0, 0, 0.15);
@@ -996,7 +996,7 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 .side-row-title {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1004,27 +1004,27 @@ onBeforeUnmount(() => {
 }
 .side-row-meta {
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 
 /* 管理员速览卡（过渡件） */
 .side-admin-total {
-  margin: 0 0 8px;
-  font-size: 13px;
+  margin: 0 0 var(--sp-8);
+  font-size: var(--fs-13);
 }
 .side-admin-total b {
-  font-size: 26px;
-  margin-right: 4px;
+  font-size: var(--fs-26);
+  margin-right: var(--sp-4);
 }
 .side-admin-queues {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 .side-admin-q {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
-  padding: 2px 6px;
+  padding: var(--sp-2) var(--sp-6);
   border: 2px solid var(--ink, #000);
   background: var(--paper-deep, #f2eee6);
 }
@@ -1034,7 +1034,7 @@ onBeforeUnmount(() => {
 @media (max-width: 1024px) {
   .hub-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+    gap: var(--sp-8);
   }
 }
 </style>

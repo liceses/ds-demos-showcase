@@ -148,7 +148,7 @@ function onTaskEntityPick(p: EntityPick) {
             {{ t('upload.taskPropose', '没有这道题？提议新题') }}
           </button>
           <div v-else class="form-stack uw-propose-form">
-            <div class="filter-row" style="margin: 0 0 6px">
+            <div class="filter-row" style="margin: 0 0 var(--sp-6)">
               <b>{{ t('upload.taskProposeTitle', '提议新题') }}</b>
               <button type="button" class="btn btn-sm btn-dark" @click="proposeOpen = false">✕ {{ t('common.collapse', '收起') }}</button>
             </div>
@@ -178,10 +178,10 @@ function onTaskEntityPick(p: EntityPick) {
           :placeholder="t('upload.taskSearchPh', '输入题目关键词…')"
           @pick="onTaskEntityPick"
         />
-        <div class="filter-row" style="margin: 6px 0 0">
+        <div class="filter-row" style="margin: var(--sp-6) 0 0">
           <button type="button" class="btn btn-sm btn-ghost" @click="taskPickerOpen = false">{{ t('common.collapse', '收起') }}</button>
         </div>
-        <p class="hint" style="margin: 6px 0 0">
+        <p class="hint" style="margin: var(--sp-6) 0 0">
           {{ t('upload.taskNoHit', '没有匹配的题目。可以不挂题；若想出题，去题目页看看「题目候选」。') }}
           <RouterLink to="/tasks" target="_blank" rel="noopener">{{ t('upload.taskGo', '题目页 ↗') }}</RouterLink>
         </p>
@@ -190,21 +190,21 @@ function onTaskEntityPick(p: EntityPick) {
 
     <!-- 建议包主动呈现（旧版藏在抽屉里 = 不存在）；provenance：建议 ≠ 声明，须作者点头 -->
     <div v-if="!packIgnored && packVisible.length" class="pack-card">
-      <div class="filter-row" style="margin: 0 0 8px; flex-wrap: wrap">
+      <div class="filter-row" style="margin: 0 0 var(--sp-8); flex-wrap: wrap">
         <b>{{ t('upload.packTitle', '根据你的描述，这些标签可能合适') }}</b>
         <span v-if="packLoading" class="muted mono">…</span>
         <button class="btn btn-sm btn-primary" type="button" @click="emit('addAllSuggestions')">{{ t('upload.packAll', '全部收下') }}</button>
         <button class="btn btn-sm btn-outline" type="button" @click="emit('ignorePack')">{{ t('upload.packHide', '不用了') }}</button>
       </div>
       <div class="pack-list">
-        <button v-for="s in packVisible" :key="s.key + ':' + s.value" type="button" class="pack-chip" :title="`${s.reason}（${t('upload.packConf', '置信')} ${Math.round(s.confidence * 100)}%）`" @click="emit('addSuggestion', s)">
+        <button v-for="s in packVisible" :key="s.key + ':' + s.value" type="button" class="pack-chip b-lift" :title="`${s.reason}（${t('upload.packConf', '置信')} ${Math.round(s.confidence * 100)}%）`" @click="emit('addSuggestion', s)">
           <span class="pack-key mono">{{ s.key }}</span><b>{{ s.value }}</b><span class="count">+</span>
         </button>
       </div>
     </div>
 
     <!-- 建议包被收掉后必须能叫回来；顺手给一个「抽一题」的岔路口 -->
-    <div v-if="packIgnored || !packVisible.length" class="filter-row" style="margin: 0 0 10px">
+    <div v-if="packIgnored || !packVisible.length" class="filter-row" style="margin: 0 0 var(--sp-10)">
       <button v-if="packIgnored" type="button" class="btn btn-sm btn-outline" @click="emit('bringBackPack')">↺ {{ t('upload.packBack', '重新看看标签建议') }}</button>
       <button type="button" class="btn btn-sm btn-secondary" :disabled="drawing" @click="emit('drawTask')">
         {{ drawing ? '…' : '🎲 ' + t('upload.drawTask', '没灵感？抽一题') }}
@@ -245,7 +245,7 @@ function onTaskEntityPick(p: EntityPick) {
       <input v-model="commitMessage" class="input" :placeholder="t('upload.commitPlaceholder', '例如：修复第二关音效不同步的问题')" />
       <span class="hint">{{ t('upload.commitHint', '会生成「作品更新公告」并写入时间线') }}</span>
     </label>
-    <label v-if="editSlug && zipFile && demoType !== 'link'" class="field" style="display: flex; gap: 8px; align-items: center">
+    <label v-if="editSlug && zipFile && demoType !== 'link'" class="field" style="display: flex; gap: var(--sp-8); align-items: center">
       <input v-model="keepOldVersion" type="checkbox" style="width: 18px; height: 18px" />
       {{ t('upload.keepOld', '保留当前版本为独立旧版页面（上传新 zip 时生效）') }}
     </label>
@@ -264,7 +264,7 @@ function onTaskEntityPick(p: EntityPick) {
         <!-- 同一个键，换个读法：这是你这次实验的编号，截图发群时可引用 -->
         <span v-if="expNo" class="uw-expno mono" :title="t('upload.expTip', '本次上传的实验编号（由幂等键末 6 位得到）')">EXP-{{ expNo }}</span>
       </p>
-      <label v-if="isAdmin" class="field" style="display: flex; gap: 8px; align-items: center; margin-top: 8px">
+      <label v-if="isAdmin" class="field" style="display: flex; gap: var(--sp-8); align-items: center; margin-top: var(--sp-8)">
         <input v-model="forceUpload" type="checkbox" style="width: 18px; height: 18px" />
         {{ t('upload.force', '强制上传（跳过 zip 去重 409）') }}
       </label>

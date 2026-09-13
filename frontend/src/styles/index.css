@@ -13,6 +13,9 @@
 @import './utilities.css';
 @import './components/button.css';
 @import './components/card.css';
+/* 微交互库：全站唯一的 hover/active 物理（抬升 + 增影 + 压平）。
+   放在 components 层靠前位置：组件只声明 --lift-* 变量，不再各自写 hover 物理。 */
+@import './components/lift.css';
 @import './components/form.css';
 @import './components/chip.css';
 @import './layouts/topbar.css';

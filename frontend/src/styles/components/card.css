@@ -10,9 +10,14 @@
   /* R8：静止零倾斜（原 rotate(1deg) 清零） */
 }
 .card-entity {
-  box-shadow: var(--shadow-entity);
-  /* t6 M5-U2（C2，08 §3）：实体强调卡（models/explore/tasks 列表 + task 对比行）单一语义影；
-     纸白=--shadow-teal 保值，墨黑=--k-cyan-dim 降饱和（themes.css 换绑） */
+  /* t6 M5-U2（C2，08 §3）：实体强调卡（models/explore/tasks 列表 + task 对比行）单一语义影。
+     2026-09 用户拍板改口径：**墨色 + 与探索页题目行同一套档位**（3px 静止 / hover 5px）。
+     两个值都来自令牌、与 .task-line 共用 → 两处物理上不可能再分叉（由门禁 ① 钉住）。
+     hover/active 物理由微交互库 .b-lift 提供（模板加 b-lift 类即可，组件不再写 hover 规则）。 */
+  --lift-sh: var(--shadow-entity);
+  --lift-sh-hover: var(--shadow-entity-hover);
+  --lift-flat: var(--sh-off-uw); /* Rule 01：它的影是 3px 档 → 压平位移也用 3px */
+  box-shadow: var(--lift-sh); /* 兜底：即使模板漏了 b-lift 类，静止影也照旧（不会掉影） */
 }
 .card.card-coral {
   background: var(--card-coral-bg);
@@ -29,9 +34,13 @@
   background: var(--wash-mint);
   box-shadow: var(--shadow-lg);
 }
-.card-hover:hover {
-  transform: translate(-2px, -2px) rotate(0deg);
-  box-shadow: 12px 12px 0 0 var(--red); /* hover 增影顶格档 12px（非标准三档，字面保留随手感灰度二批定档；档位外不强行收编） */
+.card-hover {
+  /* 作品卡：静止**无影** → hover 有影（参考站按钮同款"从无到有"口径），颜色换强调红。
+     参考站 Rule 04 的卡片 hover 是 12px + 换彩色 → 这里 12px 档已升为正式令牌 --sh-off-2xl。
+     hover 物理交给 .b-lift（本类只声明值）。 */
+  --lift-sh: none;
+  --lift-sh-hover: var(--shadow-hover-red);
+  --lift-flat: var(--sh-off-2xl);
 }
 .card-flat {
   box-shadow: none;

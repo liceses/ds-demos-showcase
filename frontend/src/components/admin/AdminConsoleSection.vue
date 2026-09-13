@@ -155,7 +155,7 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px">
+    <div class="filter-row" style="margin-bottom: var(--sp-12)">
       <span class="filter-label">{{ t('admin.console.hint', '按待办量排序的入口台。数字只统计"等你处理"的，不统计"已经存在"的。') }}</span>
       <button class="btn btn-sm btn-secondary" type="button" @click="load">↻ {{ t('common.refresh', '刷新') }}</button>
     </div>
@@ -174,7 +174,7 @@ onMounted(load)
         <!-- M2-t4：收件箱卡升级（kind 分组计数+直达深链+批量按钮）。div 承载子钮，避免 button 嵌套 button -->
         <div
           v-if="c.k === 'inbox'"
-          class="ac-card"
+          class="ac-card b-lift"
           :class="{ hot: inboxCombined > 0 }"
           role="button"
           tabindex="0"
@@ -214,7 +214,7 @@ onMounted(load)
         <!-- M2-t4：归属卡——组内多选批量归属+多数猜测预填已有（R9：单件工作台、整批归属分工不变） -->
         <div
           v-else-if="c.k === 'attribution'"
-          class="ac-card"
+          class="ac-card b-lift"
           :class="{ hot: queues[c.k as keyof typeof queues]!.count > 0 }"
           role="button"
           tabindex="0"
@@ -231,7 +231,7 @@ onMounted(load)
           </div>
         </div>
         <!-- 普通卡：无批量端点的面板不放假门，直达即可 -->
-        <button v-else type="button" class="ac-card" :class="{ hot: queues[c.k as keyof typeof queues]!.count > 0 }" @click="go(c.tab)">
+        <button v-else type="button" class="ac-card b-lift" :class="{ hot: queues[c.k as keyof typeof queues]!.count > 0 }" @click="go(c.tab)">
           <b class="ac-num">{{ queues[c.k as keyof typeof queues]!.count }}</b>
           <span class="ac-label">{{ c.label }}</span>
           <span class="ac-why">{{ c.why }}</span>
@@ -306,18 +306,18 @@ onMounted(load)
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--sp-8);
+  margin-top: var(--sp-10);
   border-top: 2px solid var(--ink, #000);
-  padding-top: 10px;
+  padding-top: var(--sp-10);
 }
 .ac-kind {
   border: 2px solid var(--ink, #000);
   background: var(--paper, #fff);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
-  padding: 4px 8px;
+  padding: var(--sp-4) var(--sp-8);
   cursor: pointer;
   min-height: 32px;
 }
@@ -332,28 +332,28 @@ onMounted(load)
 /* 灰测池常驻卡：默认纸面 3px 墨框；90 天红线 = 左缘 9px --err（与 ac-card.hot 同语汇） */
 .ac-pool {
   margin-top: 18px;
-  padding: 12px 14px;
+  padding: var(--sp-12) var(--sp-14);
   border: var(--border-w, 4px) solid var(--ink, #000);
   background: var(--paper, #fff);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .ac-pool-red {
   border-left: 9px solid var(--err, #ff6b6b);
 }
 .ac-pool-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 900;
 }
 .ac-pool-stat {
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 700;
 }
 .ac-pool-flag {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 900;
   color: var(--err, #ff6b6b);
 }

@@ -316,7 +316,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <div v-if="!only" class="filter-row" style="margin-bottom: 14px">
+    <div v-if="!only" class="filter-row" style="margin-bottom: var(--sp-14)">
       <button class="tab" :class="{ active: tagSub === 'keys' }" type="button" @click="tagSub = 'keys'">键管理</button>
       <button class="tab" :class="{ active: tagSub === 'review' }" type="button" @click="tagSub = 'review'; loadSuggestions()">固定值申请 / AI</button>
       <!-- KB-30：models.dev 一键同步（新模型进待审建议；后端抓网络最长 30s，期间禁用按钮） -->
@@ -333,8 +333,8 @@ onMounted(() => {
     </div>
 
     <template v-if="tagSub === 'keys'">
-      <div class="card card-mint" style="padding: 16px 20px; margin-bottom: 16px; max-width: 720px">
-        <h2 style="margin-bottom: 10px">新建标签键</h2>
+      <div class="card card-mint" style="padding: var(--sp-16) var(--sp-20); margin-bottom: var(--sp-16); max-width: 720px">
+        <h2 style="margin-bottom: var(--sp-10)">新建标签键</h2>
         <div class="form-stack">
           <div class="filter-row" style="margin-bottom: 0">
             <input v-model="newKey.key" class="input" style="max-width: 140px" placeholder="key" />
@@ -357,9 +357,9 @@ onMounted(() => {
         <div class="tag-pane-keys">
           <!-- P2：标签数据加载失败 → 别渲染成"没有标签"（护栏测试抓出的同型缺陷） -->
           <template v-if="tagsLoadError">
-            <p class="notice notice-error" style="margin: 8px">
+            <p class="notice notice-error" style="margin: var(--sp-8)">
               标签数据加载失败（不是「没有标签」）
-              <button class="btn btn-sm btn-outline" type="button" style="margin-left: 8px" @click="loadTags">重试</button>
+              <button class="btn btn-sm btn-outline" type="button" style="margin-left: var(--sp-8)" @click="loadTags">重试</button>
             </p>
           </template>
           <template v-else>
@@ -378,9 +378,9 @@ onMounted(() => {
               <b>{{ adminActiveTagKey.label || adminActiveTagKey.key }} <code>{{ adminActiveTagKey.key }}</code></b>
               <span class="mode-badge" :class="'mode-badge-' + adminActiveTagKey.mode">{{ modeLabel[adminActiveTagKey.mode] }}</span>
             </div>
-            <p class="muted" style="margin: 0 0 10px">{{ adminActiveTagKey.description || '暂无介绍' }}</p>
+            <p class="muted" style="margin: 0 0 var(--sp-10)">{{ adminActiveTagKey.description || '暂无介绍' }}</p>
 
-            <div class="form-stack" style="margin-bottom: 12px">
+            <div class="form-stack" style="margin-bottom: var(--sp-12)">
               <div class="filter-row" style="margin: 0">
                 <select v-model="editKeyForm.mode" class="input" style="max-width: 120px">
                   <option value="fixed">固定值</option>
@@ -395,7 +395,7 @@ onMounted(() => {
               <span v-if="keyEditError" class="notice notice-error" style="margin: 0">{{ keyEditError }}</span>
             </div>
 
-            <div v-if="adminActiveTagKey.mode === 'fixed'" class="form-stack" style="margin-bottom: 12px">
+            <div v-if="adminActiveTagKey.mode === 'fixed'" class="form-stack" style="margin-bottom: var(--sp-12)">
               <div class="filter-row" style="margin: 0">
                 <input v-model="newValue.value" class="input" style="max-width: 140px" placeholder="value" />
                 <input v-model="newValue.description" class="input" style="max-width: 180px" placeholder="介绍（可选）" />
@@ -406,7 +406,7 @@ onMounted(() => {
             </div>
 
               <!-- 值可能有 160+（model 键）：搜索比分页对症 —— 管理员是来找某个值的，不是一页页翻的 -->
-              <div class="filter-row" style="margin: 0 0 10px; flex-wrap: wrap">
+              <div class="filter-row" style="margin: 0 0 var(--sp-10); flex-wrap: wrap">
                 <input v-model="valueFilter" class="input" type="search" placeholder="搜值名或介绍…" style="max-width: 240px" />
                 <span class="muted mono">{{ shownValues.length }} / {{ adminActiveTagKey.values.length }}</span>
                 <span v-if="!valueFilter.trim() && adminActiveTagKey.values.length > VALUE_CAP" class="hint">
@@ -417,28 +417,28 @@ onMounted(() => {
             <template v-if="adminActiveTagKey.mode === 'fixed'">
               <template v-for="g in groupedTagValues(shownValues)" :key="g.group">
                 <div v-if="groupedTagValues(shownValues).length > 1" class="tag-group-name">{{ g.group }}</div>
-                <div class="filter-row" style="margin: 0; gap: 6px">
+                <div class="filter-row" style="margin: 0; gap: var(--sp-6)">
                   <template v-for="v in g.values" :key="v.value">
                     <RouterLink class="tag-chip" :class="'mode-fixed'" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
                     <!-- 合并此前在 UI 上不可达：TagMergeModal 组件与 /tags/admin/merge 端点都在，却没人引用它 -->
-                    <button class="btn btn-sm btn-outline" type="button" style="padding: 2px 6px" title="把该值并入另一个值" @click="openMerge(v.value)">并</button>
-                    <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
+                    <button class="btn btn-sm btn-outline" type="button" style="padding: var(--sp-2) var(--sp-6)" title="把该值并入另一个值" @click="openMerge(v.value)">并</button>
+                    <button class="btn btn-sm btn-danger" type="button" style="padding: var(--sp-2) var(--sp-6)" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
                   </template>
                 </div>
               </template>
               <span v-if="!shownValues.length" class="muted">{{ valueFilter.trim() ? '没有匹配的值，换个关键词' : '还没有值' }}</span>
             </template>
-            <div v-else class="filter-row" style="margin: 0; gap: 6px">
+            <div v-else class="filter-row" style="margin: 0; gap: var(--sp-6)">
               <template v-for="v in shownValues" :key="v.value">
                 <RouterLink class="tag-chip" :class="'mode-' + adminActiveTagKey.mode" :to="`/tag/${adminActiveTagKey.key}/${v.value}`">{{ v.value }}<span class="count">{{ v.demo_count }}</span></RouterLink>
-                <button class="btn btn-sm btn-outline" type="button" style="padding: 2px 6px" title="把该值并入另一个值" @click="openMerge(v.value)">并</button>
-                <button class="btn btn-sm btn-danger" type="button" style="padding: 2px 6px" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
+                <button class="btn btn-sm btn-outline" type="button" style="padding: var(--sp-2) var(--sp-6)" title="把该值并入另一个值" @click="openMerge(v.value)">并</button>
+                <button class="btn btn-sm btn-danger" type="button" style="padding: var(--sp-2) var(--sp-6)" title="删除该值" @click="deleteTagValue(adminActiveTagKey.key, v.value)">×</button>
               </template>
               <span v-if="!shownValues.length" class="muted">{{ valueFilter.trim() ? '没有匹配的值，换个关键词' : '还没有值' }}</span>
             </div>
 
             <div v-if="adminActiveTagKey.mode === 'fixed'" class="group-workbench-inline">
-              <div class="filter-row" style="margin: 16px 0 10px; justify-content: space-between; align-items: center; flex-wrap: wrap">
+              <div class="filter-row" style="margin: var(--sp-16) 0 var(--sp-10); justify-content: space-between; align-items: center; flex-wrap: wrap">
                 <h3 style="margin: 0">分组管理</h3>
                 <input v-model="groupSearch" class="input" style="max-width: 180px" placeholder="搜索值…" />
               </div>
@@ -451,7 +451,7 @@ onMounted(() => {
               />
             </div>
 
-            <div class="filter-row" style="margin-top: 14px">
+            <div class="filter-row" style="margin-top: var(--sp-14)">
               <button class="btn btn-sm btn-dark" type="button" @click="deleteTagKey(adminActiveTagKey.key)">删除键</button>
             </div>
           </template>
@@ -462,8 +462,8 @@ onMounted(() => {
     </template>
 
     <template v-else>
-      <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 720px">
-        <h2 style="margin-bottom: 12px">AI 整理标签</h2>
+      <div class="card card-coral" style="padding: var(--sp-20); margin-bottom: var(--sp-20); max-width: 720px">
+        <h2 style="margin-bottom: var(--sp-12)">AI 整理标签</h2>
         <div class="form-stack">
           <div class="filter-row" style="margin: 0">
             <select v-model="aiDemoSlug" class="input" style="max-width: 260px">

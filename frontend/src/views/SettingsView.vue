@@ -202,9 +202,9 @@ onBeforeUnmount(() => {
     <p class="sub">{{ t('settings.sub', '修改你的登录密码。密码修改后，下次登录请使用新密码。') }}</p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
-    <div class="auth-card card card-coral read-col" style="padding: 24px">
-      <h2 style="margin-bottom: 12px">{{ t('settings.changePwd', '修改密码') }}</h2>
+  <section class="section" style="padding-top: var(--sp-8)">
+    <div class="auth-card card card-coral read-col" style="padding: var(--sp-24)">
+      <h2 style="margin-bottom: var(--sp-12)">{{ t('settings.changePwd', '修改密码') }}</h2>
       <form class="form-stack" @submit.prevent="submitPassword">
         <label class="field">
           {{ t('settings.oldPwd', '原密码') }}
@@ -229,9 +229,9 @@ onBeforeUnmount(() => {
 
   <!-- 个人资料（含头像）：收藏/历史的账号侧入口 -->
     <section class="section" style="padding-top: 0">
-      <div class="card card-default read-col" style="padding: 24px">
-        <h2 style="margin-bottom: 6px">{{ t('acc.profile', '个人资料') }}</h2>
-        <p class="hint" style="margin-bottom: 16px">{{ t('acc.profileHint', '展示名与头像会出现在你的作品与评论旁；用户名不变（用于链接与提及）。') }}</p>
+      <div class="card card-default read-col" style="padding: var(--sp-24)">
+        <h2 style="margin-bottom: var(--sp-6)">{{ t('acc.profile', '个人资料') }}</h2>
+        <p class="hint" style="margin-bottom: var(--sp-16)">{{ t('acc.profileHint', '展示名与头像会出现在你的作品与评论旁；用户名不变（用于链接与提及）。') }}</p>
         <div class="avatar-row">
           <span class="avatar-preview" aria-hidden="true">
             <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" alt="" />
@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
             <button v-if="auth.user?.avatar_url" class="btn btn-sm btn-outline" type="button" :disabled="avatarUploading" @click="removeAvatar">
               {{ t('acc.removeAvatar', '移除') }}
             </button>
-            <p class="hint" style="margin: 6px 0 0">{{ t('acc.avatarHint', '支持 png/jpg/webp，会自动压缩成方形，无需自己处理大小') }}</p>
+            <p class="hint" style="margin: var(--sp-6) 0 0">{{ t('acc.avatarHint', '支持 png/jpg/webp，会自动压缩成方形，无需自己处理大小') }}</p>
           </div>
         </div>
         <form class="form-stack" style="margin-top: 18px" @submit.prevent="saveProfile">
@@ -266,12 +266,12 @@ onBeforeUnmount(() => {
 
     <!-- 隐私：浏览历史开关 + 收藏夹可见性说明 -->
     <section class="section" style="padding-top: 0">
-      <div class="card card-coral read-col" style="padding: 24px">
-        <h2 style="margin-bottom: 6px">{{ t('acc.privacy', '隐私') }}</h2>
+      <div class="card card-coral read-col" style="padding: var(--sp-24)">
+        <h2 style="margin-bottom: var(--sp-6)">{{ t('acc.privacy', '隐私') }}</h2>
         <div class="privacy-row">
           <div>
             <p style="margin: 0; font-weight: 800">{{ t('acc.historyToggle', '浏览历史') }}</p>
-            <p class="hint" style="margin: 4px 0 0">{{ t('acc.historyHint', '登录后记录你打开过的作品，跨设备可见；只记作品与时间，不记 IP、不记来源。') }}</p>
+            <p class="hint" style="margin: var(--sp-4) 0 0">{{ t('acc.historyHint', '登录后记录你打开过的作品，跨设备可见；只记作品与时间，不记 IP、不记来源。') }}</p>
           </div>
           <div class="tab-group" role="radiogroup" :aria-label="t('acc.historyToggle', '浏览历史')">
             <button class="tab" :class="{ active: historyOn }" type="button" role="radio" :aria-checked="historyOn" @click="setHistory(true)">
@@ -289,7 +289,7 @@ onBeforeUnmount(() => {
         <div class="privacy-row" style="margin-top: 18px">
           <div>
             <p style="margin: 0; font-weight: 800">{{ t('acc.collections', '收藏夹可见性') }}</p>
-            <p class="hint" style="margin: 4px 0 0">{{ t('acc.collectionsHint', '收藏夹默认私密；设为公开的可以被查看与分享。') }}</p>
+            <p class="hint" style="margin: var(--sp-4) 0 0">{{ t('acc.collectionsHint', '收藏夹默认私密；设为公开的可以被查看与分享。') }}</p>
           </div>
           <RouterLink class="btn btn-sm btn-outline" to="/me/collections">{{ t('acc.manageCollections', '去管理收藏夹 →') }}</RouterLink>
         </div>
@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
 
 <section class="section" style="padding-top: 0">
     <div class="appearance-card card card-default read-col">
-      <h2 style="margin-bottom: 6px">{{ t('settings.appearanceTitle', '外观与主题') }}</h2>
+      <h2 style="margin-bottom: var(--sp-6)">{{ t('settings.appearanceTitle', '外观与主题') }}</h2>
       <p class="appearance-desc">
         {{ t('settings.appearanceDesc', '选择立即生效并保存在本设备；「跟随系统」随设备深浅色偏好自动换肤。') }}
       </p>
@@ -335,12 +335,12 @@ onBeforeUnmount(() => {
 <style scoped>
 /* ---- M2-4 外观与主题节 ---- */
 .appearance-card {
-  padding: 24px;
+  padding: var(--sp-24);
 }
 .appearance-desc {
   margin: 0 0 18px;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--fs-14);
   line-height: 1.7;
 }
 
@@ -348,7 +348,7 @@ onBeforeUnmount(() => {
 .theme-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--sp-14);
 }
 @media (max-width: 720px) { /* P0-3 断点收缝：719 → 720 */
   .theme-options {
@@ -360,9 +360,9 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--sp-10);
   min-height: 44px; /* 触达红线 ≥44×44（03 §10.1；实际卡片远超下限） */
-  padding: 14px;
+  padding: var(--sp-14);
   text-align: left;
   background: var(--paper-deep);
   border: 2px solid var(--ink);
@@ -398,10 +398,10 @@ onBeforeUnmount(() => {
 
 .theme-name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-15);
 }
 .theme-desc {
-  font-size: 12px;
+  font-size: var(--fs-12);
   line-height: 1.6;
   color: var(--ink-soft);
 }
@@ -411,9 +411,9 @@ onBeforeUnmount(() => {
 }
 /* 系统卡实时生效值章（matchMedia 监听驱动；仅跟随系统被选中时显示） */
 .theme-eff {
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 3px var(--sp-8);
   border: 2px solid currentColor;
 }
 

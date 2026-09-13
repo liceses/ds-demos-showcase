@@ -8,11 +8,11 @@
 .eyebrow {
   display: inline-block;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 6px 12px;
+  padding: var(--sp-6) var(--sp-12);
   background: var(--yellow);
   color: var(--on-accent, #000); /* 小面积章+黑字 */
   border: var(--border-w) solid var(--ink);
@@ -35,7 +35,7 @@
 }
 .muted {
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .strike {
   text-decoration: line-through;

@@ -26,6 +26,20 @@
   --sh-off-xl: 8px 8px;
   --sh-off-uw: 3px 3px; /* T15 档位归一（t20 记账）：uw-type 压平位移的档外 3px 字面收编为具名档
                            （P2-4 暂留清偿）；不随 @720 减半——原字面行为全宽恒 3px，视觉零变化 */
+  --sh-off-2xl: 12px 12px; /* 顶格档（原为 .card-hover:hover 的字面 12px，注释写"非标准三档"）——
+                              参考站 Rule 04 的卡片 hover 正是 12px，故升为正式档位：卡片 hover = 8→12 */
+  /* hover 档 = 静止档 × 1.5（取整到整数像素）——一条律同时解释两个事实：
+     参考站卡片 8→12 ✔；用户认可的探索页题目行 3→5 ✔。禁"hover 影缩"（R6/Rule 04） */
+  --sh-off-hov-sm: 3px 3px;
+  --sh-off-hov-uw: 5px 5px;
+  --sh-off-hov-md: 6px 6px;
+  --sh-off-hov-lg: 9px 9px;
+  --sh-off-hov-xl: var(--sh-off-2xl); /* 8×1.5=12 ✔ 与参考站逐值一致 */
+  /* 抬起量（原先 -2px/-1px 字面散在 29 处，无令牌） */
+  --lift-x: -2px;
+  --lift-y: -2px;
+  --lift-s-x: -1px; /* 小件档（chip 类；forum/markdown/home 的 -1px 现值） */
+  --lift-s-y: -1px;
 
   /* R1/R2 响应式（50% 律，@720 收敛点与 pages/_mobile-legacy 断点一致，无双跳）：
      移动档边框减半、位移档减半——压平位移 translate(var(--sh-off-*)) 同源自动同步；
@@ -35,6 +49,11 @@
     --sh-off-md: 2px 2px;
     --sh-off-lg: 3px 3px;
     --sh-off-xl: 4px 4px;
+    --sh-off-2xl: 6px 6px;
+    --sh-off-hov-md: 3px 3px;
+    --sh-off-hov-lg: 5px 5px;
+    --sh-off-hov-xl: 6px 6px;
+    /* hov-sm(3)/hov-uw(5) 与 sm/uw 同规则不减半 */
   }
 
   /* ---------- L1 色板原子 · 纸系（--p-*，默认主题；04 §2.1 玩乐谱系基因） ---------- */
@@ -63,8 +82,8 @@
   --k-red: #ff006e; /* 荧光玫红 */
   --k-yellow: #ccff00; /* 酸性黄绿 */
   --k-cyan: #00d9ff; /* 电光青 */
-  --k-cyan-dim: #2f95a3; /* t6 M5-U2（C2，08 §3）：实体强调影墨黑降饱和档——电光青硬影近黑底 10.85:1 刺眼/漂移，
-                            同色相压饱和（对 --k-ink #141414 ≈5.2:1、对卡底 #1d1d1d ≈4.8:1），可辨不刺眼 */
+  /* --k-cyan-dim（实体影墨黑降饱和档）已于 2026-09 删除：实体卡影改用默认墨影，
+     它的唯一消费者（themes.css 那条 --shadow-entity 覆盖）同时删掉了 */
   --k-orange: #ff9500; /* 信号橙 */
   --k-ink-soft: #b8b2a4; /* 暖灰次级（对 --k-ink ≈ 8.3:1，AA 余量） */
   --k-err: #ff8a8a; /* t16 验收入册：错误色墨系提亮（对 --k-ink 8.12:1，04 §3.4 矩阵） */

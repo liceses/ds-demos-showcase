@@ -1,13 +1,13 @@
 /* ---------- 输入框 ---------- */
 .input {
   width: 100%;
-  padding: 12px 14px;
+  padding: var(--sp-12) var(--sp-14);
   border: var(--border-w) solid var(--ink);
   border-radius: 0;
   background: var(--wash-yellow);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--fs-14);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
   outline: none;
 }
@@ -30,31 +30,31 @@ select.input {
 }
 label.field {
   display: block;
-  margin: 0 0 14px;
+  margin: 0 0 var(--sp-14);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 label.field .input {
-  margin-top: 6px;
+  margin-top: var(--sp-6);
 }
 /* 全局 .hint：项目里原本只有 `label.field .hint` 有样式，
    结果所有写在 label 之外的 class="hint"（详情页、高级区、后台）都是 16px 裸正文，
    还会和上方卡片的硬阴影叠在一起 —— 一处定义，全站统一。 */
 .hint {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 400;
   line-height: 1.55;
   text-transform: none;
   color: var(--ink-soft);
 }
-p.hint { margin: 8px 0 0; }
+p.hint { margin: var(--sp-8) 0 0; }
 label.field .hint {
   display: block;
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: var(--sp-6);
+  font-size: var(--fs-11);
   font-weight: 400;
   text-transform: none;
   color: var(--ink-soft);
@@ -62,35 +62,35 @@ label.field .hint {
 
 .field-label {
   display: block;
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-10);
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 .tag-key-row {
   border: 2px solid var(--ink);
-  padding: 12px 14px;
-  margin-bottom: 12px;
+  padding: var(--sp-12) var(--sp-14);
+  margin-bottom: var(--sp-12);
   background: var(--paper);
 }
 .tag-key-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: var(--sp-10);
+  margin-bottom: var(--sp-10);
   flex-wrap: wrap;
 }
 .tag-key-head code {
   background: var(--wash-yellow);
   padding: 1px 5px;
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 
 /* 上传进度条 */
 .upload-progress {
-  margin: 4px 0 14px;
+  margin: var(--sp-4) 0 var(--sp-14);
 }
 .progress-track {
   height: 10px;
@@ -109,7 +109,7 @@ label.field .hint {
   background: var(--paper);
   border: 2px solid var(--ink);
   color: #ccc;
-  font-size: 22px;
+  font-size: var(--fs-22);
   line-height: 1;
   width: 36px;
   height: 36px;
@@ -131,9 +131,9 @@ label.field .hint {
 .int-dist-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-  font-size: 12px;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-12);
 }
 .int-dist-label {
   width: 40px;
@@ -160,17 +160,17 @@ label.field .hint {
 .dsh-trajectory {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .dsh-block {
   border: 2px solid var(--ink);
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
   background: var(--paper);
 }
 .dsh-title {
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-6);
 }
 .dsh-user {
   border-left: 6px solid var(--coral);
@@ -193,11 +193,11 @@ label.field .hint {
   line-height: 1.7;
   white-space: pre-wrap;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 .dsh-code {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-12);
   overflow-x: auto;
   white-space: pre-wrap;
 }

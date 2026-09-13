@@ -43,7 +43,7 @@ function linkable(m: ModelBrief): boolean {
       :is="peek ? 'button' : linkable(m) ? 'RouterLink' : 'span'"
       v-for="m in models.slice(0, max)"
       :key="m.slug"
-      class="model-chip"
+      class="model-chip b-lift"
       :class="{ 'model-chip-plain': plain, 'model-chip-muted': !linkable(m) && !peek }"
       :to="!peek && linkable(m) ? `/models/${m.slug}` : undefined"
       :type="peek ? 'button' : undefined"

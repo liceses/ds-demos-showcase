@@ -83,7 +83,7 @@ onMounted(async () => {
     <!-- P2-b：404 不是品牌页，标题从 115px 巨字收进功能页档（.page-title 已独立成类，
          原先它只作为 .page-hero--compact 的后代选择器存在，所以这页只能用 .huge） -->
     <h1 class="page-title">404</h1>
-    <p class="sub" style="margin: 12px auto 20px; max-width: 360px">{{ t('notFound.sub', '页面不存在，可能已被移动或删除。') }}</p>
+    <p class="sub" style="margin: var(--sp-12) auto var(--sp-20); max-width: 360px">{{ t('notFound.sub', '页面不存在，可能已被移动或删除。') }}</p>
     <RouterLink class="btn btn-primary" to="/">{{ t('notFound.back', '返回首页') }}</RouterLink>
 
     <!-- 相似 slug 猜测：命中才出现（零命中不渲染，站点地图不背锅） -->
@@ -117,40 +117,40 @@ onMounted(async () => {
 /* M1-C：styles/ 冻结令——新样式全 scoped，令牌 var() 引全局既有值带字面回落 */
 .nf {
   margin-top: 60px;
-  padding: 40px 16px 44px;
+  padding: var(--sp-40) var(--sp-16) 44px;
 }
 .nf-label {
   font-family: var(--font-mono, var(--font-body, monospace));
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-soft, #555);
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-10);
 }
 
 /* 相似猜测：三行候选，标题+slug 码 */
 .nf-guess {
   margin-top: 30px;
   display: grid;
-  gap: 8px;
+  gap: var(--sp-8);
   justify-items: center;
 }
 .nf-guess-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--sp-14);
   border: 2px solid var(--ink, #000);
   background: var(--paper, #fff);
   color: var(--ink, #000);
   text-decoration: none;
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 .nf-guess-slug {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft, #555);
 }
 @media (hover: hover) {
@@ -173,18 +173,18 @@ onMounted(async () => {
 .nf-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: var(--sp-10);
 }
 /* 「关于」低频文字链（M1-fix-10）：地图下缘静默一行，不与四入口卡争位 */
 .nf-about-row {
-  margin: 12px 0 0;
+  margin: var(--sp-12) 0 0;
   text-align: center;
 }
 .nf-about {
   color: var(--ink-soft, #555);
   text-decoration: none;
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 .nf-about:hover {
   color: var(--ink, #000);
@@ -200,16 +200,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--sp-6);
   min-height: 56px; /* 触达底线富余 */
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
   border: var(--border-w, 4px) solid var(--ink, #000);
   background: var(--paper, #fff);
   color: var(--ink, #000);
   text-decoration: none;
   font-family: var(--font-heading, sans-serif);
   font-weight: 900;
-  font-size: 13px;
+  font-size: var(--fs-13);
   box-shadow: 4px 4px 0 0 var(--ink, #000);
   transition: transform var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1)),
     box-shadow var(--b-dur, 150ms) var(--b-ease, cubic-bezier(0, 0, 0.2, 1));

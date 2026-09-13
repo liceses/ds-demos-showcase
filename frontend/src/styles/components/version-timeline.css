@@ -3,7 +3,7 @@
   position: relative;
   padding: 0 0 22px 26px;
   border-left: 4px solid var(--ink);
-  margin-left: 10px;
+  margin-left: var(--sp-10);
 }
 .commit-item::before {
   content: "";
@@ -18,33 +18,33 @@
 .commit-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-6);
 }
 .commit-hash {
-  font-size: 11px;
+  font-size: var(--fs-11);
   background: var(--ink);
   color: var(--paper);
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
 }
 .commit-msg {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .commit-meta {
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft);
 }
 .diff-block {
   border: 3px solid var(--ink);
   background: var(--ink);
-  margin-top: 10px;
+  margin-top: var(--sp-10);
   overflow-x: auto;
 }
 .diff-line {
-  font-size: 12px;
-  padding: 2px 12px;
+  font-size: var(--fs-12);
+  padding: var(--sp-2) var(--sp-12);
   white-space: pre;
   font-family: var(--font-body);
 }

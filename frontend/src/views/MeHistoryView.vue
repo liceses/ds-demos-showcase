@@ -129,12 +129,12 @@ const historyOff = computed(() => loggedIn.value && auth.user?.history_enabled =
     <PageHero>
       <span class="eyebrow">{{ t('hist.title', '浏览历史') }}</span>
       <h1 class="page-title">{{ t('hist.title', '浏览历史') }}</h1>
-      <p class="hint" style="margin-top: 10px">
+      <p class="hint" style="margin-top: var(--sp-10)">
         {{ t('hist.note', '未登录时只记在这台设备；登录后同步到账号（可在设置里关闭）。') }}
       </p>
     </PageHero>
 
-    <section class="section" style="padding-top: 8px">
+    <section class="section" style="padding-top: var(--sp-8)">
       <!-- 隐私说明（本页的门面）：写清"记了什么"与"怎么清" -->
       <div class="card card-mint hist-notice">
         <p class="hist-notice-text">
@@ -145,10 +145,10 @@ const historyOff = computed(() => loggedIn.value && auth.user?.history_enabled =
         </button>
       </div>
 
-      <p v-if="historyOff" class="notice notice-error" style="margin-top: 12px">
+      <p v-if="historyOff" class="notice notice-error" style="margin-top: var(--sp-12)">
         {{ t('hist.off', '历史记录已关闭') }} · {{ t('hist.offHint', '在设置里重新开启后才会记录新的记录') }}
       </p>
-      <p v-else-if="!loggedIn" class="hint" style="margin-top: 12px">
+      <p v-else-if="!loggedIn" class="hint" style="margin-top: var(--sp-12)">
         <RouterLink :to="`/login?next=${encodeURIComponent('/me/history')}`">{{ t('hist.loginHint', '登录后历史可跨设备同步 →') }}</RouterLink>
       </p>
 

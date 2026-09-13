@@ -266,7 +266,7 @@ onMounted(async () => {
               <span class="tag-pane-key-count">{{ selectedOf(k.key).length }}</span>
             </button>
           </template>
-          <div v-if="!filteredKeys.length" class="muted" style="padding: 8px">无匹配标签</div>
+          <div v-if="!filteredKeys.length" class="muted" style="padding: var(--sp-8)">无匹配标签</div>
         </div>
 
         <div class="tag-pane-values">
@@ -303,8 +303,8 @@ onMounted(async () => {
                     <button class="btn btn-sm btn-secondary" type="button" @click="submitSuggestion">申请</button>
                     <button class="btn btn-sm btn-dark" type="button" @click="toggleSuggestPanel(activeTagKey.key)">取消</button>
                   </div>
-                  <span v-if="suggestError" class="notice notice-error" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestError }}</span>
-                  <span v-if="suggestMsg" class="notice notice-success" style="margin: 4px 0 0; padding: 6px 10px; font-size: 12px">{{ suggestMsg }}</span>
+                  <span v-if="suggestError" class="notice notice-error" style="margin: var(--sp-4) 0 0; padding: var(--sp-6) var(--sp-10); font-size: var(--fs-12)">{{ suggestError }}</span>
+                  <span v-if="suggestMsg" class="notice notice-success" style="margin: var(--sp-4) 0 0; padding: var(--sp-6) var(--sp-10); font-size: var(--fs-12)">{{ suggestMsg }}</span>
                 </div>
               </div>
 

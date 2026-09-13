@@ -3,27 +3,32 @@
   border: 3px solid var(--ink);
   border-left: 8px solid var(--mint);
   background: var(--paper);
-  padding: 10px 12px;
-  margin-bottom: 10px;
+  padding: var(--sp-10) var(--sp-12);
+  margin-bottom: var(--sp-10);
 }
-.pack-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.pack-list { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
 .pack-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: var(--sp-6);
+  padding: var(--sp-4) var(--sp-10);
   background: var(--mint);
   color: var(--on-accent, #000);
   border: 2px solid var(--ink);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--ink);
-  transition: transform var(--b-dur) var(--b-ease);
+  --lift-sh: none;
+  --lift-sh-hover: var(--sh-off-md) 0px 0px var(--ink);
+  --lift-x: var(--lift-s-x);
+  --lift-y: var(--lift-s-y);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.pack-chip:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25); }
+/* 收进微交互库：无影元素 → hover 4px 档（原 3px 且是软影 rgba(0,0,0,.25)，与硬影体系冲突） */
 .pack-key {
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;

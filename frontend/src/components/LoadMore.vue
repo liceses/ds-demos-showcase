@@ -67,15 +67,15 @@ const more = computed(() => props.hasMore ?? props.shown < props.total)
 .load-more {
   display: flex;
   justify-content: center;
-  padding: 18px 0 4px;
+  padding: 18px 0 var(--sp-4);
 }
 .load-more-count {
-  margin-left: 8px;
-  font-size: 11px;
+  margin-left: var(--sp-8);
+  font-size: var(--fs-11);
   opacity: 0.75;
 }
 .load-more-end {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 </style>

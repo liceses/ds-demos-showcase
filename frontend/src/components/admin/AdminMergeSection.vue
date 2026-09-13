@@ -150,7 +150,7 @@ async function doMerge() {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.merge.hint', '合并 = 迁引用 + 旧名转别名 + 源退役，全程单事务且留审计。') }}</span>
       <select v-model="kind" class="input" style="max-width: 130px" @change="reset">
         <option value="models">{{ t('admin.merge.kindModel', '模型实体') }}</option>
@@ -164,9 +164,9 @@ async function doMerge() {
     <template v-else>
       <div v-if="error" class="notice notice-error">{{ error }}</div>
 
-      <div v-if="conflictGroups.length" class="card card-mint" style="padding: 12px 16px; margin-bottom: 14px">
+      <div v-if="conflictGroups.length" class="card card-mint" style="padding: var(--sp-12) var(--sp-16); margin-bottom: var(--sp-14)">
         <b>{{ t('admin.merge.conflictTitle', '规范化同名冲突（该合的就是这些）') }}</b>
-        <p class="hint" style="margin: 4px 0 8px">
+        <p class="hint" style="margin: var(--sp-4) 0 var(--sp-8)">
           {{ t('admin.merge.conflictWhy', '匹配层会把大小写与分隔符吃掉：两个实体规范化后同键，第三种写法就会分叉到不同实体上。') }}
         </p>
         <div v-for="g in conflictGroups" :key="g.key" class="merge-conflict-row">
@@ -192,12 +192,12 @@ async function doMerge() {
         </div>
       </div>
 
-      <label class="field" style="margin-top: 12px">
+      <label class="field" style="margin-top: var(--sp-12)">
         {{ t('admin.merge.reasonLabel', '合并理由（进审计，建议写清依据）') }}
         <input v-model="reason" class="input" maxlength="500" :placeholder="t('admin.merge.reasonPh', '如：官方确认 dsv4flash 与 dsv4-flash 是同一型号')" />
       </label>
 
-      <div class="filter-row" style="margin-top: 12px">
+      <div class="filter-row" style="margin-top: var(--sp-12)">
         <button class="btn btn-primary" type="button" :disabled="!canPreview || busy" @click="doPreview">
           {{ t('admin.merge.previewBtn', '③ 预览影响面（dry_run）') }}
         </button>
@@ -215,7 +215,7 @@ async function doMerge() {
           <div><span class="kpi-label">{{ t('admin.merge.kpiSource', '源') }}</span><b>{{ preview.source.name || preview.source.title }}</b><span class="muted mono"> #{{ preview.source.id }}</span></div>
           <div><span class="kpi-label">{{ t('admin.merge.kpiTarget', '归宿') }}</span><b>{{ preview.target.name || preview.target.title }}</b><span class="muted mono"> #{{ preview.target.id }}</span></div>
         </div>
-        <p class="hint" style="margin: 8px 0 0">
+        <p class="hint" style="margin: var(--sp-8) 0 0">
           {{ t('admin.merge.previewFoot', '执行后源实体状态转 deprecated、其公开页不再出现，旧名会自动成为归宿实体的别名以继续匹配历史标签。') }}
         </p>
       </div>
@@ -254,7 +254,7 @@ async function doMerge() {
                   {{ t('admin.merge.unDo', '撤销') }}
                 </button>
               </div>
-              <p v-if="unPrev[h.source.id]" class="hint" style="margin: 6px 0 0">
+              <p v-if="unPrev[h.source.id]" class="hint" style="margin: var(--sp-6) 0 0">
                 <template v-if="unPrev[h.source.id].reliable">
                   {{ t('admin.merge.unWillRestore', '将迁回 {n} 个；另有 {m} 个已被后续操作改走，不动它们。', { n: unPrev[h.source.id].will_restore, m: unPrev[h.source.id].already_moved_away }) }}
                 </template>

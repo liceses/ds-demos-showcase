@@ -39,12 +39,12 @@ onMounted(load)
     <span class="eyebrow">{{ t('tasks.eyebrow', '题目图鉴') }}</span>
     <h1 class="page-title">{{ t('tasks.title', '题目') }}</h1>
     <p class="sub">{{ t('tasks.sub', '同一道题，不同模型各交了什么 —— 题目是本站的比较单位。') }}</p>
-    <div class="filter-row" style="margin-top: 16px">
+    <div class="filter-row" style="margin-top: var(--sp-16)">
       <span class="mini-stat"><b>{{ total }}</b> {{ t('tasks.count', '道题目') }}</span>
     </div>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div class="toolbar">
       <div class="search-box search-box--grow search-box--sm">
         <input
@@ -67,7 +67,7 @@ onMounted(load)
     <EmptyBox v-else-if="!items.length" :text="t('tasks.emptyList', '还没有题目')" />
 
     <div v-else class="task-list">
-      <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-row card card-entity">
+      <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-row card card-entity b-lift">
         <EntityStamp :name="tk.title" size="md" />
         <div class="task-row-main">
           <div class="task-row-title">{{ tk.title }}</div>

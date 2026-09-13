@@ -262,7 +262,7 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px">
+    <div class="filter-row" style="margin-bottom: var(--sp-12)">
       <button v-if="!embedded" class="btn btn-sm btn-outline" type="button" @click="emit('back')">← {{ t('admin.kc.backToList', '返回实体总表') }}</button>
       <span class="filter-label">{{ t('admin.kc.detailHint', '看→选→改→存：内容字段点保存即审计；合并/slug/状态走身份闸。') }}</span>
     </div>

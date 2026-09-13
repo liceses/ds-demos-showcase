@@ -25,13 +25,13 @@
 }
 .forum-topbar-inner {
   margin: 0 auto;
-  padding: 10px 16px;
+  padding: var(--sp-10) var(--sp-16);
   display: flex;
   align-items: center;
   gap: 18px;
 }
 .forum-brand {
-  font-size: 20px;
+  font-size: var(--fs-20);
   font-weight: 900;
   color: var(--yellow);
   text-decoration: none;
@@ -39,14 +39,14 @@
 }
 .forum-nav {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   flex: 1;
 }
 .forum-nav-link {
   color: var(--paper);
   text-decoration: none;
   font-weight: 700;
-  padding: 4px 8px;
+  padding: var(--sp-4) var(--sp-8);
   border: 2px solid transparent;
 }
 .forum-nav-link:hover,
@@ -62,14 +62,14 @@
   border-bottom: 2px solid var(--yellow);
 }
 .forum-hero {
-  padding: 32px 0 8px;
+  padding: var(--sp-32) 0 var(--sp-8);
 }
 .forum-hero-inner {
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 var(--sp-16);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--sp-16);
   flex-wrap: wrap;
 }
 .forum-title {
@@ -82,23 +82,23 @@
 }
 .forum-section {
   margin: 0 auto;
-  padding: 20px 16px 40px;
+  padding: var(--sp-20) var(--sp-16) var(--sp-40);
 }
 .forum-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-16);
 }
 .forum-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .forum-topic-card {
   display: block;
-  padding: 14px 16px;
+  padding: var(--sp-14) var(--sp-16);
   border: 3px solid var(--ink);
   background: var(--paper);
   box-shadow: 4px 4px 0 0 var(--ink);
@@ -106,21 +106,17 @@
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
 }
-.forum-topic-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 var(--ink);
-}
 .forum-topic-title {
-  font-size: 16px;
+  font-size: var(--fs-16);
   font-weight: 800;
-  margin-bottom: 6px;
+  margin-bottom: var(--sp-6);
   overflow-wrap: anywhere;
 }
 .forum-topic-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 12px;
+  gap: var(--sp-12);
+  font-size: var(--fs-12);
   color: var(--text-forum);
 }
 .forum-stat {
@@ -129,10 +125,10 @@
 }
 .forum-badge {
   display: inline-block;
-  margin-right: 6px;
-  padding: 1px 6px;
+  margin-right: var(--sp-6);
+  padding: 1px var(--sp-6);
   border: 2px solid var(--ink);
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 800;
   transform: rotate(-2deg);
 }
@@ -140,35 +136,35 @@
 .forum-badge-sticky { background: var(--yellow); color: var(--ink); }
 .forum-cat {
   display: inline-block;
-  margin-right: 6px;
-  padding: 1px 6px;
+  margin-right: var(--sp-6);
+  padding: 1px var(--sp-6);
   border: 2px solid var(--ink);
   background: var(--mint);
   color: var(--ink);
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 800;
 }
 .forum-topic-main {
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: var(--sp-20);
+  margin-bottom: var(--sp-20);
 }
 .forum-replies {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-20);
 }
 .forum-reply {
-  padding: 14px 16px;
+  padding: var(--sp-14) var(--sp-16);
 }
 .forum-reply-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
+  gap: var(--sp-10);
+  margin-bottom: var(--sp-8);
+  padding-bottom: var(--sp-8);
   border-bottom: 2px solid var(--ink);
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 .forum-reply-author {
   font-weight: 800;
@@ -185,7 +181,7 @@
   padding: 18px;
 }
 .forum-new-card {
-  padding: 20px;
+  padding: var(--sp-20);
 }
 
 /* 论坛斜角入口 + 飞入接管 */
@@ -195,7 +191,7 @@
   top: 30%;
   z-index: var(--z-float);
   transform: rotate(-6deg);
-  padding: 12px 80px 12px 16px;
+  padding: var(--sp-12) 80px var(--sp-12) var(--sp-16);
   /* T16（M4-2a）：牛皮纸件跨主题常驻（首页右缘），原绑 --ink 在墨黑主题翻成暖白——
      暖白字/边/影贴牛皮纸=不可见（暗色盲区复盘实锤）。改绑 --text-forum（论坛常量墨棕），
      双主题可读；纸白主题下黑→墨棕=论坛件语义归位（论坛孤岛家具用论坛自己的墨色）。 */
@@ -203,7 +199,7 @@
   background: var(--paper-forum);
   box-shadow: 4px 4px 0 0 var(--text-forum);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 800;
   color: var(--text-forum);
   cursor: pointer;
@@ -250,7 +246,7 @@
        抬到 TabBar(56px+safe-area) 上方 12px，防遮挡；桌面档逐字未动 */
     bottom: calc(56px + env(safe-area-inset-bottom) + 12px);
     transform: rotate(-3deg);
-    padding: 8px 14px;
+    padding: var(--sp-8) var(--sp-14);
     box-shadow: 3px 3px 0 0 var(--ink);
   }
   .forum-peek:hover {
@@ -270,9 +266,9 @@
 .forum-demo-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin: 14px 0;
-  padding: 12px 14px;
+  gap: var(--sp-14);
+  margin: var(--sp-14) 0;
+  padding: var(--sp-12) var(--sp-14);
   border: 3px solid var(--ink);
   background: var(--paper);
   box-shadow: 4px 4px 0 0 var(--ink);
@@ -295,7 +291,7 @@
 .forum-demo-main {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
   min-width: 0;
 }
 .forum-demo-title {
@@ -306,7 +302,7 @@
   white-space: nowrap;
 }
 .forum-demo-meta {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--text-forum);
 }
 .forum-demo-loading {
@@ -317,16 +313,16 @@
 
 /* 论坛主题卡 demo 缩略图 chip */
 .forum-topic-demo {
-  margin: 6px 0 8px;
+  margin: var(--sp-6) 0 var(--sp-8);
 }
 .forum-demo-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px 3px 3px;
+  gap: var(--sp-6);
+  padding: 3px var(--sp-8) 3px 3px;
   border: 2px solid var(--ink);
   background: var(--paper);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
@@ -350,7 +346,7 @@
 .forum-scope {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
 }
 .forum-toolbar-sep {

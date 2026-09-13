@@ -2,8 +2,8 @@
 .mini-stat {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--sp-6);
+  font-size: var(--fs-12);
 }
 .mini-stat b {
   background: var(--yellow);

@@ -48,6 +48,18 @@ const totalWorks = computed(() => data.value?.models.total ?? 0)
 // 现在：有内容的在前，空的折叠成一行 —— **该段全空则不折叠**（见 partitionByContent 的边界说明）。
 const modelsOpen = ref(false)
 const tasksOpen = ref(false)
+/**
+ * 封面加载失败的题目 slug。
+ *
+ * 服务端只在缩略图**确实落盘**时才给 URL，所以正常路径不会失败；但 OSS 同步滞后、
+ * 文件被清、或极端数据（列有值文件没了）都会让 `<img>` 变成破图 —— 那时它就不是封面了。
+ * 按设计稿「无封面不留空洞」的意思，失败即当没有：隐藏元素，行布局回到无图态。
+ * （与 DemoCard.vue 的 `coverBroken` 同一处理思路。）
+ */
+const coverBroken = ref<Set<string>>(new Set())
+/** 这一行是否真的会渲染封面（模板里 v-if 与 class 必须同源，否则失败行会套用"有图"的版式） */
+const coverOk = (tk: { slug: string; cover_thumb_url?: string }) =>
+  !!tk.cover_thumb_url && !coverBroken.value.has(tk.slug)
 const modelsPart = computed(() => partitionByContent(data.value?.models.items ?? [], (m) => m.demo_count ?? 0))
 const tasksPart = computed(() => partitionByContent(data.value?.tasks ?? [], (tk) => tk.demo_count ?? 0))
 /** 描述性标签：没有作品的值直接过滤（没有信息量，不值得占位） */
@@ -75,18 +87,18 @@ onMounted(load)
     <span class="eyebrow">{{ t('explore.eyebrow', '目录') }}</span>
     <h1 class="page-title">{{ t('explore.title', '探索') }}</h1>
     <p class="sub">{{ t('explore.sub', '按模型看它做过什么，按题目看同一句话不同模型的回答，按标签看题材分布。') }}</p>
-    <div class="filter-row" style="margin-top: 16px">
+    <div class="filter-row" style="margin-top: var(--sp-16)">
       <span class="mini-stat"><b>{{ data?.models.total ?? 0 }}</b> {{ t('explore.modelsN', '个模型') }}</span>
       <span class="mini-stat"><b>{{ data?.tasks_total ?? 0 }}</b> {{ t('explore.tasksN', '道题目') }}</span>
       <span class="mini-stat"><b>{{ totalWorks }}</b> {{ t('explore.worksN', '个作品') }}</span>
     </div>
     <!-- 口径说明：回答"这些数字是什么"（尤其 fallback_demos 这个用户一定会疑惑的数） -->
-    <p v-if="data?.models.fallback_demos" class="hint mono" style="margin-top: 8px">
+    <p v-if="data?.models.fallback_demos" class="hint mono" style="margin-top: var(--sp-8)">
       {{ t('explore.fallbackNote', '其中 {n} 件作品未定型号', { n: data.models.fallback_demos }) }}
     </p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <LoadingRow v-if="loading" :text="t('explore.loading', '加载探索数据…')" />
 
@@ -101,7 +113,7 @@ onMounted(load)
         <RouterLink
           v-for="m in modelsPart.withContent"
           :key="m.slug"
-          class="explore-cell card card-entity"
+          class="explore-cell card card-entity b-lift"
           :class="{ 'is-embedded': !!vendorIcon(m.vendor) }"
           :style="vendorIcon(m.vendor) ? { '--vendor': vendorIcon(m.vendor)!.hex } : undefined"
           :to="`/models/${m.slug}`"
@@ -162,9 +174,9 @@ onMounted(load)
         id="explore-fold-models"
         class="explore-grid"
         :hidden="!modelsOpen"
-        style="margin-top: 10px"
+        style="margin-top: var(--sp-10)"
       >
-        <RouterLink v-for="m in modelsPart.empty" :key="m.slug" class="explore-cell card card-entity is-empty" :to="`/models/${m.slug}`">
+        <RouterLink v-for="m in modelsPart.empty" :key="m.slug" class="explore-cell card card-entity is-empty b-lift" :to="`/models/${m.slug}`">
           <EntityStamp :name="m.name" :vendor="m.vendor" size="md" />
           <div class="explore-cell-main">
             <div class="explore-cell-name">{{ modelDisplay(m) }}</div>
@@ -185,7 +197,27 @@ onMounted(load)
       </div>
       <div v-if="!data.tasks.length" class="empty-box">{{ t('explore.emptyTasks', '还没有题目') }}</div>
       <div v-else class="task-lines">
-        <RouterLink v-for="tk in tasksPart.withContent" :key="tk.slug" class="task-line" :to="`/tasks/${tk.slug}`">
+        <RouterLink
+          v-for="tk in tasksPart.withContent"
+          :key="tk.slug"
+          class="task-line b-lift"
+          :class="{ 'has-cover': coverOk(tk) }"
+          :to="`/tasks/${tk.slug}`"
+        >
+          <!-- 真实作品封面（200px 缩略图）。设计稿 §3 的硬规格逐条落地：
+               width/height 显式声明（防 CLS）+ loading=lazy + decoding=async + alt=""（装饰性图）；
+               无封面的题**不渲染**（v-if），行布局不变、不留空洞 —— 占位图不算封面。 -->
+          <img
+            v-if="coverOk(tk)"
+            class="task-line-cover"
+            :src="tk.cover_thumb_url"
+            alt=""
+            width="72"
+            height="48"
+            loading="lazy"
+            decoding="async"
+            @error="coverBroken.add(tk.slug)"
+          />
           <span class="task-line-title">{{ tk.title }}</span>
           <!-- 一行题面摘要：没有它，"仿真题：坦克·科幻·幻坦"这种标题读者无从判断要不要点进去 -->
           <span v-if="tk.description || tk.prompt_excerpt" class="task-line-desc muted">
@@ -210,8 +242,8 @@ onMounted(load)
           :data-expanded="t('explore.foldTasksOpen', '收起暂无作品的题目 ▴')"
         >{{ tasksOpen ? t('explore.foldTasksOpen', '收起暂无作品的题目 ▴') : t('explore.foldTasks', '暂无作品的题目 {n} 道 ▾', { n: tasksPart.empty.length }) }}</span>
       </button>
-      <div v-if="tasksPart.empty.length" id="explore-fold-tasks" class="task-lines" :hidden="!tasksOpen" style="margin-top: 10px">
-        <RouterLink v-for="tk in tasksPart.empty" :key="tk.slug" class="task-line is-empty" :to="`/tasks/${tk.slug}`">
+      <div v-if="tasksPart.empty.length" id="explore-fold-tasks" class="task-lines" :hidden="!tasksOpen" style="margin-top: var(--sp-10)">
+        <RouterLink v-for="tk in tasksPart.empty" :key="tk.slug" class="task-line is-empty b-lift" :to="`/tasks/${tk.slug}`">
           <span class="task-line-title">{{ tk.title }}</span>
           <span class="task-line-count">{{ t('explore.taskWorks', '{n} 个作品', { n: tk.demo_count }) }}</span>
         </RouterLink>
@@ -292,19 +324,19 @@ onMounted(load)
 /* M1-C 词表入口：styles/ 冻结令——全 scoped；mono 小字+虚线上缘，探索页收尾的低调出口 */
 .explore-tail {
   margin-top: 30px;
-  padding: 12px 0 2px;
+  padding: var(--sp-12) 0 var(--sp-2);
   border-top: 2px dashed rgba(0, 0, 0, 0.18);
   display: flex;
   justify-content: center;
 }
 .explore-tail-link {
   font-family: var(--font-mono, var(--font-body, monospace));
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-soft, #555);
   text-decoration: none;
-  padding: 6px 4px;
+  padding: var(--sp-6) var(--sp-4);
   min-height: 44px;
   display: inline-flex;
   align-items: center;

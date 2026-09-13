@@ -172,8 +172,8 @@ onMounted(loadAnnouncements)
 
 <template>
   <div>
-    <div class="card card-coral" style="padding: 20px; margin-bottom: 20px; max-width: 640px">
-      <h2 style="margin-bottom: 12px">{{ editingAnn ? '编辑公告' : '发布手动公告' }}</h2>
+    <div class="card card-coral" style="padding: var(--sp-20); margin-bottom: var(--sp-20); max-width: 640px">
+      <h2 style="margin-bottom: var(--sp-12)">{{ editingAnn ? '编辑公告' : '发布手动公告' }}</h2>
       <div class="form-stack">
         <template v-if="editingAnn">
           <label class="field">
@@ -184,7 +184,7 @@ onMounted(loadAnnouncements)
             内容
             <MarkdownEditor v-model="editAnnForm.content" :rows="3" placeholder="公告内容（可选）" />
           </label>
-          <label class="field" style="display: flex; gap: 8px; align-items: center">
+          <label class="field" style="display: flex; gap: var(--sp-8); align-items: center">
             <input v-model="editAnnForm.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
           </label>
           <div class="filter-row" style="margin: 0">
@@ -231,7 +231,7 @@ onMounted(loadAnnouncements)
             内容
             <MarkdownEditor v-model="newAnn.content" :rows="3" placeholder="公告内容（可选）" />
           </label>
-          <label class="field" style="display: flex; gap: 8px; align-items: center">
+          <label class="field" style="display: flex; gap: var(--sp-8); align-items: center">
             <input v-model="newAnn.pinned" type="checkbox" style="width: 18px; height: 18px" /> 置顶
           </label>
           <div class="filter-row" style="margin: 0">
@@ -286,7 +286,7 @@ onMounted(loadAnnouncements)
       </button>
     </div>
 
-    <div class="filter-row" style="margin-top: 8px">
+    <div class="filter-row" style="margin-top: var(--sp-8)">
       <select v-model="annStatusFilter" class="input" style="max-width: 120px" @change="loadAnnouncements">
         <option value="all">全部状态</option>
         <option value="draft">草稿</option>
@@ -316,7 +316,7 @@ onMounted(loadAnnouncements)
           <tr v-for="a in filteredAnnouncements" :key="a.id">
             <td>
               <span class="status-pill">{{ annTypeLabel[a.type] || a.type }}</span>
-              <span v-if="a.type !== 'manual'" class="status-pill status-pending" style="margin-left: 4px">系统</span>
+              <span v-if="a.type !== 'manual'" class="status-pill status-pending" style="margin-left: var(--sp-4)">系统</span>
             </td>
             <td>{{ a.pinned ? '置顶' : '-' }}</td>
             <td><span class="ann-status" :class="'status-' + (a.status || 'published')">{{ a.status || 'published' }}</span></td>

@@ -227,16 +227,16 @@ onMounted(load)
           </div>
 
           <div class="card forum-reply-box">
-            <h3 style="margin-bottom: 10px">{{ t('forum.reply', '回复') }}</h3>
-            <div v-if="topic.locked" class="notice notice-warn" style="margin-bottom: 8px">{{ t('forum.lockedNotice', '该主题已关闭讨论。') }}</div>
+            <h3 style="margin-bottom: var(--sp-10)">{{ t('forum.reply', '回复') }}</h3>
+            <div v-if="topic.locked" class="notice notice-warn" style="margin-bottom: var(--sp-8)">{{ t('forum.lockedNotice', '该主题已关闭讨论。') }}</div>
             <template v-else-if="auth.isLoggedIn()">
-              <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: 8px">{{ t('forum.reviewingVisible', '已提交，等待审核，通过后可见。') }}</div>
-              <div v-if="replyParentId" class="filter-row" style="margin-bottom: 6px">
+              <div v-if="pendingNotice" class="notice notice-success" style="margin-bottom: var(--sp-8)">{{ t('forum.reviewingVisible', '已提交，等待审核，通过后可见。') }}</div>
+              <div v-if="replyParentId" class="filter-row" style="margin-bottom: var(--sp-6)">
                 <span class="tag-chip active">{{ t('forum.replyingTo', '正在回复 #{n}', { n: replies.findIndex((x) => x.id === replyParentId) + 1 }) }}</span>
                 <button class="btn btn-sm btn-dark" type="button" @click="replyParentId = null; replyText = ''">{{ t('common.cancel', '取消') }}</button>
               </div>
               <MarkdownEditor v-model="replyText" :rows="4" :placeholder="t('forum.replyPlaceholder', '支持 Markdown…')" />
-              <div class="filter-row" style="margin-top: 10px">
+              <div class="filter-row" style="margin-top: var(--sp-10)">
                 <button class="btn btn-primary" type="button" :disabled="posting || !replyText.trim()" @click="submitReply">{{ posting ? t('settings.submitting', '提交中…') : t('forum.submitReply', '发表回复') }}</button>
               </div>
             </template>
@@ -254,7 +254,7 @@ onMounted(load)
               <span class="forum-avatar" :class="avatarClass(topic.author || t('forum.anon', '匿名'))">{{ (topic.author || t('forum.anon', '匿名'))[0] }}</span>
               <div>
                 <div class="forum-side-author-name">{{ topic.author || t('forum.anon', '匿名') }}</div>
-                <div v-if="authorProfile" class="muted" style="font-size: 12px">{{ t('forum.reputationN', '声望 {n}', { n: authorProfile.reputation }) }} · {{ t('forum.followersN', '粉丝 {n}', { n: authorProfile.follower_count }) }}</div>
+                <div v-if="authorProfile" class="muted" style="font-size: var(--fs-12)">{{ t('forum.reputationN', '声望 {n}', { n: authorProfile.reputation }) }} · {{ t('forum.followersN', '粉丝 {n}', { n: authorProfile.follower_count }) }}</div>
               </div>
             </div>
             <RouterLink v-if="topic.author && !authorProfile?.is_self" class="btn btn-sm btn-outline btn-block" :to="`/user/${topic.author}`">{{ t('forum.profile', '个人主页') }}</RouterLink>

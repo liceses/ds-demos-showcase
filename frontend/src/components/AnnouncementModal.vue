@@ -40,7 +40,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
       <div class="ann-modal-panel ann-modal-panel--drop">
         <div class="ann-modal-head">
           <div>
-            <div class="filter-row" style="margin: 0 0 6px">
+            <div class="filter-row" style="margin: 0 0 var(--sp-6)">
               <span v-if="ann.pinned" class="ann-pin">{{ t('ann.pinBadge', '置顶') }}</span>
               <span v-if="ann.category" class="ann-cat">{{ ann.category }}</span>
             </div>
@@ -49,9 +49,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
           <button class="btn btn-sm btn-dark" type="button" @click="emit('close')">{{ t('ann.close', '关闭') }}</button>
         </div>
         <MarkdownRenderer :content="ann.content" />
-        <div class="filter-row" style="margin-top: 14px">
+        <div class="filter-row" style="margin-top: var(--sp-14)">
           <RouterLink v-if="ann.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${ann.topic_id}`">{{ t('ann.discuss', '去讨论 →') }}</RouterLink>
-          <span class="muted" style="font-size: 12px">{{ parseDate(ann.created_at).toLocaleString(currentLocale()) }}</span>
+          <span class="muted" style="font-size: var(--fs-12)">{{ parseDate(ann.created_at).toLocaleString(currentLocale()) }}</span>
         </div>
       </div>
     </div>
@@ -78,7 +78,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             </summary>
             <div class="ann-item-body">
               <MarkdownRenderer :content="a.content" />
-              <div class="filter-row" style="margin: 10px 0 0">
+              <div class="filter-row" style="margin: var(--sp-10) 0 0">
                 <RouterLink v-if="a.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${a.topic_id}`">{{ t('ann.discuss', '去讨论 →') }}</RouterLink>
                 <RouterLink v-else-if="a.demo_slug" class="btn btn-sm btn-outline" :to="`/demo/${a.demo_slug}`">{{ t('ann.viewDemo', '看这件作品 →') }}</RouterLink>
               </div>
@@ -98,7 +98,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             </summary>
             <div class="ann-item-body">
               <MarkdownRenderer :content="a.content" />
-              <div class="filter-row" style="margin: 10px 0 0">
+              <div class="filter-row" style="margin: var(--sp-10) 0 0">
                 <RouterLink v-if="a.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${a.topic_id}`">{{ t('ann.discuss', '去讨论 →') }}</RouterLink>
                 <RouterLink v-else-if="a.demo_slug" class="btn btn-sm btn-outline" :to="`/demo/${a.demo_slug}`">{{ t('ann.viewDemo', '看这件作品 →') }}</RouterLink>
               </div>
@@ -132,16 +132,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   margin: 0;
 }
 .ann-list-group + .ann-list-group {
-  margin-top: 20px;
+  margin-top: var(--sp-20);
 }
 .ann-group-head {
   font-family: var(--font-body, monospace);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink, #000);
-  margin: 0 0 4px;
+  margin: 0 0 var(--sp-4);
 }
 .ann-list-item {
   border-top: 2px solid var(--ink, #000);
@@ -153,9 +153,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-10);
   min-height: 44px; /* 触达底线 */
-  padding: 8px 2px;
+  padding: var(--sp-8) var(--sp-2);
   cursor: pointer;
   list-style: none;
 }
@@ -177,7 +177,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 }
 .ann-item-title {
   font-weight: 800;
-  font-size: 14px;
+  font-size: var(--fs-14);
   color: var(--ink, #000);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -185,16 +185,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 .ann-item-meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex: none;
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft, #555);
 }
 .ann-item-date {
   font-variant-numeric: tabular-nums;
 }
 .ann-item-body {
-  padding: 2px 2px 12px 18px;
+  padding: var(--sp-2) var(--sp-2) var(--sp-12) 18px;
 }
 @media (prefers-reduced-motion: reduce) {
   .ann-list-item summary::before {

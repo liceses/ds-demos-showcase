@@ -75,10 +75,10 @@ async function save() {
             <input v-model="form.tags" class="input" placeholder="model:dsv4, type:game" />
           </label>
           <div class="filter-row" style="margin: 0">
-            <label style="display: flex; gap: 6px; align-items: center"><input v-model="form.pinned" type="checkbox" /> 置顶</label>
-            <label style="display: flex; gap: 6px; align-items: center"><input v-model="form.sticky" type="checkbox" /> 加精</label>
-            <label style="display: flex; gap: 6px; align-items: center"><input v-model="form.locked" type="checkbox" /> 锁定</label>
-            <label style="display: flex; gap: 6px; align-items: center"><input v-model="form.solved" type="checkbox" /> 已解决</label>
+            <label style="display: flex; gap: var(--sp-6); align-items: center"><input v-model="form.pinned" type="checkbox" /> 置顶</label>
+            <label style="display: flex; gap: var(--sp-6); align-items: center"><input v-model="form.sticky" type="checkbox" /> 加精</label>
+            <label style="display: flex; gap: var(--sp-6); align-items: center"><input v-model="form.locked" type="checkbox" /> 锁定</label>
+            <label style="display: flex; gap: var(--sp-6); align-items: center"><input v-model="form.solved" type="checkbox" /> 已解决</label>
           </div>
           <label class="field">
             状态

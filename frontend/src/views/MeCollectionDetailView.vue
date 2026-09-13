@@ -147,7 +147,7 @@ function addedLabel(iso: string): string {
     <PageHero tight>
       <RouterLink class="eyebrow" to="/me/collections">← {{ t('fav.backList', '收藏夹') }}</RouterLink>
       <h1 class="page-title">{{ collection ? collection.title : t('fav.title', '收藏夹') }}</h1>
-      <div v-if="collection" class="filter-row" style="margin-top: 12px">
+      <div v-if="collection" class="filter-row" style="margin-top: var(--sp-12)">
         <span class="mini-stat"><b>{{ collection.item_count }}</b> {{ t('fav.items', '件') }}</span>
         <span class="mono me-vis" :class="collection.visibility === 'public' ? 'me-vis--public' : ''">
           {{ collection.visibility === 'public' ? t('fav.public', '公开') : t('fav.private', '私密') }}
@@ -160,10 +160,10 @@ function addedLabel(iso: string): string {
           {{ t('fav.delThis', '删除此夹') }}
         </button>
       </div>
-      <p v-if="collection?.description" class="hint" style="margin-top: 8px">{{ collection.description }}</p>
+      <p v-if="collection?.description" class="hint" style="margin-top: var(--sp-8)">{{ collection.description }}</p>
     </PageHero>
 
-    <section class="section" style="padding-top: 8px">
+    <section class="section" style="padding-top: var(--sp-8)">
       <LoadingRow v-if="loading" :text="t('fav.loadingItems', '加载条目…')" />
       <EmptyBox v-else-if="error" kind="error" :text="error" @retry="load" />
       <EmptyBox v-else-if="!items.length" :text="t('fav.empty', '这个收藏夹还是空的')">

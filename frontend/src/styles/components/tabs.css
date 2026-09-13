@@ -8,18 +8,18 @@
    P2-c 不动它。 */
 .tabs {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-20);
 }
 .tab {
-  padding: 10px 18px;
+  padding: var(--sp-10) 18px;
   border: var(--border-w) solid var(--ink);
   background: var(--paper);
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--fs-13);
   text-transform: uppercase;
   cursor: pointer;
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease); /* R7：颜色属性剥离 */

@@ -10,6 +10,11 @@
   }
 }
 .animate-in {
-  animation: neo-fade-in 0.5s ease-out both;
+  /* fill-mode 必须是 backwards 而**不是 both**：both 会让动画结束后继续锁住 to 帧的
+     `transform: translateY(0)`（CSS 动画优先级高于普通声明），于是元素上任何 hover 抬升
+     （.card-hover / .b-lift）都被这条恒等 transform 吃掉 —— 实测作品卡 hover 只有影变了、
+     位置不动。backwards 保留"动画开始前的起始态"，结束后交还给正常层叠。
+     （2026-09 微交互统一时实测发现，属存量 bug。） */
+  animation: neo-fade-in 0.5s ease-out backwards;
 }
 

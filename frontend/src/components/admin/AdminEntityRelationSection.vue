@@ -237,38 +237,38 @@ watch(
   margin-bottom: 22px;
 }
 .kc-zone-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   border-bottom: var(--border-w, 4px) solid var(--ink, #000);
-  padding-bottom: 6px;
-  margin-bottom: 12px;
+  padding-bottom: var(--sp-6);
+  margin-bottom: var(--sp-12);
   flex: 1 1 auto;
 }
 .kc-rel-row {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: center;
   flex-wrap: wrap;
-  padding: 6px 0;
+  padding: var(--sp-6) 0;
 }
 .kc-chip-x {
   border: none;
   background: none;
   font-weight: 900;
   cursor: pointer;
-  padding: 0 0 0 4px;
+  padding: 0 0 0 var(--sp-4);
 }
 .kc-trans {
   border: 2px solid var(--ink, #000);
-  padding: 12px;
+  padding: var(--sp-12);
   display: grid;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .kc-field {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   align-items: center;
   min-width: 0;
   flex-wrap: wrap;
@@ -278,7 +278,7 @@ watch(
 }
 .kc-k {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.04em;

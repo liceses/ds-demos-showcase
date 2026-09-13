@@ -2,14 +2,14 @@
 .fl-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
   max-width: var(--w-read); /* P3：名单列宽并到 --w-read（原 720 字面量） */
 }
 .fl-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: var(--sp-12);
+  padding: var(--sp-10) var(--sp-12);
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
   box-shadow: 4px 4px 0 0 var(--ink);
@@ -30,7 +30,7 @@
   flex: 1;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
 }
 .fl-name {
@@ -39,11 +39,11 @@
   text-decoration: none;
 }
 .fl-mutual {
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 2px 6px;
+  padding: var(--sp-2) var(--sp-6);
   background: var(--mint);
   border: 2px solid var(--ink);
 }

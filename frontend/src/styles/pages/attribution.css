@@ -2,17 +2,17 @@
 /* 后台两级导航：先按职责分组，组内再切面板（10+ 面板一层 tab 挤不下） */
 .tab-groups {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: var(--sp-10);
 }
 .tab-group {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 12px;
+  font-size: var(--fs-12);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 5px 12px;
+  padding: 5px var(--sp-12);
   background: transparent;
   color: var(--ink-soft);
   border: 2px solid var(--ink);
@@ -28,10 +28,10 @@
 .attr-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-14);
 }
-.attr-group { padding: 14px 18px; }
-.attr-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.attr-group { padding: var(--sp-14) 18px; }
+.attr-head { display: flex; align-items: center; gap: var(--sp-10); flex-wrap: wrap; }
 .attr-title {
   font-family: var(--font-heading);
   font-weight: 900;
@@ -41,17 +41,17 @@
 .attr-tools {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   flex-wrap: wrap;
-  margin: 12px 0;
-  padding: 10px 12px;
+  margin: var(--sp-12) 0;
+  padding: var(--sp-10) var(--sp-12);
   background: var(--paper);
   border: 2px dashed var(--ink);
 }
-.attr-pick-all { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
-.attr-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.attr-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.attr-pick-all { display: flex; align-items: center; gap: var(--sp-6); font-weight: 700; font-size: var(--fs-13); }
+.attr-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-6); }
+.attr-row { display: flex; align-items: center; gap: var(--sp-10); flex-wrap: wrap; font-size: var(--fs-13); }
 .attr-row-title { font-weight: 700; }
 .attr-hint { max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.attr-rating { margin-left: auto; font-size: 11px; }
+.attr-rating { margin-left: auto; font-size: var(--fs-11); }
 

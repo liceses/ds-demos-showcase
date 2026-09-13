@@ -36,8 +36,8 @@
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: var(--z-toast);
-  padding: 8px 14px;
-  font-size: 12px;
+  padding: var(--sp-8) var(--sp-14);
+  font-size: var(--fs-12);
   background: var(--yellow);
   color: var(--on-accent, #000);
   border: 3px solid var(--ink);
@@ -57,12 +57,12 @@
   z-index: var(--z-local);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   min-width: 36px;
   min-height: 36px;
-  padding: 6px;
+  padding: var(--sp-6);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   background: var(--paper, #fff);
   color: var(--ink, #000);
@@ -90,7 +90,7 @@
 }
 .preview-chrome:hover,
 .preview-chrome:focus-visible {
-  padding: 6px 10px;
+  padding: var(--sp-6) var(--sp-10);
 }
 .preview-chrome:active {
   transform: translate(2px, 2px);

@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
     <p class="sub">{{ t('about.heroSub', '一个由 AI 模型生成的网页 Demo 作品集 —— 每个作品都附带生成会话日志与版本时间线，过程全透明。') }}</p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div v-if="error" class="notice notice-error">{{ error }}</div>
     <div v-if="loading" class="loading-row"><span class="spinner"></span> 加载站点信息…</div>
 
@@ -147,11 +147,11 @@ onBeforeUnmount(() => {
       <div id="reputation" class="section-head" style="margin-top: 28px">
         <h2 class="section-title">{{ t('about.repTitle', '声望怎么算') }}</h2>
       </div>
-      <div class="card card-default read-col" style="padding: 20px">
-        <p style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repAgg', '声望是用户档案的聚合统计：综合你发布的作品、获赞与收到感谢、发起的主题、回复、被关注等社区活动，由后端按 profile 聚合口径计算。') }}</p>
-        <p class="muted" style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repHonest', '我们不展示精确公式与实时分解：权重由后端算法决定，且可能随版本调整——给一个看起来精确的假公式，比诚实解释更误导。') }}</p>
-        <p class="muted" style="line-height: 1.8; margin-bottom: 8px">{{ t('about.repNote', '想涨声望：发布作品、被点赞/感谢、参与讨论、被关注。声望是社区展示与激励，不是权限凭证。') }}</p>
-        <div class="filter-row" style="margin-top: 12px; gap: 8px; flex-wrap: wrap">
+      <div class="card card-default read-col" style="padding: var(--sp-20)">
+        <p style="line-height: 1.8; margin-bottom: var(--sp-8)">{{ t('about.repAgg', '声望是用户档案的聚合统计：综合你发布的作品、获赞与收到感谢、发起的主题、回复、被关注等社区活动，由后端按 profile 聚合口径计算。') }}</p>
+        <p class="muted" style="line-height: 1.8; margin-bottom: var(--sp-8)">{{ t('about.repHonest', '我们不展示精确公式与实时分解：权重由后端算法决定，且可能随版本调整——给一个看起来精确的假公式，比诚实解释更误导。') }}</p>
+        <p class="muted" style="line-height: 1.8; margin-bottom: var(--sp-8)">{{ t('about.repNote', '想涨声望：发布作品、被点赞/感谢、参与讨论、被关注。声望是社区展示与激励，不是权限凭证。') }}</p>
+        <div class="filter-row" style="margin-top: var(--sp-12); gap: var(--sp-8); flex-wrap: wrap">
           <RouterLink class="btn btn-sm btn-outline" to="/leaderboard?tab=users">{{ t('about.repBoard', '查看声望榜 →') }}</RouterLink>
         </div>
       </div>
@@ -160,10 +160,10 @@ onBeforeUnmount(() => {
       <div class="section-head" style="margin-top: 28px">
         <h2 class="section-title">{{ t('about.about', '关于') }}</h2>
       </div>
-      <div class="card card-default read-col" style="padding: 20px">
-        <p style="line-height: 1.8; margin-bottom: 8px">{{ t('about.desc', '本站收集由 AI 模型生成的网页 Demo，作者可为已注册用户或匿名「公开用户」。所有作品附生成会话日志与版本时间线，力求过程透明。') }}</p>
-        <p class="muted" style="font-size: 13px">{{ t('about.descNote', '时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明。若需反馈或投稿，请到「上传 Demo」页。') }}</p>
-        <div class="filter-row" style="margin-top: 14px; gap: 8px; flex-wrap: wrap">
+      <div class="card card-default read-col" style="padding: var(--sp-20)">
+        <p style="line-height: 1.8; margin-bottom: var(--sp-8)">{{ t('about.desc', '本站收集由 AI 模型生成的网页 Demo，作者可为已注册用户或匿名「公开用户」。所有作品附生成会话日志与版本时间线，力求过程透明。') }}</p>
+        <p class="muted" style="font-size: var(--fs-13)">{{ t('about.descNote', '时间线仅表示创建/更新记录，不等同于 AI 生成真实性证明。若需反馈或投稿，请到「上传 Demo」页。') }}</p>
+        <div class="filter-row" style="margin-top: var(--sp-14); gap: var(--sp-8); flex-wrap: wrap">
           <a class="btn btn-sm btn-outline" href="https://github.com/liceses/ds-demos-showcase" target="_blank" rel="noopener">{{ t('about.repo', '网站仓库 →') }}</a>
           <a class="btn btn-sm btn-outline" href="mailto:1801203413@qq.com">{{ t('about.email', '站长邮箱：1801203413@qq.com') }}</a>
         </div>

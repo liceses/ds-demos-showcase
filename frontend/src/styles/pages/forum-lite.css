@@ -21,17 +21,22 @@
 .forum-topbar-inner,
 .forum-hero-inner,
 .forum-section {
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-left: var(--sp-20);
+  padding-right: var(--sp-20);
 }
 /* 主题卡轻量化：细边、无常驻阴影、hover 才浮起 */
 .forum-topic-card {
   border: 2px solid var(--ink);
-  box-shadow: none;
-  margin-bottom: 8px;
-}
-.forum-topic-card:hover {
-  box-shadow: 4px 4px 0 0 var(--ink);
+  margin-bottom: var(--sp-8);
+  /* 收进微交互库：无影元素 → hover 走 4px 档（与参考站"无影按钮从无到有 4px"同口径）。
+     原先这条 hover 只写影、forum.css 里另有一条同名规则只写 transform —— 物理被两个文件劈开，
+     谁生效看导入顺序（门禁①的由来）。 */
+  --lift-sh: none;
+  --lift-sh-hover: var(--sh-off-md) 0px 0px var(--ink);
+  --lift-x: var(--lift-s-x);
+  --lift-y: var(--lift-s-y);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
 .forum-side-card {
   border: 2px solid var(--ink);
@@ -41,7 +46,7 @@
 .forum-reply {
   border: 1px solid var(--ink);
   box-shadow: none;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 .forum-reply:hover {
   box-shadow: 3px 3px 0 0 var(--ink);
@@ -54,7 +59,7 @@
   border: none;
   border-bottom: 1px solid #d8cfc0;
   background: transparent;
-  padding: 10px 0;
+  padding: var(--sp-10) 0;
 }
 .quick-comment:last-child {
   border-bottom: none;
@@ -63,49 +68,48 @@
   gap: 0;
 }
 
-/* 按钮轻量化：论坛壳内默认阴影减档（3px）；R6 物理与主站同构（P2-2b 页面级跟进） */
-.btn-primary,
-.btn-secondary,
-.btn-outline,
-.btn-dark,
-.btn-danger {
-  box-shadow: 3px 3px 0 0 var(--ink); /* rgba(0,0,0,1)→var(--ink)，墨黑下自动翻暖白 */
-}
-@media (hover: hover) {
-  .btn:hover {
-    transform: translate(-1px, -1px); /* R6：抬起增影（3px 基影保持，表观 4px）；原压平翻转废止 */
-    box-shadow: 3px 3px 0 0 var(--ink);
-  }
-}
-.btn:active {
-  transform: translate(3px, 3px) rotate(var(--tilt-press)); /* 法则 01/R2：压平位移=同档偏移 + 微倾 + 0ms */
-  box-shadow: none;
-  transition-duration: 0ms;
+/* 按钮轻量化：论坛壳内默认阴影减档（3px）；R6 物理与主站同构（P2-2b 页面级跟进）
+   —— 2026-09 微交互统一时补上 `.forum-shell` 前缀：这三条当年是**裸选择器**，而本文件在
+   index.css 里排在 components/button.css 之后 → 全站按钮（含非论坛页）的影档被从 8px 改成 3px、
+   hover 物理也被换成论坛这套，一直没人发现。作用域收进论坛壳后，主站按钮回到 button.css 口径。 */
+/* 论坛壳按钮的物理同样由微交互库提供（钩子 :is(.b-lift, .btn)）；这里只声明"用哪个档"：
+   3px 轻量档 + hover 保持原档（抬起 1px 形成表观增影），压平位移同档 3px。 */
+.forum-shell .btn,
+.forum-shell .btn-primary,
+.forum-shell .btn-secondary,
+.forum-shell .btn-outline,
+.forum-shell .btn-dark,
+.forum-shell .btn-danger {
+  --lift-sh: var(--sh-off-uw) 0px 0px var(--ink);
+  --lift-sh-hover: var(--lift-sh);
+  --lift-x: var(--lift-s-x);
+  --lift-y: var(--lift-s-y);
+  --lift-flat: var(--sh-off-uw);
 }
 
 /* TagGroupBox */
 .tag-group-box {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-14);
 }
 .tag-merge-craft {
   border: 3px solid var(--ink);
   background: var(--paper);
-  padding: 14px;
+  padding: var(--sp-14);
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 .tag-merge-plus,
 .tag-merge-eq {
   font-weight: 900;
-  font-size: 18px;
-  padding: 0 4px;
+  font-size: var(--fs-18);
+  padding: 0 var(--sp-4);
 }
 .group-card-add {
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 8px;
+  gap: var(--sp-6);
+  margin-top: var(--sp-10);
+  padding-top: var(--sp-8);
   border-top: 2px solid var(--ink);
 }
 

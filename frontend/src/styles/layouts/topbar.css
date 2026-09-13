@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--sp-16);
   flex-wrap: wrap;
   padding: 18px 0;
   border-bottom: var(--border-w) solid var(--ink);
@@ -11,7 +11,7 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   text-decoration: none;
   color: var(--ink);
 }
@@ -35,23 +35,23 @@
 .brand-name {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 16px;
+  font-size: var(--fs-16);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 .topnav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
 }
 .nav-link {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 500;
   text-transform: uppercase;
   text-decoration: none;
-  padding: 8px 12px;
+  padding: var(--sp-8) var(--sp-12);
   border: 3px solid transparent;
   transition: transform var(--b-dur) var(--b-ease); /* R7：border-color/background 剥离——换色 0ms 硬切 */
 }

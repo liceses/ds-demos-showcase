@@ -32,13 +32,13 @@ defineProps<{ audit: AuditEntry[] }>()
   margin-bottom: 22px;
 }
 .kc-zone-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   border-bottom: var(--border-w, 4px) solid var(--ink, #000);
-  padding-bottom: 6px;
-  margin-bottom: 12px;
+  padding-bottom: var(--sp-6);
+  margin-bottom: var(--sp-12);
   flex: 1 1 auto;
 }
 .kc-audit {
@@ -48,11 +48,11 @@ defineProps<{ audit: AuditEntry[] }>()
 }
 .kc-audit li {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   flex-wrap: wrap;
-  padding: 6px 0;
+  padding: var(--sp-6) 0;
   border-bottom: 2px solid var(--ink, #000);
-  font-size: 13px;
+  font-size: var(--fs-13);
   align-items: baseline;
 }
 </style>

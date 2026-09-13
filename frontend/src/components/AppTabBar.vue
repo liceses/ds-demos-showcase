@@ -89,7 +89,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-height: var(--tabbar-h); /* ≥44 触达线（03 §10.1），留余量；P0-2 起高度入令牌 */
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.02em;

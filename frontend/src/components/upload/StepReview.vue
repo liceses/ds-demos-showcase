@@ -40,7 +40,7 @@ const emit = defineEmits<{ go: [step: number]; reset: []; forceSubmit: [] }>()
     <p class="hint">{{ t('upload.s4Foot', '发布后进入审核队列（登录作者可直接上架）；标签和提示词随时可再编辑。') }}</p>
 
     <div v-if="error" class="notice notice-error">
-      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+      <div style="display: flex; align-items: center; gap: var(--sp-10); flex-wrap: wrap">
         <span>{{ error }}</span>
         <RouterLink v-if="dupSlug" class="btn btn-sm btn-outline" :to="`/demo/${dupSlug}`">{{ t('upload.viewDup', '查看已有 Demo →') }}</RouterLink>
         <!-- P4：编辑已有作品时，重复内容 409 原先只能"去看已有那件"或自己改内容 ——
@@ -51,10 +51,10 @@ const emit = defineEmits<{ go: [step: number]; reset: []; forceSubmit: [] }>()
       </div>
     </div>
     <div v-if="success" class="notice notice-success">
-      <p style="margin-bottom: 10px">
+      <p style="margin-bottom: var(--sp-10)">
         {{ editSlug ? t('upload.updated', '更新成功，已生成更新公告。') : success.status === 'pending' ? t('upload.pending', '已提交，等待管理员审核。') : t('upload.uploaded', '上传成功。') }}
       </p>
-      <p v-if="challenge && !challengeOff && !editSlug" class="hint" style="margin: 0 0 10px">
+      <p v-if="challenge && !challengeOff && !editSlug" class="hint" style="margin: 0 0 var(--sp-10)">
         {{ t('upload.challengeQueued', '挑战已提交：挂题请求待管理员确认，通过后即出现在同题对比中。') }}
         <RouterLink :to="`/tasks/${challenge.slug}`">{{ t('upload.viewTask', '查看题目 →') }}</RouterLink>
       </p>

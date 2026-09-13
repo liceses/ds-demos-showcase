@@ -66,7 +66,7 @@ const KIND_LABEL: Record<string, string> = {
       <aside ref="panelEl" class="peek-panel card" tabindex="-1" role="dialog" aria-modal="true" :aria-label="KIND_LABEL[target.kind]">
         <header class="peek-head">
           <span class="peek-kind mono">{{ KIND_LABEL[target.kind] }}</span>
-          <button class="peek-close" type="button" :aria-label="t('common.close', '关闭')" :title="t('peek.closeTip', '关闭（Esc）')" @click="emit('close')">✕</button>
+          <button class="peek-close b-lift" type="button" :aria-label="t('common.close', '关闭')" :title="t('peek.closeTip', '关闭（Esc）')" @click="emit('close')">✕</button>
         </header>
 
         <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('peek.loading', '加载中…') }}</div>

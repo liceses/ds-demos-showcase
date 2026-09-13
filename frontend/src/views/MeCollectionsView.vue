@@ -141,12 +141,12 @@ function shareLink(c: CollectionOut): string {
     <PageHero>
       <span class="eyebrow">{{ t('fav.title', '收藏夹') }}</span>
       <h1 class="page-title">{{ t('fav.mine', '我的收藏夹') }}</h1>
-      <p class="hint" style="margin-top: 10px">
+      <p class="hint" style="margin-top: var(--sp-10)">
         {{ t('fav.pageHint', '公开的收藏夹可以被别人看到，也能把链接发出去；私密的只有你自己能看。') }}
       </p>
     </PageHero>
 
-    <section class="section" style="padding-top: 8px">
+    <section class="section" style="padding-top: var(--sp-8)">
       <!-- 新建：行内展开（不跳页、不弹窗） -->
       <div class="me-toolbar">
         <button v-if="!creating" class="btn btn-sm btn-primary" type="button" :disabled="!canCreate" @click="creating = true">

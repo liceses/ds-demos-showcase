@@ -3,7 +3,7 @@
   display: inline-block;
   padding: 3px 9px;
   border: 3px solid var(--ink);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   text-transform: uppercase;
 }

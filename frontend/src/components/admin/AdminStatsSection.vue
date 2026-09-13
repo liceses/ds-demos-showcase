@@ -34,7 +34,7 @@ const backlog = computed(() =>
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.stats.hint', '指标只认「作品被描述到了吗」，不认标签条数。') }}</span>
       <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>
     </div>
@@ -65,7 +65,7 @@ const backlog = computed(() =>
         </div>
       </div>
 
-      <div class="section-head" style="margin-top: 24px">
+      <div class="section-head" style="margin-top: var(--sp-24)">
         <h2 class="section-title">{{ t('admin.stats.covTitle', '按重要层的覆盖率') }}</h2>
         <span class="mini-stat">{{ t('admin.stats.covNote', 'tier1 是地基，掉到 90% 以下就该补') }}</span>
       </div>
@@ -90,7 +90,7 @@ const backlog = computed(() =>
         </tbody>
       </table>
 
-      <div class="section-head" style="margin-top: 24px">
+      <div class="section-head" style="margin-top: var(--sp-24)">
         <h2 class="section-title">{{ t('admin.stats.entityTitle', '实体健康度') }}</h2>
       </div>
       <div class="filter-row" style="margin: 0; flex-wrap: wrap">
@@ -101,17 +101,17 @@ const backlog = computed(() =>
         <span class="stat stat-teal">{{ t('admin.stats.retiredN', '已退役 {n}', { n: data.model_entity.deprecated }) }}</span>
         <RouterLink class="tag-chip mode-fixed" to="/models">{{ t('admin.stats.openModels', '模型管理 →') }}</RouterLink>
       </div>
-      <div class="filter-row" style="margin: 10px 0 0; flex-wrap: wrap">
+      <div class="filter-row" style="margin: var(--sp-10) 0 0; flex-wrap: wrap">
         <span class="stat stat-teal">{{ t('admin.stats.tasksN', '题目 {n}', { n: data.task.total }) }}</span>
         <span class="stat stat-mint">{{ t('admin.stats.tasksActive', '已确认 {n}', { n: data.task.active }) }}</span>
         <span class="stat" :class="data.task.candidate ? 'stat-yellow' : 'stat-teal'">{{ t('admin.stats.tasksCandidate', '候选 {n}', { n: data.task.candidate }) }}</span>
         <RouterLink class="tag-chip mode-fixed" to="/tasks">{{ t('admin.stats.openTasks', '题目管理 →') }}</RouterLink>
       </div>
-      <p class="hint" style="margin-top: 8px">
+      <p class="hint" style="margin-top: var(--sp-8)">
         {{ t('admin.stats.taskGap', '题目数远小于作品数 = 同题对比这块价值还没铺开，去「巡检」和「题目候选」推进。') }}
       </p>
 
-      <div class="section-head" style="margin-top: 24px">
+      <div class="section-head" style="margin-top: var(--sp-24)">
         <h2 class="section-title">{{ t('admin.stats.backlogTitle', '待批候选构成') }}</h2>
       </div>
       <div v-if="!backlog.length" class="muted">{{ t('admin.stats.noBacklog', '收件箱是空的') }}</div>

@@ -38,10 +38,10 @@ onMounted(load)
     <PageHero tight>
       <RouterLink class="eyebrow" :to="`/user/${username}`">← {{ username }}</RouterLink>
       <h1 class="page-title">{{ t('fav.publicOf', '公开收藏夹') }}</h1>
-      <p class="hint" style="margin-top: 10px">{{ t('fav.publicOfHint', 'TA 设为公开的收藏夹，任何人都能查看。') }}</p>
+      <p class="hint" style="margin-top: var(--sp-10)">{{ t('fav.publicOfHint', 'TA 设为公开的收藏夹，任何人都能查看。') }}</p>
     </PageHero>
 
-    <section class="section" style="padding-top: 8px">
+    <section class="section" style="padding-top: var(--sp-8)">
       <LoadingRow v-if="loading" :text="t('fav.loading', '加载收藏夹…')" />
       <EmptyBox v-else-if="error" kind="error" :text="error" @retry="load" />
       <EmptyBox v-else-if="!items.length" :text="t('fav.nonePublic', 'TA 还没有公开的收藏夹')" />

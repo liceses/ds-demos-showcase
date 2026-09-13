@@ -7,9 +7,9 @@
 .dv-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 24px;
+  gap: var(--sp-24);
   align-items: start;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
   /* t23：列宽变化 0ms 硬切——用户反感的是推挤「动效」（补间中间帧），不是布局变化本身；
      显式 transition:none 防任何未来规则给栅格补间 */
   transition: none;
@@ -26,8 +26,8 @@
   min-width: 0;
 }
 .dv-stage iframe { max-height: calc(100vh - 120px); }
-.dv-standin { padding: 32px; text-align: center; }
-.dv-standin h2 { margin-bottom: 10px; }
+.dv-standin { padding: var(--sp-32); text-align: center; }
+.dv-standin h2 { margin-bottom: var(--sp-10); }
 .dv-standin p { margin-bottom: 18px; }
 .dv-facts {
   grid-column: 2;
@@ -40,7 +40,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 14px 16px 16px;
+  padding: var(--sp-14) var(--sp-16) var(--sp-16);
   background: var(--paper);
   border: var(--border-w) solid var(--ink);
   box-shadow: 6px 6px 0 0 var(--ink); /* 槽内卡片投影（非浮层强投影） */
@@ -54,49 +54,49 @@
 }
 /* 分组：身份 / 热度 / 评分 / 词表 / 动作 / 档案摘要 —— 用分隔线代替大间距，
    窄栏里间距会失控，线才是稳定的阅读节奏 */
-.dv-group { padding: 12px 0; border-bottom: 2px dashed rgba(0, 0, 0, 0.18); }
-.dv-group:first-of-type { padding-top: 6px; }
+.dv-group { padding: var(--sp-12) 0; border-bottom: 2px dashed rgba(0, 0, 0, 0.18); }
+.dv-group:first-of-type { padding-top: var(--sp-6); }
 .dv-group:last-of-type { border-bottom: none; padding-bottom: 0; }
 .dv-title {
   font-family: var(--font-heading);
-  font-size: 22px;
+  font-size: var(--fs-22);
   font-weight: 900;
   line-height: 1.2;
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-8);
   overflow-wrap: anywhere;
 }
-.dv-byline { display: flex; flex-wrap: wrap; margin-bottom: 8px; }
-.dv-by { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.dv-byline { display: flex; flex-wrap: wrap; margin-bottom: var(--sp-8); }
+.dv-by { display: flex; align-items: baseline; gap: var(--sp-8); flex-wrap: wrap; font-size: var(--fs-13); }
 .dv-by a { font-weight: 800; }
-.dv-meter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dv-meter { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-8); }
 .dv-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 6px 4px;
-  font-size: 10px;
+  padding: var(--sp-6) var(--sp-4);
+  font-size: var(--fs-10);
   letter-spacing: 0.04em;
   color: var(--ink-soft);
   background: var(--paper-deep);
   border: 2px solid var(--ink);
   text-transform: uppercase;
 }
-.dv-cell b { font-family: var(--font-heading); color: var(--ink); font-size: 16px; line-height: 1; }
-.dv-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.dv-actions { display: flex; flex-direction: column; gap: 8px; }
+.dv-cell b { font-family: var(--font-heading); color: var(--ink); font-size: var(--fs-16); line-height: 1; }
+.dv-tags { display: flex; flex-wrap: wrap; gap: var(--sp-6); }
+.dv-actions { display: flex; flex-direction: column; gap: var(--sp-8); }
 .dv-action-main { width: 100%; }
-.dv-action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.dv-action-row { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
 .dv-action-row .btn { flex: 1; justify-content: center; }
 .dv-updates {
   margin: 0;
-  padding: 6px 8px;
-  font-size: 12px;
+  padding: var(--sp-6) var(--sp-8);
+  font-size: var(--fs-12);
   background: var(--paper-deep);
   border-left: 5px solid var(--teal);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
 }
 /* 收起/展开动效的**唯一定义**在文件末尾的「新野兽派动效令牌」层里
@@ -111,21 +111,21 @@
   .dv-rail:hover { transform: none; }
 }
 /* ② 过程档案：原生 details，收起时只占一行，展开即读（不再需要 tab 跳转） */
-.dv-archive { padding-top: 8px; }
+.dv-archive { padding-top: var(--sp-8); }
 /* 两个 disclosure 并排：收起时各占一行，展开时各占半宽 —— 比竖着堆两屏更省地方 */
-.dv-disclose-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; align-items: start; }
+.dv-disclose-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--sp-10); align-items: start; }
 .dv-summary-cta { margin-left: auto; }
-.dv-archive-empty { font-size: 13px; }
+.dv-archive-empty { font-size: var(--fs-13); }
 .dv-disclose {
   border: var(--border-w) solid var(--ink);
   background: var(--paper);
-  margin-bottom: 10px;
+  margin-bottom: var(--sp-10);
 }
 .dv-disclose summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: var(--sp-10);
+  padding: var(--sp-10) var(--sp-14);
   cursor: pointer;
   list-style: none;
   font-family: var(--font-heading);
@@ -137,15 +137,15 @@
 .dv-disclose summary:hover { background: var(--paper-deep); }
 .dv-disclose-n {
   min-width: 22px;
-  padding: 0 6px;
+  padding: 0 var(--sp-6);
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
   color: var(--paper);
   background: var(--ink);
 }
-.dv-disclose-hint { font-size: 11px; color: var(--ink-soft); }
-.dv-disclose-body { padding: 12px 14px 14px; border-top: 2px dashed rgba(0, 0, 0, 0.18); }
+.dv-disclose-hint { font-size: var(--fs-11); color: var(--ink-soft); }
+.dv-disclose-body { padding: var(--sp-12) var(--sp-14) var(--sp-14); border-top: 2px dashed rgba(0, 0, 0, 0.18); }
 .dv-disclose[open] .dv-disclose-body { animation: dv-disclose-in 180ms ease; }
 @keyframes dv-disclose-in {
   from { opacity: 0; transform: translateY(-4px); }
@@ -156,9 +156,9 @@
   .dv-disclose[open] .dv-disclose-body { animation: none; }
 }
 /* 横条分布：窄栏里唯一能同时读出"长短 + 票数"的编码 */
-.rd-rows { display: flex; flex-direction: column; gap: 3px; padding-top: 4px; }
+.rd-rows { display: flex; flex-direction: column; gap: 3px; padding-top: var(--sp-4); }
 .rd-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) 26px; align-items: center; gap: 7px; }
-.rd-n, .rd-c { font-size: 11px; color: var(--ink-soft); }
+.rd-n, .rd-c { font-size: var(--fs-11); color: var(--ink-soft); }
 .rd-c { text-align: right; font-weight: 700; color: var(--ink); }
 .rd-track { display: block; height: 9px; background: var(--paper-deep, #eee9e0); border: 1px solid rgba(0, 0, 0, 0.35); }
 .rd-track i { display: block; height: 100%; background: var(--ink); transition: width var(--b-dur) var(--b-ease); }
@@ -167,7 +167,7 @@
 .rd-track i.dist-3 { background: var(--yellow); }
 .rd-track i.dist-4 { background: var(--teal); }
 @media (prefers-reduced-motion: reduce) { .rd-track i { transition: none; } }
-.dv-story { padding-top: 8px; }
+.dv-story { padding-top: var(--sp-8); }
 .dv-desc-card { padding: 22px; }
 .dv-h2 {
   font-family: var(--font-heading);
@@ -175,22 +175,22 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin: 0 0 12px;
+  margin: 0 0 var(--sp-12);
 }
-.dv-prompt { padding: 16px; border-left: 4px solid var(--ink); }
+.dv-prompt { padding: var(--sp-16); border-left: 4px solid var(--ink); }
 .dv-prompt-text {
   margin: 0;
   line-height: 1.8;
   white-space: pre-wrap;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 /* 三种"比较"形态各异：同形即同类是这页原来最大的信息事故。
    P2-9 wash 收尾（t17 账本）：深青 #0f766e+白 / 深红 #a4001d+白 → 原饱和 wash 底 + --on-accent 黑字
    （04「面积×饱和度」纪律；对比 13.99:1 / 7.57:1 全 AA；墨黑下随 --wash-* 换绑暗橄榄） */
 .dv-cmp-tag {
   padding: 1px 7px;
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 900;
   letter-spacing: 0.08em;
   color: var(--on-accent, #000);
@@ -207,8 +207,8 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--sp-8);
+  padding: var(--sp-10) var(--sp-12);
   border-width: 2px;
   border-left-width: 6px;
   box-shadow: none;
@@ -217,41 +217,41 @@
 .dv-facts .rating-stars { align-self: flex-start; }
 /* 原样式给 .rating-meta 设了 align-items:center —— 纵向 flex 下子元素会缩到内容宽，
    分布图因此被压成 46px。窄栏里必须 stretch，柱形才有地方长开。 */
-.dv-facts .rating-meta { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.dv-facts .rating-meta { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-4); }
 .dv-facts .rating-avg,
 .dv-facts .rating-sub,
 .dv-facts .rating-legend { text-align: center; }
 /* .rating-sub 在原样式里是 flex，text-align 管不住它 —— 得用 justify-content */
-.dv-facts .rating-sub { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-.dv-facts .rating-avg { font-size: 14px; }
+.dv-facts .rating-sub { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-6); }
+.dv-facts .rating-avg { font-size: var(--fs-14); }
 .dv-facts .rating-legend,
 .dv-facts .rating-anon-hint {
   white-space: normal;
   overflow-wrap: anywhere;
-  font-size: 11px;
+  font-size: var(--fs-11);
   line-height: 1.5;
 }
 /* 分布图是"分数分布"唯一的可视化：给它基线 + 等分列，柱高保持比例 */
 .dv-facts .rating-dist {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  gap: var(--sp-4);
   padding-top: 5px;
-  margin-top: 2px;
+  margin-top: var(--sp-2);
   border-top: 1px dashed rgba(0, 0, 0, 0.25);
 }
 .dv-facts .rating-dist-col { flex: 1; }
 .dv-facts .rating-dist-bar { width: 100%; max-width: 24px; }
 /* 信息卡可收起：槽位常驻——收起时槽内显示横向窄轨把手（满槽宽、~48px 高），
    展开时同一槽位换装完整信息卡（Transition out-in + 显式 placement=零重排） */
-.dv-facts-head { display: flex; align-items: center; gap: 10px; }
+.dv-facts-head { display: flex; align-items: center; gap: var(--sp-10); }
 .dv-facts-head .eyebrow { flex: 1; }
 .dv-collapse {
   font: inherit;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
   letter-spacing: 0.04em;
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
   background: transparent;
   border: 2px solid var(--ink);
   color: var(--ink-soft);
@@ -270,8 +270,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 10px 4px;
+  gap: var(--sp-8);
+  padding: var(--sp-10) var(--sp-4);
   font: inherit;
   color: var(--ink);
   background: var(--paper);
@@ -283,15 +283,15 @@
 .dv-rail:hover { background: var(--yellow); }
 .dv-rail-label {
   font-family: var(--font-heading);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
   letter-spacing: 0.06em;
 }
 .dv-rail-score {
   font-family: var(--font-heading);
-  font-size: 15px;
+  font-size: var(--fs-15);
   font-weight: 900;
-  padding: 1px 6px;
+  padding: 1px var(--sp-6);
   background: var(--mint);
   border: 2px solid var(--ink);
 }
@@ -299,7 +299,7 @@
   /* t23：竖轨形态——标题竖排（writing-mode 回归），40px 轨内纵向省略 */
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -333,8 +333,8 @@
     align-self: auto;
     flex-direction: row;
     justify-content: flex-start;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: var(--sp-10);
+    padding: var(--sp-8) var(--sp-12);
   }
   .dv-rail-title { writing-mode: horizontal-tb; max-height: none; flex: 1; }
   .dv-facts {

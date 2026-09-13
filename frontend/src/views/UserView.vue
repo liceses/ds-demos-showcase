@@ -112,7 +112,7 @@ onMounted(async () => {
       <span class="eyebrow">{{ t('user.eyebrow', '用户主页') }}</span>
       <h1 class="page-title">{{ user.username }}</h1>
       <p class="sub">{{ user.bio || t('user.noBio', '这个人很懒，还没有写简介。') }}</p>
-      <div class="filter-row" style="margin-top: 16px">
+      <div class="filter-row" style="margin-top: var(--sp-16)">
         <span class="mini-stat"><b>{{ user.demo_count }}</b> {{ t('home.demos', 'Demo') }}</span>
         <span class="mini-stat"><b>{{ profile?.reputation ?? 0 }}</b> {{ t('user.reputation', '声望') }}</span>
         <span class="mini-stat"><b>{{ profile?.topic_count ?? 0 }}</b> {{ t('user.topics', '主题') }}</span>
@@ -227,12 +227,12 @@ onMounted(async () => {
 }
 .self-badge {
   min-width: 22px;
-  padding: 1px 6px;
+  padding: 1px var(--sp-6);
   text-align: center;
   background: var(--red, #ff6b6b);
   color: var(--on-accent, #000);
   border: 2px solid var(--ink, #000);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 900;
 }
 </style>

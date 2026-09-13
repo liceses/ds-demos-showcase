@@ -110,7 +110,7 @@ onMounted(loadUsers)
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 14px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-14); flex-wrap: wrap">
       <div class="search-box search-box--grow search-box--xs">
         <input v-model="query" class="input" type="search" placeholder="搜索用户名…" />
         <span class="search-icon">Q</span>

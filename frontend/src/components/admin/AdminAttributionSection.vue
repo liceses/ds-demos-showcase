@@ -116,7 +116,7 @@ async function submit(g: AttributionGroup) {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.attr.hint', '兜底位不是终点：这里是把它们逐条迁回真实型号的工作台。') }}</span>
       <button class="btn btn-sm btn-secondary" type="button" :disabled="loading" @click="load">{{ t('common.refresh', '刷新') }}</button>
       <span v-if="data" class="mini-stat"><b>{{ totalPending }}</b> {{ t('admin.attr.pendingN', '个作品待归属') }}</span>

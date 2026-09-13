@@ -61,12 +61,12 @@ onMounted(load)
     <span class="eyebrow">{{ t('models.eyebrow', '模型图鉴') }}</span>
     <h1 class="page-title">{{ t('models.title', '模型') }}</h1>
     <p class="sub">{{ t('models.sub', '每个模型在这一年里真正做过什么 —— 从作品反推它的行为，不给综合分。') }}</p>
-    <div class="filter-row" style="margin-top: 16px">
+    <div class="filter-row" style="margin-top: var(--sp-16)">
       <span class="mini-stat"><b>{{ total }}</b> {{ t('models.count', '个模型') }}</span>
     </div>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div class="toolbar">
       <div class="search-box search-box--grow search-box--sm">
         <input
@@ -95,7 +95,7 @@ onMounted(load)
     <EmptyBox v-else-if="!items.length" :text="t('models.emptyList', '还没有模型条目')" />
 
     <div v-else class="model-list">
-      <article v-for="m in items" :key="m.slug" class="model-row card card-entity">
+      <article v-for="m in items" :key="m.slug" class="model-row card card-entity b-lift">
         <RouterLink class="model-row-stamp" :to="`/models/${m.slug}`">
           <EntityStamp :name="m.name" :vendor="m.vendor" size="md" />
         </RouterLink>

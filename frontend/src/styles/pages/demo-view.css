@@ -1,23 +1,23 @@
 /* ---------- v2 B2′：同提示词模块 ---------- */
 .same-prompt-quote {
-  padding: 14px 18px;
+  padding: var(--sp-14) 18px;
   border-left: 6px solid var(--ink);
 }
 .same-prompt-label {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 3px 8px;
+  padding: 3px var(--sp-8);
   background: var(--ink);
   color: var(--yellow);
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-8);
 }
 .same-prompt-text {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-13);
   line-height: 1.75;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

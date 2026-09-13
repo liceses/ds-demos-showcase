@@ -180,6 +180,12 @@ export interface TaskSummary {
   description: string
   /** 题面摘录（无描述时取该题下第一件作品的提示词） */
   prompt_excerpt?: string
+  /**
+   * 题目行的代表封面（200px 缩略图）：该题下排序第一且有缩略图的已上架作品。
+   * 空字符串 = 该题没有任何带缩略图的作品（例如全是 default.svg 占位图）→ **不渲染图片**，
+   * 行布局不变、不留空洞（设计稿 §3）。
+   */
+  cover_thumb_url?: string
   category?: string | null
   status: string
   demo_count: number

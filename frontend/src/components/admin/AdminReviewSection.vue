@@ -34,12 +34,12 @@ async function review(slug: string, action: 'approve' | 'reject') {
     <LoadingRow v-if="loading" text="加载待审…" />
     <EmptyBox v-else-if="!pending.length" text="没有待审核的 Demo" />
     <div v-for="d in pending" :key="d.slug" class="card card-sunny" style="padding: 18px; margin-bottom: 18px">
-      <div class="section-head" style="margin-bottom: 8px">
+      <div class="section-head" style="margin-bottom: var(--sp-8)">
         <h2>{{ d.title }}</h2>
         <span class="status-pill status-pending">pending</span>
       </div>
-      <p class="muted" style="margin-bottom: 12px">{{ d.description }}</p>
-      <div class="filter-row" style="margin-bottom: 12px">
+      <p class="muted" style="margin-bottom: var(--sp-12)">{{ d.description }}</p>
+      <div class="filter-row" style="margin-bottom: var(--sp-12)">
         <span v-for="t in d.tags" :key="t.key + ':' + t.value" class="tag-chip">{{ t.key }}:{{ t.value }}</span>
       </div>
       <div class="filter-row" style="margin-bottom: 0">

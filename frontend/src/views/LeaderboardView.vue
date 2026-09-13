@@ -128,8 +128,8 @@ onMounted(load)
     <p class="sub">{{ tab === 'users' ? t('leaderboard.usersSub', '谁在给这个社区添砖加瓦——声望、获赞与作品说话。') : t('leaderboard.sub', '用「神作 / 鬼作」两极语义给作品投票，看看大家的口碑。') }}</p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
-    <div class="filter-row" style="margin-bottom: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
+    <div class="filter-row" style="margin-bottom: var(--sp-8)">
       <button class="tab" :class="{ active: tab === 'works' }" type="button" @click="switchTab('works')">
         {{ t('leaderboard.tab.works', '作品神鬼榜') }}
       </button>
@@ -140,7 +140,7 @@ onMounted(load)
 
     <!-- 时间窗：作品榜后端已支持（/leaderboard?range=…）；声望榜实测不支持（未知参数被静默忽略），
          禁用 + 「即将支持」，不做假开关（M0-1）。 -->
-    <div class="filter-row" style="margin-bottom: 8px">
+    <div class="filter-row" style="margin-bottom: var(--sp-8)">
       <button
         v-for="r in (['week', 'month', 'all'] as const)"
         :key="r"
@@ -155,7 +155,7 @@ onMounted(load)
       <span v-if="tab === 'users'" class="muted">{{ t('leaderboard.rangeSoon', '时间窗即将支持（当前仅总榜）') }}</span>
     </div>
 
-    <div v-if="tab === 'works'" class="filter-row" style="margin-bottom: 8px">
+    <div v-if="tab === 'works'" class="filter-row" style="margin-bottom: var(--sp-8)">
       <button
         v-for="s in WORK_SORTS"
         :key="s"
@@ -206,7 +206,7 @@ onMounted(load)
                 <td class="mono">{{ (page - 1) * pageSize + i + 1 }}</td>
                 <td>
                   <RouterLink :to="`/user/${u.username}`" style="font-weight: 900">{{ u.username }}</RouterLink>
-                  <span v-if="u.bio" class="muted" style="margin-left: 6px; font-size: 12px">{{ u.bio }}</span>
+                  <span v-if="u.bio" class="muted" style="margin-left: var(--sp-6); font-size: var(--fs-12)">{{ u.bio }}</span>
                 </td>
                 <td class="mono">{{ u.reputation }}</td>
                 <td class="mono">{{ u.received_likes }}</td>
@@ -222,7 +222,7 @@ onMounted(load)
             </tbody>
           </table>
         </div>
-        <p class="muted" style="margin-top: 10px">
+        <p class="muted" style="margin-top: var(--sp-10)">
           {{ t('leaderboard.howRep', '声望怎么算？') }}
           <RouterLink to="/about#reputation">{{ t('leaderboard.howRepLink', '看规则 →') }}</RouterLink>
         </p>

@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--sp-20);
 }
 .tag-merge-mask {
   position: absolute;
@@ -21,21 +21,21 @@
   background: var(--paper);
   border: 4px solid var(--ink);
   box-shadow: 8px 8px 0 0 var(--ink);
-  padding: 20px;
+  padding: var(--sp-20);
 }
 .tag-merge-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  gap: var(--sp-12);
+  margin-bottom: var(--sp-12);
+  padding-bottom: var(--sp-12);
   border-bottom: 3px solid var(--ink);
 }
 .tag-merge-result {
   border: 3px solid var(--ink);
   background: var(--mint);
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
 }
 
 /* 标签分组工作台 */
@@ -45,30 +45,30 @@
 .group-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  gap: var(--sp-14);
 }
 .group-card {
   border: 3px solid var(--ink);
   background: var(--paper);
   box-shadow: 4px 4px 0 0 var(--ink);
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
 }
 .group-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-10);
+  padding-bottom: var(--sp-8);
   border-bottom: 2px solid var(--ink);
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 .group-card-head b {
-  font-size: 15px;
+  font-size: var(--fs-15);
 }
 .group-card-values {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-6);
   align-items: center;
 }
 .group-card-ungrouped {
@@ -76,25 +76,25 @@
   background: var(--paper-forum);
 }
 .group-assign {
-  margin-left: 4px;
-  padding: 0 2px;
+  margin-left: var(--sp-4);
+  padding: 0 var(--sp-2);
   border: 2px solid var(--ink);
   background: var(--paper);
-  font-size: 11px;
+  font-size: var(--fs-11);
   max-width: 90px;
 }
 
 /* 分组标签展示 */
 .tag-group-block {
-  margin-bottom: 10px;
+  margin-bottom: var(--sp-10);
 }
 .tag-group-name {
   display: inline-block;
-  margin: 0 8px 6px 0;
-  padding: 1px 8px;
+  margin: 0 var(--sp-8) var(--sp-6) 0;
+  padding: 1px var(--sp-8);
   border: 2px solid var(--ink);
   background: var(--yellow);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
 }
 
@@ -103,12 +103,12 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-8);
   border: 2px solid var(--ink);
   background: var(--paper);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   text-decoration: none;
 }
@@ -125,7 +125,7 @@
   border: 2px solid var(--ink);
   background: var(--red);
   color: var(--on-accent, #000);
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 900;
   line-height: 14px;
   text-align: center;
@@ -134,44 +134,46 @@
 .notif-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .notif-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   width: 100%;
-  padding: 12px 14px;
+  padding: var(--sp-12) var(--sp-14);
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 3px 3px 0 0 var(--ink);
   text-align: left;
   cursor: pointer;
   font-family: var(--font-body);
+  --lift-sh: var(--sh-off-uw) 0px 0px var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-uw) 0px 0px var(--ink);
+  --lift-x: var(--lift-s-x);
+  --lift-y: var(--lift-s-y);
+  --lift-flat: var(--sh-off-uw);
+  box-shadow: var(--lift-sh);
 }
-.notif-item:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 0 var(--ink);
-}
+/* 收进微交互库：3px → hover 5px（本来就是 ×1.5，只是写成了字面值）；抬起走小件档 -1px */
 .notif-item.unread {
   background: var(--yellow);
 }
 .notif-type {
   flex-shrink: 0;
-  padding: 1px 6px;
+  padding: 1px var(--sp-6);
   border: 2px solid var(--ink);
   background: var(--mint);
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 800;
 }
 .notif-text {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 700;
 }
 .notif-time {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-12);
   color: var(--text-forum);
 }
 /* P3-b：小屏三列（类型/正文/时间）挤一行，正文被压到只剩几十像素。
@@ -193,17 +195,17 @@
 
 /* 论坛嵌套回复 */
 .forum-reply.nested {
-  margin-left: 24px;
+  margin-left: var(--sp-24);
 }
 .forum-reply-parent {
   color: var(--text-forum);
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 
 /* 论坛重设计：两栏 + 头像 */
 .forum-layout {
   display: flex;
-  gap: 20px;
+  gap: var(--sp-20);
   align-items: flex-start;
 }
 .forum-main {
@@ -216,35 +218,35 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-14);
 }
 .forum-side-card {
   border: 3px solid var(--ink);
   background: var(--paper);
   box-shadow: 4px 4px 0 0 var(--ink);
-  padding: 14px;
+  padding: var(--sp-14);
 }
 .forum-side-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 800;
-  margin: 0 0 10px;
-  padding-bottom: 6px;
+  margin: 0 0 var(--sp-10);
+  padding-bottom: var(--sp-6);
   border-bottom: 2px solid var(--ink);
 }
 .forum-side-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
 }
 .forum-side-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: var(--sp-8);
+  padding: var(--sp-6) var(--sp-8);
   border: 2px solid transparent;
   text-decoration: none;
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--fs-13);
   cursor: pointer;
   background: transparent;
   font-family: var(--font-body);
@@ -268,14 +270,14 @@
   height: 40px;
   border: 2px solid var(--ink);
   font-weight: 900;
-  font-size: 16px;
+  font-size: var(--fs-16);
   flex-shrink: 0;
   background: var(--paper);
 }
 .avatar-sm {
   width: 24px;
   height: 24px;
-  font-size: 12px;
+  font-size: var(--fs-12);
 }
 .avatar-1 { background: var(--yellow); }
 .avatar-2 { background: var(--mint); }
@@ -284,8 +286,8 @@
 .forum-topic-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: var(--sp-12);
+  padding: var(--sp-14) var(--sp-16);
 }
 .forum-topic-card .forum-topic-body {
   flex: 1;
@@ -300,15 +302,15 @@
   border: 2px solid var(--ink);
   background: var(--mint);
   font-weight: 900;
-  font-size: 13px;
+  font-size: var(--fs-13);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: var(--sp-2);
 }
 .forum-topic-head {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-12);
   align-items: flex-start;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-14);
 }
 .forum-topic-head-main {
   flex: 1;
@@ -316,21 +318,21 @@
 }
 .forum-topic-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 10px;
+  gap: var(--sp-8);
+  margin-top: var(--sp-14);
+  padding-top: var(--sp-10);
   border-top: 2px solid var(--ink);
 }
 .forum-reply-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--sp-8);
+  margin-top: var(--sp-10);
 }
 .forum-side-author {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--sp-10);
 }
 .forum-side-author-name {
   font-weight: 800;
@@ -369,30 +371,30 @@
 .quick-comments {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .quick-comment-input {
   border: 3px solid var(--ink);
   background: var(--paper);
-  padding: 12px;
+  padding: var(--sp-12);
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 .quick-comment-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .quick-comment {
   border: 2px solid var(--ink);
   background: var(--paper);
-  padding: 10px 12px;
+  padding: var(--sp-10) var(--sp-12);
 }
 .quick-comment-head {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   align-items: baseline;
-  font-size: 12px;
-  margin-bottom: 6px;
+  font-size: var(--fs-12);
+  margin-bottom: var(--sp-6);
 }
 .quick-comment-author {
   font-weight: 800;

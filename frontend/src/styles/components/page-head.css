@@ -1,30 +1,30 @@
 /* ---------- 页面头部 ---------- */
 /* 品牌/首屏 hero 的基准（首页 hero-v2 自持变体，不挂本档） */
 .page-hero {
-  padding: 48px 0 36px;
+  padding: var(--sp-48) 0 36px;
 }
 .page-hero .sub {
   max-width: 640px;
   margin-top: 18px;
-  font-size: 15px;
+  font-size: var(--fs-15);
   line-height: 1.7;
 }
-/* P2-b 清死：原 `.page-hero .title { margin-top: 16px }` 全仓 `class="title"` 零命中，已删 */
+/* P2-b 清死：原 `.page-hero .title { margin-top: var(--sp-16) }` 全仓 `class="title"` 零命中，已删 */
 
 /* ---------- 区块 ---------- */
 .section {
-  padding: 40px 0;
+  padding: var(--sp-40) 0;
 }
 .section-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--sp-16);
   flex-wrap: wrap;
   margin-bottom: 22px;
 }
 .section-title {
-  font-size: 26px;
+  font-size: var(--fs-26);
 }
 
 /* ------------------------------------------------------------
@@ -35,12 +35,12 @@
    登录/404/上传/标签/模型详情/用户主页那一排 115px 巨标题已收进 42px。
    ------------------------------------------------------------ */
 .page-hero--compact {
-  padding: 14px 0 12px;
+  padding: var(--sp-14) 0 var(--sp-12);
 }
 .page-hero--compact .sub {
   max-width: 620px;
-  margin-top: 6px;
-  font-size: 14px;
+  margin-top: var(--sp-6);
+  font-size: var(--fs-14);
   line-height: 1.55;
 }
 /* 注意这个 `>`：只给页头**直接子元素**的统计条加上边距。原先写的是后代选择器，
@@ -49,13 +49,13 @@
    靠这个 `>` 保证零变化（filter-row 内的统计不吃这 8px）。 */
 .page-hero--compact .filter-row,
 .page-hero--compact > .mini-stat {
-  margin-top: 8px;
+  margin-top: var(--sp-8);
   margin-bottom: 0;
 }
-/* 详情页变体：底部收紧 + 标题零上边距（等价于原先散在各页的内联 style="padding-bottom: 20px"
+/* 详情页变体：底部收紧 + 标题零上边距（等价于原先散在各页的内联 style="padding-bottom: var(--sp-20)"
    与 h1 上的 style="margin-top: 0"，原先 4 个详情页各写一遍） */
 .page-hero--tight {
-  padding-bottom: 20px;
+  padding-bottom: var(--sp-20);
 }
 .page-hero--tight .page-title {
   margin-top: 0;
@@ -67,7 +67,7 @@
    以后调档只改这一处。 */
 .page-title {
   display: block;
-  margin-top: 8px;
+  margin-top: var(--sp-8);
   font-family: var(--font-body);
   font-size: var(--fs-title-compact);
   font-weight: 900;

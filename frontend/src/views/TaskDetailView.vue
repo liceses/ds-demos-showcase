@@ -75,18 +75,18 @@ const chainStat = computed(() => {
         <EntityStamp :name="task.title" size="lg" />
         <div>
           <h1 class="page-title">{{ task.title }}</h1>
-          <div class="filter-row" style="margin-top: 6px; gap: 8px">
+          <div class="filter-row" style="margin-top: var(--sp-6); gap: var(--sp-8)">
             <span v-if="task.category" class="mini-stat"><b>{{ task.category }}</b> {{ t('tasks.category', '分类') }}</span>
             <span class="mini-stat"><b>{{ task.demos_total }}</b> {{ t('tasks.entries', '作品') }}</span>
             <span class="mini-stat"><b>{{ task.compare.length }}</b> {{ t('tasks.modelsCount', '模型') }}</span>
           </div>
         </div>
       </div>
-      <p v-if="task.description" class="sub" style="margin-top: 10px">{{ task.description }}</p>
+      <p v-if="task.description" class="sub" style="margin-top: var(--sp-10)">{{ task.description }}</p>
     </PageHero>
 
     <!-- 题面块：这道题到底让你做什么 —— 原来页面上完全看不到 -->
-    <section v-if="task.chain && task.chain.brief" class="section" style="padding-top: 4px">
+    <section v-if="task.chain && task.chain.brief" class="section" style="padding-top: var(--sp-4)">
       <div class="brief-card card card-default">
         <div class="brief-head">
           <span class="brief-tag mono">{{ task.chain.brief_source === 'prompt' ? t('tasks.briefFromPrompt', '题面（取自作品提示词）') : t('tasks.briefFromAuthor', '题面') }}</span>
@@ -110,7 +110,7 @@ const chainStat = computed(() => {
     </div>
     <div v-if="!task.compare.length" class="empty-box">{{ t('tasks.emptyCompare', '还没有模型参与此题，等更多模型来挑战 →') }}</div>
     <div v-else class="compare-list">
-      <div v-for="(row, i) in task.compare" :key="row.model.slug" class="compare-row card card-entity">
+      <div v-for="(row, i) in task.compare" :key="row.model.slug" class="compare-row card card-entity b-lift">
         <span class="compare-rank" :class="'rank-' + (i + 1)">{{ i + 1 }}</span>
         <RouterLink class="compare-model" :to="`/models/${row.model.slug}`">
           <EntityStamp :name="row.model.name" :vendor="row.model.vendor" size="md" />
@@ -196,7 +196,7 @@ const chainStat = computed(() => {
       </table>
     </div>
 
-    <p class="muted mono" style="text-align: center; margin-top: 24px">
+    <p class="muted mono" style="text-align: center; margin-top: var(--sp-24)">
       {{ t('tasks.since', '收录') }} {{ parseDate(task.created_at).toLocaleDateString(currentLocale()) }}
     </p>
   </template>

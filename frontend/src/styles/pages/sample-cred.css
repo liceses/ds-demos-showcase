@@ -8,7 +8,7 @@
   align-items: center;
   gap: 5px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-11);
   letter-spacing: 0.02em;
   color: var(--ink-soft);
   white-space: nowrap;

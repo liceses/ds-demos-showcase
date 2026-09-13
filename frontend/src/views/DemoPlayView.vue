@@ -117,9 +117,9 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   min-height: 44px;
-  padding: 5px 12px;
+  padding: 5px var(--sp-12);
   border-bottom: var(--border-w, 4px) solid var(--ink, #000);
   background: var(--paper, #fff);
 }
@@ -141,11 +141,11 @@ onBeforeUnmount(() => {
 .play-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   min-height: 32px;
-  padding: 4px 10px;
+  padding: var(--sp-4) var(--sp-10);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-12);
   font-weight: 800;
   background: var(--paper, #fff);
   color: var(--ink, #000);
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
 .play-hint {
   display: none; /* 窄屏默认不显示，见下方 min-width 断点 */
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-faint, #767676);
 }
 @media (min-width: 721px) {
@@ -173,11 +173,11 @@ onBeforeUnmount(() => {
 /* 窄屏：顶条保持单行（3 个按钮 ≈ 300px），说明文字已由 v-if 收起 */
 @media (max-width: 480px) {
   .play-bar {
-    gap: 6px;
-    padding: 5px 8px;
+    gap: var(--sp-6);
+    padding: 5px var(--sp-8);
   }
   .play-btn {
-    padding: 4px 8px;
+    padding: var(--sp-4) var(--sp-8);
   }
 }
 </style>

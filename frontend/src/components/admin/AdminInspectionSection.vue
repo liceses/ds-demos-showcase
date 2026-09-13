@@ -56,9 +56,9 @@ async function queue(id: string, label: string, n: number) {
 
 <template>
   <div>
-    <div class="filter-row" style="margin-bottom: 12px; flex-wrap: wrap">
+    <div class="filter-row" style="margin-bottom: var(--sp-12); flex-wrap: wrap">
       <span class="filter-label">{{ t('admin.inspect.hint', '巡检只列待办与生成候选，改数据一律走收件箱人工批准。') }}</span>
-      <label class="filter-row" style="margin: 0; gap: 6px">
+      <label class="filter-row" style="margin: 0; gap: var(--sp-6)">
         <span class="muted">{{ t('admin.inspect.minConf', '补值置信度 ≥') }}</span>
         <input v-model.number="minConfidence" class="input" type="number" step="0.05" min="0" max="1" style="max-width: 92px" />
       </label>
@@ -91,7 +91,7 @@ async function queue(id: string, label: string, n: number) {
               {{ busy[c.id] ? t('admin.inspect.working', '生成中…') : t('admin.inspect.queueBtn', '生成候选') }}
             </button>
           </div>
-          <p class="hint" style="margin: 6px 0 0">{{ c.hint }}</p>
+          <p class="hint" style="margin: var(--sp-6) 0 0">{{ c.hint }}</p>
           <div v-if="c.samples?.length" class="inspect-samples mono">
             <span v-for="(s, i) in c.samples" :key="i">
               {{ (s.title as string) || (s.value as string) || (s.slug as string) }}<span v-if="s.types">[{{ (s.types as string[]).join('+') }}]</span>
@@ -100,7 +100,7 @@ async function queue(id: string, label: string, n: number) {
         </article>
       </div>
 
-      <div class="section-head" style="margin-top: 24px">
+      <div class="section-head" style="margin-top: var(--sp-24)">
         <h2 class="section-title">{{ t('admin.inspect.watchTitle', '只能人工处理 / 背景读数') }}</h2>
       </div>
       <div v-if="!watchList.length" class="empty-box">{{ t('admin.inspect.noWatch', '没有其它待办') }}</div>

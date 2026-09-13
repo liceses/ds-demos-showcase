@@ -256,22 +256,22 @@ watch(
 .kc-zone-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   justify-content: space-between;
 }
 .kc-zone-title {
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   border-bottom: var(--border-w, 4px) solid var(--ink, #000);
-  padding-bottom: 6px;
-  margin-bottom: 12px;
+  padding-bottom: var(--sp-6);
+  margin-bottom: var(--sp-12);
   flex: 1 1 auto;
 }
 .kc-summary {
   display: flex;
-  gap: 16px;
+  gap: var(--sp-16);
   align-items: flex-start;
   flex-wrap: wrap;
 }
@@ -279,11 +279,11 @@ watch(
   flex: 1 1 260px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 8px 16px;
+  gap: var(--sp-8) var(--sp-16);
 }
 .kc-field {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   align-items: center;
   min-width: 0;
   flex-wrap: wrap;
@@ -293,7 +293,7 @@ watch(
 }
 .kc-k {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: var(--fs-11);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -302,7 +302,7 @@ watch(
 /* 无端点字段的诚实标注：置灰+虚线下划 */
 .kc-pending {
   color: var(--ink-soft, #555);
-  font-size: 12px;
+  font-size: var(--fs-12);
   text-decoration: underline dotted;
   text-underline-offset: 3px;
 }

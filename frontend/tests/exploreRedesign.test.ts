@@ -138,4 +138,57 @@ describe('探索页护栏', () => {
     expect(eyebrow).toBeTruthy()
     expect(eyebrow).not.toBe(title)
   })
+
+  // ── 题目行封面（设计稿 §3 的硬规格；规格是逐条列的，护栏也逐条钉） ──
+
+  it('题目行封面：四个属性一个都不能少（防 CLS / 懒加载 / 异步解码 / 装饰性图）', () => {
+    const img = view.slice(view.indexOf('class="task-line-cover"') - 400, view.indexOf('task-line-title'))
+    expect(img).toContain('class="task-line-cover"')
+    expect(img).toMatch(/width="72"/)
+    expect(img).toMatch(/height="48"/)
+    expect(img).toMatch(/loading="lazy"/)
+    expect(img).toMatch(/decoding="async"/)
+    expect(img).toMatch(/alt=""/)
+  })
+
+  it('题目行封面：只在有 URL 且未失败时渲染（无封面不留空洞，占位图不算封面）', () => {
+    expect(view).toMatch(/v-if="coverOk\(tk\)"/)
+    expect(view).toMatch(/@error="coverBroken\.add\(tk\.slug\)"/)
+    expect(view).toContain('const coverBroken = ref<Set<string>>(new Set())')
+    // v-if 与 .has-cover 必须同一个判定（否则加载失败的行会套用"有图"的移动版式）
+    expect(view).toMatch(/:class="\{ 'has-cover': coverOk\(tk\) \}"/)
+    const fn = view.slice(view.indexOf('const coverOk'), view.indexOf('const coverOk') + 220)
+    expect(fn).toContain('tk.cover_thumb_url')
+    expect(fn).toContain('coverBroken.value.has(tk.slug)')
+    // 数据面：字段必须在类型里（optional，mock 模式不提供）
+    expect(read('api/types.ts')).toMatch(/cover_thumb_url\?: string/)
+  })
+
+  it('题目行封面样式：cover 裁切 + 固定 72×48 + 2px 黑边（且不许顺手给栅格加 overflow）', () => {
+    const css = read('styles/pages/models-tasks.css')
+    const i = css.indexOf('.task-line-cover')
+    const body = css.slice(css.indexOf('{', i), css.indexOf('}', i))
+    expect(body).toMatch(/object-fit:\s*cover/)
+    expect(body).toMatch(/width:\s*72px/)
+    expect(body).toMatch(/height:\s*48px/)
+    expect(body).toMatch(/border:\s*2px solid var\(--ink\)/)
+    expect(body).toMatch(/flex:\s*none/)
+    // 上一轮踩过的坑：栅格上任何 overflow:hidden 都会把半嵌入的图标块裁掉
+    expect(css.slice(css.indexOf('.task-line-cover'), css.indexOf('.task-line-desc'))).not.toContain('overflow')
+  })
+
+  it('移动端有封面的行：摘要必须与 CTA 同行且不许被压没（实测 132px → 105px 的关键）', () => {
+    // 这条来自一次真实测量：不处理时移动端行高 81 → 132（+51），且 8 行高的高矮的矮。
+    // 修复靠把摘要的 flex-basis 从 100% 改成 60px；**不许写成 0**（试过：短标题行摘要被压到 3px）。
+    const css = read('styles/pages/models-tasks.css')
+    const at = css.indexOf('.task-line.has-cover .task-line-desc')
+    expect(at, '移动端必须有 .task-line.has-cover .task-line-desc 规则').toBeGreaterThan(-1)
+    const body = css.slice(css.indexOf('{', at), css.indexOf('}', at))
+    expect(body).toMatch(/flex:\s*1 1 60px/)
+    expect(body).toMatch(/min-width:\s*0/)
+    expect(body).not.toMatch(/flex:\s*1 1 0\b/)
+    // 必须待在移动断点里（桌面端 456px 卡片不需要这条）
+    const mq = css.lastIndexOf('@media (max-width: 640px)', at)
+    expect(mq).toBeGreaterThan(-1)
+  })
 })

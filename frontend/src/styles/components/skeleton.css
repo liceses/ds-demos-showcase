@@ -15,16 +15,16 @@
 .loading-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   padding: 30px 0;
-  font-size: 13px;
+  font-size: var(--fs-13);
   text-transform: uppercase;
 }
 .empty-box {
   border: var(--border-w) dashed var(--ink);
-  padding: 40px 20px;
+  padding: var(--sp-40) var(--sp-20);
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-14);
 }
 /* P2：三种语义分开 —— empty 保持虚线（"还没有"），error/notfound 改实线（"出事了/不存在"），
    error 再用错误色，让"接口挂了"与"真没数据"一眼可辨（原先两者长得一模一样）。 */
@@ -34,8 +34,8 @@
 .empty-box-action {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: var(--sp-10);
+  margin-top: var(--sp-14);
 }
 .empty-box--error {
   border-style: solid;

@@ -1,7 +1,7 @@
 /* ---------- 工具条（搜索 / 过滤） ---------- */
 .toolbar {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-12);
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 22px;
@@ -38,10 +38,10 @@
 }
 .filter-row {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-8);
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--sp-24);
 }
 
 /* P0-4 归位：移动端工具条竖排。.search-box 的 @720 覆盖**不在这里**——

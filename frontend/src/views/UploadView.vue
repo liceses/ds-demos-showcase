@@ -518,7 +518,7 @@ async function submit(force = false) {
     </p>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
+  <section class="section" style="padding-top: var(--sp-8)">
     <div v-if="loading" class="loading-row"><span class="spinner"></span> {{ t('demo.loading', '加载 Demo…') }}</div>
 
     <div v-else-if="denied" class="empty-box" style="max-width: 560px">
@@ -527,7 +527,7 @@ async function submit(force = false) {
     </div>
 
     <div v-else class="upload-grid" :class="{ 'panel-open': tagsOpen }">
-      <div class="card card-default upload-form-card" style="padding: 24px">
+      <div class="card card-default upload-form-card" style="padding: var(--sp-24)">
         <!-- 草稿恢复：只探测不自动覆盖（误恢复比误清空更难被发现，所以必须让作者点头） -->
         <div v-if="draftFound && !success" class="uw-draft">
           <span>
@@ -579,7 +579,7 @@ async function submit(force = false) {
         <form class="form-stack" @submit.prevent="submit()">
         <!-- v2 B4′：挑战上下文（跨步保留，因为题面同时喂给标题与提示词） -->
         <div v-if="challenge && !challengeOff" class="card card-mint challenge-card">
-          <div class="filter-row" style="margin-bottom: 6px">
+          <div class="filter-row" style="margin-bottom: var(--sp-6)">
             <span class="cluster-badge cb-exact">CHALLENGE</span>
             <b>{{ challenge.title }}</b>
             <span class="mini-stat"><b>{{ challenge.demos_total }}</b> {{ t('upload.challengeWorks', '个已有作品') }}</span>
@@ -592,9 +592,9 @@ async function submit(force = false) {
             <!-- 挂了题面就该能摘掉：不想进同题对比时别被 URL 参数绑架 -->
             <button class="btn btn-sm btn-dark" type="button" style="margin-left: auto" @click="dropChallenge">✕ {{ t('upload.dropChallenge', '不挑战这题了') }}</button>
           </div>
-          <p v-if="challenge.description" class="muted" style="margin: 0 0 6px">{{ challenge.description }}</p>
+          <p v-if="challenge.description" class="muted" style="margin: 0 0 var(--sp-6)">{{ challenge.description }}</p>
           <p v-if="challengePrompt" class="challenge-prompt mono">{{ challengePrompt }}</p>
-          <p class="hint" style="margin: 6px 0 0">{{ t('upload.challengeHint', '提交后挂题请求进入管理员确认队列，通过才会出现在同题对比里。') }}</p>
+          <p class="hint" style="margin: var(--sp-6) 0 0">{{ t('upload.challengeHint', '提交后挂题请求进入管理员确认队列，通过才会出现在同题对比里。') }}</p>
         </div>
 
         <!-- ============ ① 作品是什么 ============ -->
@@ -606,7 +606,7 @@ async function submit(force = false) {
               v-for="o in typeOptions"
               :key="o.value"
               type="button"
-              class="uw-type"
+              class="uw-type b-lift"
               :class="{ active: demoType === o.value }"
               :aria-pressed="demoType === o.value"
               data-step-focus="1"

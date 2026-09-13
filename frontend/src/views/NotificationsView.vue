@@ -58,8 +58,8 @@ onMounted(load)
     <h1 class="page-title">{{ t('notifications.title', '通知中心') }}</h1>
   </PageHero>
 
-  <section class="section" style="padding-top: 8px">
-    <div class="filter-row" style="margin-bottom: 14px">
+  <section class="section" style="padding-top: var(--sp-8)">
+    <div class="filter-row" style="margin-bottom: var(--sp-14)">
       <!-- P4：切 tab 会触发上面的 watch 重新按服务端口径取数 -->
       <button class="tab" :class="{ active: filter === 'all' }" type="button" @click="filter = 'all'">{{ t('notifications.all', '全部') }}</button>
       <button class="tab" :class="{ active: filter === 'unread' }" type="button" @click="filter = 'unread'">{{ t('notifications.unread', '未读') }}</button>
@@ -73,7 +73,7 @@ onMounted(load)
       <button
         v-for="n in visible"
         :key="n.id"
-        class="notif-item"
+        class="notif-item b-lift"
         :class="{ unread: !n.read }"
         type="button"
         @click="open(n)"

@@ -1,8 +1,8 @@
 /* ---------- 提示条 ---------- */
 .notice {
-  padding: 12px 14px;
+  padding: var(--sp-12) var(--sp-14);
   border: var(--border-w) solid var(--ink);
-  font-size: 13px;
+  font-size: var(--fs-13);
   margin-bottom: 18px;
 }
 .notice-warn {

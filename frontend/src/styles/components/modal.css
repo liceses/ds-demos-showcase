@@ -15,17 +15,17 @@
 }
 .modal-card {
   width: min(440px, calc(100% - 48px));
-  padding: 24px;
+  padding: var(--sp-24);
   box-shadow: 10px 10px 0 0 var(--ink); /* 弹层专属 10px 档（非标准三档，stamp-hard 登场配重，字面保留）；rgba(0,0,0,1)→var(--ink) 墨黑下翻暖白 */
 }
 .modal-title {
-  font-size: 22px;
-  margin-bottom: 10px;
+  font-size: var(--fs-22);
+  margin-bottom: var(--sp-10);
 }
 .modal-message {
-  font-size: 14px;
+  font-size: var(--fs-14);
   line-height: 1.7;
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-20);
   overflow-wrap: anywhere;
 }
 

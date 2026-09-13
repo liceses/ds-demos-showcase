@@ -36,36 +36,36 @@
   text-shadow: 3px 3px 0 var(--ink);
 }
 .demo-card-body {
-  padding: 14px 16px 16px;
+  padding: var(--sp-14) var(--sp-16) var(--sp-16);
 }
 .demo-title {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 18px;
+  font-size: var(--fs-18);
   text-transform: uppercase;
   line-height: 1.1;
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-8);
 }
 .demo-meta {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-12);
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: var(--fs-11);
   color: var(--ink-soft);
-  margin-bottom: 10px;
+  margin-bottom: var(--sp-10);
 }
 .demo-stats {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: center;
-  font-size: 11px;
+  font-size: var(--fs-11);
 }
 .stat {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-4);
   border: 2px solid var(--ink);
-  padding: 2px 6px;
+  padding: var(--sp-2) var(--sp-6);
   background: var(--paper);
 }
 .stat-yellow {

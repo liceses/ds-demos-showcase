@@ -132,7 +132,7 @@ async function removeAlias(alias: string) {
 
 <template>
   <div>
-    <p class="filter-label" style="margin-bottom: 10px">
+    <p class="filter-label" style="margin-bottom: var(--sp-10)">
       {{ t('admin.alias.hint', '上传写 dsv4-flash、dsv4flash、DSV4 Flash 都该落到同一个实体 —— 靠的就是这里登记的别名表。') }}
     </p>
 
@@ -153,9 +153,9 @@ async function removeAlias(alias: string) {
             <span class="cluster-badge cb-exact">{{ resolutionLabel }}</span>
             <span class="mini-stat"><b>{{ detail.demo_count }}</b> {{ t('admin.alias.works', '件作品') }}</span>
           </div>
-          <p v-if="detail.vendor" class="muted" style="margin: 6px 0">{{ t('admin.alias.vendor', '厂商') }}：{{ detail.vendor }}</p>
+          <p v-if="detail.vendor" class="muted" style="margin: var(--sp-6) 0">{{ t('admin.alias.vendor', '厂商') }}：{{ detail.vendor }}</p>
 
-          <div class="filter-row" style="margin: 10px 0 0">
+          <div class="filter-row" style="margin: var(--sp-10) 0 0">
             <input
               v-model="newAlias"
               class="input"
@@ -170,7 +170,7 @@ async function removeAlias(alias: string) {
           </div>
 
           <!-- 改 slug：旧值转别名，但对外链接会变 -->
-          <div class="filter-row" style="margin: 8px 0 0">
+          <div class="filter-row" style="margin: var(--sp-8) 0 0">
             <input
               v-model="slugDraft"
               class="input mono"
@@ -189,20 +189,20 @@ async function removeAlias(alias: string) {
               <code class="mono">{{ a }}</code>
               <button class="btn btn-sm btn-dark" type="button" @click="removeAlias(a)">{{ t('admin.alias.removeBtn', '移除') }}</button>
             </div>
-            <p v-if="!detail.aliases?.length" class="muted" style="margin: 8px 0 0">
+            <p v-if="!detail.aliases?.length" class="muted" style="margin: var(--sp-8) 0 0">
               {{ t('admin.alias.noAlias', '还没有额外写法。历史标签名与当前名一致时不需要别名；一旦改名，旧名会自动进这里。') }}
             </p>
           </div>
 
-          <div v-if="detail.tasks?.length" style="margin-top: 12px">
+          <div v-if="detail.tasks?.length" style="margin-top: var(--sp-12)">
             <span class="kpi-label">{{ t('admin.alias.sharedTasks', '该型号参与的题目') }}</span>
-            <div class="filter-row" style="margin-top: 6px">
+            <div class="filter-row" style="margin-top: var(--sp-6)">
               <RouterLink v-for="tk in detail.tasks" :key="tk.slug" class="tag-chip mode-open" :to="`/tasks/${tk.slug}`">
                 {{ tk.title }}<span class="count">{{ tk.demo_count }}</span>
               </RouterLink>
             </div>
           </div>
-          <RouterLink class="btn btn-sm btn-outline" style="margin-top: 12px" :to="`/models/${detail.slug}`">
+          <RouterLink class="btn btn-sm btn-outline" style="margin-top: var(--sp-12)" :to="`/models/${detail.slug}`">
             {{ t('admin.alias.openPage', '看模型页 →') }}
           </RouterLink>
         </template>

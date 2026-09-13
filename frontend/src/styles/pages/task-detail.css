@@ -1,26 +1,26 @@
 /* ---------- 题目页：题面块 + 证据表（链条视图 方案 A） ---------- */
-.brief-card { padding: 14px 18px 16px; border-left: 8px solid var(--teal); }
-.brief-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.brief-card { padding: var(--sp-14) 18px var(--sp-16); border-left: 8px solid var(--teal); }
+.brief-head { display: flex; align-items: center; gap: var(--sp-10); margin-bottom: var(--sp-8); }
 .brief-tag {
-  font-size: 10px;
+  font-size: var(--fs-10);
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--paper);
   background: var(--ink);
-  padding: 2px 8px;
+  padding: var(--sp-2) var(--sp-8);
 }
 .brief-head .uw-edit { margin-left: auto; }
-.brief-text { margin: 0; font-size: 14px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
-.brief-text.mono { font-family: var(--font-mono); font-size: 13px; }
+.brief-text { margin: 0; font-size: var(--fs-14); line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.brief-text.mono { font-family: var(--font-mono); font-size: var(--fs-13); }
 .brief-caveat {
-  margin: 10px 0 0;
-  padding: 6px 10px;
-  font-size: 12px;
+  margin: var(--sp-10) 0 0;
+  padding: var(--sp-6) var(--sp-10);
+  font-size: var(--fs-12);
   background: #ffe3e8;
   border-left: 5px solid var(--err);
 }
-.brief-caveat b { color: var(--err); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.brief-caveat b { color: var(--err); text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--fs-11); }
 .chain-table { table-layout: fixed; }
 .chain-table th:nth-child(1) { width: 18%; }
 .chain-table th:nth-child(2) { width: 30%; }
@@ -29,9 +29,9 @@
 .chain-table th:nth-child(5) { width: 13%; }
 .chain-model {
   display: inline-block;
-  margin: 0 6px 4px 0;
+  margin: 0 var(--sp-6) var(--sp-4) 0;
   padding: 1px 7px;
-  font-size: 12px;
+  font-size: var(--fs-12);
   text-decoration: none;
   color: var(--ink);
   border: 2px solid var(--ink);
@@ -40,8 +40,8 @@
 .chain-model:hover { background: var(--yellow); }
 .chain-yes {
   display: inline-block;
-  padding: 0 6px;
-  font-size: 11px;
+  padding: 0 var(--sp-6);
+  font-size: var(--fs-11);
   font-weight: 900;
   color: var(--on-accent, #000);
   background: var(--teal);
@@ -49,8 +49,8 @@
 }
 .chain-no {
   display: inline-block;
-  padding: 0 6px;
-  font-size: 11px;
+  padding: 0 var(--sp-6);
+  font-size: var(--fs-11);
   font-weight: 900;
   color: var(--paper);
   background: var(--err);
@@ -58,11 +58,11 @@
 }
 .chain-excerpt {
   margin: 5px 0 0;
-  font-size: 11px;
+  font-size: var(--fs-11);
   line-height: 1.5;
   color: var(--ink-soft);
   overflow-wrap: anywhere;
 }
-.chain-gen { font-size: 12px; white-space: nowrap; }
+.chain-gen { font-size: var(--fs-12); white-space: nowrap; }
 .chain-work { font-weight: 700; overflow-wrap: anywhere; }
 

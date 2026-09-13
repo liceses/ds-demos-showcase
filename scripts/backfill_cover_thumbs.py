@@ -5,9 +5,15 @@
 所以列表页在回填之前不会显示任何图片（`cover_thumb_url` 全空 → 前端不渲染 <img>，
 页面与改动前一模一样，不会坏，只是没图）。
 
-运行（在 web/ 目录下执行；容器内与 fix_visit_anomaly.py 同一条路）：
+运行（**生产推荐这一条**；compose 把仓库只读挂在 /site-repo，所以容器内能直接按路径执行）：
+
+    docker compose exec backend python /site-repo/scripts/backfill_cover_thumbs.py
+
+stdin 形式同样可用（脚本已做兜底，见 _repo_root）：
+
     docker compose exec -T backend python - < scripts/backfill_cover_thumbs.py
-    # 本地：python scripts/backfill_cover_thumbs.py
+
+本地：`python scripts/backfill_cover_thumbs.py`
 
 顺序纪律：**先上线后端（列自愈）→ 再跑本脚本**。脚本写的是新列，列还没建时直接报错退出。
 
@@ -18,10 +24,36 @@
 重跑即可补齐（比回滚备份更省事）。
 """
 
+import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+
+def _repo_root() -> Path:
+    """定位仓库根，三种执行方式都要能跑：
+
+    ① 按文件路径执行（`python /site-repo/scripts/xxx.py`）→ `__file__` 可用；
+    ② **stdin 执行（`python - < scripts/xxx.py`）→ `__file__` 未定义**（这不是小概率：
+       运维文档给的就是这种形式），此时用 compose 注入的 `SITE_REPO_DIR`（= /site-repo）；
+    ③ 都没有 → 当前工作目录兜底。
+
+    为什么值得专门写一段：`python - <` 下直接 `Path(__file__)` 会 **NameError 当场崩**，
+    而这正是上线时才暴露的那类错（本地按路径跑永远看不到）。
+
+    ⚠️ 第二个坑（实测才发现）：`python -` 下 `__file__` **不是未定义，而是字符串 `"<stdin>"`**
+    —— 只判 `if here` 会拿它去 `resolve().parents[1]` 得到盘根（`D:\`），于是 `import app` 报
+    `ModuleNotFoundError: No module named 'app'`。所以这里按**"是不是真实存在的文件"**判，不按真假判。
+    """
+    here = globals().get("__file__") or ""
+    if here and Path(here).is_file():
+        return Path(here).resolve().parents[1]
+    env = os.environ.get("SITE_REPO_DIR")
+    if env and (Path(env) / "backend").is_dir():
+        return Path(env)
+    return Path.cwd()
+
+
+sys.path.insert(0, str(_repo_root() / "backend"))
 
 from app.config import settings  # noqa: E402
 from app.database import SessionLocal  # noqa: E402

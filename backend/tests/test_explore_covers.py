@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 import json
 import os
 
@@ -83,16 +84,24 @@ def test_make_cover_thumb_size_and_idempotent():
 
 
 def test_save_cover_writes_both_files():
-    cover_url, thumb_url = storage.save_cover(_png(1600, 900), "png")
+    # 三元组：封面 + 200 缩略图 + 640 卡片图（三个文件必须一起落盘）
+    cover_url, thumb_url, card_url = storage.save_cover(_png(1600, 900), "png")
     assert cover_url.startswith("/media/covers/") and cover_url.endswith(".webp")
     assert thumb_url == f"{cover_url[:-5]}-thumb.webp"
+    assert card_url == f"{cover_url[:-5]}-card.webp"
+    assert (_covers_dir() / _name_of(card_url)).is_file(), "640 卡片图没落盘"
+    # 档位像素：200 / 640（只缩不放）
+    assert max(Image.open(_covers_dir() / _name_of(thumb_url)).size) <= storage.COVER_THUMB_MAX_SIDE
+    assert max(Image.open(_covers_dir() / _name_of(card_url)).size) <= storage.COVER_CARD_MAX_SIDE
+    assert max(Image.open(_covers_dir() / _name_of(card_url)).size) > storage.COVER_THUMB_MAX_SIDE
     assert (_covers_dir() / _name_of(cover_url)).is_file()
     assert (_covers_dir() / _name_of(thumb_url)).is_file()
     assert max(Image.open(_covers_dir() / _name_of(thumb_url)).size) <= storage.COVER_THUMB_MAX_SIDE
 
-    # SVG 分支没有缩略图（前端据此不渲染图片）
-    _, svg_thumb = storage.save_cover(b"<svg xmlns='http://www.w3.org/2000/svg'/>", "svg")
+    # SVG 分支没有小图（两个档都是 ""，前端据此不渲染图片）
+    _, svg_thumb, svg_card = storage.save_cover(b"<svg xmlns='http://www.w3.org/2000/svg'/>", "svg")
     assert svg_thumb == ""
+    assert svg_card == ""
 
 
 # ---------- 4. HTTP 路径：上传带封面 → 两个字段都被写入 ----------
@@ -229,3 +238,40 @@ def test_task_list_exposes_cover_thumb_url(client):
     for tk in e.json()["tasks"]:
         assert "cover_thumb_url" in tk
         assert isinstance(tk["cover_thumb_url"], str)
+
+
+# ---------- 8. 与前端共用同一份用例（规则不许分叉） ----------
+
+
+def test_cover_url_cases_match_frontend_fixture():
+    """前端 utils/coverUrl.ts 与后端 storage.cover_sized_url() 必须满足同一份用例。
+
+    两侧各有一套实现（前端要能在 v-html 拼串与本机历史里推导 URL，后端要在写入与回填时派生文件名），
+    规则一旦分叉就会出现"列表 404 但详情正常"这种最难查的错 —— 所以用例只有一份。
+    """
+    fixture_path = Path(__file__).resolve().parents[2] / "frontend" / "tests" / "fixtures" / "cover-url-cases.json"
+    if not fixture_path.is_file():  # 后端单独 checkout 时不硬失败
+        return
+    data = json.loads(fixture_path.read_text(encoding="utf-8"))
+    bad = []
+    for case in data["cases"]:
+        for tier in ("thumb", "card"):
+            got = storage.cover_sized_url(case["url"], tier)
+            if got != case[tier]:
+                bad.append(f'{case["url"]} {tier}: 期望 {case[tier]!r} 实得 {got!r}（{case["why"]}）')
+    assert not bad, "与前端用例不一致：\n" + "\n".join(bad)
+
+
+def test_cover_card_tier_size_and_idempotent():
+    src = _webp(1280, 800)
+    a = storage.make_cover_card(src)
+    b = storage.make_cover_card(src)
+    assert a == b, "同一输入必须产出同一字节"
+    assert Image.open(io.BytesIO(a)).size == (640, 400)
+    # 只缩不放：小图原样
+    assert Image.open(io.BytesIO(storage.make_cover_card(_webp(300, 200)))).size == (300, 200)
+    # 未知档位 → ""（调用方回落到原图）
+    assert storage.cover_sized_url("/media/covers/a.webp", "nope") == ""
+    # 跨档幂等：已经是 -thumb 的要 -card → ""（不许在 -thumb 上再叠后缀）
+    assert storage.cover_card_url("/media/covers/a-thumb.webp") == ""
+    assert storage.cover_thumb_url("/media/covers/a-card.webp") == ""

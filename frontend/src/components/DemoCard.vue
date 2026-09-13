@@ -4,6 +4,7 @@ import type { DemoSummary } from '../api/types'
 import { tagLabel } from '../utils/funMode'
 import { keyLabel, t } from '../i18n'
 import ModelChips from './ModelChips.vue'
+import CoverImg from '../components/CoverImg.vue'
 
 const props = defineProps<{ demo: DemoSummary }>()
 
@@ -36,7 +37,7 @@ function label(tag: { key: string; value: string }) {
 <template>
   <RouterLink :to="`/demo/${demo.slug}`" class="card card-hover demo-card animate-in b-lift">
     <div class="demo-cover">
-      <img v-if="cover && !coverBroken" :src="cover" :alt="demo.title" loading="lazy" decoding="async" @error="onCoverError" />
+      <CoverImg v-if="cover && !coverBroken" :src="cover" tier="card" sizes="(max-width:720px) 50vw, 320px" :alt="demo.title" @error="onCoverError" />
       <div v-else class="cover-fallback" style="background: var(--wash-mint, #4ecdc4)">{{ demo.title[0] }}</div>
     </div>
     <div class="demo-card-body">

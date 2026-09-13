@@ -7,6 +7,7 @@ import type { DerivedTag, TaskSuggestItem } from '../../api/types'
 // T5·M5-F2：挑战挂题改用 TaskPicker（公开题目库搜索，词库归一）
 import EntityPicker from '../picker/EntityPicker.vue'
 import type { EntityPick } from '../picker/pickerSources'
+import CoverImg from '../../components/CoverImg.vue'
 
 const title = defineModel<string>('title', { default: '' })
 const description = defineModel<string>('description', { default: '' })
@@ -231,7 +232,7 @@ function onTaskEntityPick(p: EntityPick) {
       {{ t('upload.cover', '封面（可选）') }}{{ editSlug ? t('upload.coverEdit', '（可选，不选保留当前封面）') : '' }}
       <input class="input" type="file" accept="image/png,image/jpeg,image/webp" @change="emit('coverChange', $event)" />
       <div v-if="currentCover || coverPreview" class="cover-preview">
-        <img :src="coverPreview || currentCover" alt="封面预览" />
+        <CoverImg :src="coverPreview || currentCover" tier="card" sizes="(max-width:720px) 100vw, 420px" alt="封面预览" />
         <span v-if="coverPreview" class="cover-preview-badge">{{ t('upload.newCover', '新封面') }}</span>
         <button v-if="coverFile" type="button" class="uw-x uw-x-over" :aria-label="t('upload.removeCover', '移除封面')" @click="emit('clearCover')">✕</button>
       </div>

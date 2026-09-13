@@ -11,6 +11,7 @@ import MarkdownEditor from '../components/MarkdownEditor.vue'
 import { errorMessage } from '../utils/error'
 import { parseDate, currentLocale } from '../utils/time'
 import { t, forumCatLabel } from '../i18n'
+import CoverImg from '../components/CoverImg.vue'
 
 const props = defineProps<{ id: string }>()
 const route = useRoute()
@@ -264,7 +265,7 @@ onMounted(load)
             <h3 class="forum-side-title">{{ t('forum.relatedDemo', '相关 Demo') }}</h3>
             <div v-if="demoCardLoading" class="muted">{{ t('common.loading', '加载中…') }}</div>
             <RouterLink v-else-if="demoCard" :to="`/demo/${topic.demo_slug}`" class="forum-demo-card">
-              <img class="forum-demo-cover" :src="demoCard.cover_url" :alt="demoCard.title" loading="lazy" />
+              <CoverImg class="forum-demo-cover" :src="demoCard.cover_url" tier="card" sizes="120px" :alt="demoCard.title" />
               <span class="forum-demo-main">
                 <span class="forum-demo-title">{{ demoCard.title }}</span>
                 <span class="forum-demo-meta">{{ demoCard.author }}</span>

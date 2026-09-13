@@ -15,6 +15,7 @@ import DemoCard from '../components/DemoCard.vue'
 import AnnouncementModal from '../components/AnnouncementModal.vue'
 import MasonryGrid from '../components/MasonryGrid.vue'
 import LoadMore from '../components/LoadMore.vue'
+import CoverImg from '../components/CoverImg.vue'
 
 // 整活模式：大标题/灰测区文案随全站开关切换
 const funOn = funEffective
@@ -362,7 +363,7 @@ onBeforeUnmount(() => {
       <!-- 精选主件（右列视觉门面）：静态首件大卡；轮播动态化 P3 -->
       <div class="hub-hero-right">
         <RouterLink v-if="featuredHero" class="hero-feature" :to="`/demo/${featuredHero.slug}`">
-          <img v-if="featuredHero.cover_url" class="hero-feature-img" :src="featuredHero.cover_url" :alt="featuredHero.title" loading="eager" />
+          <CoverImg v-if="featuredHero.cover_url" class="hero-feature-img" :src="featuredHero.cover_url" tier="full" eager :alt="featuredHero.title" />
           <div v-else class="hero-feature-ph"><span>{{ featuredHero.title }}</span></div>
           <div class="hero-feature-meta">
             <span class="hero-feature-title">{{ featuredHero.title }}</span>

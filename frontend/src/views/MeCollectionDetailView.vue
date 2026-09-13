@@ -13,6 +13,7 @@ import CopyButton from '../components/CopyButton.vue'
 import { t } from '../i18n'
 import { parseDate, currentLocale } from '../utils/time'
 import { errorMessage } from '../utils/error'
+import CoverImg from '../components/CoverImg.vue'
 
 /**
  * /me/collections/:id —— 收藏夹详情（整理条目）。
@@ -176,7 +177,7 @@ function addedLabel(iso: string): string {
         <ul class="me-list">
           <li v-for="it in items" :key="it.demo.slug" class="me-row me-row--item">
             <RouterLink class="me-thumb" :to="`/demo/${it.demo.slug}`">
-              <img v-if="it.demo.cover_url" :src="it.demo.cover_url" alt="" loading="lazy" decoding="async" />
+              <CoverImg v-if="it.demo.cover_url" :src="it.demo.cover_url" tier="thumb" alt="" />
               <span v-else aria-hidden="true">{{ it.demo.title[0] }}</span>
             </RouterLink>
             <div class="me-row-main">

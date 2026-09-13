@@ -9,6 +9,7 @@ import EmptyBox from '../components/EmptyBox.vue'
 import CopyButton from '../components/CopyButton.vue'
 import { t } from '../i18n'
 import { errorMessage } from '../utils/error'
+import CoverImg from '../components/CoverImg.vue'
 
 /**
  * /me/collections —— 我的收藏夹（管理页）。
@@ -183,7 +184,7 @@ function shareLink(c: CollectionOut): string {
       <ul v-else class="me-list">
         <li v-for="c in items" :key="c.id" class="me-row">
           <div class="me-covers" aria-hidden="true">
-            <img v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" alt="" loading="lazy" decoding="async" />
+            <CoverImg v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" tier="thumb" alt="" />
             <span v-if="!c.cover_urls.length" class="me-cover me-cover--empty">—</span>
           </div>
 

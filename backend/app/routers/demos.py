@@ -847,8 +847,14 @@ async def _create_demo_record(
     demo.status = status
 
     if cover_bytes:
-        # save_cover 返回 (封面, 200px 缩略图)：两个 URL 一起落库（缩略图是列表页唯一的图片来源）
-        demo.cover_url, demo.cover_thumb_url = await asyncio.to_thread(storage.save_cover, cover_bytes, cover_ext)
+        # save_cover 返回 (封面, 200px 缩略图, 640px 卡片图)：封面与两个档位的小图一起落库
+
+        # （列表/卡片只加载小图，原图留给详情页与首页 hero；档位定义见 storage.COVER_TIERS）
+        demo.cover_url, demo.cover_thumb_url, _cover_card = await asyncio.to_thread(
+
+            storage.save_cover, cover_bytes, cover_ext
+
+        )
     else:
         demo.cover_url = "/media/covers/default.svg"
         demo.cover_thumb_url = ""  # SVG 无法栅格化 → 列表页不渲染图片（不留空洞）
@@ -1277,7 +1283,11 @@ async def update_demo(
     if cover is not None and cover.filename:
         ext = Path(cover.filename).suffix.lstrip(".") or "png"
         cover_bytes = await _read_limited(cover, settings.max_file_size, "封面文件过大")
-        demo.cover_url, demo.cover_thumb_url = await asyncio.to_thread(storage.save_cover, cover_bytes, ext)
+        demo.cover_url, demo.cover_thumb_url, _cover_card = await asyncio.to_thread(
+
+            storage.save_cover, cover_bytes, ext
+
+        )
         changed = True
     if file is not None and file.filename:
         if demo.demo_type == "link":

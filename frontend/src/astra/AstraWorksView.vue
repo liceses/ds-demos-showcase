@@ -5,6 +5,7 @@ import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { DemoSummary, SiteInfo } from '../api/types'
 import { fmtAgo } from './format'
+import { sizedCoverUrl } from '../utils/coverUrl'
 
 const PAGE = 24
 const items = ref<DemoSummary[]>([])
@@ -56,7 +57,7 @@ onMounted(() => {
   <div v-else class="ax-grid">
     <RouterLink v-for="d in items" :key="d.slug" class="ax-card" :to="`/demo/${d.slug}`">
       <figure>
-        <img :src="d.cover_url" :alt="d.title" loading="lazy" />
+        <img :src="sizedCoverUrl(d.cover_url, 'card') || d.cover_url" :alt="d.title" loading="lazy" />
       </figure>
       <figcaption>
         <span class="ax-card-title">{{ d.title }}</span>

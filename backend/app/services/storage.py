@@ -315,33 +315,61 @@ def compress_cover(data: bytes) -> tuple[bytes, str]:
 
 COVER_URL_PREFIX = "/media/covers/"
 COVER_THUMB_SUFFIX = "-thumb"
-# 列表缩略图最长边（设计稿 §3 定的 200px 档：8 张 ≤120KB，替代 8 张原图 580KB）
+COVER_CARD_SUFFIX = "-card"
+# 尺寸阶梯（按**实测显示尺寸**定的，别随手加档）：
+#   thumb 200 ← ≤100 CSS px 的小件：收藏三联 48、论坛 chip 34、md 链接卡 64、历史行 56–72、题目行 72
+#   card  640 ← 101–320 CSS px 的卡片：作品库卡（1440 下约 308）、同题卡、论坛题内卡 120、上传小预览
+#   （>320 CSS px 用原图 1280：详情页封面、首页 hero、上传向导大预览）
+# 640 而不是 480：卡片 308 CSS px 在 2x 屏要 616 真实像素。
 COVER_THUMB_MAX_SIDE = 200
+COVER_CARD_MAX_SIDE = 640
+COVER_TIERS: dict[str, tuple[str, int]] = {
+    "thumb": (COVER_THUMB_SUFFIX, COVER_THUMB_MAX_SIDE),
+    "card": (COVER_CARD_SUFFIX, COVER_CARD_MAX_SIDE),
+}
 
 
-def cover_thumb_url(cover_url: str) -> str:
-    """缩略图 URL 规则的**唯一定义处**：`/media/covers/<stem>.webp` → `/media/covers/<stem>-thumb.webp`。
+def cover_sized_url(cover_url: str, tier: str) -> str:
+    """某个档位的封面 URL —— **命名规则的唯一定义处**（`cover_thumb_url` / `cover_card_url` 都走它）。
 
-    返回 "" 表示**没有缩略图**，前端据此不渲染 `<img>`（不给假封面、不留空洞）：
+    `/media/covers/<stem>.webp` → `<stem>-thumb.webp`(200) / `<stem>-card.webp`(640)。
+
+    返回 "" 表示**这一档没有图**，前端据此不渲染 `<img>`（不给假封面、不留空洞）：
       · SVG（含站内 `default.svg`，Pillow 无法栅格化）；
       · 历史遗留的非 webp 封面（`scripts/recompress_covers.py` 之前的产物）；
       · 非 covers 路径（外链封面）或空值。
 
+    幂等：已经是该档后缀就原样返回（重复套用不叠后缀）；未知档位返回 ""。
     回填脚本（`scripts/backfill_cover_thumbs.py`）与写入路径共用本函数 —— 命名规则只写一遍。
     """
+    if tier not in COVER_TIERS:
+        return ""
+    suffix = COVER_TIERS[tier][0]
     url = (cover_url or "").strip()
     if not url.startswith(COVER_URL_PREFIX) or not url.lower().endswith(".webp"):
         return ""
     stem = url[len(COVER_URL_PREFIX) : -len(".webp")]
     if not stem or "/" in stem or "\\" in stem:
         return ""
-    if stem.endswith(COVER_THUMB_SUFFIX):
-        return url  # 规则幂等：已经是缩略图就原样返回，重复套用不会叠后缀
-    return f"{COVER_URL_PREFIX}{stem}{COVER_THUMB_SUFFIX}.webp"
+    # 规则幂等：任何档位的后缀都认得，不再叠加
+    for other, _ in COVER_TIERS.values():
+        if stem.endswith(other):
+            return url if other == suffix else ""
+    return f"{COVER_URL_PREFIX}{stem}{suffix}.webp"
 
 
-def make_cover_thumb(cover_bytes: bytes) -> bytes:
-    """从**已压缩的封面 WebP** 生成列表缩略图：最长边 200（只缩不放）、WebP q80。
+def cover_thumb_url(cover_url: str) -> str:
+    """200px 列表缩略图 URL（探索页题目行等小件用）。规则见 `cover_sized_url`。"""
+    return cover_sized_url(cover_url, "thumb")
+
+
+def cover_card_url(cover_url: str) -> str:
+    """640px 卡片图 URL（作品库卡片、同题卡、论坛题内卡等用）。规则见 `cover_sized_url`。"""
+    return cover_sized_url(cover_url, "card")
+
+
+def make_cover_thumb(cover_bytes: bytes, max_side: int = COVER_THUMB_MAX_SIDE) -> bytes:
+    """从**已压缩的封面 WebP** 生成指定档位的小图：最长边 max_side（只缩不放）、WebP q80。
 
     为什么入参是"压缩产物"而不是上传原图：新上传与历史回填走**同一条路** ——
     回填时手上只有磁盘上的 1280px webp，所以统一以它为源；顺带让本函数对同一输入字节
@@ -364,8 +392,8 @@ def make_cover_thumb(cover_bytes: bytes) -> bytes:
         img = img.convert("RGB")
 
     w, h = img.size
-    if max(w, h) > COVER_THUMB_MAX_SIDE:
-        scale = COVER_THUMB_MAX_SIDE / max(w, h)
+    if max(w, h) > max_side:
+        scale = max_side / max(w, h)
         img = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
 
     out = io.BytesIO()
@@ -373,13 +401,18 @@ def make_cover_thumb(cover_bytes: bytes) -> bytes:
     return out.getvalue()
 
 
-def save_cover(data: bytes, ext: str | None = None) -> tuple[str, str]:
-    """保存封面：自动压缩为 WebP（只保留压缩版），返回 **(封面 URL, 缩略图 URL)**。
+def make_cover_card(cover_bytes: bytes) -> bytes:
+    """640px 卡片档（大件列表卡用）。"""
+    return make_cover_thumb(cover_bytes, COVER_CARD_MAX_SIDE)
+
+
+def save_cover(data: bytes, ext: str | None = None) -> tuple[str, str, str]:
+    """保存封面：自动压缩为 WebP（只保留压缩版），返回 **(封面 URL, 200 缩略图, 640 卡片图)**。
 
     不做上传体积限制（原图多大都收），压缩后通常几 KB ~ 几十 KB。
-    返回二元组而不是单个 URL：两个文件必须一起写、一起用 —— 调用点只有 2 处，
-    把「写了封面忘了缩略图」变成编译期就能发现的事（单值返回时它只会静默少图）。
-    SVG 分支没有缩略图（返回 ""），前端据此不渲染图片。
+    返回三元组而不是单个 URL：三个文件必须一起写、一起用 ——
+    把「写了封面忘了小图」变成编译期就能发现的事（单值返回时它只会静默少图）。
+    SVG 分支没有小图（两个档都返回 ""），前端据此不渲染图片。
     """
     if not data:
         raise HTTPException(status_code=400, detail="封面为空")
@@ -405,19 +438,24 @@ def save_cover(data: bytes, ext: str | None = None) -> tuple[str, str]:
     )
 
     cover_url = f"{COVER_URL_PREFIX}{name}"
-    thumb_url = cover_thumb_url(cover_url)
-    if thumb_url:
-        # 名字由规则派生（<stem>-thumb.webp）—— 不许另起一套命名，否则回填脚本对不上
-        thumb_name = thumb_url[len(COVER_URL_PREFIX) :]
-        thumb_data = make_cover_thumb(out_data)
-        (folder / thumb_name).write_bytes(thumb_data)
+    urls: list[str] = []
+    for tier, (_, max_side) in COVER_TIERS.items():
+        sized_url = cover_sized_url(cover_url, tier)
+        if not sized_url:
+            urls.append("")
+            continue
+        # 名字由规则派生（<stem>-thumb/-card.webp）—— 不许另起一套命名，否则回填脚本对不上
+        sized_name = sized_url[len(COVER_URL_PREFIX) :]
+        sized_data = make_cover_thumb(out_data, max_side)
+        (folder / sized_name).write_bytes(sized_data)
         oss.put_bytes(
-            f"media/covers/{thumb_name}",
-            thumb_data,
+            f"media/covers/{sized_name}",
+            sized_data,
             "image/webp",
             extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
         )
-    return cover_url, thumb_url
+        urls.append(sized_url)
+    return cover_url, urls[0], urls[1]
 
 
 def delete_demo_from_oss(slug: str) -> None:

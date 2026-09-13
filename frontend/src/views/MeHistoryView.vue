@@ -13,6 +13,7 @@ import { groupByDay, relativeTime } from '../utils/relTime'
 import { errorMessage } from '../utils/error'
 import { useLocalHistory, mergeHistory } from '../composables/useLocalHistory'
 import type { HistoryRow } from '../composables/useLocalHistory'
+import CoverImg from '../components/CoverImg.vue'
 
 /**
  * /me/history —— 浏览历史（**本页是隐私门面**）。
@@ -165,7 +166,7 @@ const historyOff = computed(() => loggedIn.value && auth.user?.history_enabled =
           <ul class="me-list">
             <li v-for="r in g.rows" :key="r.slug" class="me-row me-row--item">
               <RouterLink class="me-thumb" :to="`/demo/${r.slug}`">
-                <img v-if="r.cover_url" :src="r.cover_url" alt="" loading="lazy" decoding="async" />
+                <CoverImg v-if="r.cover_url" :src="r.cover_url" tier="thumb" alt="" />
                 <span v-else aria-hidden="true">{{ r.title[0] }}</span>
               </RouterLink>
               <div class="me-row-main">

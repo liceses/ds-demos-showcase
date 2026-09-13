@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useUiStore } from '../stores/ui'
 import type { DemoSummary } from '../api/types'
+import CoverImg from '../components/CoverImg.vue'
 
 const props = defineProps<{ demo: DemoSummary }>()
 const ui = useUiStore()
@@ -43,7 +44,7 @@ async function copyPrompt() {
     <RouterLink :to="`/demo/${demo.slug}`" class="prompt-body">
       <h3 class="prompt-title">{{ demo.title }}</h3>
       <div class="prompt-cover">
-        <img v-if="demo.cover_url" :src="demo.cover_url" :alt="demo.title" loading="lazy" decoding="async" />
+        <CoverImg v-if="demo.cover_url" :src="demo.cover_url" tier="card" sizes="(max-width:720px) 100vw, 260px" :alt="demo.title" />
         <div v-else class="cover-fallback" style="background: #4ecdc4">{{ demo.title[0] }}</div>
       </div>
     </RouterLink>

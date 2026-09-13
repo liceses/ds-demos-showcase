@@ -10,6 +10,7 @@ import EmptyBox from '../components/EmptyBox.vue'
 import { timeAgo } from '../utils/time'
 import { useListPage } from '../composables/useListPage'
 import { t, forumCatLabel } from '../i18n'
+import CoverImg from '../components/CoverImg.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,7 +183,7 @@ watch(
               </div>
               <div v-if="t2.demo_slug" class="forum-topic-demo">
                 <span class="forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t2.demo_slug}`)">
-                  <img v-if="demoCards[t2.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t2.demo_slug]?.cover_url" alt="" loading="lazy" />
+                  <CoverImg v-if="demoCards[t2.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t2.demo_slug]?.cover_url" tier="thumb" alt="" />
                   <span>{{ demoCards[t2.demo_slug]?.title || t2.demo_slug }}</span>
                 </span>
               </div>

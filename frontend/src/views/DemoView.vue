@@ -23,6 +23,7 @@ import { useLocalHistory } from '../composables/useLocalHistory'
 import { useDismissOnEsc } from '../composables/useDismissOnEsc'
 import type { CollectionOut, FavoriteStatus } from '../api/types'
 import { t } from '../i18n'
+import CoverImg from '../components/CoverImg.vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -530,7 +531,7 @@ onMounted(load)
             @keydown.enter="armPreview"
             @keydown.space.prevent="armPreview"
           >
-            <img v-if="demo.cover_url" :src="demo.cover_url" :alt="demo.title" loading="lazy" decoding="async" />
+            <CoverImg v-if="demo.cover_url" :src="demo.cover_url" tier="full" :alt="demo.title" />
             <div v-else class="pv-poster-fallback" aria-hidden="true">{{ demo.title[0] }}</div>
             <span class="pv-play" aria-hidden="true">
               <svg viewBox="0 0 16 16" width="22" height="22"><path d="M4 2l10 6-10 6V2z" fill="currentColor" /></svg>

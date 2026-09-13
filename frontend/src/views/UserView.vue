@@ -20,6 +20,7 @@ import EmptyBox from '../components/EmptyBox.vue'
 import { useLocalHistory } from '../composables/useLocalHistory'
 import { relativeTime } from '../utils/relTime'
 import type { CollectionOut } from '../api/types'
+import CoverImg from '../components/CoverImg.vue'
 
 const props = defineProps<{ username: string }>()
 const auth = useAuthStore()
@@ -158,7 +159,7 @@ onMounted(async () => {
         <li v-for="c in myCollections" :key="c.id">
           <RouterLink class="card card-default me-card" :to="c.visibility === 'public' ? `/collections/${c.id}` : `/me/collections/${c.id}`">
             <span class="me-covers" aria-hidden="true">
-              <img v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" alt="" loading="lazy" decoding="async" />
+              <CoverImg v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" tier="thumb" alt="" />
               <span v-if="!c.cover_urls.length" class="me-cover me-cover--empty">—</span>
             </span>
             <span class="me-card-title">{{ c.title }}</span>
@@ -185,7 +186,7 @@ onMounted(async () => {
       <ul v-else class="me-list">
         <li v-for="r in recentRows" :key="r.slug" class="me-row me-row--item">
           <RouterLink class="me-thumb" :to="`/demo/${r.slug}`">
-            <img v-if="r.cover_url" :src="r.cover_url" alt="" loading="lazy" decoding="async" />
+            <CoverImg v-if="r.cover_url" :src="r.cover_url" tier="thumb" alt="" />
             <span v-else aria-hidden="true">{{ r.title[0] }}</span>
           </RouterLink>
           <div class="me-row-main">

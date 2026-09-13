@@ -7,6 +7,7 @@ import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { t } from '../i18n'
 import { errorMessage } from '../utils/error'
+import CoverImg from '../components/CoverImg.vue'
 
 /**
  * /u/:username/collections —— 某人的**公开**收藏夹（只读）。
@@ -49,7 +50,7 @@ onMounted(load)
       <ul v-else class="me-list">
         <li v-for="c in items" :key="c.id" class="me-row">
           <div class="me-covers" aria-hidden="true">
-            <img v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" alt="" loading="lazy" decoding="async" />
+            <CoverImg v-for="(u, i) in c.cover_urls" :key="i" class="me-cover" :src="u" tier="thumb" alt="" />
             <span v-if="!c.cover_urls.length" class="me-cover me-cover--empty">—</span>
           </div>
           <div class="me-row-main">

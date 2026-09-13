@@ -69,10 +69,39 @@ def _local_name(url: str) -> str:
     return url[len(prefix) :] if url.startswith(prefix) else ""
 
 
+def _sizes_from_argv(argv: list[str]) -> list[str]:
+    """`--sizes 200,640` → ['thumb', 'card']；缺省两档全做。
+
+    只认 storage.COVER_TIERS 里登记的档位（档位定义与像素值都在那里，这里不重复写数字）。
+    """
+    size_to_tier = {}
+    for tier, (_, max_side) in storage.COVER_TIERS.items():
+        size_to_tier[str(max_side)] = tier
+    raw = ""
+    for i, a in enumerate(argv):
+        if a == "--sizes" and i + 1 < len(argv):
+            raw = argv[i + 1]
+        elif a.startswith("--sizes="):
+            raw = a.split("=", 1)[1]
+    if not raw:
+        return list(storage.COVER_TIERS)
+    tiers = []
+    for tok in raw.split(","):
+        tok = tok.strip()
+        tier = size_to_tier.get(tok) or (tok if tok in storage.COVER_TIERS else "")
+        if not tier:
+            raise SystemExit(f"未知档位 {tok!r}；可选：" + "、".join(f"{t}({s}px)" for t, (_, s) in storage.COVER_TIERS.items()))
+        tiers.append(tier)
+    return tiers
+
+
 def main() -> None:
     if not COVERS_DIR.exists():
         print(f"covers 目录不存在，退出：{COVERS_DIR}")
         return
+
+    tiers = _sizes_from_argv(sys.argv[1:])
+    print("回填档位：" + "、".join(f"{t}({storage.COVER_TIERS[t][1]}px)" for t in tiers))
 
     db = SessionLocal()
     made = skipped_have = skipped_ext = missing = failed = 0
@@ -83,53 +112,66 @@ def main() -> None:
             if not url.startswith(storage.COVER_URL_PREFIX):
                 continue
             name = _local_name(url)
-            thumb_url = storage.cover_thumb_url(url)
-            if not thumb_url:
-                # default.svg / SVG 封面 / 历史非 webp：没有可栅格化的源，跳过（前端不渲染图片）
+            # 该封面能生成的档位（SVG / 历史非 webp → 空列表，跳过；前端不渲染图片）
+            wanted = {t: storage.cover_sized_url(url, t) for t in tiers}
+            if not any(wanted.values()):
                 skipped_ext += 1
                 continue
 
-            thumb_name = _local_name(thumb_url)
-            if demo.cover_thumb_url == thumb_url and (COVERS_DIR / thumb_name).is_file():
+            src = COVERS_DIR / name
+            # 先判"够不够"：所有目标档位都已落文件才算跳过（少一档就补那一档）
+            todo = []
+            for tier in tiers:
+                sized_url = wanted[tier]
+                if not sized_url:
+                    continue
+                sized_name = _local_name(sized_url)
+                if (COVERS_DIR / sized_name).is_file():
+                    continue
+                todo.append((tier, sized_url, sized_name))
+            if not todo:
                 skipped_have += 1
                 continue
 
-            src = COVERS_DIR / name
             if not src.is_file():
                 print(f"[skip] 本地无原图: {name}")
                 missing += 1
                 continue
 
-            try:
-                thumb_data = storage.make_cover_thumb(src.read_bytes())
-            except Exception as e:  # noqa: BLE001
-                print(f"[error] 生成失败 {name}: {e}")
-                failed += 1
-                continue
+            src_bytes = src.read_bytes()
+            for tier, sized_url, sized_name in todo:
+                try:
+                    sized_data = storage.make_cover_thumb(src_bytes, storage.COVER_TIERS[tier][1])
+                except Exception as e:  # noqa: BLE001
+                    print(f"[error] 生成失败 {name} ({tier}): {e}")
+                    failed += 1
+                    continue
 
-            (COVERS_DIR / thumb_name).write_bytes(thumb_data)
-            try:  # OSS 同步 best-effort（与 recompress_covers.py 一致：失败不回滚本地产物）
-                oss.put_bytes(
-                    f"media/covers/{thumb_name}",
-                    thumb_data,
-                    "image/webp",
-                    extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
-                )
-            except Exception as e:  # noqa: BLE001
-                print(f"[warn] OSS 上传失败 {thumb_name}: {e}")
+                (COVERS_DIR / sized_name).write_bytes(sized_data)
+                try:  # OSS 同步 best-effort（与 recompress_covers.py 一致：失败不回滚本地产物）
+                    oss.put_bytes(
+                        f"media/covers/{sized_name}",
+                        sized_data,
+                        "image/webp",
+                        extra_headers={"Cache-Control": "public, max-age=86400, immutable"},
+                    )
+                except Exception as e:  # noqa: BLE001
+                    print(f"[warn] OSS 上传失败 {sized_name}: {e}")
 
-            demo.cover_thumb_url = thumb_url
-            made += 1
-            made_bytes += len(thumb_data)
-            src_kb = src.stat().st_size // 1024
-            print(f"[ok] {name} ({src_kb}KB) -> {thumb_name} ({len(thumb_data) // 1024}KB)")
+                if tier == "thumb":
+                    # 列只跟 200 档挂钩（已上线的语义）；640 档走前端按 URL 规则推导，不加列
+                    demo.cover_thumb_url = sized_url
+                made += 1
+                made_bytes += len(sized_data)
+                src_kb = src.stat().st_size // 1024
+                print(f"[ok] {tier} {name} ({src_kb}KB) -> {sized_name} ({len(sized_data) // 1024}KB)")
 
         db.commit()
     finally:
         db.close()
 
     print(
-        f"\n完成：生成 {made} 个缩略图（共 {made_bytes // 1024}KB）"
+        f"\n完成：生成 {made} 个小图（共 {made_bytes // 1024}KB）"
         f"｜跳过（已有）{skipped_have}｜跳过（非 webp/SVG）{skipped_ext}"
         f"｜无原图 {missing}｜失败 {failed}"
     )

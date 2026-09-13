@@ -99,7 +99,10 @@
   --lift-sh-hover: var(--sh-off-md) 0px 0px var(--ink);
   --lift-flat: var(--sh-off-md);
 }
-.ac-card.hot { border-left-width: 9px; border-left-color: var(--err); }
+.ac-card.hot { border-left-width: 9px; border-left-color: var(--err);
+  /* 热态：hover 影换成 teal 8px 档（原规则自写 box-shadow，现覆盖库变量） */
+  --lift-sh-hover: var(--sh-off-lg) 0 0 var(--teal);
+}
 .ac-num { font-family: var(--font-heading); font-size: var(--fs-26); font-weight: 900; line-height: 1; }
 .ac-label { font-size: var(--fs-13); font-weight: 800; }
 .ac-why { font-size: var(--fs-11); color: var(--ink-soft); line-height: 1.45; }

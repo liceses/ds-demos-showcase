@@ -22,11 +22,15 @@
   font-size: var(--fs-13);
   text-transform: uppercase;
   cursor: pointer;
+  /* 交互物理在微交互库（钩子已登记 .tab）：本处只声明档位。无基影 → hover 4px 档。 */
+  --lift-sh: none;
+  --lift-sh-hover: var(--sh-off-md) 0px 0px var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease); /* R7：颜色属性剥离 */
 }
 @media (hover: hover) {
   .tab:hover {
-    transform: translate(-2px, -2px);
   }
 }
 .tab.active {

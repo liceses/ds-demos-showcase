@@ -85,7 +85,6 @@
 .peek-foot { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; padding-top: var(--sp-12); border-top: 2px dashed rgba(0, 0, 0, 0.18); }
 .peek-foot .hint { flex: 1; text-align: right; }
 @media (prefers-reduced-motion: reduce) {
-  .peek-panel { animation: none; }
-  .peek-close:active { transform: none; }
+  .peek-panel { animation: none; }
 }
 

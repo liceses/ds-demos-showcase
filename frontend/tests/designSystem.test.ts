@@ -119,9 +119,11 @@ describe('② 微交互禁裸写：物理只许在 components/lift.css 里', () 
 
   it('库里必须真的有那三条物理（hover / active / touch+reduce 守卫），且 .btn 是登记钩子', () => {
     const lib = readFileSync(`${STYLES}/${LIB_FILE}`, 'utf8')
-    expect(lib).toMatch(/:is\(\.b-lift, \.btn\)\s*\{/)
-    expect(lib).toMatch(/:is\(\.b-lift, \.btn\):hover/)
-    expect(lib).toMatch(/:is\(\.b-lift, \.btn\):active/)
+    // 钩子登记表：原语级、出现面广的类在这里登记（加钩子请连 docs/uiux/04-组件.md 一起改）
+    const HOOKS = ['.b-lift', '.btn', '.tag-chip', '.tab', '.mode-badge', '.uw-item']
+    for (const h of HOOKS) expect(lib, '库里缺少登记钩子 ' + h).toContain(h)
+    expect(lib).toMatch(/:is\([^)]*\):hover/)
+    expect(lib).toMatch(/:is\([^)]*\):active/)
     expect(lib).toMatch(/@media \(hover: hover\)/)
     expect(lib).toMatch(/prefers-reduced-motion/)
     expect(lib).toMatch(/box-shadow: var\(--lift-sh-hover, var\(--lift-sh\)\)/)

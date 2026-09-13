@@ -45,12 +45,16 @@
 /* 回复/评论时间线化：不用每个都套大黑框 */
 .forum-reply {
   border: 1px solid var(--ink);
-  box-shadow: none;
   margin-bottom: var(--sp-8);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: none;
+  --lift-sh-hover: var(--sh-off-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.forum-reply:hover {
-  box-shadow: 3px 3px 0 0 var(--ink);
-}
+
 .quick-comment-input {
   border: 2px solid var(--ink);
   box-shadow: none;

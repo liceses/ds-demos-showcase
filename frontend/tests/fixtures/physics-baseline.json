@@ -2,73 +2,8 @@
  "note": "自动生成（tooling/uiux-physics-baseline.mjs）：微交互库之外的存量交互物理 = 阶段 2 迁移清单。护栏只拦新增；清完一处就跑脚本收窄一次。",
  "generatedFrom": "frontend/src/styles/**/*.css",
  "files": {
-  "components/button.css": [
-   ".btn-primary:active, .btn-secondary:active, .btn-outline:active, .btn-dark:active, .btn-danger:active",
-   ".btn-primary:hover, .btn-secondary:hover, .btn-outline:hover, .btn-dark:hover, .btn-danger:hover",
-   ".btn:active",
-   ".btn:hover"
-  ],
-  "components/chip.css": [
-   ".tag-chip:hover"
-  ],
-  "components/preview-embed.css": [
-   ".preview-chrome:active"
-  ],
-  "components/tabs.css": [
-   ".tab:hover"
-  ],
-  "pages/about.css": [
-   ".home-title-link:hover h1",
-   ".rating-star:hover:not(:disabled)"
-  ],
-  "pages/demo-detail.css": [
-   "@reduce .dv-rail:hover"
-  ],
-  "pages/demo-next.css": [
-   "@reduce .dv-next-card:hover, .dv-next-card:active"
-  ],
-  "pages/forum-lite.css": [
-   ".forum-reply:hover",
-   ".forum-shell .btn:active",
-   ".forum-shell .btn:hover"
-  ],
-  "pages/forum.css": [
-   ".forum-demo-card:hover",
-   ".forum-demo-chip:hover",
-   ".forum-peek:hover",
-   "@media (max-width: 720px) .forum-peek:hover"
-  ],
-  "pages/home.css": [
-   ".ann-card:hover",
-   ".ann-item:hover",
-   ".ann-tip:hover"
-  ],
-  "pages/interactions.css": [
-   ".mode-badge:active, .uw-item:active",
-   ".tab:active",
-   ".tag-chip:active",
-   "@reduce .tag-chip:active, .tab:active, .mode-badge:active, .uw-item:active"
-  ],
-  "pages/markdown.css": [
-   ".ann-item.clickable:hover",
-   ".md-link-card:hover"
-  ],
-  "pages/peek-drawer.css": [
-   "@reduce .peek-close:active"
-  ],
-  "pages/tag-system.css": [
-   ".tag-drawer-bar:hover"
-  ],
-  "pages/upload-wizard.css": [
-   "@reduce .uw-step.active, .uw-type:hover"
-  ],
   "tokens/motion.css": [
-   ".ac-card.hot:hover",
-   ".ac-card:active",
-   ".dv-rail:active, .dv-collapse:active, .uw-edit:active",
-   ".uw-step:hover",
-   ".uw-type:active",
-   "@reduce .ac-card:active, .uw-type:active, .dv-rail:active"
+   ".dv-rail:active, .dv-collapse:active, .uw-edit:active"
   ]
  },
  "crossFileDuplicates": []

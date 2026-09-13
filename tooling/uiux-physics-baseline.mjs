@@ -86,6 +86,8 @@ for (const r of physics) {
   if (!files[r.file].includes(key)) files[r.file].push(key)
 }
 for (const f of Object.keys(files)) files[f].sort()
+// 已不存在的文件直接剔除（删过的 CSS 不该在基线里阴魂不散，否则"剩余 N 条"虚高）
+for (const f of Object.keys(files)) if (!fs.existsSync("frontend/src/styles" + '/' + f)) delete files[f]
 
 // 跨文件同名（同一 key 出现在 ≥2 文件）——阶段 1 已修 5 处，剩余的登记在案
 const byKey = new Map()

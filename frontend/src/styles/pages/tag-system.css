@@ -167,7 +167,6 @@
   padding: var(--sp-8) var(--sp-12);
   border: 3px solid var(--ink);
   background: var(--wash-yellow); /* 大面积已选条：墨黑下暗橄榄+暖白（t16 用户反馈） */
-  box-shadow: 4px 4px 0 0 var(--ink);
   font-family: var(--font-body);
   font-size: var(--fs-14);
   font-weight: 700;
@@ -176,11 +175,15 @@
   text-align: left;
     /* R8：静止零倾斜（原 rotate(-0.5deg) 清零） */
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.tag-drawer-bar:hover {
-  transform: translate(-1px, -1px); /* R6：hover 抬起不倾斜（原 rotate(-0.5deg) 清零） */
-  box-shadow: 6px 6px 0 0 var(--ink);
-}
+
 .tag-drawer-stamp {
   background: var(--ink);
   color: var(--paper);

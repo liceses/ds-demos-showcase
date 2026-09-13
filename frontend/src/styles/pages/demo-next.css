@@ -25,7 +25,6 @@
 }
 .dv-next-card:hover { background: var(--yellow); }
 @media (prefers-reduced-motion: reduce) {
-  .dv-next-card { transition: none; }
-  .dv-next-card:hover, .dv-next-card:active { transform: none; box-shadow: var(--b-shadow); }
+  .dv-next-card { transition: none; }
 }
 

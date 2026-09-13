@@ -17,10 +17,10 @@
    收进这里之后：touch 防粘滞、reduced-motion、active 压平三件事一处改全站生效。
    ============================================================ */
 
-/* 钩子：`.b-lift` 是新写组件的标准姿势；`.btn` 是**登记的 legacy hook** ——
-   全站 324 处按钮模板不值得为收库逐个加类，而按钮物理确实该和其它组件走同一份实现
-   （触屏守卫 / reduced-motion / active 压平三件事一处改全站生效）。新增组件一律用 `.b-lift`。 */
-:is(.b-lift, .btn) {
+/* 钩子：`.b-lift` 是新写组件的标准姿势。**登记的 legacy hook**（原语级、出现面广，逐个加类不划算）：
+   `.btn`（全站 324 处）· `.tag-chip` · `.tab` · `.mode-badge` · `.uw-item`。
+   其它组件（出现面窄的）一律显式加 `.b-lift` —— 登记表就是这行，加钩子请连注释一起改。 */
+:is(.b-lift, .btn, .tag-chip, .tab, .mode-badge, .uw-item) {
   /* 静止影：组件必须声明 --lift-sh（无影组件显式写 none）——见 09-规范↔门禁对照.md 的门禁 ③ */
   box-shadow: var(--lift-sh, none);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease); /* R7：颜色属性一律不进过渡（0ms 硬切） */
@@ -32,7 +32,7 @@
    共同红线：影**决不许缩**（R6 / 参考站 Rule 04）。
    触屏守卫：hover 在触屏上不生效 —— 此前全站只有 .btn 有，其余 28 处会"粘"在 hover 态。 */
 @media (hover: hover) {
-  :is(.b-lift, .btn):hover {
+  :is(.b-lift, .btn, .tag-chip, .tab, .mode-badge, .uw-item):hover {
     transform: translate(var(--lift-x, var(--lift-x)), var(--lift-y, var(--lift-y)));
     box-shadow: var(--lift-sh-hover, var(--lift-sh));
   }
@@ -40,16 +40,16 @@
 
 /* Rule 01：按下压进表面——位移量 = 该元素影的偏移像素、阴影清零。
    默认走 --sh-off-md（4px 档）；其它档位由组件用 --lift-flat 指定同档值。 */
-:is(.b-lift, .btn):active {
+:is(.b-lift, .btn, .tag-chip, .tab, .mode-badge, .uw-item):active {
   transform: translate(var(--lift-flat, var(--sh-off-md))) rotate(var(--tilt-press));
   box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.b-lift, .btn) {
+  :is(.b-lift, .btn, .tag-chip, .tab, .mode-badge, .uw-item) {
     transition: none;
   }
-  :is(.b-lift, .btn):active {
+  :is(.b-lift, .btn, .tag-chip, .tab, .mode-badge, .uw-item):active {
     transform: none;
   }
 }

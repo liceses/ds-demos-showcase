@@ -86,7 +86,7 @@ function demoCardHtml(d: DemoInfo) {
   // 这处是拼 HTML 字符串（v-html 渲染），用不了 CoverImg 组件 → 用同一个纯函数取 200 档小图，
   // 没有小图（SVG/非 webp/外链）时回落原图。显示尺寸 64×48，见 markdown.css .md-link-cover。
   const coverSrc = sizedCoverUrl(d.cover_url, 'thumb') || d.cover_url
-  return `<a class="md-link-card md-link-demo" data-link-card="1" href="/demo/${attr(d.slug)}">
+  return `<a class="b-lift md-link-card md-link-demo" data-link-card="1" href="/demo/${attr(d.slug)}">
     <img class="md-link-cover" src="${attr(coverSrc)}" alt="" loading="lazy" />
     <span class="md-link-main">
       <span class="md-link-title">${attr(d.title)}</span>
@@ -96,7 +96,7 @@ function demoCardHtml(d: DemoInfo) {
 }
 
 function topicCardHtml(topic: TopicInfo) {
-  return `<a class="md-link-card md-link-topic" data-link-card="1" href="/forum/topic/${topic.id}">
+  return `<a class="b-lift md-link-card md-link-topic" data-link-card="1" href="/forum/topic/${topic.id}">
     <span class="md-link-main">
       <span class="md-link-title">${attr(topic.title)}</span>
       <span class="md-link-meta">${attr(topic.author)} · ${t('md.topicMeta', '回复 {n} · 查看讨论 →', { n: topic.reply_count })}</span>
@@ -105,7 +105,7 @@ function topicCardHtml(topic: TopicInfo) {
 }
 
 function placeholderHtml() {
-  return `<span class="md-link-card md-link-loading" data-link-card="1">${t('md.resolving', '解析链接…')}</span>`
+  return `<span class="b-lift md-link-card md-link-loading" data-link-card="1">${t('md.resolving', '解析链接…')}</span>`
 }
 
 function scanLinks() {

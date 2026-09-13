@@ -69,7 +69,7 @@ onMounted(loadRating)
         <button
           v-for="s in [1, 2, 3, 4, 5]"
           :key="s"
-          class="rating-star"
+          class="b-lift rating-star"
           :class="{ active: (rating?.my_score ?? 0) >= s, mine: rating?.my_score === s }"
           type="button"
           :disabled="ratingLoading"

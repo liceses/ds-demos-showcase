@@ -218,7 +218,7 @@ function onTaskEntityPick(p: EntityPick) {
 
     <!-- 其他标签：需要完全控制的人有门，普通人不必进去 -->
     <div class="tag-drawer-wrap">
-      <button class="tag-drawer-bar" type="button" @click="tagsOpen = !tagsOpen">
+      <button class="b-lift tag-drawer-bar" type="button" @click="tagsOpen = !tagsOpen">
         <span class="tag-drawer-title">{{ t('upload.tagsOther', '其他标签（类型 / 分类 / 玩法 / 轮数…）') }}</span>
         <span v-if="selectedList.length" class="tag-drawer-chips">
           <span v-for="s in selectedList" :key="s.key + ':' + s.value" class="tag-chip active" :title="s.description || ''">{{ s.key }}:{{ tagLabel(s.value) }}</span>

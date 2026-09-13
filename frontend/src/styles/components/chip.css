@@ -10,13 +10,18 @@
   font-size: var(--fs-12);
   font-weight: 500;
   cursor: pointer;
+  /* 交互物理在微交互库（components/lift.css，钩子已登记 .tag-chip）：本处只声明"用哪个档"。
+     无基影 → hover 从无到有 4px 档；active 位移 = 同档偏移（Rule 01：位移=影偏移像素）。 */
+  --lift-sh: none;
+  --lift-sh-hover: var(--sh-off-md) 0px 0px var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
   text-decoration: none;
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease); /* R7：颜色属性剥离——hover 换色 0ms 硬切 */
 }
 /* R6：hover 抬起仅 hover 设备（触屏无粘滞 hover）；色变保持瞬切语义（R7 剥离随 P2-3） */
 @media (hover: hover) {
   .tag-chip:hover {
-    transform: translate(-2px, -2px);
     background: var(--yellow);
     color: var(--on-accent, #000); /* 小面积原饱和+黑字（面积×饱和度） */
   }

@@ -26,8 +26,8 @@
 }
 /* 法则 01：按下必须"压扁进表面"，位移量等于阴影偏移（--sh-off 单源，@720 自动减半；
    uw-type 压平位移=--sh-off-uw 3px 具名档——T15 归一：P2-4『非档位字面暂留』清偿，不随 @720 减半=原字面行为） */
-.ac-card:active { transform: translate(var(--sh-off-md)); box-shadow: none; }
-.uw-type:active { transform: translate(var(--sh-off-uw)); box-shadow: none; }
+
+
 .dv-rail:active,
 .dv-collapse:active,
 .uw-edit:active { transform: translate(var(--sh-off-sm)); box-shadow: none; }
@@ -37,8 +37,12 @@
    后者胜出，即这两条**从未生效**（.ac-card 那条写 8px 红、实际是 6px 墨）。
    同名选择器跨文件重复 = 事故源，现已由门禁「跨文件同名交互选择器」拦下；
    这两个组件（后台卡 / 上传类型卡）的正式物理在阶段 2 迁入 .b-lift。 */
-.ac-card.hot:hover { box-shadow: 8px 8px 0 0 var(--teal); }
-.uw-step:hover { transform: none; background: var(--yellow); }
+
+.uw-step:hover {
+  /* 本组件 hover **刻意不抬起**（只换底色，Rule 02 硬切）——
+     故不挂 .b-lift；将来若补 hover 态（04 §4.3）必须重新决定抬起量 */
+  background: var(--yellow);
+}
 /* 法则 02：面板出现/消失不做 opacity 淡入 —— 用"盖章"落位（缩放+微旋转后硬停） */
 @keyframes b-stamp-in {
   0% { transform: scale(1.06) rotate(-1.2deg); }
@@ -58,8 +62,7 @@
 .rd-track i { transition: width var(--b-dur) var(--b-ease); }
 @media (prefers-reduced-motion: reduce) {
   .ac-card, .uw-step, .uw-type, .dv-rail, .dv-collapse, .uw-edit, .uw-aside-toggle, .btn, .tag-chip { transition: none; }
-  .dv-panel-enter-active, .dv-disclose[open] .dv-disclose-body { animation: none; }
-  .ac-card:active, .uw-type:active, .dv-rail:active { transform: none; }
+  .dv-panel-enter-active, .dv-disclose[open] .dv-disclose-body { animation: none; }
 }
 
 /* ============================================================

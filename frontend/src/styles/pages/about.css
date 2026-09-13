@@ -6,12 +6,17 @@
   text-decoration: none;
   color: inherit;
   margin: 0 auto 0 0;
+
+  /* 交互物理在微交互库。**物理归元素自身、不许挂后代**；本条只做位移、无影（保持原表现）。 */
+  --lift-sh: none;
+  --lift-sh-hover: none;
+  --lift-x: 0px;
+  --lift-y: -3px;
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.home-title-link h1 {
-  transition: transform var(--b-dur) var(--b-ease); /* R7：text-decoration-color 剥离 */
-}
+
 .home-title-link:hover h1 {
-  transform: translateY(-3px);
   text-decoration: underline;
   text-decoration-color: var(--yellow);
   text-decoration-thickness: 6px;
@@ -196,11 +201,17 @@
   font-size: var(--fs-16);
   width: 26px;
   height: 26px;
+
+  /* 交互物理在微交互库。**物理归元素自身、不许挂后代**；本条只做位移、无影（保持原表现）。 */
+  /* 小件：只做位移、不引入影（原表现就是无影） */
+  --lift-sh: none;
+  --lift-sh-hover: none;
+  --lift-x: 0px;
+  --lift-y: -2px;
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.rating-star:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 2px 2px 0 0 var(--ink);
-}
+
 .rating-meta {
   display: flex;
   flex-wrap: wrap;

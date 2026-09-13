@@ -197,17 +197,22 @@
      双主题可读；纸白主题下黑→墨棕=论坛件语义归位（论坛孤岛家具用论坛自己的墨色）。 */
   border: 3px solid var(--text-forum);
   background: var(--paper-forum);
-  box-shadow: 4px 4px 0 0 var(--text-forum);
   font-family: var(--font-body);
   font-size: var(--fs-14);
   font-weight: 800;
   color: var(--text-forum);
   cursor: pointer;
   transition: right var(--b-dur) var(--b-ease), transform var(--b-dur) var(--b-ease); /* R7：background 剥离 */
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--text-forum);
+  --lift-sh-hover: var(--sh-off-hov-md) 0 0 var(--text-forum);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
 .forum-peek:hover {
   right: -14px;
-  transform: rotate(-3deg);
   background: var(--yellow);
 }
 .forum-takeover {
@@ -251,7 +256,6 @@
   }
   .forum-peek:hover {
     right: 10px;
-    transform: rotate(-3deg) translateY(-2px);
   }
 }
 /* T9 微适配：12.4 reduce 运动退场（接管=页面级转场，随 site 律退场；原件先于该律） */
@@ -271,15 +275,18 @@
   padding: var(--sp-12) var(--sp-14);
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 4px 4px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.forum-demo-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 var(--ink);
-}
+
 .forum-demo-cover {
   width: 120px;
   height: 90px;
@@ -326,13 +333,16 @@
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
-  box-shadow: 2px 2px 0 0 var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-sm) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-sm) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-sm);
+  box-shadow: var(--lift-sh);
 }
-.forum-demo-chip:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 0 var(--ink);
-}
+
 .forum-demo-chip-cover {
   width: 34px;
   height: 24px;

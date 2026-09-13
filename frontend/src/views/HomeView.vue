@@ -329,7 +329,7 @@ onBeforeUnmount(() => {
     <div class="hub-hero">
       <div class="hub-hero-left">
         <span class="eyebrow hero-eyebrow"><span class="hero-eyebrow-line" aria-hidden="true"></span>{{ t('home.eyebrow', 'AI 网页 Demo 作品集') }}</span>
-        <RouterLink to="/about" class="home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
+        <RouterLink to="/about" class="b-lift home-title-link" :aria-label="`AI 全民制作人 · 关于本站`">
           <!-- 注意：<br> 必须写在模板字面量里；{{ }} 插值会转义 HTML，把 <br> 当纯文本显示出来 -->
           <h1 v-if="funOn && lang === 'en'" class="huge">astra canary<br />collection</h1>
           <h1 v-else-if="funOn" class="huge">astra 灰测<br />作品收集</h1>
@@ -519,7 +519,7 @@ onBeforeUnmount(() => {
 
   <!-- 论坛斜角入口（T9 逐字恢复自 52421e5~1 原件，M1-2 移除；标记/脚本/样式三处均照原）
        样式=forum.css .forum-peek（dormant 存活至今，逐字核对一致），飞入接管=forum-takeover -->
-  <button class="forum-peek" type="button" @click="enterForum">{{ t('home.forum', '论坛 →') }}</button>
+  <button class="b-lift forum-peek" type="button" @click="enterForum">{{ t('home.forum', '论坛 →') }}</button>
   <Transition name="forum-takeover">
     <div v-if="forumEntering" class="forum-takeover">
       <span class="forum-takeover-brand">讨论区</span>

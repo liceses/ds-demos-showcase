@@ -107,8 +107,7 @@
   .dv-panel-enter-active,
   .dv-panel-leave-active { transition: none; }
   .dv-panel-enter-from,
-  .dv-panel-leave-to { transform: none; opacity: 1; }
-  .dv-rail:hover { transform: none; }
+  .dv-panel-leave-to { transform: none; opacity: 1; }
 }
 /* ② 过程档案：原生 details，收起时只占一行，展开即读（不再需要 tab 跳转） */
 .dv-archive { padding-top: var(--sp-8); }

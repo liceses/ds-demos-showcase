@@ -202,16 +202,16 @@ onMounted(load)
           </div>
 
           <div class="forum-replies">
-            <div v-for="(r, i) in replies" :key="r.id" class="card forum-reply" :class="{ nested: r.parent_id }">
-              <div class="forum-reply-head">
+            <div v-for="(r, i) in replies" :key="r.id" class="b-lift card forum-reply" :class="{ nested: r.parent_id }">
+              <div class="b-lift forum-reply-head">
                 <span class="forum-avatar avatar-sm" :class="avatarClass(r.author || t('forum.anon', '匿名'))">{{ (r.author || t('forum.anon', '匿名'))[0] }}</span>
-                <span class="forum-reply-author">{{ r.author || t('forum.anon', '匿名') }}</span>
-                <span class="forum-reply-floor">#{{ i + 1 }}</span>
-                <span v-if="r.parent_id" class="forum-reply-parent">↳ {{ t('forum.replyTo', '回复 #{n}', { n: replies.findIndex((x) => x.id === r.parent_id) + 1 }) }}</span>
-                <span class="forum-reply-time">{{ parseDate(r.created_at).toLocaleString(currentLocale()) }}</span>
+                <span class="b-lift forum-reply-author">{{ r.author || t('forum.anon', '匿名') }}</span>
+                <span class="b-lift forum-reply-floor">#{{ i + 1 }}</span>
+                <span v-if="r.parent_id" class="b-lift forum-reply-parent">↳ {{ t('forum.replyTo', '回复 #{n}', { n: replies.findIndex((x) => x.id === r.parent_id) + 1 }) }}</span>
+                <span class="b-lift forum-reply-time">{{ parseDate(r.created_at).toLocaleString(currentLocale()) }}</span>
               </div>
               <MarkdownRenderer :content="r.content" />
-              <div class="forum-reply-actions">
+              <div class="b-lift forum-reply-actions">
                 <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('like') }" type="button" @click="toggleReaction('reply', r.id, 'like')">{{ t('forum.likeN', '赞 {n}', { n: r.like_count || 0 }) }}</button>
                 <button class="btn btn-sm btn-outline" :class="{ active: (r.my_reactions || []).includes('thanks') }" type="button" @click="toggleReaction('reply', r.id, 'thanks')">{{ t('forum.thanksN', '感谢 {n}', { n: r.thanks_count || 0 }) }}</button>
                 <button class="btn btn-sm btn-outline" type="button" @click="quoteReply(r)">{{ t('forum.quote', '引用') }}</button>
@@ -227,7 +227,7 @@ onMounted(load)
             >{{ loadingMore ? t('common.loading', '加载中…') : t('forum.loadMoreReplies', '加载更多回复') }}</button>
           </div>
 
-          <div class="card forum-reply-box">
+          <div class="b-lift card forum-reply-box">
             <h3 style="margin-bottom: var(--sp-10)">{{ t('forum.reply', '回复') }}</h3>
             <div v-if="topic.locked" class="notice notice-warn" style="margin-bottom: var(--sp-8)">{{ t('forum.lockedNotice', '该主题已关闭讨论。') }}</div>
             <template v-else-if="auth.isLoggedIn()">
@@ -264,7 +264,7 @@ onMounted(load)
           <div v-if="topic.demo_slug" class="forum-side-card">
             <h3 class="forum-side-title">{{ t('forum.relatedDemo', '相关 Demo') }}</h3>
             <div v-if="demoCardLoading" class="muted">{{ t('common.loading', '加载中…') }}</div>
-            <RouterLink v-else-if="demoCard" :to="`/demo/${topic.demo_slug}`" class="forum-demo-card">
+            <RouterLink v-else-if="demoCard" :to="`/demo/${topic.demo_slug}`" class="b-lift forum-demo-card">
               <CoverImg class="forum-demo-cover" :src="demoCard.cover_url" tier="card" sizes="120px" :alt="demoCard.title" />
               <span class="forum-demo-main">
                 <span class="forum-demo-title">{{ demoCard.title }}</span>

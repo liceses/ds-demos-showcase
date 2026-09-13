@@ -10,15 +10,18 @@
   gap: var(--sp-12);
   padding: var(--sp-14) var(--sp-16);
   border: var(--border-w) solid var(--ink);
-  box-shadow: 6px 6px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-lg) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.ann-card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 10px 10px 0 0 var(--ink);
-}
+
 .ann-card-manual { background: var(--wash-yellow); }
 .ann-card-auto { background: var(--wash-teal); }
 .ann-card-demo { background: var(--wash-red); color: var(--ink); }
@@ -127,15 +130,18 @@
   gap: var(--sp-10);
   padding: var(--sp-10) var(--sp-12);
   border: 3px solid var(--ink);
-  box-shadow: 4px 4px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.ann-item:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 var(--ink);
-}
+
 .ann-item .ann-title {
   font-size: var(--fs-13);
 }
@@ -189,7 +195,6 @@
   max-width: min(560px, 100%);
   padding: var(--sp-8) var(--sp-12);
   border: 3px solid var(--ink);
-  box-shadow: 4px 4px 0 0 var(--ink);
   font-size: var(--fs-13);
   line-height: 1.4;
   text-decoration: none;
@@ -198,11 +203,15 @@
   text-align: left;
   font-family: var(--font-body);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.ann-tip:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 var(--ink);
-}
+
 .ann-tip .ann-stamp {
   flex-shrink: 0;
 }

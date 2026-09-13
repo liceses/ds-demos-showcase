@@ -69,14 +69,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
           <h3 class="ann-group-head">{{ t('ann.pinnedGroup', '置顶') }}</h3>
           <details v-for="a in pinnedList" :key="a.id" class="ann-list-item">
             <summary>
-              <span class="ann-item-title">{{ a.title }}</span>
-              <span class="ann-item-meta">
+              <span class="b-lift ann-item-title">{{ a.title }}</span>
+              <span class="b-lift ann-item-meta">
                 <span class="ann-pin">{{ t('ann.pinBadge', '置顶') }}</span>
                 <span class="mono">{{ annLabel(a.type) }}</span>
-                <span class="ann-item-date">{{ parseDate(a.created_at).toLocaleDateString(currentLocale()) }}</span>
+                <span class="b-lift ann-item-date">{{ parseDate(a.created_at).toLocaleDateString(currentLocale()) }}</span>
               </span>
             </summary>
-            <div class="ann-item-body">
+            <div class="b-lift ann-item-body">
               <MarkdownRenderer :content="a.content" />
               <div class="filter-row" style="margin: var(--sp-10) 0 0">
                 <RouterLink v-if="a.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${a.topic_id}`">{{ t('ann.discuss', '去讨论 →') }}</RouterLink>
@@ -90,13 +90,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
           <h3 class="ann-group-head">{{ t('ann.generalGroup', '公告') }}</h3>
           <details v-for="a in generalList" :key="a.id" class="ann-list-item">
             <summary>
-              <span class="ann-item-title">{{ a.title }}</span>
-              <span class="ann-item-meta">
+              <span class="b-lift ann-item-title">{{ a.title }}</span>
+              <span class="b-lift ann-item-meta">
                 <span class="mono">{{ annLabel(a.type) }}</span>
-                <span class="ann-item-date">{{ parseDate(a.created_at).toLocaleDateString(currentLocale()) }}</span>
+                <span class="b-lift ann-item-date">{{ parseDate(a.created_at).toLocaleDateString(currentLocale()) }}</span>
               </span>
             </summary>
-            <div class="ann-item-body">
+            <div class="b-lift ann-item-body">
               <MarkdownRenderer :content="a.content" />
               <div class="filter-row" style="margin: var(--sp-10) 0 0">
                 <RouterLink v-if="a.topic_id" class="btn btn-sm btn-outline" :to="`/forum/topic/${a.topic_id}`">{{ t('ann.discuss', '去讨论 →') }}</RouterLink>

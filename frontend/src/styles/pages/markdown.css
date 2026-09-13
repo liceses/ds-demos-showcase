@@ -144,11 +144,15 @@
 .ann-status.status-offline { background: var(--ink); color: var(--paper); }
 .ann-item.clickable {
   cursor: pointer;
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: none;
+  --lift-sh-hover: var(--sh-off-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.ann-item.clickable:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 0 var(--ink);
-}
+
 .ann-modal {
   position: fixed;
   inset: 0;
@@ -192,15 +196,18 @@
   padding: var(--sp-10) var(--sp-12);
   border: 3px solid var(--ink);
   background: var(--paper);
-  box-shadow: 4px 4px 0 0 var(--ink);
   text-decoration: none;
   color: var(--ink);
   transition: transform var(--b-dur) var(--b-ease), box-shadow var(--b-dur) var(--b-ease);
+
+  /* 交互物理在微交互库（components/lift.css）：本处只声明档位。
+     hover 档按"静止档 ×1.5"表取令牌；压平位移 = 同档偏移（Rule 01）。 */
+  --lift-sh: var(--sh-off-md) 0 0 var(--ink);
+  --lift-sh-hover: var(--sh-off-hov-md) 0 0 var(--ink);
+  --lift-flat: var(--sh-off-md);
+  box-shadow: var(--lift-sh);
 }
-.md-link-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0 0 var(--ink);
-}
+
 .md-link-cover {
   width: 64px;
   height: 48px;

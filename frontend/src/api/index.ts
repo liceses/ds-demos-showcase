@@ -843,7 +843,9 @@ const realApi = {
 
   // ── 浏览历史 ─────────────────────────────────────────────
   async recordView(slug: string): Promise<void> {
-    await http.post(`/me/history/${encodeURIComponent(slug)}`)
+    // silent401：这是**后台可选调用**（未登录就不该记服务端历史），
+    // 不能因为匿名 401 把正在看作品的读者弹去登录页（2026-09 线上事故）。
+    await http.post(`/me/history/${encodeURIComponent(slug)}`, undefined, { silent401: true })
   },
   async listHistory(params: { page?: number; pageSize?: number } = {}): Promise<Paginated<HistoryItemOut>> {
     const { data } = await http.get('/me/history', { params: { page: params.page, page_size: params.pageSize } })

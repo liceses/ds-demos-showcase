@@ -402,14 +402,16 @@ async function load() {
     // 先把日志请求发出去，详情一到就赋值渲染，再 await 日志。
     const logsPromise = api.listSessionLogs(slug).catch(() => [] as SessionLog[])
     demo.value = await api.getDemo(slug)
-    // 浏览记录（混合存储）：本机始终记；登录时服务端也记一份（失败静默，绝不影响浏览）
+    // 浏览记录（混合存储）：本机**始终**记；服务端只在**登录时**记一份
+    //（接口要身份，匿名发过去是 401 —— 曾因漏了这个判断 + 全局 401 跳转，
+    //  把匿名读者从作品页弹去登录页；护栏：tests/authFlow.test.ts）
     local.record({
       slug: demo.value.slug,
       title: demo.value.title,
       cover_url: demo.value.cover_url || '',
       model_labels: (demo.value.models ?? []).map((m) => m.name || m.slug),
     })
-    void api.recordView(demo.value.slug).catch(() => undefined)
+    if (auth.isLoggedIn()) void api.recordView(demo.value.slug).catch(() => undefined)
     void loadFavorite()
     sessionLogs.value = await logsPromise
     void loadSamePrompt()

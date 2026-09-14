@@ -186,6 +186,8 @@ export interface TaskSummary {
    * 行布局不变、不留空洞（设计稿 §3）。
    */
   cover_thumb_url?: string
+  /** 题目卡用：代表封面的原图 URL（前端推导 640 档；缺失则回落缩略图） */
+  cover_url?: string // 题目卡
   category?: string | null
   status: string
   demo_count: number

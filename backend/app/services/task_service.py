@@ -344,26 +344,22 @@ def prompt_excerpts(db: Session, task_ids: list[int], limit_chars: int = 160) ->
     return out
 
 
-def representative_covers(db: Session, task_ids: list[int]) -> dict[int, str]:
-    """批量取题目行的「代表封面缩略图」：该题下**排序第一且有缩略图**的已上架作品。
+def representative_cover_urls(db: Session, task_ids: list[int]) -> dict[int, tuple[str, str]]:
+    """{task_id: (200 档缩略图, 原图)} —— **同一件代表作品的**两档 URL。
 
-    排序口径与 `task_chain()` **完全一致**（rating_avg desc → rating_count desc → id desc）——
-    题目页链条第一行是哪件作品，列表页封面就得是哪件；两处口径一旦分叉，读者看到的
-    「代表作品」和点进去看到的第一行不是同一个，比没有封面更糟。
+    为什么一次给两档：卡片网格用 640 档（前端按原图 URL 推导），列表小件用 200 档；
+    若分成两次查询，两处可能挑中**不同的作品**（排序里含 rating/count/id），
+    页面就会出现"小图是 A、大图是 B"这种最难被发现的不一致。挑法与旧版逐字一致。
 
-    没有缩略图的作品（上传时没给封面 → default.svg / SVG 封面 / 尚未回填）直接跳过：
-    宁可不放图，也不拿站内占位图冒充作品封面。
-
-    取数方式与 `prompt_excerpts()` 同款：**一页一次查询**（不按题目循环 → 无 N+1），
     ORDER BY 交给 SQLite，Python 侧按 task_id 取首条（不引窗口函数 —— 全仓无先例，
-    而本页最多 20 题、最多百来行）。返回 {task_id: thumb_url}，无封面者不在字典里。
+    而本页最多 20 题、最多百来行）。无带封面作品的任务不在字典里（调用方用 ("", "") 兜底）。
     """
-    out: dict[int, str] = {}
+    out: dict[int, tuple[str, str]] = {}
     ids = [i for i in task_ids if i]
     if not ids:
         return out
     rows = (
-        db.query(DemoTask.task_id, Demo.cover_thumb_url)
+        db.query(DemoTask.task_id, Demo.cover_thumb_url, Demo.cover_url)
         .join(Demo, Demo.id == DemoTask.demo_id)
         .filter(
             DemoTask.task_id.in_(ids),
@@ -378,10 +374,15 @@ def representative_covers(db: Session, task_ids: list[int]) -> dict[int, str]:
         )
         .all()
     )
-    for tid, url in rows:
-        if tid not in out and url:
-            out[tid] = url
+    for task_id, thumb_url, cover_url in rows:
+        if task_id not in out:
+            out[task_id] = (thumb_url or "", cover_url or "")
     return out
+
+
+def representative_covers(db: Session, task_ids: list[int]) -> dict[int, str]:
+    """{task_id: 200 档缩略图}。**薄封装**：查询实现只在上面一处（避免两份挑法漂移）。"""
+    return {tid: pair[0] for tid, pair in representative_cover_urls(db, task_ids).items()}
 
 
 def list_tasks(
@@ -423,7 +424,9 @@ def list_tasks(
     # 题面摘录：规则与取数都在 prompt_excerpts() 一处（本页一次查询，不按任务循环）
     excerpts = prompt_excerpts(db, [t.id for t, _ in rows])
     # 代表封面：同上，一页一次查询（口径与 task_chain 同源，见 representative_covers）
-    covers = representative_covers(db, [t.id for t, _ in rows])
+    # 一次查两档：缩略图给列表小件，原图给卡片网格（同一件代表作品，不会不一致）
+    cover_pairs = representative_cover_urls(db, [t.id for t, _ in rows])
+    covers = {tid: pair[0] for tid, pair in cover_pairs.items()}
 
     items = [
         {
@@ -433,6 +436,8 @@ def list_tasks(
             "description": t.description,
             "prompt_excerpt": excerpts.get(t.id, ""),
             "cover_thumb_url": covers.get(t.id, ""),
+            # 卡片网格用 640 档：前端按这个原图 URL 推导 {stem}-card.webp（缺文件时 CoverImg 自己回落）
+            "cover_url": cover_pairs.get(t.id, ("", ""))[1],
             "category": t.category,
             "status": t.status,
             "demo_count": c,

@@ -70,8 +70,9 @@ onMounted(load)
     <div v-else class="task-grid">
       <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-card b-lift">
         <span class="task-card-cover">
-          <!-- 封面 = 最强的识别线索（评审页 task-grid 通过）；API 目前只暴露 200px 缩略图 ⇒ 先用它 -->
-          <CoverImg v-if="tk.cover_thumb_url" :src="tk.cover_thumb_url" tier="thumb" alt="" />
+          <!-- 封面 = 最强的识别线索（评审页 task-grid）：卡片宽约 300px，2x 屏需 ~600px ⇒ 用 640 档（由原图 URL 推导）；
+             后端未给原图时回落 200 档缩略图，再不行 CoverImg 自己回落原图 → 不会裂图 -->
+          <CoverImg v-if="tk.cover_url || tk.cover_thumb_url" :src="tk.cover_url || tk.cover_thumb_url" tier="card" alt="" />
           <EntityStamp v-else :name="tk.title" size="md" />
         </span>
         <span class="task-card-name">{{ tk.title }}<i class="model-card-arrow" aria-hidden="true">→</i></span>

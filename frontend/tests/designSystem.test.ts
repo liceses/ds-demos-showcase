@@ -165,7 +165,7 @@ describe('④ 迁移组件的模板使用点必须带 b-lift（类漏了=悬停�
   const MIGRATED: { file: string; cls: string }[] = [
     { file: 'src/views/ExploreView.vue', cls: 'explore-cell card card-entity' },
     { file: 'src/views/ExploreView.vue', cls: 'task-line' },
-    { file: 'src/views/ModelsView.vue', cls: 'model-card b-lift' },
+    { file: 'src/views/ModelsView.vue', cls: 'explore-cell card card-entity' },
     { file: 'src/views/TasksView.vue', cls: 'task-card b-lift' },
     { file: 'src/views/TaskDetailView.vue', cls: 'compare-row card card-entity' },
     { file: 'src/views/ModelDetailView.vue', cls: 'task-line' },

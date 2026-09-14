@@ -6,9 +6,9 @@ import { onMounted, ref } from 'vue'
 import { api } from '../api'
 import type { ModelSummary } from '../api/types'
 import { tagLabel } from '../utils/funMode'
-import { entityStatusClass, sampleLabel, sampleClass } from '../utils/modelDisplay'
+import { entityStatusClass } from '../utils/modelDisplay'
+import { iconInkFor, vendorIcon } from '../utils/vendorIcon'
 import { t } from '../i18n'
-import EntityStamp from '../components/EntityStamp.vue'
 import PaginationBar from '../components/PaginationBar.vue'
 import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
@@ -94,28 +94,41 @@ onMounted(load)
     <LoadingRow v-if="loading && !items.length" :text="t('models.loadingList', '加载模型…')" />
     <EmptyBox v-else-if="!items.length" :text="t('models.emptyList', '还没有模型条目')" />
 
-    <div v-else class="model-grid">
-      <article v-for="m in items" :key="m.slug" class="model-card b-lift">
-        <RouterLink class="model-card-hit" :to="`/models/${m.slug}`">
-          <span class="model-card-stamp"><EntityStamp :name="m.name" :vendor="m.vendor" size="md" /></span>
-          <span class="model-card-name">{{ tagLabel(m.name) }}<i class="model-card-arrow" aria-hidden="true">→</i></span>
-          <span class="model-card-meta">
-            <span v-if="m.vendor" class="mini-stat"><b>{{ m.vendor }}</b> {{ t('models.vendor', '厂商') }}</span>
+    <div v-else class="explore-grid">
+      <RouterLink
+        v-for="m in items"
+        :key="m.slug"
+        class="explore-cell card card-entity b-lift"
+        :class="{ 'is-embedded': !!vendorIcon(m.vendor) }"
+        :style="vendorIcon(m.vendor) ? { '--vendor': vendorIcon(m.vendor)!.hex } : undefined"
+        :to="`/models/${m.slug}`"
+      >
+             厂商图标那支（vendorIcon + explore-tile SVG）在探索页是局部实现，等抽成共享 util 再接过来 -->
+        <!-- 完整 D 变体（与探索页逐字一致）：半嵌入图标块（上凸 10px）+ 底色=厂商色 + 顶带/左带把边框染成厂商色；
+             无图标厂商回退字母章（无色无带）—— 回退本身也是设计的一部分 -->
+        <template v-if="vendorIcon(m.vendor)">
+          <span class="explore-band explore-band--top" aria-hidden="true"></span>
+          <span class="explore-band explore-band--left" aria-hidden="true"></span>
+          <span class="explore-tile" aria-hidden="true" :style="{ background: vendorIcon(m.vendor)!.hex, color: iconInkFor(vendorIcon(m.vendor)!.hex) }">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path v-for="(d, i) in vendorIcon(m.vendor)!.paths" :key="i" :d="d" />
+            </svg>
+          </span>
+        </template>
+        <span v-else class="explore-tile explore-tile--letter" aria-hidden="true">{{ (m.vendor || m.name || '?').slice(0, 1).toUpperCase() }}</span>
+        <div class="explore-cell-main">
+          <div class="explore-cell-name">{{ tagLabel(m.name) }}</div>
+          <div class="explore-cell-meta">
+            <span class="explore-vendor mono">{{ m.vendor || t('explore.noVendor', '未标厂商') }} · {{ m.demo_count }} {{ t('models.works', '作品') }}</span>
+          </div>
+          <div class="explore-cell-meta">
+            <!-- 分数口径与探索页一致：显示收缩后的社区分（旧口径下 1 票 5.0 能压过 40 票 4.7） -->
+            <span v-if="m.score != null" class="stat stat-mint" :title="t('models.scoreTip', '社区分＝按票数加权均分向全站先验收缩；票数越少越靠近平均线')">SCORE {{ m.score.toFixed(2) }}</span>
+            <span v-if="m.votes" class="mini-stat mono">{{ m.votes }}{{ t('models.votesUnit', '票') }}</span>
             <span v-if="m.status !== 'active'" class="mode-badge" :class="entityStatusClass(m.status)">{{ statusText[m.status] || m.status }}</span>
-          </span>
-          <span v-if="m.description" class="model-card-desc muted">{{ m.description }}</span>
-          <span class="model-card-stats">
-            <span class="stat stat-teal">DEMO {{ m.demo_count }}</span>
-            <!-- 分数换成收缩后的社区分，并显式标出证据量（票数 + 样本档）—— 旧口径下 1 票 5.0 能压过 40 票 4.7 -->
-            <span class="stat stat-mint" :title="t('models.scoreTip', '社区分＝按票数加权均分向全站先验收缩；票数越少越靠近平均线')">
-              SCORE {{ m.score != null ? m.score.toFixed(2) : '—' }}
-            </span>
-            <span :class="sampleClass(m.sample_level)" :title="t('models.sampleTip', '票数决定这个分数能信几分')">
-              <b>{{ m.votes ?? 0 }}</b>{{ t('models.votesUnit', '票') }} · {{ sampleLabel(m.sample_level) }}
-            </span>
-          </span>
-        </RouterLink>
-      </article>
+          </div>
+        </div>
+      </RouterLink>
     </div>
 
     <PaginationBar

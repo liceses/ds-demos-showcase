@@ -434,3 +434,31 @@ describe('⑨ 按钮 hover 定稿：影保持原档（用户 2026-09-13 拍板�
     }
   })
 })
+
+describe('⑪ 声明了 --lift-sh 的组件必须自己声明 box-shadow（否则静止影不受控）', () => {
+  // 真实事故（2026-09，只有真实渲染才能发现）：`.dv-next-card` 在同一文件里既写
+  // `box-shadow: var(--b-shadow)`（4px 黑）又写 `--lift-sh: none` —— 而该文件在 lift.css **之后**导入，
+  // 库的 `:is(.b-lift,.btn) { box-shadow: var(--lift-sh, none) }` 与它同特异度、按导入顺序输掉
+  // ⇒ 静止影仍是 4px、hover 也不变红，`--lift-sh` 成了死变量。门禁看不见"静止影"（它不是交互物理），
+  // 所以这里把规则钉死：**同一选择器若在别处声明了非 var(--lift-sh) 的 box-shadow，
+  // 那么声明 --lift-sh 的那一块必须自己写 box-shadow: var(--lift-sh)**。
+  const norm = (sel: string) => sel.replace(/\s+/g, ' ').trim()
+
+  it('没有"声明了 --lift-sh 却没接管 box-shadow"的组件', () => {
+    const offenders: string[] = []
+    for (const r of allRules) {
+      if (!/--lift-sh\s*:/.test(r.body)) continue
+      if (/box-shadow\s*:\s*var\(--lift-sh\)/.test(r.body)) continue
+      const key = norm(r.sel)
+      const rival = allRules.find(
+        (o) =>
+          norm(o.sel) === key &&
+          o !== r &&
+          /box-shadow\s*:/.test(o.body) &&
+          !/box-shadow\s*:\s*var\(--lift-sh\)/.test(o.body),
+      )
+      if (rival) offenders.push(`${r.file} → ${key}（被 ${rival.file} 的 ` + rival.body.match(/box-shadow\s*:[^;]+/)![0].trim() + ' 盖住）')
+    }
+    expect([...new Set(offenders)], '这些组件声明了 --lift-sh 却没自己接管 box-shadow，静止影会被同特异度的规则盖掉：\n' + offenders.join('\n')).toEqual([])
+  })
+})

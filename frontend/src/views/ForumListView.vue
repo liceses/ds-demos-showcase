@@ -183,7 +183,7 @@ watch(
               </div>
               <div v-if="t2.demo_slug" class="forum-topic-demo">
                 <span class="b-lift forum-demo-chip" role="link" @click.stop.prevent="router.push(`/demo/${t2.demo_slug}`)">
-                  <CoverImg v-if="demoCards[t2.demo_slug]" class="b-lift forum-demo-chip-cover" :src="demoCards[t2.demo_slug]?.cover_url" tier="thumb" alt="" />
+                  <CoverImg v-if="demoCards[t2.demo_slug]" class="forum-demo-chip-cover" :src="demoCards[t2.demo_slug]?.cover_url" tier="thumb" alt="" />
                   <span>{{ demoCards[t2.demo_slug]?.title || t2.demo_slug }}</span>
                 </span>
               </div>
@@ -195,7 +195,7 @@ watch(
                 <span>{{ timeAgo(t2.created_at) }}</span>
               </div>
             </div>
-            <span class="b-lift forum-reply-badge">{{ t2.reply_count }}</span>
+            <span class="forum-reply-badge">{{ t2.reply_count }}</span>
           </RouterLink>
         </div>
 

@@ -43,3 +43,15 @@
   .task-row-cta { margin-left: auto; }
 }
 
+
+/* ---------- 题目卡网格（形态①，评审页 task-grid）：封面是最强的识别线索 ---------- */
+.task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: var(--sp-16); }
+.task-card { display: grid; grid-template-rows: auto auto auto 1fr auto; border: var(--border-w) solid var(--ink); background: var(--paper); text-decoration: none; color: var(--ink); box-shadow: var(--lift-sh); }
+.task-card-cover { display: block; aspect-ratio: 4 / 3; border-bottom: var(--border-w) solid var(--ink); overflow: hidden; background: var(--paper-deep, #efe9dd); }
+.task-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.task-card-cover > :not(img) { display: grid; place-items: center; height: 100%; }
+.task-card-name { display: block; padding: var(--sp-12) var(--sp-14) 0; font-family: var(--font-heading); font-size: var(--fs-16); font-weight: 900; }
+.task-card-meta { display: flex; flex-wrap: wrap; gap: var(--sp-6) var(--sp-8); align-items: center; padding: var(--sp-6) var(--sp-14) 0; }
+.task-card-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: var(--sp-8) var(--sp-14) 0; font-size: var(--fs-12); }
+.task-card-stats { display: flex; gap: var(--sp-6); align-items: center; padding: var(--sp-12) var(--sp-14) var(--sp-14); font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .task-grid { grid-template-columns: 1fr; gap: var(--sp-12); } }

@@ -56,3 +56,17 @@
   .model-row-cta { order: 4; margin-left: auto; }
 }
 
+
+/* ---------- 模型卡网格（形态①，评审页 form-grid） ----------
+   换掉长条的理由：24 行等权平铺 → Hick's law 无梯度、F 型扫视首列无信息、
+   格式塔无分组边界、Fitts's law 只有小按钮可点。卡片 = 单一可点目标 + 自然分组。 */
+.model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: var(--sp-16); }
+.model-card { border: var(--border-w) solid var(--ink); background: var(--paper); box-shadow: var(--lift-sh); }
+.model-card-hit { display: block; padding: var(--sp-14) var(--sp-16); text-decoration: none; color: var(--ink); }
+.model-card-stamp { display: block; margin-bottom: var(--sp-10); }
+.model-card-name { display: block; font-family: var(--font-heading); font-size: var(--fs-16); font-weight: 900; letter-spacing: 0.01em; }
+.model-card-arrow { font-style: normal; margin-left: var(--sp-6); }
+.model-card-meta { display: flex; flex-wrap: wrap; gap: var(--sp-6) var(--sp-8); align-items: center; margin-top: var(--sp-6); }
+.model-card-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: var(--sp-8) 0 0; font-size: var(--fs-12); }
+.model-card-stats { display: flex; flex-wrap: wrap; gap: var(--sp-6); align-items: center; margin-top: var(--sp-12); font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) { .model-grid { grid-template-columns: 1fr; gap: var(--sp-12); } }

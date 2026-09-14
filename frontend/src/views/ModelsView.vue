@@ -94,32 +94,27 @@ onMounted(load)
     <LoadingRow v-if="loading && !items.length" :text="t('models.loadingList', '加载模型…')" />
     <EmptyBox v-else-if="!items.length" :text="t('models.emptyList', '还没有模型条目')" />
 
-    <div v-else class="model-list">
-      <article v-for="m in items" :key="m.slug" class="model-row card card-entity b-lift">
-        <RouterLink class="model-row-stamp" :to="`/models/${m.slug}`">
-          <EntityStamp :name="m.name" :vendor="m.vendor" size="md" />
-        </RouterLink>
-        <div class="model-row-main">
-          <RouterLink class="model-row-name" :to="`/models/${m.slug}`">{{ tagLabel(m.name) }}</RouterLink>
-          <div class="model-row-meta">
+    <div v-else class="model-grid">
+      <article v-for="m in items" :key="m.slug" class="model-card b-lift">
+        <RouterLink class="model-card-hit" :to="`/models/${m.slug}`">
+          <span class="model-card-stamp"><EntityStamp :name="m.name" :vendor="m.vendor" size="md" /></span>
+          <span class="model-card-name">{{ tagLabel(m.name) }}<i class="model-card-arrow" aria-hidden="true">→</i></span>
+          <span class="model-card-meta">
             <span v-if="m.vendor" class="mini-stat"><b>{{ m.vendor }}</b> {{ t('models.vendor', '厂商') }}</span>
             <span v-if="m.status !== 'active'" class="mode-badge" :class="entityStatusClass(m.status)">{{ statusText[m.status] || m.status }}</span>
-            <span v-if="m.description" class="muted model-row-desc">{{ m.description }}</span>
-          </div>
-        </div>
-        <div class="model-row-stats">
-          <span class="stat stat-teal">DEMO {{ m.demo_count }}</span>
-          <!-- 分数换成收缩后的社区分，并显式标出证据量（票数 + 样本档）—— 旧口径下 1 票 5.0 能压过 40 票 4.7 -->
-          <span class="stat stat-mint" :title="t('models.scoreTip', '社区分＝按票数加权均分向全站先验收缩；票数越少越靠近平均线')">
-            SCORE {{ m.score != null ? m.score.toFixed(2) : '—' }}
           </span>
-          <span :class="sampleClass(m.sample_level)" :title="t('models.sampleTip', '票数决定这个分数能信几分')">
-            <b>{{ m.votes ?? 0 }}</b>{{ t('models.votesUnit', '票') }} · {{ sampleLabel(m.sample_level) }}
+          <span v-if="m.description" class="model-card-desc muted">{{ m.description }}</span>
+          <span class="model-card-stats">
+            <span class="stat stat-teal">DEMO {{ m.demo_count }}</span>
+            <!-- 分数换成收缩后的社区分，并显式标出证据量（票数 + 样本档）—— 旧口径下 1 票 5.0 能压过 40 票 4.7 -->
+            <span class="stat stat-mint" :title="t('models.scoreTip', '社区分＝按票数加权均分向全站先验收缩；票数越少越靠近平均线')">
+              SCORE {{ m.score != null ? m.score.toFixed(2) : '—' }}
+            </span>
+            <span :class="sampleClass(m.sample_level)" :title="t('models.sampleTip', '票数决定这个分数能信几分')">
+              <b>{{ m.votes ?? 0 }}</b>{{ t('models.votesUnit', '票') }} · {{ sampleLabel(m.sample_level) }}
+            </span>
           </span>
-        </div>
-        <div class="model-row-cta">
-          <RouterLink class="btn btn-sm btn-outline" :to="`/demos?model=${m.slug}`">{{ t('models.works', '全部作品 →') }}</RouterLink>
-        </div>
+        </RouterLink>
       </article>
     </div>
 

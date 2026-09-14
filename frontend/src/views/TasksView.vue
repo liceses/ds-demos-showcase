@@ -13,6 +13,7 @@ import LoadingRow from '../components/LoadingRow.vue'
 import EmptyBox from '../components/EmptyBox.vue'
 import { useListPage } from '../composables/useListPage'
 import PageHero from '../components/PageHero.vue'
+import CoverImg from '../components/CoverImg.vue'
 
 const q = ref('')
 const sort = ref<'demos' | 'newest'>('demos')
@@ -66,25 +67,24 @@ onMounted(load)
     <LoadingRow v-if="loading && !items.length" :text="t('tasks.loadingList', '加载题目…')" />
     <EmptyBox v-else-if="!items.length" :text="t('tasks.emptyList', '还没有题目')" />
 
-    <div v-else class="task-list">
-      <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-row card card-entity b-lift">
-        <EntityStamp :name="tk.title" size="md" />
-        <div class="task-row-main">
-          <div class="task-row-title">{{ tk.title }}</div>
-          <div class="task-row-meta">
-            <span v-if="tk.category" class="mini-stat"><b>{{ tk.category }}</b> {{ t('tasks.category', '分类') }}</span>
-            <span class="muted">{{ parseDate(tk.created_at).toLocaleDateString(currentLocale()) }}</span>
-          </div>
-          <!-- 题面优先用作者写的描述；成题自动建的题目没描述，就取该题下的提示词摘录 -->
-          <p v-if="tk.description || tk.prompt_excerpt" class="task-row-desc">
-            <span v-if="!tk.description" class="task-row-tag mono">{{ t('tasks.promptTag', '题面') }}</span>
-            <span :class="{ muted: !tk.description }">{{ tk.description || tk.prompt_excerpt }}</span>
-          </p>
-        </div>
-        <div class="task-row-stats">
-          <span class="stat stat-teal">DEMO {{ tk.demo_count }}</span>
-        </div>
-        <span class="task-row-cta">{{ t('tasks.enter', '同题对比 →') }}</span>
+    <div v-else class="task-grid">
+      <RouterLink v-for="tk in items" :key="tk.slug" :to="`/tasks/${tk.slug}`" class="task-card b-lift">
+        <span class="task-card-cover">
+          <!-- 封面 = 最强的识别线索（评审页 task-grid 通过）；API 目前只暴露 200px 缩略图 ⇒ 先用它 -->
+          <CoverImg v-if="tk.cover_thumb_url" :src="tk.cover_thumb_url" tier="thumb" alt="" />
+          <EntityStamp v-else :name="tk.title" size="md" />
+        </span>
+        <span class="task-card-name">{{ tk.title }}<i class="model-card-arrow" aria-hidden="true">→</i></span>
+        <span class="task-card-meta">
+          <span v-if="tk.category" class="mini-stat"><b>{{ tk.category }}</b> {{ t('tasks.category', '分类') }}</span>
+          <span class="muted">{{ parseDate(tk.created_at).toLocaleDateString(currentLocale()) }}</span>
+        </span>
+        <!-- 题面优先用作者写的描述；成题自动建的题目没描述，就取该题下的提示词摘录 -->
+        <span v-if="tk.description || tk.prompt_excerpt" class="task-card-desc">
+          <span v-if="!tk.description" class="task-row-tag mono">{{ t('tasks.promptTag', '题面') }}</span>
+          <span :class="{ muted: !tk.description }">{{ tk.description || tk.prompt_excerpt }}</span>
+        </span>
+        <span class="task-card-stats"><span class="stat stat-teal">DEMO {{ tk.demo_count }}</span></span>
       </RouterLink>
     </div>
 

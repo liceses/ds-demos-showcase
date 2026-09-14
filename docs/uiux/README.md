@@ -68,3 +68,14 @@
 | `docs/预览架构与排坑记录.md` / `docs/运维经验与排坑记录.md` | 排坑记录（不改写成规范；其中的规范结论在本目录引用） |
 | `docs/model/design.json` | 后端/实体的需求账本（KC/KB 系列）。**UI/UX 条款不写在那里**，那里只登记产品级需求 |
 | `frontend/stylelint.config.cjs` | 机器化禁止项（圆角/模糊影/断点白名单/颜色 var 化），是本目录的**执行层** |
+
+## 阶段 2 收尾（2026-09-13）
+
+| 项 | 数字 |
+|---|---|
+| 库外交互物理 | **30 → 1 条**（唯一一条是按规则①「只搬已存在的态」故意保留并登记的 `.dv-rail/.dv-collapse/.uw-edit:active`） |
+| 跨文件同名交互选择器 | **0 组** |
+| 门禁条数 | **23 条**（⑪ 新增：声明 `--lift-sh` 必须自己接管 `box-shadow`，并已证明"撤掉修复即变红"） |
+| 作废文件 | `styles/pages/interactions.css`（内容全被库覆盖，整文件删除） |
+| 库钩子登记表 | `(:is(.b-lift, .btn, .tag-chip, .tab, .mode-badge, .uw-item))` —— 原语级/面广的进表，其余显式加 `.b-lift` |
+| 真实渲染实测 | 已测：`.uw-step`（hover 4→6px + 抬起 -1,-1）· `.ac-card` · `.rating-star` · `.tag-drawer-bar` · `.tag-chip` · `.tab` · `.dv-next-card` · `.home-title-link`；未测项见 `08-例外登记.md` |

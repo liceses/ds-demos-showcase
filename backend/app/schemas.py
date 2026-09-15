@@ -733,6 +733,8 @@ class TaskSummaryOut(BaseModel):
     # 题目行的代表封面（200px 缩略图）：该题下排序第一且有缩略图的已上架作品；
     # 空 = 该题没有任何带缩略图的作品（如全是 default.svg）→ 前端不渲染图片
     cover_thumb_url: str = ""
+    # 同一件代表作品的**原图** URL：卡片网格按它推导 640 档（缺文件时 CoverImg 自身回落）
+    cover_url: str = ""
     category: str | None = None
     status: str = "active"
     demo_count: int = 0

@@ -103,9 +103,8 @@ onMounted(load)
         :style="vendorIcon(m.vendor) ? { '--vendor': vendorIcon(m.vendor)!.hex } : undefined"
         :to="`/models/${m.slug}`"
       >
-            <!--  厂商图标那支（vendorIcon + explore-tile SVG）在探索页是局部实现，等抽成共享 util 再接过来 -->
-             完整 D 变体（与探索页逐字一致）：半嵌入图标块（上凸 10px）+ 底色=厂商色 + 顶带/左带把边框染成厂商色；
-             无图标厂商回退字母章（无色无带）—— 回退本身也是设计的一部分 -->
+        <!-- 完整 D 变体（与探索页逐字一致）：半嵌入图标块（上凸 10px）+ 底色=厂商色 + 顶带/左带把边框染成厂商色；
+             无图标厂商回退字母章（无色无带）—— **回退本身也是设计的一部分**，不是缺失 -->
         <template v-if="vendorIcon(m.vendor)">
           <span class="explore-band explore-band--top" aria-hidden="true"></span>
           <span class="explore-band explore-band--left" aria-hidden="true"></span>

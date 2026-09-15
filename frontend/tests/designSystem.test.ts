@@ -462,3 +462,36 @@ describe('⑪ 声明了 --lift-sh 的组件必须自己声明 box-shadow（否�
     expect([...new Set(offenders)], '这些组件声明了 --lift-sh 却没自己接管 box-shadow，静止影会被同特异度的规则盖掉：\n' + offenders.join('\n')).toEqual([])
   })
 })
+
+describe('⑫ 模板注释必须成对（注释手术最容易漏掉右括号）', () => {
+  // 真实事故：用脚本删"过时注释"时只删了两行中的一行，留下一个没有 \`-->\` 的 \`<!--\`；
+  // 后面那段说明文字于是被 Vue 当成**正文**渲染进卡片（构建/类型/测试全绿，只有真看页面才发现）。
+  // 教训：注释也是标记，动它就要像动标签一样校验配平。
+  const SRC = path.resolve(import.meta.dirname, '../src')
+
+  function* walkVue(dir: string): Generator<string> {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) yield* walkVue(p)
+      else if (e.name.endsWith('.vue')) yield p
+    }
+  }
+
+  it('每个 .vue 的 <!-- 与 --> 数量一致，且没有孤儿 -->', () => {
+    const offenders: string[] = []
+    for (const f of walkVue(SRC)) {
+      const raw = readFileSync(f, 'utf8')
+      const open = (raw.match(/<!--/g) || []).length
+      const close = (raw.match(/-->/g) || []).length
+      if (open !== close) offenders.push(`${f.replace(SRC, 'src')}：<!-- ${open} 个 / --> ${close} 个`)
+      // 孤儿 -->：往回 6 行内找不到 <!-- 的收尾括号
+      const lines = raw.split('\n')
+      lines.forEach((l, i) => {
+        if (!l.includes('-->')) return
+        const window = lines.slice(Math.max(0, i - 6), i + 1).join('\n')
+        if (!window.includes('<!--')) offenders.push(`${f.replace(SRC, 'src')}:${i + 1} 孤儿 -->`)
+      })
+    }
+    expect(offenders, '注释不配平（会把说明文字渲染成正文）：\n' + offenders.join('\n')).toEqual([])
+  })
+})
